@@ -6,7 +6,7 @@ MySQL建议使用5.7.16以上版本，若使用读写分离功能则需要搭建
 
 ## 安装
 
-Cetus只支持linux系统，安装步骤参考[Cetus 安装说明](https://git.ms.netease.com/dbproxy/cetus/wikis/cetus-install)。
+Cetus只支持linux系统，安装步骤参考[Cetus 安装说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-install.md)。
 
 ## 部署
 
@@ -42,4 +42,4 @@ Cetus对外暴露两类端口：proxy｜shard端口和admin端口。proxy｜shar
 
 可以使用在配置文件中的admin用户名和密码，登陆地址为admin-address的mysql对Cetus进行管理，例如在查询Cetus的后端详细信息时，可以登录后通过命令 select * from backends，显示后端端口的地址、状态、读写类型，以及读写延迟时间和连接数等信息。
 
-具体使用说明根据版本情况详见[Cetus 读写分离版管理手册](https://git.ms.netease.com/dbproxy/cetus/wikis/cetus-rw-admin)、[Cetus 分库(sharding)版管理手册](https://git.ms.netease.com/dbproxy/cetus/wikis/cetus-shard-admin)
+具体使用说明根据版本情况详见[Cetus 读写分离版管理手册](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw-admin.md)、[Cetus 分库(sharding)版管理手册](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-shard-admin.md)

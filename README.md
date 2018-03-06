@@ -88,6 +88,10 @@ Cetus支持读写分离和分库两个版本。
 
 [Cetus 性能约束说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-constraint.md)
 
+### Cetus发现的MySQL xa事务问题
+
+[MySQL xa事务问题说明](https://github.com/Lede-Inc/cetus/blob/master/doc/mysql-xa-bug.md)
+
 ### Cetus辅助工具
 
 [Cetus xa悬挂处理工具](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-xa.md)

@@ -194,7 +194,7 @@ TODO
    admin> select * from backends；
 ```
 
-可以使用在配置文件中的admin用户名和密码，登陆地址为admin-address的MYSQL对Cetus进行管理，例如在查询Cetus的后端详细信息时，可以登录后通过命令 select * from backends，显示后端端口的地址、状态、读写类型，以及读写延迟时间和连接数等信息。
+可以使用在配置文件中的admin用户名和密码，登陆地址为admin-address的MySQL对Cetus进行管理，例如在查询Cetus的后端详细信息时，可以登录后通过命令 select * from backends，显示后端端口的地址、状态、读写类型，以及读写延迟时间和连接数等信息。
 
 具体使用说明详见[Cetus 读写分离版管理手册](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw-admin.md)
 

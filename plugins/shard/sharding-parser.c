@@ -720,7 +720,7 @@ static void find_linkage(sql_expr_t *p, const GPtrArray *tables,
 /**
  * 1.check if all the tables belong to same VDB
  * 2.check if there exists tableA.key = tableB.key,
- * 3.and mark that eqution with EP_JOIN_LINK
+ * 3.and mark that equation with EP_JOIN_LINK
  */
 static gboolean join_on_sharding_key(char *default_db, GPtrArray *sharding_tables,
                                      sql_expr_t *where)

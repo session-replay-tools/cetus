@@ -30,7 +30,7 @@ Cetus 读写分离版将前端发来的读请求和写请求分别发送到不�
 
 **2.Cetus**
 
-- 根据MySQL后端信息配置users.json和proxy.conf（variables.json可选配），具体配置说明详见[Cetus 配置文件说明](https://git.ms.netease.com/dbproxy/cetus/wikis/cetus-profile)
+- 根据MySQL后端信息配置users.json和proxy.conf（variables.json可选配），具体配置说明详见[Cetus 配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-profile.md)
 
 **3.LVS & keepalived**
 
@@ -42,15 +42,13 @@ Cetus 读写分离版将前端发来的读请求和写请求分别发送到不�
 
 ### 安装
 
-Cetus只支持linux系统，安装过程详见[Cetus 安装说明](https://git.ms.netease.com/dbproxy/cetus/wikis/cetus-install)
+Cetus只支持linux系统，安装过程详见[Cetus 安装说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-install.md)
 
 ### 部署
 
 Cetus 在部署时架构图如下图所示。
 
-<div align=center>
-<img src="/uploads/1e3c12f40c48ff0df530eae37fb6876a/Cetus_deployment_rw.png" width="50%" height="50%">
-</div>
+![Cetus 读写分离版部署架构图](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/Cetus_deployment_rw.png)
 
 Cetus位于应用程序与MySQL数据库之间，作为前端应用与数据库的通讯。其中，前端应用连接LVS节点，LVS节点映射端口到多个Cetus服务，后者通过自身的连接池连接到后端的数据库。
 
@@ -66,9 +64,9 @@ Cetus可以利用bin/cetus启动
 bin/cetus --defaults-file=conf/proxy.conf [--conf-dir＝/home/user/cetus_install/conf/]
 ```
 
-​其中Cetus启动时可以添加命令行选项，--defaults-file选项用来加载启动配置文件，且在启动前保证启动配置文件的权限为660；--conf-dir是可选项，用来加载其他配置文件(.json文件)，默认为当前目录下conf文件夹。
+其中Cetus启动时可以添加命令行选项，--defaults-file选项用来加载启动配置文件，且在启动前保证启动配置文件的权限为660；--conf-dir是可选项，用来加载其他配置文件(.json文件)，默认为当前目录下conf文件夹。
 
-​Cetus可起动守护进程后台运行，也可在进程意外终止自动启动一个新进程，可通过启动配置选项进行设置。
+Cetus可起动守护进程后台运行，也可在进程意外终止自动启动一个新进程，可通过启动配置选项进行设置。
 
 ## 主要功能概述
 
@@ -94,7 +92,7 @@ Cetus能提供对分流策略的自定义。比如可以设置为：把30%的读
 
 安全性管理功能包括后端管理、基本配置管理、查看连接信息、用户密码管理、IP许可管理、远程配置中心管理和整体信息查询。
 
-用户可以通过登录管理端口，查看后端状态，增删改指定后端，查看和修改基本配置（包括连接池配置和从库延迟检测配置），查看当前连接的详细信息，用户连接Cetus的密码查询和增删改，查看以及增删改IP许可(可以为每个用户以及管理员用户指定允许访问的来源ip地址，但是无法为来自不同ip的同一用户提供不同的权限设置)，重载远程配置和查看Cetus总体状态等，具体管理操作相见[Cetus 读写分离版管理手册](https://git.ms.netease.com/dbproxy/cetus/wikis/cetus-rw-admin)。
+用户可以通过登录管理端口，查看后端状态，增删改指定后端，查看和修改基本配置（包括连接池配置和从库延迟检测配置），查看当前连接的详细信息，用户连接Cetus的密码查询和增删改，查看以及增删改IP许可(可以为每个用户以及管理员用户指定允许访问的来源ip地址，但是无法为来自不同ip的同一用户提供不同的权限设置)，重载远程配置和查看Cetus总体状态等，具体管理操作相见[Cetus 读写分离版管理手册](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw-admin.md)。
 
 ### 5.状态监控
 
@@ -198,7 +196,7 @@ TODO
 
 可以使用在配置文件中的admin用户名和密码，登陆地址为admin-address的mysql对Cetus进行管理，例如在查询Cetus的后端详细信息时，可以登录后通过命令 select * from backends，显示后端端口的地址、状态、读写类型，以及读写延迟时间和连接数等信息。
 
-具体使用说明详见[Cetus 读写分离版管理手册](./https://git.ms.netease.com/dbproxy/cetus/wikis/cetus-rw-admin)
+具体使用说明详见[Cetus 读写分离版管理手册](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw-admin.md)
 
 ### 3.查看Cetus参数
 

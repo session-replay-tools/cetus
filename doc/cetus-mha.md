@@ -5,7 +5,7 @@ cetus使用改进过的mha实现高可用。乐得DBA在原生mha中，加入修
 mha切换包括故障切换和在线手工切换，以故障切换(failover)为例，简单介绍一下mha_ld的工作流程，未提及的操作请参考官方文档：
 https://github.com/yoshinorim/mha4mysql-manager/wiki
 
-![图片_1](/uploads/3c3f01ff5766418a73d0060e59451f68/图片_1.jpg)
+![Cetus mha](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/cetus_mha.jpg)
 
 1、检测当前主库不达，准备开始切换
 

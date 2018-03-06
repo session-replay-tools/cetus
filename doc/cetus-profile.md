@@ -18,11 +18,11 @@
 }
 ```
 
-​其中user是用户名；client_pwd是前端登录Cetus的密码；server_pwd是Cetus登录后端的密码。
+其中user是用户名；client_pwd是前端登录Cetus的密码；server_pwd是Cetus登录后端的密码。
 
 ##  2.variables.json
 
-​Cetus支持部分会话级系统变量的设置，可以通过配置允许发送的值和静默处理的值，如下
+Cetus支持部分会话级系统变量的设置，可以通过配置允许发送的值和静默处理的值，如下
 
 ```
 {
@@ -46,7 +46,7 @@
 }
 ```
 
-​其中name是变量名称；type是变量类型，string，string-csv逗号分隔的字符串值，目前尚未支持int类型；allowed_values是指定允许设定的值，可以使用通配符\*，表示此变量设任意值都允许；silent_values是指定静默处理的值，可以使用通配符\*，表示此变量设任意值都静默处理，前提：配置过allowed_values才能走到静默处理流程。
+其中name是变量名称；type是变量类型，string，string-csv逗号分隔的字符串值，目前尚未支持int类型；allowed_values是指定允许设定的值，可以使用通配符\*，表示此变量设任意值都允许；silent_values是指定静默处理的值，可以使用通配符\*，表示此变量设任意值都静默处理，前提：配置过allowed_values才能走到静默处理流程。
 
 ## 3.sharding.json
 
@@ -83,7 +83,7 @@
 }
 ```
 
-​其中vdb是逻辑db，包含属性有id、type、method、num和partitions，id是逻辑db的id，type是分片键的类型，method是分片方式，num是hash分片的底数（range分片的num为0），partitions是分组名和分片范围的键值对；table是分片表，包含属性有vdb、db、table和pkey，vdb是逻辑db的id，db是物理db名，table是分片表名，pkey是分片键；single_tables是未分片表，包含属性有table、db和group，table是表名，db是物理db名，group是分组名。
+其中vdb是逻辑db，包含属性有id、type、method、num和partitions，id是逻辑db的id，type是分片键的类型，method是分片方式，num是hash分片的底数（range分片的num为0），partitions是分组名和分片范围的键值对；table是分片表，包含属性有vdb、db、table和pkey，vdb是逻辑db的id，db是物理db名，table是分片表名，pkey是分片键；single_tables是未分片表，包含属性有table、db和group，table是表名，db是物理db名，group是分组名。
 
 ##  4.proxy.conf
 
@@ -111,7 +111,7 @@ log-file=cetus.log
 log-level=debug
 ```
 
-​其中plugins是加载插件的名称，读写分离版本需加载的插件为proxy和admin；proxy-address是Proxy监听的IP和端口；proxy-backend-addresses是读写后端(主库)的IP和端口，可多项；proxy-read-only-backend-addresses是只读后端(从库)的IP和端口，可多项；admin-address是管理模块的IP和端口；admin-username是管理模块的用户名；admin-password是管理模块的密码明文；default-db是默认数据库，当连接未指定db时，使用的默认数据库名称；default-username是默认用户名，在Proxy启动时自动创建连接使用的用户名；log-file是日志文件路径；log-level是日志记录级别，可选 info | message | warning | error | critical(default)；其他可选性能配置详见[Cetus 启动配置选项说明](https://git.ms.netease.com/dbproxy/cetus/wikis/cetus-configuration)。
+其中plugins是加载插件的名称，读写分离版本需加载的插件为proxy和admin；proxy-address是Proxy监听的IP和端口；proxy-backend-addresses是读写后端(主库)的IP和端口，可多项；proxy-read-only-backend-addresses是只读后端(从库)的IP和端口，可多项；admin-address是管理模块的IP和端口；admin-username是管理模块的用户名；admin-password是管理模块的密码明文；default-db是默认数据库，当连接未指定db时，使用的默认数据库名称；default-username是默认用户名，在Proxy启动时自动创建连接使用的用户名；log-file是日志文件路径；log-level是日志记录级别，可选 info | message | warning | error | critical(default)；其他可选性能配置详见[Cetus 启动配置选项说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-configuration.md)。
 
 ##  5.shard.conf
 
@@ -138,6 +138,6 @@ log-file=cetus.log
 log-level=debug
 ```
 
-​其中其中plugins是加载插件的名称，分库（sharding）版本需加载的插件为shard和admin；proxy-address是Proxy监听的IP和端口；proxy-backend-addresses是后端的IP和端口，需要同时指定group（@group）；其他选项与proxy.conf含义相同；其他可选性能配置详见[Cetus 启动配置选项说明](https://git.ms.netease.com/dbproxy/cetus/wikis/cetus-configuration)。
+其中其中plugins是加载插件的名称，分库（sharding）版本需加载的插件为shard和admin；proxy-address是Proxy监听的IP和端口；proxy-backend-addresses是后端的IP和端口，需要同时指定group（@group）；其他选项与proxy.conf含义相同；其他可选性能配置详见[Cetus 启动配置选项说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-configuration.md)。
 
 **注：以上配置文件中.json文件名称不可变，.conf文件可自定义名称，并利用命令行加载**

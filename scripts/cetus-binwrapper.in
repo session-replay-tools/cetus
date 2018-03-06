@@ -1,0 +1,25 @@
+#!/bin/sh
+#
+# wrapper script for self-contained packaging
+#
+# we assume that this script is located in
+#
+#   {basedir}/bin/cetus
+#
+# and wants to call
+#
+#   {basedir}/libexec/cetus
+#
+# You can inject a wrapper like
+#
+#   $ MYSQL_PROXY_WRAPPER=valgrind ./bin/cetus
+#
+
+scriptdir=`dirname $0`
+scriptname=`basename $0`
+scriptdir=`(cd "$scriptdir/"; pwd)`
+scriptdir=`dirname "$scriptdir"`
+
+@DYNLIB_PATH_VAR@="$@DYNLIB_PATH_VAR@:$scriptdir/lib/"
+export @DYNLIB_PATH_VAR@
+exec $MYSQL_PROXY_WRAPPER "$scriptdir/libexec/$scriptname" "$@"

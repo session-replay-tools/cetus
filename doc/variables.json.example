@@ -1,0 +1,17 @@
+{
+    "variables": [
+        {
+            "name": "sql_mode",
+            "type": "string-csv",
+            "allowed_values":  ["STRICT_TRANS_TABLES",
+                                "NO_AUTO_CREATE_USER",
+                                "NO_ENGINE_SUBSTITUTION"]
+        },
+        {
+            "name": "connect_timeout",
+            "type": "string",
+            "allowed_values": ["*"],
+            "silent_values": ["10", "100"]
+        }
+    ]
+}

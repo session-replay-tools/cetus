@@ -1,0 +1,21 @@
+[cetus]
+# Loaded Plugins
+plugins=proxy,admin
+
+# Proxy Configuration
+proxy-address=proxy-ip:proxy-port
+proxy-backend-addresses=rw-ip:rw-port
+proxy-read-only-backend-addresses=ro-ip:ro-port
+
+# Admin Configuration
+admin-address=admin-ip:admin-port
+admin-username=admin
+admin-password=admin
+
+# Backend Configuration
+default-db=test
+default-username=dbtest
+
+# File and Log Configuration
+log-file=cetus.log
+log-level=debug

@@ -1,0 +1,20 @@
+[cetus]
+# Loaded Plugins
+plugins=shard,admin
+
+# Proxy Configuration
+proxy-address=proxy-ip:proxy-port
+proxy-backend-addresses=ip1:port1@data1,ip2:port2@data2,ip3:port3@data3,ip4:port4@data4
+
+# Admin Configuration
+admin-address=admin-ip:admin-port
+admin-username=admin
+admin-password=admin
+
+# Backend Configuration
+default-db=test
+default-username=dbtest
+
+# Log Configuration
+log-file=cetus.log
+log-level=debug

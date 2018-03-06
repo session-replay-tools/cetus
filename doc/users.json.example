@@ -1,0 +1,11 @@
+{
+	"users":	[{
+			"user":	"test1",
+			"client_pwd":	"123",
+			"server_pwd":	"123456"
+		}, {
+			"user":	"test2",
+			"client_pwd":	"123456",
+			"server_pwd":	"123456"
+		}]
+}

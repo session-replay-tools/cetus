@@ -1,0 +1,30 @@
+{
+  "vdb": [
+    {
+      "id": 1,
+      "type": "int",
+      "method": "hash",
+      "num": 8,
+      "partitions": {"data1": [0,1], "data2": [2,3], "data3": [4,5], "data4": [6,7]}
+    },
+    {
+      "id": 2,
+      "type": "int",
+      "method": "range",
+      "num": 0,
+      "partitions": {"data1": 124999, "data2": 249999, "data3": 374999,"data4": 499999}
+    }
+  ],
+  "table": [
+    {"vdb": 1, "db": "employees_hash", "table": "dept_emp", "pkey": "emp_no"},
+    {"vdb": 1, "db": "employees_hash", "table": "employees", "pkey": "emp_no"},
+    {"vdb": 1, "db": "employees_hash", "table": "titles", "pkey": "emp_no"},
+    {"vdb": 2, "db": "employees_range", "table": "dept_emp", "pkey": "emp_no"},
+    {"vdb": 2, "db": "employees_range", "table": "employees", "pkey": "emp_no"},
+    {"vdb": 2, "db": "employees_range", "table": "titles", "pkey": "emp_no"}
+  ],
+  "single_tables": [
+    {"table": "regioncode", "db": "employees_hash", "group": "data1"},
+    {"table": "countries",  "db": "employees_range", "group": "data2"}
+  ]
+}

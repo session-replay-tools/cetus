@@ -155,7 +155,7 @@ delete:      后端已被删除，无法再建立连接。
 
 `show variables [like '%pattern%']`
 
-查看的参数均为启动配置选项中的参数，详见[Cetus 启动配置选项说明](https://git.ms.netease.com/dbproxy/cetus/wikis/cetus-configuration)。
+查看的参数均为启动配置选项中的参数，详见[Cetus 启动配置选项说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-configuration.md)。
 
 ## 查看连接信息
 

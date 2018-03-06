@@ -43,11 +43,11 @@ Cetus 测试报告包括Cetus性能测试和Cetus健壮性测试，其中Cetus�
 
 单Cetus拓扑如下：
 
-![单Cetus拓扑图](./picture/Cetus_test_single.png)
+![单Cetus拓扑图](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/Cetus_test_single.png)
 
 集群Cetus拓扑如下：
 
-![集群Cetus拓扑图](./picture/Cetus_test_lvs.png)
+![集群Cetus拓扑图](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/Cetus_test_lvs.png)
 
 ## 测试过程
 
@@ -138,19 +138,19 @@ Cetus 测试报告包括Cetus性能测试和Cetus健壮性测试，其中Cetus�
 
 - tps对比图
 
-![rw-tps对比图](./picture/rw_test_tps.png)
+![rw-tps对比图](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_test_tps.png)
 
 - qps对比图
 
-![rw-qps对比图](./picture/rw_test_qps.png)
+![rw-qps对比图](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_test_qps.png)
 
 - 响应时间对比图
 
-![rw-art对比图](./picture/rw_test_art.png)
+![rw-art对比图](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_test_art.png)
 
 - 95%请求响应时间对比图
 
-![rw-95art对比图](./picture/rw_test_95art.png)
+![rw-95art对比图](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_test_95art.png)
 
 性能小结：
 
@@ -196,19 +196,19 @@ Cetus 测试报告包括Cetus性能测试和Cetus健壮性测试，其中Cetus�
 
 - tps对比图
 
-![shard-tps对比图](./picture/shard_test_tps.png)
+![shard-tps对比图](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/shard_test_tps.png)
 
 - qps对比图
 
-![shard-qps对比图](./picture/shard_test_qps.png)
+![shard-qps对比图](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/shard_test_qps.png)
 
 - 响应时间对比图
 
-![shard-art对比图](./picture/shard_test_art.png)
+![shard-art对比图](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/shard_test_art.png)
 
 - 95%请求响应时间对比图
 
-![shard-95art对比图](./picture/shard_test_95art.png)
+![shard-95art对比图](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/shard_test_95art.png)
 
 性能小结：
 
@@ -234,37 +234,37 @@ Cetus 测试报告包括Cetus性能测试和Cetus健壮性测试，其中Cetus�
 
 蓝色为qps，红色为tps，横坐标为s：
 
-![rw-持续冲击图1](./picture/rw_sysbench1.png)
+![rw-持续冲击图1](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_sysbench1.png)
 
-![rw-持续冲击图2](./picture/rw_sysbench2.png)
+![rw-持续冲击图2](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_sysbench2.png)
 
 - 从库的qps/tps图
 
 蓝色为qps，红色为tps，横坐标为s：
 
-![rw-持续冲击图3](./picture/rw_sysbench3.png)
+![rw-持续冲击图3](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_sysbench3.png)
 
-![rw-持续冲击图4](./picture/rw_sysbench4.png)
+![rw-持续冲击图4](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_sysbench4.png)
 
 - 主库的load图
 
-![rw-持续冲击图5](./picture/rw_sysbench5.png)
+![rw-持续冲击图5](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_sysbench5.png)
 
-![rw-持续冲击图6](./picture/rw_sysbench6.png)
+![rw-持续冲击图6](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_sysbench6.png)
 
 - 从库的load图
 
-![rw-持续冲击图7](./picture/rw_sysbench7.png)
+![rw-持续冲击图7](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_sysbench7.png)
 
-![rw-持续冲击图8](./picture/rw_sysbench8.png)
+![rw-持续冲击图8](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_sysbench8.png)
 
 - 主库和从库的total_used_conns图
 
 蓝色为主库连接数，红色为从库连接数，横坐标为s：
 
-![rw-持续冲击图9](./picture/rw_sysbench9.png)
+![rw-持续冲击图9](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_sysbench9.png)
 
-![rw-持续冲击图10](./picture/rw_sysbench10.png)
+![rw-持续冲击图10](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_sysbench10.png)
 
 性能小结：
 
@@ -288,25 +288,25 @@ qps/tps、load图以其中一个分片为例：
 
 蓝色为qps，红色为tps，横坐标为s：
 
-![shard-持续冲击图1](./picture/shard_sysbench1.png)
+![shard-持续冲击图1](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/shard_sysbench1.png)
 
-![shard-持续冲击图2](./picture/shard_sysbench2.png)
+![shard-持续冲击图2](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/shard_sysbench2.png)
 
 - 分库1的load图
 
 横坐标为s，纵坐标为load的值：
 
-![shard-持续冲击图3](./picture/shard_sysbench3.png)
+![shard-持续冲击图3](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/shard_sysbench3.png)
 
-![shard-持续冲击图4](./picture/shard_sysbench4.png)
+![shard-持续冲击图4](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/shard_sysbench4.png)
 
 - 4个分库的total_used_conns图
 
 蓝色为分库1连接数，红色为分库2连接数，灰色为分库3连接数，黄色为分库4连接数，横坐标为s：
 
-![shard-持续冲击图5](./picture/shard_sysbench5.png)
+![shard-持续冲击图5](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/shard_sysbench5.png)
 
-![shard-持续冲击图6](./picture/shard_sysbench6.png)
+![shard-持续冲击图6](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/shard_sysbench6.png)
 
 性能小结：
 
@@ -322,7 +322,7 @@ qps/tps、load图以其中一个分片为例：
 
 1）启动cetus程序，开启事物和只读查询测试程序，观察cetus上的后端连接。
 
-![rw-后端闪断图1](./picture/rw_backend_down1.png)
+![rw-后端闪断图1](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_backend_down1.png)
 
 2）在后端从服务器上执行下列命令，模拟cetus到后端的网络中断。
 
@@ -332,9 +332,9 @@ qps/tps、load图以其中一个分片为例：
 
 3）在管理端查询后端状态，在模拟网络中断大概4秒后，从库被设置为down状态。观察cetus日志，日志一直提示后端无法连接。
 
-![rw-后端闪断图2](./picture/rw_backend_down2.png)
+![rw-后端闪断图2](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_backend_down2.png)
 
-![rw-后端闪断图3](./picture/rw_backend_down3.png)
+![rw-后端闪断图3](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_backend_down3.png)
 
 4）在后端从服务器上删除新增的iptables规则。
 
@@ -344,7 +344,7 @@ qps/tps、load图以其中一个分片为例：
 
 6) 删除之后，在观察cetus的管理端口，在2秒内，数据库的状态便切换为可用且能继续提供服务。
 
-![rw-后端闪断图4](./picture/rw_backend_down4.png)
+![rw-后端闪断图4](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/rw_backend_down4.png)
 
 性能小结：
 
@@ -386,7 +386,7 @@ iptables命令执行后，lvs和cetus均无异常日志与行为。连接池等�
 
 1）启动cetus程序，观察cetus上的后端连接。
 
-![shard-后端闪断图1](./picture/shard_backend_down1.png)
+![shard-后端闪断图1](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/shard_backend_down1.png)
 
 2）在后端分库1上执行下列命令，模拟cetus到其中一个后端的网络中断。
 
@@ -396,9 +396,9 @@ iptables命令执行后，lvs和cetus均无异常日志与行为。连接池等�
 
 3）在管理端查询后端状态，在模拟网络中断大概4秒后，分库1被设置为down状态。之后观察cetus日志，日志一直提示后端无法连接。
 
-![shard-后端闪断图2](./picture/shard_backend_down2.png)
+![shard-后端闪断图2](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/shard_backend_down2.png)
 
-![shard-后端闪断图3](./picture/shard_backend_down3.png)
+![shard-后端闪断图3](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/shard_backend_down3.png)
 
 4）在后端从服务器上删除新增的iptables规则。
 
@@ -408,7 +408,7 @@ iptables命令执行后，lvs和cetus均无异常日志与行为。连接池等�
 
 5) 删除之后，在观察cetus的管理端口，在2秒内，数据库的状态便切换为可用且能继续提供服务。
 
-![shard-后端闪断图4](./picture/shard_backend_down4.png)
+![shard-后端闪断图4](https://github.com/Lede-Inc/cetus/blob/master/doc/picture/shard_backend_down4.png)
 
 性能小结：
 

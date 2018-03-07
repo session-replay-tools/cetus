@@ -312,7 +312,6 @@ Cetus sharding版能支持大多数的SQL语句，目前限制支持的功能有
 
 DML语句的限制：Update/Delete 支持子查询，但子查询中不要有嵌套（仅针对分片表）；不支持对 sharding key 列进行 update（仅针对分片表）；Insert 使用时要写全列名，例如：insert into a(col1,col2) values(xx,xx)；Insert 不支持子查询,如有特殊业务需要用到,可以使用注释（仅针对分片表，详见注释功能）；Insert 支持多 value 语句，例如：insert into a(col1,col2) values(x,x),(xx,xx)；支持 replace into/insert on duplicate key 语法。
 
-TODO：MySQL崩溃了，主从数据不一致怎么办？
 
 ### 13.分区键的数值类型
 

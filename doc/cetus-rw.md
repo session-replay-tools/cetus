@@ -138,7 +138,7 @@ Cetus内置监控功能，可通过配置选择开启或关闭。开启后Cetus�
 
 ### 5.不支持 Kill query
 
-不支持在SQL执行过程中 kill query操作，一旦SQL语句开始执行就不能通过这种方式来终止，此时可以连接Cetu 管理后端，通过执行 show connectionlist 命令查看正在执行的SQL，从而找到正在执行的后端信息，通过数据库中 kill query的命令进行终止操作。
+不支持在SQL执行过程中 kill query操作，一旦SQL语句开始执行就不能通过这种方式来终止，此时可以连接Cetus管理后端，通过执行 show connectionlist 命令查看正在执行的SQL，从而找到正在执行的后端信息，通过数据库中 kill query的命令进行终止操作。
 
 ### 6.不支持TLS
 

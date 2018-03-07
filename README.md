@@ -84,9 +84,9 @@ Cetus分为读写分离和分库两个版本。
 
 2. [Cetus 测试报告](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-test.md)
 
-### Cetus性能约束
+### Cetus使用约束
 
-[Cetus 性能约束说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-constraint.md)
+[Cetus 使用约束说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-constraint.md)
 
 ### Cetus发现的MySQL xa事务问题
 

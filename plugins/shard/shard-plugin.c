@@ -1178,7 +1178,7 @@ static int proxy_get_server_list(network_mysqld_con *con)
         !con->is_auto_commit || rv == USE_SAME)
     {
         g_debug("%s: check is_read_ro_server_allowed:%p", G_STRLOC, con);
-        if (con->is_read_ro_server_allowed) {
+        if (!con->client->is_server_conn_reserved) {
             if (con->servers) {
                 remove_ro_servers(con);
             }
@@ -1446,6 +1446,9 @@ proxy_add_server_connection_array(network_mysqld_con *con, int *server_unavailab
         if (con->dist_tran && con->servers) {
             for (i = 0; i < con->servers->len; i++) {
                 server_session_t  *pmd = g_ptr_array_index(con->servers, i);
+                if (pmd->server->is_read_only) {
+                    g_critical("%s: crazy, dist tran use readonly server:%p", G_STRLOC, con);
+                }
                 pmd->participated = 0;
             }
         }

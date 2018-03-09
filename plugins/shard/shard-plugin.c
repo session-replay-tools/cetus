@@ -1177,22 +1177,20 @@ static int proxy_get_server_list(network_mysqld_con *con)
         st->sql_context->rw_flag & CF_FORCE_MASTER || /*# mode = READWRITE */
         !con->is_auto_commit || rv == USE_SAME)
     {
-        g_debug("%s: check is_read_ro_server_allowed:%p", G_STRLOC, con);
         if (!con->client->is_server_conn_reserved) {
             if (con->servers) {
                 remove_ro_servers(con);
             }
         }
-        con->is_read_ro_server_allowed = 0;
         stats->client_query.rw++;
         stats->proxyed_query.rw++;
+        if (st->sql_context->rw_flag & CF_FORCE_SLAVE) {
+            con->is_read_ro_server_allowed = 1;
+        }
     } else {
         con->is_read_ro_server_allowed = 1;
         stats->client_query.ro++;
         stats->proxyed_query.ro++;
-    }
-    if (st->sql_context->rw_flag & CF_FORCE_SLAVE) {
-        con->is_read_ro_server_allowed = 1;
     }
 
     if (rv != USE_PREVIOUS_WARNING_CONN) {

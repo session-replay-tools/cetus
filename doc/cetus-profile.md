@@ -140,4 +140,22 @@ log-level=debug
 
 其中其中plugins是加载插件的名称，分库（sharding）版本需加载的插件为shard和admin；proxy-address是Proxy监听的IP和端口；proxy-backend-addresses是后端的IP和端口，需要同时指定group（@group）；其他选项与proxy.conf含义相同；其他可选性能配置详见[Cetus 启动配置选项说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-configuration.md)。
 
-**注：以上配置文件中.json文件名称不可变，.conf文件可自定义名称，并利用命令行加载**
+**注：**
+
+**以上配置文件中.json文件名称不可变，.conf文件可自定义名称，并利用命令行加载**
+
+**proxy.conf\/shard.conf 常用参数：**
+
+**1）default-pool-size=\<num\>，设置刚启动的连接数量**
+  
+**2）max-pool-size=\<num\>，设置最大连接数量**
+ 
+**3）max-resp-size=\<num\>，设置最大响应大小，一旦超过此大小，则会报错给客户端**
+  
+**4）enable-client-compress=\[true\|false\]，支持客户端压缩**
+
+**5）enable-tcp-stream=\[true\|false\]，启动tcp stream，无需等响应收完就发送给客户端**
+
+**6）master-preferred=\[true\|false\]，除非注释强制访问从库，否则一律访问主库**
+
+**7）reduce-connections=\[true\|false\]，自动减少过多的后端连接数量**

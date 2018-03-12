@@ -109,7 +109,6 @@ struct chassis {
     unsigned int auto_key;
     unsigned int sess_key;
     unsigned int maintain_close_mode;
-    unsigned int sharding_mode;
     unsigned int config_remote;
     unsigned int disable_threads;
     unsigned int is_tcp_stream_enabled;

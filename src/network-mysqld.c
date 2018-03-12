@@ -2563,17 +2563,19 @@ handle_send_query_to_servers(network_mysqld_con *con,
      * this state will loop until all the packets
      * from the send-queue are flushed 
      */
-    if (con->srv->sharding_mode && con->servers != NULL) {
+#ifndef SIMPLE_PARSER
+    g_message("%s: SIMPLE_PARSER true for con:%p", G_STRLOC, con);
+    if (con->servers != NULL) {
         if (!process_shard_write(con, &disp_flag)) {
             return disp_flag;
         }
-
-    } else {/* RW-edition */
-
-        if (!process_rw_write(con, ostate, &disp_flag)) {
-            return disp_flag;
-        }
     }
+#else
+    g_message("%s: SIMPLE_PARSER false for con:%p", G_STRLOC, con);
+    if (!process_rw_write(con, ostate, &disp_flag)) {
+        return disp_flag;
+    }
+#endif 
 
     return DISP_CONTINUE;
 }
@@ -4321,12 +4323,12 @@ static retval_t proxy_self_read_handshake(chassis *srv, server_connection_state_
         return RET_ERROR;
     }
 
-    if (con->srv->sharding_mode) {
-        if (challenge->server_version < 50707) {
-            g_warning("%s: for xa, server:%s, mysql version:%s is lower than 5.7.7", 
-                    G_STRLOC, recv_sock->dst->name->str, challenge->server_version_str);
-        }
+#ifndef SIMPLE_PARSER
+    if (challenge->server_version < 50707) {
+        g_warning("%s: for xa, server:%s, mysql version:%s is lower than 5.7.7", 
+                G_STRLOC, recv_sock->dst->name->str, challenge->server_version_str);
     }
+#endif
 
     if (!con->srv->client_found_rows) {
         challenge->capabilities &= ~(CLIENT_FOUND_ROWS);

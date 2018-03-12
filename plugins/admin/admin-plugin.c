@@ -401,77 +401,76 @@ static int admin_send_backend_detail_info(network_mysqld_con *admin_con, const c
             continue;
         }
 
-        if (chas->sharding_mode) {
-            if (con->servers == NULL) {
+#ifndef SIMPLE_PARSER
+        if (con->servers == NULL) {
+            continue;
+        }
+
+        for (j = 0; j < con->servers->len; j++) {
+            server_session_t  *pmd = g_ptr_array_index(con->servers, j);
+
+            GHashTable *table = g_hash_table_lookup(back_user_conn_hash_table, 
+                    pmd->backend->addr->name->str);
+            if (table == NULL) {
+                g_warning("%s: table is null for backend:%s", G_STRLOC, 
+                        pmd->backend->addr->name->str);
                 continue;
             }
 
-            for (j = 0; j < con->servers->len; j++) {
-                server_session_t  *pmd = g_ptr_array_index(con->servers, j);
-
-                GHashTable *table = g_hash_table_lookup(back_user_conn_hash_table, 
-                        pmd->backend->addr->name->str);
-                if (table == NULL) {
-                    g_warning("%s: table is null for backend:%s", G_STRLOC, 
-                            pmd->backend->addr->name->str);
-                    continue;
-                }
-
-                used_conns_t *total_used = g_hash_table_lookup(table,
-                        con->client->response->username->str);
-                if (total_used == NULL) {
-                    total_used = g_new0(used_conns_t, 1);
-                    g_hash_table_insert(table, 
-                            g_strdup(con->client->response->username->str), total_used);
-                }
-                total_used->num++;
+            used_conns_t *total_used = g_hash_table_lookup(table,
+                    con->client->response->username->str);
+            if (total_used == NULL) {
+                total_used = g_new0(used_conns_t, 1);
+                g_hash_table_insert(table, 
+                        g_strdup(con->client->response->username->str), total_used);
             }
-            
-        } else {
-
-            if (con->servers != NULL) {
-                for (j = 0; j < con->servers->len; j++) {
-                    network_socket *sock = g_ptr_array_index(con->servers, j);
-                    GHashTable *table = g_hash_table_lookup(back_user_conn_hash_table, 
-                            sock->dst->name->str);
-                    if (table == NULL) {
-                        g_warning("%s: table is null for backend:%s", G_STRLOC, 
-                            sock->dst->name->str);
-                        continue;
-                    }
-
-                    used_conns_t *total_used = g_hash_table_lookup(table,
-                            con->client->response->username->str);
-                    if (total_used == NULL) {
-                        total_used = g_new0(used_conns_t, 1);
-                        g_hash_table_insert(table, 
-                                g_strdup(con->client->response->username->str), total_used);
-                    }
-                    total_used->num++;
-                }
-            } else {
-                if (con->server == NULL) {
-                    continue;
-                }
-
-                GHashTable *table = g_hash_table_lookup(back_user_conn_hash_table, 
-                            con->server->dst->name->str);
-                if (table == NULL) {
-                    g_warning("%s: table is null for backend:%s", G_STRLOC, 
-                            con->server->dst->name->str);
-                    continue;
-                }
-                used_conns_t *total_used = g_hash_table_lookup(table,
-                        con->client->response->username->str);
-                if (total_used == NULL) {
-                    total_used = g_new0(used_conns_t, 1);
-                    g_hash_table_insert(table, 
-                            g_strdup(con->client->response->username->str), total_used);
-                }
-
-                total_used->num++;
-            }
+            total_used->num++;
         }
+
+#else
+        if (con->servers != NULL) {
+            for (j = 0; j < con->servers->len; j++) {
+                network_socket *sock = g_ptr_array_index(con->servers, j);
+                GHashTable *table = g_hash_table_lookup(back_user_conn_hash_table, 
+                        sock->dst->name->str);
+                if (table == NULL) {
+                    g_warning("%s: table is null for backend:%s", G_STRLOC, 
+                            sock->dst->name->str);
+                    continue;
+                }
+
+                used_conns_t *total_used = g_hash_table_lookup(table,
+                        con->client->response->username->str);
+                if (total_used == NULL) {
+                    total_used = g_new0(used_conns_t, 1);
+                    g_hash_table_insert(table, 
+                            g_strdup(con->client->response->username->str), total_used);
+                }
+                total_used->num++;
+            }
+        } else {
+            if (con->server == NULL) {
+                continue;
+            }
+
+            GHashTable *table = g_hash_table_lookup(back_user_conn_hash_table, 
+                    con->server->dst->name->str);
+            if (table == NULL) {
+                g_warning("%s: table is null for backend:%s", G_STRLOC, 
+                        con->server->dst->name->str);
+                continue;
+            }
+            used_conns_t *total_used = g_hash_table_lookup(table,
+                    con->client->response->username->str);
+            if (total_used == NULL) {
+                total_used = g_new0(used_conns_t, 1);
+                g_hash_table_insert(table, 
+                        g_strdup(con->client->response->username->str), total_used);
+            }
+
+            total_used->num++;
+        }
+#endif
     }
 
 

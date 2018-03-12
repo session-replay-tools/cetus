@@ -48,6 +48,7 @@ IF (ENABLE_GCOV AND NOT WIN32 AND NOT APPLE)
         "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -fprofile-arcs -ftest-coverage -lgcov")
 ENDIF()
 
+option(SIMPLE_PARSER "use the simple parser")
 option(NETWORK_DEBUG_TRACE_IO "if NETWORK_DEBUG_TRACE_IO is defined, the network layer will log the raw MySQL packets as log-level debug")
 
 option(NETWORK_DEBUG_TRACE_EVENT "if NETWORK_DEBUG_TRACE_EVENT is defined, cetus will log the abnormal event")

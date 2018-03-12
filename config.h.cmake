@@ -42,6 +42,7 @@
 #cmakedefine HAVE_OPENSSL
 #define SIZEOF_RLIM_T @SIZEOF_RLIM_T@
 
+#cmakedefine SIMPLE_PARSER 1
 #cmakedefine NETWORK_DEBUG_TRACE_IO 1
 #cmakedefine NETWORK_DEBUG_TRACE_STATE_CHANGES 1
 #cmakedefine USE_GLIB_DEBUG_LOG 1

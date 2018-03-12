@@ -1336,6 +1336,7 @@ static int
 compare_records_from_column(char *str1, char *str2, 
         int com_type, int desc, int *result)
 {
+    g_debug("%s: str1:%s, str2:%s", G_STRLOC, str1, str2);
     int ret = 0; 
     if (str1[0] == '\0' && str2[0] != '\0') {
         ret = -1;
@@ -2983,7 +2984,7 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
 
         con->data = data;
 
-        if (select->flags & SF_DISTINCT) {
+        if ((select->flags & SF_DISTINCT) || field_count == group_array_size) {
             data->is_distinct = 1;
         }
 

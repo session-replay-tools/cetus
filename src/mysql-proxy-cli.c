@@ -424,12 +424,12 @@ static void sigsegv_handler(int G_GNUC_UNUSED signum) {
 
 static gboolean check_plugin_mode_valid(chassis_frontend_t *frontend, chassis *srv)
 {
-    int i, proxy_mode = 0;
+    int i, proxy_mode = 0, sharding_mode = 0;
 
     for (i = 0; frontend->plugin_names[i]; ++i) {
         char *name = frontend->plugin_names[i];
         if (strcmp(name, "shard") == 0) {
-            srv->sharding_mode = 1;
+            sharding_mode = 1;
             g_message("set sharding mode true");
         }
         if (strcmp(name, "proxy") == 0) {
@@ -437,7 +437,7 @@ static gboolean check_plugin_mode_valid(chassis_frontend_t *frontend, chassis *s
         }
     }
     
-    if (srv->sharding_mode && proxy_mode) {
+    if (sharding_mode && proxy_mode) {
         g_critical("shard & proxy is mutual exclusive");
         return FALSE;
     }
@@ -939,22 +939,22 @@ int main_cmdline(int argc, char **argv) {
 
     init_parameters(frontend, srv);
 
-    if (srv->sharding_mode) {
-        if (!frontend->log_xa_filename)
-            frontend->log_xa_filename = g_strdup("logs/xa.log");
+#ifndef SIMPLE_PARSER
+    if (!frontend->log_xa_filename)
+        frontend->log_xa_filename = g_strdup("logs/xa.log");
 
-        char *new_path = chassis_resolve_path(srv->base_dir, frontend->log_xa_filename);
-        if (new_path && new_path != frontend->log_xa_filename) {
-            g_free(frontend->log_xa_filename);
-            frontend->log_xa_filename = new_path;
-        }
-
-        g_message("XA log file: %s", frontend->log_xa_filename);
-
-        if (tc_log_init(frontend->log_xa_filename) == -1) {
-            GOTO_EXIT(EXIT_FAILURE);
-        }
+    char *new_path = chassis_resolve_path(srv->base_dir, frontend->log_xa_filename);
+    if (new_path && new_path != frontend->log_xa_filename) {
+        g_free(frontend->log_xa_filename);
+        frontend->log_xa_filename = new_path;
     }
+
+    g_message("XA log file: %s", frontend->log_xa_filename);
+
+    if (tc_log_init(frontend->log_xa_filename) == -1) {
+        GOTO_EXIT(EXIT_FAILURE);
+    }
+#endif
 
     if (frontend->max_files_number) {
         if (0 != chassis_fdlimit_set(frontend->max_files_number)) {

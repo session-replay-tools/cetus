@@ -34,7 +34,7 @@ INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}) ## for the packaged header file
 #lemon bin
 add_executable(lemon ${CETUS_TOOLS_DIR}/lemon.c)
 
-option(SIMPLE_PARSER "use the simple parser")
+#option(SIMPLE_PARSER "use the simple parser")
 if(SIMPLE_PARSER)
   message("** Using simple parser [-DSIMPLE_PARSER=ON]")
   set(LEMON_GRAMMAR_FILE "${CMAKE_CURRENT_SOURCE_DIR}/simple-parser.y")

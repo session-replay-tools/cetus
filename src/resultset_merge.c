@@ -2623,8 +2623,6 @@ disp_orderby_info(sql_column_list_t *sel_orderby, cetus_result_t *res_merge,
         ord_col->desc = (col->sort_order == SQL_SO_DESC);
     }
 
-    g_debug("%s: merge reach here", G_STRLOC);
-
     if (!get_order_by_fields(res_merge, order_array, order_array_size, merged_result)) {
         cetus_result_destroy(res_merge);
         return FALSE;
@@ -2659,6 +2657,40 @@ disp_groupby_info(sql_column_list_t *sel_groupby, cetus_result_t *res_merge,
     }
 
     if (!get_group_by_fields(res_merge, group_array, group_array_size, merged_result)) {
+        cetus_result_destroy(res_merge);
+        return FALSE;
+    }
+
+    return TRUE;
+}
+
+static gboolean
+retrieve_orderby_info_from_groupby_info(sql_column_list_t *sel_groupby, cetus_result_t *res_merge,
+        ORDER_BY *order_array, int order_array_size, result_merge_t *merged_result)
+{
+    int i;
+
+    for (i = 0; i < sel_groupby->len; ++i) {
+        sql_expr_t *expr = g_ptr_array_index(sel_groupby, i);
+        ORDER_BY *ord_col = &(order_array[i]);
+        ord_col->pos = -1; /* initial invalid value: -1 */
+        if (expr->op == TK_ID) {
+            strncpy(ord_col->name, expr->token_text, MAX_NAME_LEN - 1);
+        } else if (expr->op == TK_INTEGER) {
+            gint64 v;
+            sql_expr_get_int(expr, &v);
+            ord_col->pos = (v > 0 && v <= res_merge->field_count) ? (int)v-1 : -1;
+        } else if (expr->op == TK_FUNCTION) {
+            strncpy(ord_col->name, expr->start, expr->end - expr->start);
+        } else if (expr->op == TK_DOT) {
+            strncpy(ord_col->table_name, expr->left->token_text, MAX_NAME_LEN - 1);
+            strncpy(ord_col->name, expr->right->token_text, MAX_NAME_LEN - 1);
+        } else {
+            g_warning("order by name error");
+        }
+    }
+
+    if (!get_order_by_fields(res_merge, order_array, order_array_size, merged_result)) {
         cetus_result_destroy(res_merge);
         return FALSE;
     }
@@ -2892,6 +2924,18 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
             /* if order by & group by both appears, it's guaranteed they have
                only one same column */
             group_array[0].desc = order_array[0].desc;
+        } else {
+            if (field_count == group_array_size) {
+                memset(order_array, 0, sizeof(ORDER_BY) * MAX_ORDER_COLS);
+                order_array_size = group_array_size;
+                if (!retrieve_orderby_info_from_groupby_info(sel_groupby, res_merge,
+                            order_array, order_array_size, merged_result))
+                {
+                    g_warning("%s:disp_orderby_info from group by failed:%s",
+                            G_STRLOC, con->orig_sql->str);
+                    return 0;
+                }
+            }
         }
     }
 

@@ -98,7 +98,7 @@ Cetus能提供对分流策略的自定义。比如可以设置为：把30%的读
 
 Cetus内置监控功能，可通过配置选择开启或关闭。开启后Cetus会定期和后端进行通信，检测后端数据库的存活状态和主从延迟时间等。可通过登录管理端口SELECT * FROM backends查看。
 
-后端状态包括unknown（后端初始状态，还未建立连接）、up（能与后端正常建立连接，可以整车厂提供服务）、down（与后端无法联通，无法正常提供服务）、maintaining（后端正在维护，无法建立连接）和delete（后端已被删除）。
+后端状态包括unknown（后端初始状态，还未建立连接）、up（能与后端正常建立连接，可以正常提供服务）、down（与后端无法联通，无法正常提供服务）、maintaining（后端正在维护，无法建立连接）和delete（后端已被删除）。
 
 主从延迟检测检测设有阈值slave-delay-down和slave-delay-recover，检测到的从库延迟超过slave-delay-down阈值后端状态将被设置为DOWN，从库延迟少于slave-delay-recover阈值后端状态将恢复为UP。
 

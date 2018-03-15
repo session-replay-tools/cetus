@@ -24,12 +24,6 @@ mkdir build/
 cd build/
 ```
 
-- 配置环境变量：设置环境变量CFLAGS如下
-
-```
-export CFLAGS='-D_USE_XOPEN -D_GNU_SOURCE'
-```
-
 - 编译：利用cmake进行编译，指令如下
 
 ```

@@ -4,9 +4,9 @@ libdir=@CMAKE_INSTALL_PREFIX@/lib
 pkglibdir=${libdir}/cetus
 plugindir=${pkglibdir}/plugins
 
-Name: MySQL Proxy
+Name: cetus
 Version: @PACKAGE_VERSION_STRING@
-Description: MySQL Proxy
-URL: http://forge.mysql.com/wiki/MySQL_Proxy
+Description: cetus
+URL: https://github.com/Lede-Inc/cetus
 Requires: glib-2.0 >= 2.16, mysql-chassis >= @PACKAGE_VERSION_STRING@
 Libs: -L${libdir} -lmysql-chassis-proxy

@@ -22,6 +22,7 @@
 #include "config.h"
 #endif
 
+#define _GNU_SOURCE
 #include <sys/uio.h> 
 #include <sys/ioctl.h>
 #include <sys/socket.h>

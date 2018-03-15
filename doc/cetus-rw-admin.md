@@ -4,6 +4,52 @@
 
 **有配置修改均能动态生效，配置更改后请务必修改原始配置文件，以确保下次重启时配置能够保留。**
 
+## 查看帮助
+
+`SELECT * FROM help`或
+`select help`
+
+查看管理端口用法
+
+| Command                                  | Description                              |
+| :--------------------------------------- | :--------------------------------------- |
+| select conn_details from backend         | display the idle conns                   |
+| select * from backends                   | list the backends and their state        |
+| show connectionlist [\<num>]             | show \<num> connections                  |
+| show allow_ip \<module>                  | show allow_ip rules of module, currently admin |
+| add allow_ip \<module> \<address>        | add address to white list of module      |
+| delete allow_ip \<module> \<address>     | delete address from white list of module |
+| set reduce_conns (true\|false)           | reduce idle connections if set to true   |
+| set maintain (true\|false)               | close all client connections if set to true |
+| show status [like '%pattern%']           | show select/update/insert/delete statistics |
+| show variables [like '%pattern%']        |                                          |
+| select version                           | cetus version                            |
+| select conn_num from backends where backend_ndx=\<index> and user='\<name>') |                                          |
+| select * from user_pwd [where user='\<name>'] |                                          |
+| select * from app_user_pwd [where user='\<name>'] |                                          |
+| update user_pwd set password='xx' where user='\<name>' |                                          |
+| update app_user_pwd set password='xx' where user='\<name>' |                                          |
+| delete from user_pwd where user='\<name>' |                                          |
+| delete from app_user_pwd where user='\<name>' |                                          |
+| insert into backends values ('\<ip:port>', '(ro\|rw)', '\<state>') | add mysql instance to backends list      |
+| update backends set (type\|state)=x where (backend_ndx=\<index>\|address=\<'ip:port'>) | update mysql instance type or state      |
+| delete from backends where (backend_ndx=\<index>\|address=\<'ip:port'>) |                                          |
+| remove backend where (backend_ndx=\<index>\|address=\<'ip:port'>) |                                          |
+| add master \<'ip:port'>                  |                                          |
+| add slave \<'ip:port'>                   |                                          |
+| stats get [\<item>]                      | show query statistics                    |
+| config get [\<item>]                     | show config                              |
+| config set \<key>=\<value>               |                                          |
+| stats reset                              | reset query statistics                   |
+| save settings                            | not implemented                          |
+| select * from help                       | show this help                           |
+| select help                              | show this help                           |
+| cetus                                    | Show overall status of Cetus             |
+
+结果说明：
+
+读写分离版本管理端口提供了32条语句对cetus进行管理，具体用法见以下说明。
+
 ## 后端配置
 
 ### 查看后端
@@ -14,7 +60,7 @@
 
 | backend_ndx | address        | state | type | slave delay | uuid | idle_conns | used_conns | total_conns |
 | :---------- | :------------- | :---- | :--- | :---------- | :--- | :--------- | :--------- | :---------- |
-| 1           | 127.0.0.1:3306 | up    | rw   | NULL  | NULL | 100        | 0          | 100         |
+| 1           | 127.0.0.1:3306 | up    | rw   | NULL        | NULL | 100        | 0          | 100         |
 | 2           | 127.0.0.1:3307 | up    | ro   | 0           | NULL | 100        | 0          | 100         |
 
 结果说明：
@@ -118,7 +164,7 @@ delete:      后端已被删除，无法再建立连接。
 
 ### 查看连接池/通用配置
 
-`config get [\<item\>]`
+`config get [<item>]`
 
 `config get`查看支持的配置类型
    * `pool`连接池配置
@@ -137,7 +183,7 @@ delete:      后端已被删除，无法再建立连接。
 
 ### 修改连接池/通用配置
 
-`config set [\<item\>]`
+`config set [<item>]`
 
 `config set common.[option] = [value]`修改基本配置
 
@@ -157,7 +203,7 @@ delete:      后端已被删除，无法再建立连接。
 
 查看的参数均为启动配置选项中的参数，详见[Cetus 启动配置选项说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-configuration.md)。
 
-## 查看连接信息
+## 查看/设置连接信息
 
 ### 查看当前连接的详细信息
 
@@ -190,6 +236,26 @@ delete:      后端已被删除，无法再建立连接。
 例如
 
 >select conn_num from backends where backend_ndx=2 and user='root');
+
+### 设置是否减少空闲连接
+
+`set reduce_conns (true|false)`
+
+例如
+
+>set reduce_conns true;
+
+减少空闲连接。
+
+### 设置是否关闭所有客户端连接
+
+`set maintain (true|false)`
+
+例如
+
+>set maintain true;
+
+关闭所有客户端连接。
 
 ## 用户/密码管理
 
@@ -360,7 +426,7 @@ Proxy: 仅配置IP，代表限制该IP来源所有用户的访问；配置User@I
 
 ### 查看统计信息
 
-`stats get [\<item\>]`
+`stats get [<item>]`
 
 `stats get`查看支持的统计类型
    * `client_query` 客户发来的SQL数量
@@ -375,11 +441,11 @@ Proxy: 仅配置IP，代表限制该IP来源所有用户的访问；配置User@I
 
 `stats get query_time_table` `stats get query_wait_table` 查看各时间值对应的SQL数量，如：
 
-| name |value   |
-| :---------- | :------------- |
-| query_time_table.1  |  3 |
-| query_time_table.2 | 5 |
-| query_time_table.5 | 1 |
+| name               | value |
+| :----------------- | :---- |
+| query_time_table.1 | 3     |
+| query_time_table.2 | 5     |
+| query_time_table.5 | 1     |
 
 表示用时1秒的SQL有3条，用时2秒的SQL有5条，用时5秒的SQL有1条
 
@@ -412,13 +478,6 @@ Com_select_gobal   仅涉及公共表的SELECT数量
 Com_select_bad_key 分库键未识别导致走全库的SELECT数量
 ```
 
-## 其他
+### 查看当前cetus版本
 
-### 减少系统占用的内存
-
-`reduce memory`
-
-```
-说明
-获取内存分配信息，当总可用空间（字节）大于总分配空间（字节）时，释放堆顶部的空闲内存
-```
+`select version`

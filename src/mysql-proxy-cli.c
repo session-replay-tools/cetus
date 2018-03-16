@@ -647,6 +647,7 @@ int main_cmdline(int argc, char **argv) {
 
     GError *gerr = NULL;
     chassis_log *log = NULL;
+    FILE *slow_query_log_fp = NULL;
 
     /*
      * a little helper macro to set the src-location that
@@ -804,10 +805,7 @@ int main_cmdline(int argc, char **argv) {
 
         GOTO_EXIT(EXIT_FAILURE);
     }
-    FILE* slow_query_log_fp = init_slow_query_log(log->log_filename);
-    if (!slow_query_log_fp) {
-        g_warning("cannot open slow-query log");
-    }
+
 
     /*
      * handle log-level after the config-file is read,
@@ -975,6 +973,12 @@ int main_cmdline(int argc, char **argv) {
         GOTO_EXIT(EXIT_FAILURE);
     }
 #endif
+
+    slow_query_log_fp = init_slow_query_log(log->log_filename);
+    if (!slow_query_log_fp) {
+        g_warning("cannot open slow-query log");
+        GOTO_EXIT(EXIT_FAILURE);
+    }
 
     if (frontend->max_files_number) {
         if (0 != chassis_fdlimit_set(frontend->max_files_number)) {

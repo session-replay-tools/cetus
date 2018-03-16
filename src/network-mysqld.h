@@ -557,6 +557,7 @@ struct network_mysqld_con {
     unsigned int xa_query_status_error_and_abort:1;
     unsigned int use_all_prev_servers:1;
     unsigned int partially_merged:1;
+    unsigned int last_record_updated:1;
     unsigned int query_cache_judged:1;
     unsigned int is_client_compressed:1;
     unsigned int last_backend_type:2;

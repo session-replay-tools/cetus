@@ -1125,7 +1125,8 @@ static int process_rw_split(network_mysqld_con *con, proxy_plugin_con_t *st,
         sql_context_t *context, mysqld_query_attr_t *query_attr, 
         int is_under_sess_scope, int command, int *disp_flag)
 {
-    if (!con->is_in_transaction && !is_under_sess_scope && command == COM_QUERY)
+    if (!con->is_in_transaction && !is_under_sess_scope && command == COM_QUERY && 
+            (!con->last_record_updated))
     {
         /* send all non-transactional SELECTs to a slave */
         int ret = process_non_trans_query(con, context, query_attr);
@@ -1404,6 +1405,8 @@ static network_mysqld_stmt_ret network_read_query(network_mysqld_con *con,
             con->srv->query_stats.server_query_details[st->backend_ndx].rw++;
         }
     }
+
+    con->last_record_updated = 0;
 
     /* ! Normal packets also sent out through "injection" interface */
     int payload_len = packet.data->len - NET_HEADER_SIZE;
@@ -1922,6 +1925,9 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query_result) {
 
                         /* INSERTs have a affected_rows */
                         if (!com_query->was_resultset) {
+                            if (com_query->affected_rows > 0) {
+                                con->last_record_updated = 1;
+                            }
                             inj->qstat.affected_rows = com_query->affected_rows;
                             inj->qstat.insert_id     = com_query->insert_id;
                             if (inj->qstat.insert_id > 0) {

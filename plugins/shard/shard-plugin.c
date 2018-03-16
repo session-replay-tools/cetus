@@ -1192,7 +1192,7 @@ static int proxy_get_server_list(network_mysqld_con *con)
     con->resp_too_long = 0;
     con->all_participate_num = 0;
 
-    if (con->srv->master_preferred ||
+    if (con->last_record_updated || con->srv->master_preferred ||
         st->sql_context->rw_flag & CF_WRITE ||
         st->sql_context->rw_flag & CF_FORCE_MASTER || /*# mode = READWRITE */
         !con->is_auto_commit || rv == USE_SAME)
@@ -1236,6 +1236,8 @@ static int proxy_get_server_list(network_mysqld_con *con)
     if (!make_decisions(con, rv, &disp_flag)) {
         return disp_flag;
     }
+
+    con->last_record_updated = 0;
 
     return RET_SUCCESS;
 }

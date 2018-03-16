@@ -2605,6 +2605,11 @@ merge_for_modify(sql_context_t *context, network_queue *send_queue, GPtrArray *r
             break;
         }
     }
+
+    if (total_affected_rows > 0) {
+        con->last_record_updated = 1;
+    }
+
     if (con->sharding_plan->table_type == GLOBAL_TABLE && recv_queues->len) {
         total_affected_rows /= recv_queues->len;
     }

@@ -2584,14 +2584,12 @@ handle_send_query_to_servers(network_mysqld_con *con,
      * from the send-queue are flushed 
      */
 #ifndef SIMPLE_PARSER
-    g_message("%s: SIMPLE_PARSER true for con:%p", G_STRLOC, con);
     if (con->servers != NULL) {
         if (!process_shard_write(con, &disp_flag)) {
             return disp_flag;
         }
     }
 #else
-    g_message("%s: SIMPLE_PARSER false for con:%p", G_STRLOC, con);
     if (!process_rw_write(con, ostate, &disp_flag)) {
         return disp_flag;
     }

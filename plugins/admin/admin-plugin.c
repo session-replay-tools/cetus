@@ -383,9 +383,9 @@ static void g_table_free_all(gpointer q) {
     g_hash_table_destroy(table);
 }
 
-typedef struct used_conns {
+struct used_conns_t {
     int num;
-} used_conns_t;
+};
 
 static int admin_send_backend_detail_info(network_mysqld_con *admin_con, const char *sql)
 {
@@ -437,10 +437,10 @@ static int admin_send_backend_detail_info(network_mysqld_con *admin_con, const c
                 continue;
             }
 
-            used_conns_t *total_used = g_hash_table_lookup(table,
+            struct used_conns_t *total_used = g_hash_table_lookup(table,
                     con->client->response->username->str);
             if (total_used == NULL) {
-                total_used = g_new0(used_conns_t, 1);
+                total_used = g_new0(struct used_conns_t, 1);
                 g_hash_table_insert(table, 
                         g_strdup(con->client->response->username->str), total_used);
             }
@@ -459,10 +459,10 @@ static int admin_send_backend_detail_info(network_mysqld_con *admin_con, const c
                     continue;
                 }
 
-                used_conns_t *total_used = g_hash_table_lookup(table,
+                struct used_conns_t *total_used = g_hash_table_lookup(table,
                         con->client->response->username->str);
                 if (total_used == NULL) {
-                    total_used = g_new0(used_conns_t, 1);
+                    total_used = g_new0(struct used_conns_t, 1);
                     g_hash_table_insert(table, 
                             g_strdup(con->client->response->username->str), total_used);
                 }
@@ -480,10 +480,10 @@ static int admin_send_backend_detail_info(network_mysqld_con *admin_con, const c
                         con->server->dst->name->str);
                 continue;
             }
-            used_conns_t *total_used = g_hash_table_lookup(table,
+            struct used_conns_t *total_used = g_hash_table_lookup(table,
                     con->client->response->username->str);
             if (total_used == NULL) {
-                total_used = g_new0(used_conns_t, 1);
+                total_used = g_new0(struct used_conns_t, 1);
                 g_hash_table_insert(table, 
                         g_strdup(con->client->response->username->str), total_used);
             }
@@ -551,7 +551,7 @@ static int admin_send_backend_detail_info(network_mysqld_con *admin_con, const c
                 snprintf(buffer, sizeof(buffer), "%d", queue->length);
                 g_ptr_array_add(row, g_strdup(buffer));
 
-                used_conns_t *total_used = g_hash_table_lookup(table, key->str);
+                struct used_conns_t *total_used = g_hash_table_lookup(table, key->str);
                 if (total_used) {
                     snprintf(buffer, sizeof(buffer), "%d", total_used->num); 
                 } else {
@@ -2355,28 +2355,28 @@ network_mysqld_admin_plugin_get_options(chassis_plugin_config *config)
 /* ring buffer from: https://github.com/AndersKaloer/Ring-Buffer */
 #define RING_BUFFER_SIZE 128 /* must be power of 2, !! index [0, 126] !!*/
 #define RING_BUFFER_MASK (RING_BUFFER_SIZE-1)
-typedef struct ring_buffer_t {
+struct ring_buffer_t {
     int head;
     int tail;
     guint64 buffer[RING_BUFFER_SIZE];
-} ring_buffer_t;
+};
 
-static void ring_buffer_add(ring_buffer_t *buffer, guint64 data) {
+static void ring_buffer_add(struct ring_buffer_t *buffer, guint64 data) {
   if (((buffer->head - buffer->tail) & RING_BUFFER_MASK) == RING_BUFFER_MASK)
       buffer->tail = ((buffer->tail + 1) & RING_BUFFER_MASK);
   buffer->buffer[buffer->head] = data;
   buffer->head = ((buffer->head + 1) & RING_BUFFER_MASK);
 }
 
-static guint64 ring_buffer_get(ring_buffer_t *buffer, int index) {
+static guint64 ring_buffer_get(struct ring_buffer_t *buffer, int index) {
   if (index >= ((buffer->head - buffer->tail) & RING_BUFFER_MASK))
       return 0;
   int data_index = ((buffer->tail + index) & RING_BUFFER_MASK);
   return buffer->buffer[data_index];
 }
 
-static ring_buffer_t g_sql_count = {126, 0};
-static ring_buffer_t g_trx_count = {126, 0};
+static struct ring_buffer_t g_sql_count = {126, 0};
+static struct ring_buffer_t g_trx_count = {126, 0};
 
 static void calc_qps_average(char *buf, int len)
 {

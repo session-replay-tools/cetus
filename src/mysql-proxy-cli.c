@@ -82,7 +82,7 @@
 /**
  * options of the cetus frontend
  */
-typedef struct {
+struct chassis_frontend_t{
     int print_version;
     int verbose_shutdown;
 
@@ -140,15 +140,15 @@ typedef struct {
     char *default_db;
 
     char *remote_config_url;
-} chassis_frontend_t;
+};
 
 /**
  * create a new the frontend for the chassis
  */
-chassis_frontend_t *chassis_frontend_new(void) {
-    chassis_frontend_t *frontend;
+struct chassis_frontend_t *chassis_frontend_new(void) {
+    struct chassis_frontend_t *frontend;
 
-    frontend = g_slice_new0(chassis_frontend_t);
+    frontend = g_slice_new0(struct chassis_frontend_t);
     frontend->max_files_number = 0;
     frontend->disable_threads = 0;
     frontend->is_back_compressed = 0;
@@ -172,7 +172,7 @@ chassis_frontend_t *chassis_frontend_new(void) {
 /**
  * free the frontend of the chassis
  */
-void chassis_frontend_free(chassis_frontend_t *frontend) {
+void chassis_frontend_free(struct chassis_frontend_t *frontend) {
     if (!frontend) return;
 
     if (frontend->keyfile) g_key_file_free(frontend->keyfile);
@@ -196,14 +196,14 @@ void chassis_frontend_free(chassis_frontend_t *frontend) {
 
     g_free(frontend->remote_config_url);
 
-    g_slice_free(chassis_frontend_t, frontend);
+    g_slice_free(struct chassis_frontend_t, frontend);
 }
 
 
 /**
  * setup the options of the chassis
  */
-int chassis_frontend_set_chassis_options(chassis_frontend_t *frontend, chassis_options_t *opts) {
+int chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassis_options_t *opts) {
     chassis_options_add(opts,
             "verbose-shutdown",
             0, 0, OPTION_ARG_NONE, &(frontend->verbose_shutdown),
@@ -436,7 +436,7 @@ static void sigsegv_handler(int G_GNUC_UNUSED signum) {
 }
 #endif
 
-static gboolean check_plugin_mode_valid(chassis_frontend_t *frontend, chassis *srv)
+static gboolean check_plugin_mode_valid(struct chassis_frontend_t *frontend, chassis *srv)
 {
     int i, proxy_mode = 0, sharding_mode = 0;
 
@@ -469,7 +469,7 @@ static void g_query_cache_item_free(gpointer q) {
 #define DUP_STRING(STR, DEFAULT) \
         (STR) ? g_strdup(STR) : ((DEFAULT) ? g_strdup(DEFAULT) : NULL)
 
-static void init_parameters(chassis_frontend_t *frontend, chassis *srv)
+static void init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
 {
     srv->default_username = DUP_STRING(frontend->default_username, NULL);
     srv->default_charset = DUP_STRING(frontend->default_charset, NULL);
@@ -546,7 +546,7 @@ static void init_parameters(chassis_frontend_t *frontend, chassis *srv)
 
 
 static void 
-release_resouces_when_exit(chassis_frontend_t *frontend, chassis *srv, GError *gerr,
+release_resouces_when_exit(struct chassis_frontend_t *frontend, chassis *srv, GError *gerr,
         chassis_options_t *opts, chassis_log *log)
 {
     if (gerr) g_error_free(gerr);
@@ -562,7 +562,7 @@ release_resouces_when_exit(chassis_frontend_t *frontend, chassis *srv, GError *g
 }
 
 static void
-resolve_path(chassis *srv, chassis_frontend_t *frontend)
+resolve_path(chassis *srv, struct chassis_frontend_t *frontend)
 {
     /*
      * these are used before we gathered all the options
@@ -635,7 +635,7 @@ int main_cmdline(int argc, char **argv) {
     static struct sigaction sigsegv_sa;
 #endif
     /* read the command-line options */
-    chassis_frontend_t *frontend = NULL;
+    struct chassis_frontend_t *frontend = NULL;
     chassis_options_t *opts = NULL;
 
     GError *gerr = NULL;

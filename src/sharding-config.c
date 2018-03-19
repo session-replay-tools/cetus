@@ -36,32 +36,32 @@ static GHashTable *shard_conf_vdb_map = NULL;
 static GList *shard_conf_single_tables = NULL;
 
 
-typedef struct sharding_database_t {
+struct sharding_database_t {
     char *name;
     GHashTable *tables; /* <char *, const sharding_table_t *> */
-} sharding_database_t;
+};
 
-static sharding_database_t *sharding_database_new(const char *name)
+static struct sharding_database_t *sharding_database_new(const char *name)
 {
-    sharding_database_t *db = g_new0(sharding_database_t, 1);
+    struct sharding_database_t *db = g_new0(struct sharding_database_t, 1);
     db->tables = g_hash_table_new(g_str_hash, g_str_equal);
     db->name = g_strdup(name);
     return db;
 }
 
-static void sharding_database_free(sharding_database_t *db)
+static void sharding_database_free(struct sharding_database_t *db)
 {
     g_free(db->name);
     g_hash_table_destroy(db->tables);
     g_free(db);
 }
 
-static void sharding_database_add_table(sharding_database_t *db, sharding_table_t *table)
+static void sharding_database_add_table(struct sharding_database_t *db, sharding_table_t *table)
 {
     g_hash_table_insert(db->tables, table->name->str, table);
 }
 
-static sharding_table_t *sharding_database_get_table(sharding_database_t *db,
+static sharding_table_t *sharding_database_get_table(struct sharding_database_t *db,
                                                      const char *table)
 {
     if (!table)
@@ -165,12 +165,12 @@ static gboolean sharding_vdb_is_valid(sharding_vdb_t *vdb)
     return TRUE;
 }
 
-static sharding_database_t *sharding_vdb_get_database(sharding_vdb_t *vdb,
+static struct sharding_database_t *sharding_vdb_get_database(sharding_vdb_t *vdb,
                                                       const char *db_name)
 {
     int i = 0;
     for (i = 0; i < vdb->databases->len; ++i) {
-        sharding_database_t *db = g_ptr_array_index(vdb->databases, i);
+        struct sharding_database_t *db = g_ptr_array_index(vdb->databases, i);
         if (strcasecmp(db_name, db->name) == 0) {
             return db;
         }
@@ -178,10 +178,10 @@ static sharding_database_t *sharding_vdb_get_database(sharding_vdb_t *vdb,
     return NULL;
 }
 
-static sharding_database_t *sharding_vdb_add_database(sharding_vdb_t *vdb,
+static struct sharding_database_t *sharding_vdb_add_database(sharding_vdb_t *vdb,
                                                       const char *name)
 {
-    sharding_database_t *db = sharding_database_new(name);
+    struct sharding_database_t *db = sharding_database_new(name);
     g_ptr_array_add(vdb->databases, db);
     return db;
 }
@@ -311,7 +311,7 @@ sharding_table_t *shard_conf_get_info(const char *db_name, const char *table)
     if (!vdb) {
         return NULL;
     }
-    sharding_database_t *db = sharding_vdb_get_database(vdb, db_name);
+    struct sharding_database_t *db = sharding_vdb_get_database(vdb, db_name);
     if (!db) {
         return NULL;
     }
@@ -342,13 +342,13 @@ GPtrArray *shard_conf_get_fixed_group(GPtrArray *groups, const char *db, guint32
     return groups;
 }
 
-typedef struct single_table_t { /* single table only resides on 1 group */
+struct single_table_t { /* single table only resides on 1 group */
     GString *name;
     GString *db;
     GString *group;
-} single_table_t;
+};
 
-void single_table_free(single_table_t *t)
+void single_table_free(struct single_table_t *t)
 {
     if (t) {
         g_string_free(t->name, TRUE);
@@ -422,7 +422,7 @@ gboolean shard_conf_try_setup(GList *vdbs, GList *tables, GList *single_tables)
         }
 
         /* collect database into vdb */
-        sharding_database_t *database = sharding_vdb_get_database(vdb, table->db->str);
+        struct sharding_database_t *database = sharding_vdb_get_database(vdb, table->db->str);
         if (!database) {
             database = sharding_vdb_add_database(vdb, table->db->str);
         }
@@ -483,11 +483,11 @@ gboolean shard_conf_load(char *json_str)
     return success;
 }
 
-static single_table_t *shard_conf_get_single_table(const char *db, const char *name)
+static struct single_table_t *shard_conf_get_single_table(const char *db, const char *name)
 {
     GList *l = shard_conf_single_tables;
     for (; l; l = l->next) {
-        single_table_t *t = l->data;
+        struct single_table_t *t = l->data;
         if (strcasecmp(t->name->str, name) == 0
             && strcasecmp(t->db->str, db) == 0) {
             return t;
@@ -498,7 +498,7 @@ static single_table_t *shard_conf_get_single_table(const char *db, const char *n
 
 gboolean shard_conf_is_single_table(const char *db, const char *name)
 {
-    single_table_t *t = shard_conf_get_single_table(db, name);
+    struct single_table_t *t = shard_conf_get_single_table(db, name);
     return t != NULL;
 }
 
@@ -517,7 +517,7 @@ static gboolean shard_conf_group_contains(GPtrArray *groups, GString *match)
 GPtrArray *shard_conf_get_single_table_distinct_group(GPtrArray *groups,
                                                       const char *db, const char *name)
 {
-    single_table_t *t = shard_conf_get_single_table(db, name);
+    struct single_table_t *t = shard_conf_get_single_table(db, name);
     if (t && !shard_conf_group_contains(groups, t->group)) {
         g_ptr_array_add(groups, t->group);
     }
@@ -783,7 +783,7 @@ static GList *parse_single_tables(cJSON *root)
         cJSON *db = cJSON_GetObjectItem(p, "db");
         cJSON *group = cJSON_GetObjectItem(p, "group");
         if (name && db && group) {
-            single_table_t *table = g_new0(single_table_t, 1);
+            struct single_table_t *table = g_new0(struct single_table_t, 1);
             table->group = g_string_new(group->valuestring);
             table->db = g_string_new(db->valuestring);
             table->name = g_string_new(name->valuestring);

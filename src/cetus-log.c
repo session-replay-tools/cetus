@@ -25,12 +25,12 @@ static char tc_error_log_time[TC_ERR_LOG_TIME_STR_LEN];
 
 static int update_time();
 
-typedef struct {
+struct tc_log_level_t {
     char *level;
     int   len;
-} tc_log_level_t;
+};
 
-static tc_log_level_t tc_log_levels[] = {
+static struct tc_log_level_t tc_log_levels[] = {
     { "[unknown]", 9 }, 
     { "[emerg]", 7 },
     { "[alert]", 7 },
@@ -211,7 +211,7 @@ tc_log_info(int level, int err, const char *fmt, ...)
     int             n, len;
     char            buffer[LOG_MAX_LEN], *p;
     va_list         args;
-    tc_log_level_t *ll;
+    struct tc_log_level_t *ll;
 
     if (log_fd == -1) {
         return;

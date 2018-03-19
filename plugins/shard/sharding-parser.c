@@ -280,13 +280,13 @@ static gboolean sql_select_contains_sharding_table(sql_select_t *select,
     return FALSE;
 }
 
-typedef struct condition_t {
+struct condition_t {
     int op;
     union {
         gint64 num;
         const char *str;
     }v;
-} condition_t;
+};
 
 /**
  * check if the group satisfies an inequation
@@ -294,7 +294,7 @@ typedef struct condition_t {
  *   if exists X -> (low, high] that satifies X > 42, return true
  *   if it doesn't exist such an X, return false;
  */
-static gboolean partition_satisfies(sharding_partition_t *partition, condition_t cond)
+static gboolean partition_satisfies(sharding_partition_t *partition, struct condition_t cond)
 {
     /* partition value -> (low, high] */
     const sharding_vdb_t *conf = partition->vdb;
@@ -363,7 +363,7 @@ static gboolean partition_satisfies(sharding_partition_t *partition, condition_t
 }
 
 /* filter out those which not satisfy cond */
-static void partitions_filter(GPtrArray *partitions, condition_t cond)
+static void partitions_filter(GPtrArray *partitions, struct condition_t cond)
 {
     int i = 0;
     for (i = 0; i < partitions->len; ++i) {
@@ -376,7 +376,7 @@ static void partitions_filter(GPtrArray *partitions, condition_t cond)
 }
 
 /* collect those which satisfy cond */
-static void partitions_collect(GPtrArray *from_partitions, condition_t cond,
+static void partitions_collect(GPtrArray *from_partitions, struct condition_t cond,
                                  GPtrArray *to_partitions)
 {
     int i = 0;
@@ -389,7 +389,7 @@ static void partitions_collect(GPtrArray *from_partitions, condition_t cond,
 }
 
 /* get first group that satisfies cond */
-sharding_partition_t *partitions_get(GPtrArray *from_partitions, condition_t cond)
+sharding_partition_t *partitions_get(GPtrArray *from_partitions, struct condition_t cond)
 {
     int i = 0;
     for (i = 0; i < from_partitions->len; ++i) {
@@ -425,7 +425,7 @@ static GPtrArray *partitions_dup(GPtrArray *partitions)
 /**
  * parse cond.v from a string
  */
-static int string_to_sharding_value(const char *str, int expected, condition_t *cond)
+static int string_to_sharding_value(const char *str, int expected, struct condition_t *cond)
 {
     assert(cond);
     if (expected == SHARD_DATA_TYPE_STR) {
@@ -455,7 +455,7 @@ static int string_to_sharding_value(const char *str, int expected, condition_t *
 /**
  * parse cond.v from sql expression
  */
-static int expr_parse_sharding_value(sql_expr_t *p, int expected, condition_t *cond)
+static int expr_parse_sharding_value(sql_expr_t *p, int expected, struct condition_t *cond)
 {
     assert(p);
     assert(cond);
@@ -485,7 +485,7 @@ static int partitions_filter_inequation_expr(GPtrArray *partitions, sql_expr_t *
         return PARSE_OK;
     }
 
-    condition_t cond = {0};
+    struct condition_t cond = {0};
     cond.op = expr->op;
     int rc = expr_parse_sharding_value(expr->right, conf->key_type, &cond);
     if (rc != PARSE_OK)
@@ -505,7 +505,7 @@ static int partitions_filter_BETWEEN_expr(GPtrArray *partitions, sql_expr_t *exp
         return PARSE_OK;
     }
 
-    condition_t cond = {0};
+    struct condition_t cond = {0};
     sql_expr_list_t *btlist = expr->list;
     if (btlist && btlist->len == 2) {
         sql_expr_t *low = g_ptr_array_index(btlist, 0);
@@ -536,7 +536,7 @@ static int partitions_collect_IN_expr(GPtrArray *partitions, sql_expr_t *expr)
         return PARSE_OK;
     }
 
-    condition_t cond = {0};
+    struct condition_t cond = {0};
     if (expr->list && expr->list->len > 0) {
         GPtrArray *partitions = g_ptr_array_new();
 
@@ -1120,7 +1120,7 @@ static int insert_multi_value(sql_context_t *context, sql_insert_t *insert,
             rc = ERROR_UNPARSABLE;
             goto out;
         }
-        condition_t cond = {TK_EQ, {0}};
+        struct condition_t cond = {TK_EQ, {0}};
         sql_expr_t *val = g_ptr_array_index(values->columns, shard_key_index);
         int rc = expr_parse_sharding_value(val, shard_info->shard_key_type, &cond);
         if (rc != PARSE_OK) {
@@ -1234,7 +1234,7 @@ static int routing_insert(sql_context_t *context, sql_insert_t *insert,
         return ERROR_UNPARSABLE;
     }
 
-    condition_t cond = {TK_EQ, {0}};
+    struct condition_t cond = {TK_EQ, {0}};
     sql_expr_t *val = g_ptr_array_index(values, shard_key_index);
     int rc = expr_parse_sharding_value(val, shard_info->shard_key_type, &cond);
     if (rc != PARSE_OK) {
@@ -1358,7 +1358,7 @@ int routing_by_property(sql_context_t *context, sql_property_t *property,
         GPtrArray *partitions = g_ptr_array_new();
         shard_conf_table_partitions(partitions, db, table);
         if (property->key) {
-            condition_t cond = {TK_EQ, {0}};
+            struct condition_t cond = {TK_EQ, {0}};
             sharding_table_t *info = shard_conf_get_info(db, table);
             if (!info) {
                 g_ptr_array_free(partitions, TRUE);

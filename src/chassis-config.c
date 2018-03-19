@@ -38,15 +38,15 @@ enum chassis_config_type_t {
 };
 
 #define RF_MAX_NAME_LEN 128
-typedef struct chassis_config_object_t {
+struct config_object_t {
     char name[RF_MAX_NAME_LEN];
 
     /* TODO: cache lock */
     char *cache;
     time_t mtime;
-} config_object_t;
+};
 
-static void config_object_free(config_object_t *ob)
+static void config_object_free(struct config_object_t *ob)
 {
     if (ob->cache) g_free(ob->cache);
     g_free(ob);
@@ -323,7 +323,7 @@ GHashTable *chassis_config_get_options(chassis_config_t *conf)
 }
 
 
-static void chassis_config_object_set_cache(config_object_t *ob,
+static void chassis_config_object_set_cache(struct config_object_t *ob,
                                         const char *str, time_t mt)
 {
     if (ob->cache) {
@@ -333,12 +333,12 @@ static void chassis_config_object_set_cache(config_object_t *ob,
     ob->mtime = mt;
 }
 
-static config_object_t *chassis_config_get_object(chassis_config_t *conf,
+static struct config_object_t *chassis_config_get_object(chassis_config_t *conf,
                                                         const char *name)
 {
     GList *l = NULL;
     for (l = conf->objects; l; l = l->next) {
-        config_object_t *ob = l->data;
+        struct config_object_t *ob = l->data;
         if (strcmp(ob->name, name) == 0)
             return ob;
     }
@@ -346,7 +346,7 @@ static config_object_t *chassis_config_get_object(chassis_config_t *conf,
 }
 
 static gboolean chassis_config_mysql_query_object(chassis_config_t *conf,
-                  config_object_t *object, const char *name, char **json_res)
+                  struct config_object_t *object, const char *name, char **json_res)
 {
     g_assert(conf->type == CHASSIS_CONF_MYSQL);
     if (object->cache) {
@@ -391,7 +391,7 @@ mysql_error:
 }
 
 static gboolean chassis_config_local_query_object(chassis_config_t *conf,
-                   config_object_t *object, const char *name, char **json_res)
+                   struct config_object_t *object, const char *name, char **json_res)
 {
     if (object->cache) {
         *json_res = g_strdup(object->cache);
@@ -425,9 +425,9 @@ static gboolean chassis_config_local_query_object(chassis_config_t *conf,
 gboolean chassis_config_query_object(chassis_config_t *conf,
                                     const char *name, char **json_res)
 {
-    config_object_t *object = chassis_config_get_object(conf, name);
+    struct config_object_t *object = chassis_config_get_object(conf, name);
     if (!object) {
-        object = g_new0(config_object_t, 1);
+        object = g_new0(struct config_object_t, 1);
         strncpy(object->name, name, RF_MAX_NAME_LEN - 1);
         conf->objects = g_list_append(conf->objects, object);
     }
@@ -443,7 +443,7 @@ gboolean chassis_config_query_object(chassis_config_t *conf,
 }
 
 static gboolean chassis_config_mysql_write_object(chassis_config_t *conf,
-             config_object_t *object, const char *name, const char *json)
+             struct config_object_t *object, const char *name, const char *json)
 {
     g_assert(conf->type == CHASSIS_CONF_MYSQL);
     time_t now = time(0);
@@ -467,7 +467,7 @@ static gboolean chassis_config_mysql_write_object(chassis_config_t *conf,
 }
 
 static gboolean chassis_config_local_write_object(chassis_config_t *conf,
-             config_object_t *object, const char *name, const char *json_str)
+             struct config_object_t *object, const char *name, const char *json_str)
 {
     /* conf->schema is an absolute path for local config */
     char basename[128] = {0};
@@ -493,9 +493,9 @@ static gboolean chassis_config_local_write_object(chassis_config_t *conf,
 gboolean chassis_config_write_object(chassis_config_t *conf,
                                      const char *name, const char *json)
 {
-    config_object_t *object = chassis_config_get_object(conf, name);
+    struct config_object_t *object = chassis_config_get_object(conf, name);
     if (!object) {
-        object = g_new0(config_object_t, 1);
+        object = g_new0(struct config_object_t, 1);
         strncpy(object->name, name, RF_MAX_NAME_LEN - 1);
         conf->objects = g_list_append(conf->objects, object);
     }
@@ -556,7 +556,7 @@ gboolean chassis_config_parse_options(chassis_config_t *conf, GList *entries)
 }
 
 gboolean chassis_config_mysql_is_object_outdated(chassis_config_t *conf,
-                                                 config_object_t *object,
+                                                 struct config_object_t *object,
                                                  const char *name)
 {
     MYSQL *conn = chassis_config_get_mysql_connection(conf);
@@ -582,7 +582,7 @@ gboolean chassis_config_mysql_is_object_outdated(chassis_config_t *conf,
 }
 
 gboolean chassis_config_local_is_object_outdated(chassis_config_t *conf,
-                                                 config_object_t *object,
+                                                 struct config_object_t *object,
                                                  const char *name)
 {
     GStatBuf sta;
@@ -599,7 +599,7 @@ gboolean chassis_config_local_is_object_outdated(chassis_config_t *conf,
 
 gboolean chassis_config_is_object_outdated(chassis_config_t *conf, const char *name)
 {
-    config_object_t *object = chassis_config_get_object(conf, name);
+    struct config_object_t *object = chassis_config_get_object(conf, name);
     if (!object) {
         return FALSE;
     }
@@ -615,7 +615,7 @@ gboolean chassis_config_is_object_outdated(chassis_config_t *conf, const char *n
 
 void chassis_config_update_object_cache(chassis_config_t *conf, const char *name)
 {
-    config_object_t *object = chassis_config_get_object(conf, name);
+    struct config_object_t *object = chassis_config_get_object(conf, name);
     if (!object)
         return;
     if (object->cache) {

@@ -212,7 +212,7 @@ chassis_option_t *chassis_options_get(GList *opts, const char *long_name)
 
 #define OPTIONAL_ARG(entry) FALSE
 
-typedef struct
+struct opt_change
 {
   enum option_type arg_type;
   gpointer arg_data;
@@ -234,13 +234,13 @@ typedef struct
       gchar **data;
     } array;
   } allocated;
-} Change;
+};
 
-typedef struct
+struct pending_null
 {
   gchar **ptr;
   gchar *value;
-} PendingNull;
+};
 
 static gboolean context_has_h_entry(chassis_options_t *context)
 {
@@ -371,13 +371,13 @@ parse_int64(const gchar *arg_name,
     return TRUE;
 }
 
-static Change *
+static struct opt_change *
 get_change(chassis_options_t *context,
             enum option_type      arg_type,
             gpointer        arg_data)
 {
     GList *list;
-    Change *change = NULL;
+    struct opt_change *change = NULL;
 
     for(list = context->changes; list != NULL; list = list->next) {
         change = list->data;
@@ -386,7 +386,7 @@ get_change(chassis_options_t *context,
             goto found;
     }
 
-    change = g_new0(Change, 1);
+    change = g_new0(struct opt_change, 1);
     change->arg_type = arg_type;
     change->arg_data = arg_data;
 
@@ -401,9 +401,9 @@ add_pending_null(chassis_options_t *context,
                   gchar         **ptr,
                   gchar          *value)
 {
-    PendingNull *n;
+    struct pending_null *n;
 
-    n = g_new0(PendingNull, 1);
+    n = g_new0(struct pending_null, 1);
     n->ptr = ptr;
     n->value = value;
 
@@ -418,7 +418,7 @@ parse_arg(chassis_options_t *context,
            GError        **error)
 
 {
-    Change *change;
+    struct opt_change *change;
 
     g_assert(value || OPTIONAL_ARG(entry) || NO_ARG(entry));
 
@@ -680,7 +680,7 @@ static void free_changes_list(chassis_options_t *context, gboolean revert)
 {
     GList *list;
     for (list = context->changes; list != NULL; list = list->next) {
-        Change *change = list->data;
+        struct opt_change *change = list->data;
 
         if (revert) {
             switch (change->arg_type) {
@@ -718,7 +718,7 @@ static void free_pending_nulls(chassis_options_t *context, gboolean perform_null
 {
     GList *list;
     for (list = context->pending_nulls; list != NULL; list = list->next) {
-        PendingNull *n = list->data;
+        struct pending_null *n = list->data;
 
         if (perform_nulls) {
             if (n->value) {

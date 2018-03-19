@@ -1060,7 +1060,8 @@ process_quit_cmd(network_mysqld_con *con, int backend_ndx, int *disp_flag)
     if (con->is_in_transaction || network_mysqld_con_is_trx_feature_changed(con)) {
         g_message("%s: change user when COM_QUIT:%d", G_STRLOC, backend_ndx);
         int result;
-        if (con->srv->is_reset_conn_enabled) {
+        if (con->server->is_reset_conn_supported) {
+            g_debug("%s: reset conn when COM_QUIT:%d", G_STRLOC, backend_ndx);
             result = reset_connection(con);
         } else {
             result = adjust_user(con);

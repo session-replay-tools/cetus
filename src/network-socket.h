@@ -149,6 +149,7 @@ typedef struct {
     unsigned int is_multi_stmt_set:1;
     unsigned int is_closed:1;
     unsigned int unavailable:1;
+    unsigned int is_reset_conn_supported:1;
     unsigned int is_in_sess_context:1;
     unsigned int is_in_tran_context:1;
     unsigned int is_robbed:1;

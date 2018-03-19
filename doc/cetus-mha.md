@@ -33,30 +33,28 @@ master主机节点，安装mha4mysql-manager-0.56-0.el6.noarch.rpm包
 
 rpm -ivh mha4mysql-manager-0.56-0.el6.noarch.rpm
 
-使用 cetus/mha_ld/src所有文件 替换 /usr/share/perl5/vendor_perl/MHA/目录的所有同名文件
+使用 mha_ld/src 替换所有文件/usr/share/perl5/vendor_perl/MHA/目录的所有同名文件
 
-使用 cetus/mha_ld/masterha_secondary_check 替换masterha_secondary_check命令
-```bash
-which masterha_secondary_check
-#/usr/bin/masterha_secondary_check
+使用 mha_ld/masterha_secondary_check替换masterha_secondary_check命令
+ which masterha_secondary_check
+
+/usr/bin/masterha_secondary_check
+
 rm /usr/bin/masterha_secondary_check
+
 cd /usr/bin/
-#上传修改后的masterha_secondary_check
+
+上传修改后的masterha_secondary_check
+
 chmod +x /usr/bin/masterha_secondary_check
 
-```
-
 ## 配置
-安装好mha_ld后，配置启动mha的cnf文件请参考mha githup官方文档
+安装好mha_ld后，配置启动mha的cnf文件请参考mha_ld/sample.cnf，参数部分可以参考mha githup官方文档
 https://github.com/yoshinorim/mha4mysql-manager/wiki/Configuration
 
-按照官方文档配置cnf后，需要在cnf加一个变量：
+配置cnf后，有一个变量proxy_conf（变量需要写绝对路径），文件内容参考mha_ld/cetus.cnf：
 
-proxy_conf=/home/masterha/mha/proxy_mha.cnf
-
-这个变量对应的是cetus的连接信息文件。变量需要些绝对路径。
-
-编辑proxy_conf变量指定的cnf文件，配置以下参数：
+这个文件记录的是cetus的连接信息，含义解释如下：
 
 middle_ipport=127.0.0.1:4306,127.0.0.14:4307
 

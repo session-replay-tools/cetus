@@ -24,17 +24,19 @@ users.json用来配置用户登陆信息，采用键值对的结构，其中键�
 
 例如：
 
->{
->       "users":        [{
->                       "user": "root",
->                       "client_pwd":   "123",
->                       "server_pwd":   "123456"
->               }, {
->                       "user": "test",
->                       "client_pwd":   "456",
->                       "server_pwd":   "123456"
->               }]
->}
+```
+{
+       "users":        [{
+                       "user": "root",
+                       "client_pwd":   "123",
+                       "server_pwd":   "123456"
+               }, {
+                       "user": "test",
+                       "client_pwd":   "456",
+                       "server_pwd":   "123456"
+               }]
+}
+```
 
 我们配置了2个用户名root和test。其中root用户前端登录Cetus的密码是123，Cetus登录后端的密码是123456；test用户前端登录Cetus的密码是456，Cetus登录后端的密码是123456。
 
@@ -68,25 +70,27 @@ variables.json同样采用键值对的结构，其中键是固定的，值是用
 
 例如：
 
->{
-> "variables": [
->   {
->     "name": "sql_mode",
->     "type": "string-csv",
->     "allowed_values":
->     ["STRICT_TRANS_TABLES",
->       "NO_AUTO_CREATE_USER",
->       "NO_ENGINE_SUBSTITUTION"
->     ]
->   },
->   {
->     "name": "connect_timeout",
->     "type": "string",
->     "allowed_values": ["*"],
->     "silent_values": ["10", "100"]
->   }
-> ]
->}
+```
+{
+ "variables": [
+   {
+     "name": "sql_mode",
+     "type": "string-csv",
+     "allowed_values":
+     ["STRICT_TRANS_TABLES",
+       "NO_AUTO_CREATE_USER",
+       "NO_ENGINE_SUBSTITUTION"
+     ]
+   },
+   {
+     "name": "connect_timeout",
+     "type": "string",
+     "allowed_values": ["*"],
+     "silent_values": ["10", "100"]
+   }
+ ]
+}
+```
 
 我们配置了sql_mode变量和connect_timeout变量。其中sql_mode变量的类型是string-csv（逗号分隔的字符串值），指定了允许设定的变量有STRICT_TRANS_TABLES、NO_AUTO_CREATE_USER和NO_ENGINE_SUBSTITUTION；connect_timeout变量的类型是string（字符串），此变量设任意值都允许，指定静默处理的值为10和100。
 
@@ -125,30 +129,32 @@ sharding.json是分库版本的分库规则配置文件，同样采用键值对�
 
 例如：
 
->{
-> "vdb": [
->   {
->     "id": 1,
->     "type": "int",
->     "method": "hash",
->     "num": 8,
->     "partitions": {"data1": [0,1], "data2": [2,3], "data3": [4,5], "data4": [6,7]}
->   },
->   {
->     "id": 2,
->     "type": "int",
->     "method": "range",
->     "num": 0,
->     "partitions": {"data1": 124999, "data2": 249999, "data3": 374999,"data4": 499999}
->   }
-> ],
-> "table": [
->   {"vdb": 1, "db": "employees_hash", "table": "dept_emp", "pkey": "emp_no"},
->   {"vdb": 1, "db": "employees_hash", "table": "employees", "pkey": "emp_no"},
->   {"vdb": 2, "db": "employees_range", "table": "dept_emp", "pkey": "emp_no"},
->   {"vdb": 2, "db": "employees_range", "table": "employees", "pkey": "emp_no"},
-> ]
->}
+```
+{
+ "vdb": [
+   {
+     "id": 1,
+     "type": "int",
+     "method": "hash",
+     "num": 8,
+     "partitions": {"data1": [0,1], "data2": [2,3], "data3": [4,5], "data4": [6,7]}
+   },
+   {
+     "id": 2,
+     "type": "int",
+     "method": "range",
+     "num": 0,
+     "partitions": {"data1": 124999, "data2": 249999, "data3": 374999,"data4": 499999}
+   }
+  ],
+ "table": [
+   {"vdb": 1, "db": "employees_hash", "table": "dept_emp", "pkey": "emp_no"},
+   {"vdb": 1, "db": "employees_hash", "table": "employees", "pkey": "emp_no"},
+   {"vdb": 2, "db": "employees_range", "table": "dept_emp", "pkey": "emp_no"},
+   {"vdb": 2, "db": "employees_range", "table": "employees", "pkey": "emp_no"},
+ ]
+}
+```
 
 我们配置了两种vbd分片规则，第一种规则的id为1，分片键类型是int，分片方法是hash，hash分片的底数为8，一共分了4组，分组名为data1的分片范围为0和1，分组名为data2的分片范围为2和3，分组名为data3的分片范围为4和5，分组名为data4的分片范围为6和7；第二种规则的id为2，分片键类型是int，分片方法是range，range无底数num设为0，一共分了4组，分组名为data1的分片范围为0-124999，分组名为data2的分片范围为125000-249999，分组名为data3的分片范围为250000-374999，分组名为data4的分片范围为37500-499999；
 
@@ -184,27 +190,29 @@ proxy.conf是读写分离版本的启动配置文件，在启动Cetus时需要�
 
 例如：
 
->[cetus]
->\# Loaded Plugins
->plugins=proxy,admin
->
->\# Proxy Configuration
->proxy-address=127.0.0.1:1234
->proxy-backend-addresses=127.0.0.1:3306
->proxy-read-only-backend-addresses=127.0.0.1:3307
->
->\# Admin Configuration
->admin-address=127.0.0.1:5678
->admin-username=admin
->admin-password=admin
->
->\# Backend Configuration
->default-db=test
->default-username=dbtest
->
->\# File and Log Configuration
->log-file=cetus.log
->log-level=debug
+```
+[cetus]
+# Loaded Plugins
+plugins=proxy,admin
+
+# Proxy Configuration
+proxy-address=127.0.0.1:1234
+proxy-backend-addresses=127.0.0.1:3306
+proxy-read-only-backend-addresses=127.0.0.1:3307
+
+# Admin Configuration
+admin-address=127.0.0.1:5678
+admin-username=admin
+admin-password=admin
+
+# Backend Configuration
+default-db=test
+default-username=dbtest
+
+# File and Log Configuration
+log-file=cetus.log
+log-level=debug
+```
 
 我们配置了读写分离版本的启动选项，其中plugins的值是加载插件的名称，读写分离版本需加载的插件为proxy和admin；
 
@@ -245,26 +253,28 @@ shard.conf是分库版本的启动配置文件，在启动Cetus时需要加载�
 
 例如：
 
->[cetus]
->\# Loaded Plugins
->plugins=shard,admin
->
->\# Proxy Configuration
->proxy-address=127.0.0.1:1234
->proxy-backend-addresses=127.0.0.1:3361@data1,127.0.0.1:3362@data2,127.0.0.1:3363@data3,127.0.0.1:3364@data4
->
->\# Admin Configuration
->admin-address=127.0.0.1:5678
->admin-username=admin
->admin-password=admin
->
->\# Backend Configuration
->default-db=test
->default-username=dbtest
->
->\# Log Configuration
->log-file=cetus.log
->log-level=debug
+```
+[cetus]
+# Loaded Plugins
+plugins=shard,admin
+
+# Proxy Configuration
+proxy-address=127.0.0.1:1234
+proxy-backend-addresses=127.0.0.1:3361@data1,127.0.0.1:3362@data2,127.0.0.1:3363@data3,127.0.0.1:3364@data4
+
+# Admin Configuration
+admin-address=127.0.0.1:5678
+admin-username=admin
+admin-password=admin
+
+# Backend Configuration
+default-db=test
+default-username=dbtest
+
+# Log Configuration
+log-file=cetus.log
+log-level=debug
+```
 
 我们配置了分库版本的启动选项，其中plugins的值是加载插件的名称，分库（sharding）版本需加载的插件为shard和admin；
 

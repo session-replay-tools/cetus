@@ -33,20 +33,18 @@ master主机节点，安装mha4mysql-manager-0.56-0.el6.noarch.rpm包
 
 rpm -ivh mha4mysql-manager-0.56-0.el6.noarch.rpm
 
-使用 mha/manger源码（修改版）替换所有文件/usr/share/perl5/vendor_perl/MHA/目录的所有同名文件
+使用 cetus/mha_ld/src所有文件 替换 /usr/share/perl5/vendor_perl/MHA/目录的所有同名文件
 
-使用 mha/manger源码（修改版）/masterha_secondary_check替换masterha_secondary_check命令
- which masterha_secondary_check
-
-/usr/bin/masterha_secondary_check
-
+使用 cetus/mha_ld/masterha_secondary_check 替换masterha_secondary_check命令
+```bash
+which masterha_secondary_check
+#/usr/bin/masterha_secondary_check
 rm /usr/bin/masterha_secondary_check
-
 cd /usr/bin/
-
-上传修改后的masterha_secondary_check
-
+#上传修改后的masterha_secondary_check
 chmod +x /usr/bin/masterha_secondary_check
+
+```
 
 ## 配置
 安装好mha_ld后，配置启动mha的cnf文件请参考mha githup官方文档

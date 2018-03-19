@@ -1,0 +1,32 @@
+[server default]
+proxy_conf=/masterha/app1/cetus.cnf
+manager_log=/masterha/app1/app.log
+manager_workdir=/masterha/app1
+master_ip_failover_script=""
+password=rootpass
+ping_interval=1
+ping_type=select
+remote_workdir=/tmp
+repl_password=replpass
+repl_user=repl
+report_script=""
+secondary_check_script=/usr/bin/masterha_secondary_check --user=mysql --port=22 --master_ip=192.168.0.1 --master_port=3306 -s 192.168.0.2 -s 192.168.0.3
+shutdown_script=""
+ssh_port=22
+ssh_user=mysql
+user=root
+
+[192_168_0_1_3306]
+hostname=192.168.0.1
+master_binlog_dir=/home/mysql/mysql_home/data
+port=3306
+
+[192_168_0_2_3306]
+hostname=192.168.0.2
+master_binlog_dir=/home/mysql/mysql_home/data
+port=3306
+
+[192_168_0_3_3306]
+hostname=192.168.0.3
+master_binlog_dir=/home/mysql/mysql_home/data
+port=3306

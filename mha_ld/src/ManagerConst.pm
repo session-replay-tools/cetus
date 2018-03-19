@@ -43,15 +43,15 @@ our @ALIVE_ERROR_CODES = (
 
 #### begin added by cch ###################
 
-#our @MOBILE_PHONES = (
-#  15801209241,  # cch
-#  15117942453,  # wangyang 
-#  13436884740,  # hr
-#);
-
 our @MOBILE_PHONES = (
-  15801209241,  # cch
+  12345678901,  # zhang
+  12345678911,  # wang
+  12345678912,  # zhao
 );
+
+#our @MOBILE_PHONES = (
+#  1234567890,  # cch
+#);
 
 #### end ##############################
 

@@ -51,8 +51,7 @@ sub send_alert($) {
       #print $eachline . "\n";
       chomp($eachline);
       $eachline =~ s/\s//g;
-      my $str="curl \"https://smsgw.ms.netease.com/servlet/payment.user.DBSendMessage?username=$eachline&SmsGroup=Db59437&message="
-         ."$msg&gateway=4&msgtype=11&delay=25&productIdentity=dba-mha\"";
+      my $str="";
       eval { my $ret = system($str . " &");};
     }
 }

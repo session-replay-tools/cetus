@@ -2,7 +2,6 @@
 ## author : cch
 ## desc: sendmail
 
-
 ############ variable part ########################
 conf=/masterha/app1/sample.cnf
 

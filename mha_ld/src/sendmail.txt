@@ -1,0 +1,14 @@
+Master 10.120.118.232(10.120.118.232:3306) is down.
+
+Check MHA Manager logs at hz1-118-233.internal.lede.com:/masterha/app1/app1.log for details.
+
+Started automated(non-interactive) failover.
+The latest slave 10.120.13.20(10.120.13.20:3306) has all relay logs for recovery.
+Selected 10.120.13.20(10.120.13.20:3306) as a new master.
+10.120.13.20(10.120.13.20:3306): OK: Applying all logs succeeded.
+10.120.13.17(10.120.13.17:3306): This host has the latest relay log events.
+Generating relay diff files from the latest slave succeeded.
+10.120.13.17(10.120.13.17:3306): OK: Applying all logs succeeded. Slave started, replicating from 10.120.13.20(10.120.13.20:3306)
+10.120.13.20(10.120.13.20:3306): Resetting slave info succeeded.
+Master failover to 10.120.13.20(10.120.13.20:3306) completed successfully.
+

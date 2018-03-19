@@ -102,7 +102,6 @@ typedef struct {
     int is_client_compress_support;
     int check_slave_delay;
     int is_reduce_conns;
-    int is_reset_conn_enabled;
     int long_query_time;
     int xa_log_detailed;
     int cetus_max_allowed_packet;
@@ -375,11 +374,6 @@ int chassis_frontend_set_chassis_options(chassis_frontend_t *frontend, chassis_o
             "Reduce connections when idle connection num is too high", NULL);
 
     chassis_options_add(opts,
-            "enable-reset-connection",
-            0, 0, OPTION_ARG_NONE, &(frontend->is_reset_conn_enabled),
-            "Restart connections when feature changed", NULL);
-
-    chassis_options_add(opts,
             "enable-query-cache",
             0, 0, OPTION_ARG_NONE, &(frontend->query_cache_enabled),
             "", NULL);
@@ -516,7 +510,6 @@ static void init_parameters(chassis_frontend_t *frontend, chassis *srv)
     } else {
         g_message("%s:xa_log_detailed false", G_STRLOC);
     }
-    srv->is_reset_conn_enabled = frontend->is_reset_conn_enabled;
     srv->query_cache_enabled = frontend->query_cache_enabled;
     if (srv->query_cache_enabled) {
         srv->query_cache_table = g_hash_table_new_full(g_str_hash,

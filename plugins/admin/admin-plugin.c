@@ -703,7 +703,12 @@ static int admin_show_connectionlist(network_mysqld_con *admin_con, const char *
             g_ptr_array_add(row, g_strdup("0"));
         } else {
             g_ptr_array_add(row, g_strdup("Query"));
-            int diff = (now.tv_sec - con->req_recv_time.tv_sec) * 1000;
+            int diff = now.tv_sec - con->req_recv_time.tv_sec;
+            if (diff > 7200) {
+                g_critical("%s:too slow connection(%s) processing for con:%p",
+                        G_STRLOC, con->client->src->name->str, con);
+            }
+            diff = diff * 1000;
             diff += (now.tv_usec - con->req_recv_time.tv_usec) / 1000;
             snprintf(buffer, sizeof(buffer), "%d", diff);
             g_ptr_array_add(row, g_strdup(buffer));

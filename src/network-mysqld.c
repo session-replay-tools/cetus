@@ -959,7 +959,7 @@ network_mysqld_read_mul_packets(chassis G_GNUC_UNUSED *chas,
                 }
 
                 if (query->warning_count > 0) {
-                    g_critical("%s warning flag from server:%s is met:%s", 
+                    g_message("%s warning flag from server:%s is met:%s",
                             G_STRLOC, server->dst->name->str, con->orig_sql->str);
                     con->last_warning_met = 1;
                 }
@@ -4339,6 +4339,11 @@ static retval_t proxy_self_read_handshake(chassis *srv, server_connection_state_
         network_mysqld_auth_challenge_free(challenge);
 
         return RET_ERROR;
+    }
+
+    g_debug("%s: server version:%d", G_STRLOC, challenge->server_version);
+    if (challenge->server_version >= 50700) {
+        recv_sock->is_reset_conn_supported = 1;
     }
 
 #ifndef SIMPLE_PARSER

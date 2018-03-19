@@ -139,7 +139,6 @@ struct chassis {
     unsigned int master_preferred;
     unsigned int is_reduce_conns;
     unsigned int xa_log_detailed;
-    unsigned int is_reset_conn_enabled;
     unsigned int sharding_reload;
     unsigned int check_slave_delay;
     int complement_conn_cnt;

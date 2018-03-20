@@ -38,11 +38,11 @@ enum sql_join_type_t {
 
 #define MAX_AGGR_FUNS 8
 
-typedef struct GROUP_AGGR {
+typedef struct group_aggr_t {
     uint8_t type;
     int pos;
     unsigned int fun_type;
-} GROUP_AGGR;
+} group_aggr_t;
 
 
 typedef struct sql_token_t sql_token_t;
@@ -283,7 +283,7 @@ sql_expr_t *sql_expr_list_find(sql_expr_list_t *list, const char *name);
 
 sql_expr_t *sql_expr_list_find_fullname(sql_expr_list_t *list, const sql_expr_t *expr);
 
-int sql_expr_list_find_aggregates(sql_expr_list_t *list, GROUP_AGGR *aggr_array);
+int sql_expr_list_find_aggregates(sql_expr_list_t *list, group_aggr_t *aggr_array);
 int sql_expr_list_find_aggregate(sql_expr_list_t *list);
 
 void sql_expr_list_free(sql_expr_list_t *list);

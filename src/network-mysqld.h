@@ -308,7 +308,7 @@ typedef enum {
 typedef struct {
     gint64 offset;
     gint64 row_count;
-} LIMIT;
+} limit_t;
 
 typedef struct merge_parameters_s {
     void *heap;
@@ -317,7 +317,7 @@ typedef struct merge_parameters_s {
     GPtrArray *recv_queues;
     GList **candidates;
     GString *err_pack;
-    LIMIT limit;
+    limit_t limit;
     guint pkt_count;
     int pack_err_met;
     int is_distinct;

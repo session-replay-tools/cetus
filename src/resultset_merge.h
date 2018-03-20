@@ -36,13 +36,13 @@
 #define MAX_LIMIT G_MAXINT32
 #define MAX_SHARD_NUM MAX_SERVER_NUM
 
-typedef struct GROUP_BY {
+typedef struct group_by_t {
     char table_name[MAX_NAME_LEN];
     char name[MAX_NAME_LEN];
     unsigned int desc;
     uint8_t type;
     int pos;
-} GROUP_BY;
+} group_by_t;
 
 typedef struct ORDER_BY {
     char table_name[MAX_NAME_LEN];
@@ -79,9 +79,9 @@ typedef struct {
 typedef struct aggr_by_group_para_s {
     network_queue *send_queue;
     GPtrArray *recv_queues;
-    LIMIT *limit;
-    GROUP_BY *group_array;
-    GROUP_AGGR *aggr_array;
+    limit_t *limit;
+    group_by_t *group_array;
+    group_aggr_t *aggr_array;
     having_condition_t *hav_condi;
     short aggr_num;
     short group_array_size;

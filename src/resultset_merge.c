@@ -611,7 +611,7 @@ static inline guchar get_pkt_type(GString *pkt)
     return (unsigned char) pkt->str[NET_HEADER_SIZE];
 }
 
-static char *retrieve_aggr_value(GString *data, GROUP_AGGR *aggr, char *str)
+static char *retrieve_aggr_value(GString *data, group_aggr_t *aggr, char *str)
 {
     network_packet packet;
     packet.data = data;
@@ -1076,7 +1076,7 @@ static int merge_aggr_value(int fun_type, int type, char *merged_value,
 }
 
 
-static int modify_record(GList *cand1, GROUP_AGGR *aggr,
+static int modify_record(GList *cand1, group_aggr_t *aggr,
         network_packet *packet1, network_packet *packet2,
         int *orig_packet_len, int *merge_failed)
 {
@@ -1178,7 +1178,7 @@ static gint combine_aggr_record(GList *cand1, GList *cand2,
     short aggr_num = para->aggr_num;
 
     for (i = 0; i < aggr_num; i++) {
-        GROUP_AGGR *aggr = para->aggr_array + (aggr_num - 1 - i);
+        group_aggr_t *aggr = para->aggr_array + (aggr_num - 1 - i);
 
         packet1.offset = NET_HEADER_SIZE;
         packet2.offset = NET_HEADER_SIZE;
@@ -1246,7 +1246,7 @@ cal_aggr_rec_rel(GList *cand1, GList *cand2,
     packet1.data = cand1->data;
     packet2.data = cand2->data;
 
-    GROUP_BY *group_array = para->group_array;
+    group_by_t *group_array = para->group_array;
 
     for (i = 0; i < para->group_array_size; i++) {
         disp_flag = 0;
@@ -1675,12 +1675,12 @@ get_order_by_fields(cetus_result_t *res_merge, ORDER_BY *order_array,
 }
 
 static gboolean 
-get_group_by_fields(cetus_result_t *res_merge, GROUP_BY *group_array, guint group_array_size,
+get_group_by_fields(cetus_result_t *res_merge, group_by_t *group_array, guint group_array_size,
         result_merge_t *merged_result)
 {
     int i;
     for (i = 0; i < group_array_size; ++i) {
-        GROUP_BY *groupby = &(group_array[i]);
+        group_by_t *groupby = &(group_array[i]);
         if (groupby->pos == -1) {
             int index = cetus_result_find_fielddef(res_merge,
                              groupby->table_name, groupby->name);
@@ -2059,7 +2059,7 @@ static int do_simple_merge(network_mysqld_con *con, merge_parameters_t *data, in
     network_queue *send_queue = data->send_queue;
     GPtrArray *recv_queues = data->recv_queues;
     GList **candidates = data->candidates;
-    LIMIT *limit = &(data->limit);
+    limit_t *limit = &(data->limit);
     int *row_cnter = &(data->row_cnter);
     int *off_pos   = &(data->off_pos);
 
@@ -2178,7 +2178,7 @@ static int do_sort_merge(network_mysqld_con *con, merge_parameters_t *data,
     network_queue *send_queue = data->send_queue;
     GPtrArray *recv_queues = data->recv_queues;
     GList **candidates = data->candidates;
-    LIMIT *limit = &(data->limit);
+    limit_t *limit = &(data->limit);
     heap_type *heap = data->heap;
     int *row_cnter = &(data->row_cnter);
     int *off_pos   = &(data->off_pos);
@@ -2656,12 +2656,12 @@ disp_orderby_info(sql_column_list_t *sel_orderby, cetus_result_t *res_merge,
 
 static gboolean
 disp_groupby_info(sql_column_list_t *sel_groupby, cetus_result_t *res_merge,
-        GROUP_BY *group_array, int group_array_size, result_merge_t *merged_result)
+        group_by_t *group_array, int group_array_size, result_merge_t *merged_result)
 {
     int i;
     for (i = 0; i < sel_groupby->len; ++i) {
         sql_expr_t *expr = g_ptr_array_index(sel_groupby, i);
-        GROUP_BY *group_col = &(group_array[i]);
+        group_by_t *group_col = &(group_array[i]);
         group_col->pos = -1; /* initial invalid value: -1 */
         if (expr->op == TK_ID) {/* TODO: wrap sql_expr_t in list */
             strncpy(group_col->name, expr->token_text, MAX_NAME_LEN - 1);
@@ -2905,7 +2905,7 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
     }
     res_merge->field_count = field_count;
 
-    GROUP_AGGR aggr_array[MAX_AGGR_FUNS] = {{0}};
+    group_aggr_t aggr_array[MAX_AGGR_FUNS] = {{0}};
     int aggr_num = sql_expr_list_find_aggregates(select->columns, aggr_array);
     sql_column_list_t *sel_orderby = select->orderby_clause;
     sql_expr_list_t *sel_groupby = select->groupby_clause;
@@ -2932,10 +2932,10 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
         }
     }
 
-    GROUP_BY group_array[MAX_GROUP_COLS];
-    int group_array_size = 0;   /* number of GROUP_BY Columns */
+    group_by_t group_array[MAX_GROUP_COLS];
+    int group_array_size = 0;   /* number of group_by_t Columns */
     if (sel_groupby && sel_groupby->len > 0) {
-        memset(group_array, 0, sizeof(GROUP_BY) * MAX_GROUP_COLS);
+        memset(group_array, 0, sizeof(group_by_t) * MAX_GROUP_COLS);
         group_array_size = MIN(MAX_GROUP_COLS, sel_groupby->len);
         if (!disp_groupby_info(sel_groupby, res_merge, group_array,
                     group_array_size, merged_result))
@@ -2990,7 +2990,7 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
         return 0;
     }
 
-    LIMIT limit;
+    limit_t limit;
     limit.offset = 0;
     limit.row_count = G_MAXINT32;
     sql_expr_get_int(select->limit, &limit.row_count);

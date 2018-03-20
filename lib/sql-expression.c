@@ -373,7 +373,7 @@ int sql_expr_list_find_aggregate(sql_expr_list_t *list)
     return 0;
 }
 
-int sql_expr_list_find_aggregates(sql_expr_list_t *list, GROUP_AGGR *aggr_array)
+int sql_expr_list_find_aggregates(sql_expr_list_t *list, group_aggr_t *aggr_array)
 {
     int i, index = 0;
     enum sql_func_type_t type;

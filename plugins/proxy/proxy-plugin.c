@@ -1853,22 +1853,12 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query_result) {
                 network_mysqld_err_packet_t *err_packet;
                 err_packet = network_mysqld_err_packet_new();
                 if (!network_mysqld_proto_get_err_packet(&packet, err_packet)) {
-                    g_message("%s:clt:%s,src:%s,dst:%s,db:%s,%s,error code:%d, \
-                                    errmsg:%s,sqlstate:%s",
-                              G_STRLOC, con->client->src->name->str,
-                              con->server->src->name->str,
-                              con->server->dst->name->str,
-                              con->server->default_db->str,
-                              con->orig_sql->str,
-                              (int) err_packet->errcode,
-                              err_packet->errmsg->str,
-                              err_packet->sqlstate->str);
+                    g_message("%s:dst:%s,sql:%s,errmsg:%s",
+                              G_STRLOC, con->server->dst->name->str,
+                              con->orig_sql->str, err_packet->errmsg->str);
                 } else {
-                    g_message("%s:clt:%s,src:%s,dst:%s,db:%s, %s",
-                              G_STRLOC, con->client->src->name->str,
-                              con->server->src->name->str,
-                              con->server->dst->name->str, con->server->default_db->str,
-                              con->orig_sql->str);
+                    g_message("%s:dst:%s,sql:%s",
+                              G_STRLOC, con->server->dst->name->str, con->orig_sql->str);
                 }
                 network_mysqld_err_packet_free(err_packet);
                 packet.offset = offset;

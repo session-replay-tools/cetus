@@ -33,7 +33,8 @@ struct query_entry_t {
     time_t recv_time;
 };
 
-static void query_entry_free(struct query_entry_t *entry)
+static void
+query_entry_free(struct query_entry_t *entry)
 {
     if (entry->sql) {
         g_string_free(entry->sql, TRUE);
@@ -41,7 +42,8 @@ static void query_entry_free(struct query_entry_t *entry)
     g_free(entry);
 }
 
-query_queue_t *query_queue_new(int len)
+query_queue_t *
+query_queue_new(int len)
 {
     query_queue_t *q = g_new0(struct query_queue_t, 1);
     q->chunks = g_queue_new();
@@ -49,16 +51,18 @@ query_queue_t *query_queue_new(int len)
     return q;
 }
 
-void query_queue_free(query_queue_t *q)
+void
+query_queue_free(query_queue_t *q)
 {
-    g_queue_foreach(q->chunks, (GFunc)query_entry_free, NULL);
+    g_queue_foreach(q->chunks, (GFunc) query_entry_free, NULL);
     g_queue_free(q->chunks);
     g_free(q);
 }
 
-void query_queue_append(query_queue_t *q, GString *data)
+void
+query_queue_append(query_queue_t *q, GString *data)
 {
-    network_packet packet = {data, 0};
+    network_packet packet = { data, 0 };
     guint8 command = 0;
     if (packet.data) {
         network_mysqld_proto_skip_network_header(&packet);
@@ -79,42 +83,47 @@ void query_queue_append(query_queue_t *q, GString *data)
     }
     entry->recv_time = time(0);
 
-    if (g_queue_get_length(q->chunks) >= q->max_len) { /* TODO: slow */
+    if (g_queue_get_length(q->chunks) >= q->max_len) {  /* TODO: slow */
         struct query_entry_t *old = g_queue_pop_head(q->chunks);
         query_entry_free(old);
     }
     g_queue_push_tail(q->chunks, entry);
 }
 
-const char *command_name(enum enum_server_command cmd)
+const char *
+command_name(enum enum_server_command cmd)
 {
     static char number[8];
-    switch(cmd) {
-    case COM_QUERY:return "COM_QUERY";
-    case COM_QUIT:return "COM_QUIT";
-    case COM_INIT_DB:return "COM_INIT_DB";
-    case COM_FIELD_LIST:return "COM_FIELD_LIST";
+    switch (cmd) {
+    case COM_QUERY:
+        return "COM_QUERY";
+    case COM_QUIT:
+        return "COM_QUIT";
+    case COM_INIT_DB:
+        return "COM_INIT_DB";
+    case COM_FIELD_LIST:
+        return "COM_FIELD_LIST";
     default:
-        snprintf(number, sizeof(number), "COM_<%d>", cmd);/* TODO: only works for 1 cmd */
+        snprintf(number, sizeof(number), "COM_<%d>", cmd);  /* TODO: only works for 1 cmd */
         return number;
     }
 }
 
-static void query_entry_dump(gpointer data, gpointer user_data)
+static void
+query_entry_dump(gpointer data, gpointer user_data)
 {
     struct query_entry_t *entry = (struct query_entry_t *)data;
     struct tm *tm = localtime(&entry->recv_time);
-    char tm_str[16] = {0};
+    char tm_str[16] = { 0 };
     snprintf(tm_str, sizeof(tm_str), "%d:%d:%d", tm->tm_hour, tm->tm_min, tm->tm_sec);
-    g_message("%s %s %s", tm_str, command_name(entry->command),
-           entry->sql ? entry->sql->str:"");
+    g_message("%s %s %s", tm_str, command_name(entry->command), entry->sql ? entry->sql->str : "");
 }
 
-void query_queue_dump(query_queue_t *q)
+void
+query_queue_dump(query_queue_t *q)
 {
     if (!g_queue_is_empty(q->chunks)) {
         g_message("recent queries:");
         g_queue_foreach(q->chunks, query_entry_dump, NULL);
     }
 }
-

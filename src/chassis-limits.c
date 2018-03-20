@@ -36,7 +36,9 @@
 
 #include "chassis-limits.h"
 
-gint64 chassis_fdlimit_get() {
+gint64
+chassis_fdlimit_get()
+{
     struct rlimit max_files_rlimit;
 
     if (-1 == getrlimit(RLIMIT_NOFILE, &max_files_rlimit)) {
@@ -46,13 +48,14 @@ gint64 chassis_fdlimit_get() {
     }
 }
 
-
 /**
  * set the upper limit of open files
  *
  * @return -1 on error, 0 on success
  */
-int chassis_fdlimit_set(gint64 max_files_number) {
+int
+chassis_fdlimit_set(gint64 max_files_number)
+{
     struct rlimit max_files_rlimit;
     rlim_t hard_limit;
 
@@ -67,7 +70,7 @@ int chassis_fdlimit_set(gint64 max_files_number) {
      * raise the hard-limit too in case it is smaller 
      * than the soft-limit, otherwise we get a EINVAL 
      */
-    if (hard_limit < max_files_number) { 
+    if (hard_limit < max_files_number) {
         max_files_rlimit.rlim_max = max_files_number;
     }
 
@@ -77,4 +80,3 @@ int chassis_fdlimit_set(gint64 max_files_number) {
 
     return 0;
 }
-

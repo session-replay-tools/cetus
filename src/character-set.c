@@ -25,7 +25,8 @@
 
 #define DEFAULT_CHARSET   '\x21'
 
-int charset_get_number(const char *name)
+int
+charset_get_number(const char *name)
 {
     if (!name)
         return DEFAULT_CHARSET;
@@ -33,15 +34,16 @@ int charset_get_number(const char *name)
         const char *name;
         int number;
     } map[] = {
-        {"latin1",  0x08},
-        {"big5",    0x01},
-        {"gb2312",  0x18},
-        {"gbk",     0x1c},
-        {"utf8",    0x21},
-        {"utf8mb4", 0x2d},
-        {"binary",  0x3f}
+        {
+        "latin1", 0x08}, {
+        "big5", 0x01}, {
+        "gb2312", 0x18}, {
+        "gbk", 0x1c}, {
+        "utf8", 0x21}, {
+        "utf8mb4", 0x2d}, {
+        "binary", 0x3f}
     };
-    int map_len = sizeof(map)/sizeof(struct _charset_number_t);
+    int map_len = sizeof(map) / sizeof(struct _charset_number_t);
     int i = 0;
     while (i < map_len) {
         if (strcmp(name, map[i].name) == 0) {
@@ -52,7 +54,8 @@ int charset_get_number(const char *name)
     return DEFAULT_CHARSET;
 }
 
-const char *charset_get_name(int number)
+const char *
+charset_get_name(int number)
 {
     assert(number < 64);
     static const char *charset[64] = {

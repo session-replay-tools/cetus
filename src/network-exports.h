@@ -24,4 +24,3 @@
 #define NETWORK_API		extern
 
 #endif
-

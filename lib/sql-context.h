@@ -24,13 +24,13 @@
 #include "sql-expression.h"
 #include "myparser.y.h"
 
-enum sql_parse_state_code_t     {
+enum sql_parse_state_code_t {
     PARSE_NOT_SUPPORT = -3,
     PARSE_SYNTAX_ERR = -2,
     PARSE_ERROR = -1,
     PARSE_OK = 0,
-    PARSE_HEAD,  /* only extract head, leave the tail unparsed */
-    PARSE_UNRECOGNIZED, /* confused, send to backend for further validation */
+    PARSE_HEAD,                 /* only extract head, leave the tail unparsed */
+    PARSE_UNRECOGNIZED,         /* confused, send to backend for further validation */
 };
 
 enum sql_parsing_place_t {
@@ -47,7 +47,7 @@ typedef struct sql_context_t {
     char *message;
     int explain;
     void *user_data;
-    void *sql_statement;/* opaque statement pointer */
+    void *sql_statement;        /* opaque statement pointer */
     sql_stmt_type_t stmt_type;
     short stmt_count;
 
@@ -59,7 +59,6 @@ typedef struct sql_context_t {
     struct sql_property_t *property;
 } sql_context_t;
 
-
 void sql_context_init(sql_context_t *);
 
 void sql_context_reset(sql_context_t *);
@@ -70,8 +69,7 @@ void sql_context_append_msg(sql_context_t *, char *msg);
 
 void sql_context_set_error(sql_context_t *, int err, char *msg);
 
-void sql_context_add_stmt(sql_context_t *,
-                                  enum sql_stmt_type_t, void *);
+void sql_context_add_stmt(sql_context_t *, enum sql_stmt_type_t, void *);
 
 gboolean sql_context_using_property(sql_context_t *);
 
@@ -86,6 +84,5 @@ gboolean sql_context_is_autocommit_off(sql_context_t *);
 gboolean sql_context_is_single_node_trx(sql_context_t *);
 
 gboolean sql_context_is_cacheable(sql_context_t *);
-
 
 #endif /* SQL_CONTEXT_H */

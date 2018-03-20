@@ -26,7 +26,7 @@
 #include <stdio.h>
 #include <math.h>
 
-#include <mysqld_error.h> 
+#include <mysqld_error.h>
 #include "glib-ext.h"
 #include "network-mysqld-packet.h"
 #include "sys-pedantic.h"
@@ -38,35 +38,34 @@
 #include "sharding-query-plan.h"
 
 const char EPOCH[] = "1970-01-01 00:00:00";
-const char *type_name[] =
-{
-    "FIELD_TYPE_DECIMAL",    //0x00   
-    "FIELD_TYPE_TINY",       //0x01   
-    "FIELD_TYPE_SHORT",      //0x02 
-    "FIELD_TYPE_LONG",       //0x03 
-    "FIELD_TYPE_FLOAT",      //0x04    
-    "FIELD_TYPE_DOUBLE",     //0x05 
-    "FIELD_TYPE_NULL",       //0x06 
-    "FIELD_TYPE_TIMESTAMP",  //0x07 
-    "FIELD_TYPE_LONGLONG",   //0x08   
-    "FIELD_TYPE_INT24",      //0x09   
-    "FIELD_TYPE_DATE",       //0x0a  
-    "FIELD_TYPE_TIME",       //0x0b   
-    "FIELD_TYPE_DATETIME",   //0x0c   
-    "FIELD_TYPE_YEAR",       //0x0d   
-    "FIELD_TYPE_NEWDATE",    //0x0e   
-    "FIELD_TYPE_VARCHAR",    //0x0f 
-    "FIELD_TYPE_BIT",        //0x10 
-    "FIELD_TYPE_NEWDECIMAL", //0xf6 
-    "FIELD_TYPE_ENUM",       //0xf7   
-    "FIELD_TYPE_SET",        //0xf8   
-    "FIELD_TYPE_TINY_BLOB",  //0xf9   
-    "FIELD_TYPE_MEDIUM_BLOB",//0xfa   
-    "FIELD_TYPE_LONG_BLOB",  //0xfb   
-    "FIELD_TYPE_BLOB",       //0xfc   
-    "FIELD_TYPE_VAR_STRING", //0xfd   
-    "FIELD_TYPE_STRING",     //0xfe  
-    "FIELD_TYPE_GEOMETRY"    //0xff   
+const char *type_name[] = {
+    "FIELD_TYPE_DECIMAL",       //0x00   
+    "FIELD_TYPE_TINY",          //0x01   
+    "FIELD_TYPE_SHORT",         //0x02 
+    "FIELD_TYPE_LONG",          //0x03 
+    "FIELD_TYPE_FLOAT",         //0x04    
+    "FIELD_TYPE_DOUBLE",        //0x05 
+    "FIELD_TYPE_NULL",          //0x06 
+    "FIELD_TYPE_TIMESTAMP",     //0x07 
+    "FIELD_TYPE_LONGLONG",      //0x08   
+    "FIELD_TYPE_INT24",         //0x09   
+    "FIELD_TYPE_DATE",          //0x0a  
+    "FIELD_TYPE_TIME",          //0x0b   
+    "FIELD_TYPE_DATETIME",      //0x0c   
+    "FIELD_TYPE_YEAR",          //0x0d   
+    "FIELD_TYPE_NEWDATE",       //0x0e   
+    "FIELD_TYPE_VARCHAR",       //0x0f 
+    "FIELD_TYPE_BIT",           //0x10 
+    "FIELD_TYPE_NEWDECIMAL",    //0xf6 
+    "FIELD_TYPE_ENUM",          //0xf7   
+    "FIELD_TYPE_SET",           //0xf8   
+    "FIELD_TYPE_TINY_BLOB",     //0xf9   
+    "FIELD_TYPE_MEDIUM_BLOB",   //0xfa   
+    "FIELD_TYPE_LONG_BLOB",     //0xfb   
+    "FIELD_TYPE_BLOB",          //0xfc   
+    "FIELD_TYPE_VAR_STRING",    //0xfd   
+    "FIELD_TYPE_STRING",        //0xfe  
+    "FIELD_TYPE_GEOMETRY"       //0xff   
 };
 
 #define MAX_PACK_LEN 2048
@@ -85,7 +84,8 @@ typedef struct cetus_result_t {
     int field_count;
 } cetus_result_t;
 
-static void cetus_result_destroy(cetus_result_t *res)
+static void
+cetus_result_destroy(cetus_result_t *res)
 {
     if (res->fielddefs) {
         network_mysqld_proto_fielddefs_free(res->fielddefs);
@@ -95,7 +95,8 @@ static void cetus_result_destroy(cetus_result_t *res)
 
 static int compare_records_from_column(char *, char *, int, int, int *);
 
-static int check_str_num_supported(char *s, int len, char **p) 
+static int
+check_str_num_supported(char *s, int len, char **p)
 {
     if (len > 0) {
         if (s[0] == '+' || s[0] == '-') {
@@ -329,7 +330,7 @@ padding_zero(char *s1, int *p_len1, int size1, char *s2, int *p_len2, int size2)
     }
 
     char *padding;
-    int pad_len, new_str_len; 
+    int pad_len, new_str_len;
     if (short_len1 == short_len2) {
         return 1;
     } else if (short_len1 < short_len2) {
@@ -359,30 +360,26 @@ padding_zero(char *s1, int *p_len1, int size1, char *s2, int *p_len2, int size2)
     return 1;
 }
 
-static int 
-compare_str_num_value(char *str1, char *str2, int com_type, int *dest, int desc, 
-        int *compare_failed)
+static int
+compare_str_num_value(char *str1, char *str2, int com_type, int *dest, int desc, int *compare_failed)
 {
     int len1 = strlen(str1);
     int len2 = strlen(str2);
 
-    if (!padding_zero(str1, &len1, MAX_COL_VALUE_LEN, 
-                str2, &len2, MAX_COL_VALUE_LEN)) 
-    {
+    if (!padding_zero(str1, &len1, MAX_COL_VALUE_LEN, str2, &len2, MAX_COL_VALUE_LEN)) {
         *compare_failed = 1;
         return 0;
     }
 
     int result = cmp_str_num(str1, len1, str2, len2, compare_failed);
-    
-    g_debug("%s:string str1:%s, str2:%s, cmp result:%d", 
-            G_STRLOC, str1, str2, result);
 
-    if (result == 0)  {
+    g_debug("%s:string str1:%s, str2:%s, cmp result:%d", G_STRLOC, str1, str2, result);
+
+    if (result == 0) {
         return 1;
     }
 
-    if ((desc && result > 0) ||  (!desc && result < 0)) {
+    if ((desc && result > 0) || (!desc && result < 0)) {
         *dest = 1;
         return 0;
     }
@@ -400,8 +397,8 @@ compare_str_num_value(char *str1, char *str2, int com_type, int *dest, int desc,
     return 0;
 }
 
-
-static int compare_date(char *str1, char *str2, int com_type, int *result, int desc)
+static int
+compare_date(char *str1, char *str2, int com_type, int *result, int desc)
 {
     if (str1[0] == '\0') {
         strcpy(str1, EPOCH);
@@ -411,15 +408,15 @@ static int compare_date(char *str1, char *str2, int com_type, int *result, int d
         strcpy(str2, EPOCH);
     }
 
-    struct tm tm1 = {0};
-    struct tm tm2 = {0};
+    struct tm tm1 = { 0 };
+    struct tm tm2 = { 0 };
     g_debug("%s:data1:%s, data2:%s", G_STRLOC, str1, str2);
     strptime(str1, "%Y-%m-%d", &tm1);
     strptime(str2, "%Y-%m-%d", &tm2);
 
-    int diff[6] ;
-    diff[0] = tm1.tm_year - tm2.tm_year; 
-    diff[1] = tm1.tm_mon  - tm2.tm_mon;
+    int diff[6];
+    diff[0] = tm1.tm_year - tm2.tm_year;
+    diff[1] = tm1.tm_mon - tm2.tm_mon;
     diff[2] = tm1.tm_mday - tm2.tm_mday;
 
     g_debug("%s:diff0:%d, diff1:%d, diff2:%d", G_STRLOC, diff[0], diff[1], diff[2]);
@@ -443,7 +440,8 @@ static int compare_date(char *str1, char *str2, int com_type, int *result, int d
     return 1;
 }
 
-static int compare_time(char *str1, char *str2, int com_type, int *result, int desc)
+static int
+compare_time(char *str1, char *str2, int com_type, int *result, int desc)
 {
     if (str1[0] == '\0') {
         strcpy(str1, EPOCH);
@@ -453,16 +451,16 @@ static int compare_time(char *str1, char *str2, int com_type, int *result, int d
         strcpy(str2, EPOCH);
     }
 
-    struct tm tm1 = {0};
-    struct tm tm2 = {0};
+    struct tm tm1 = { 0 };
+    struct tm tm2 = { 0 };
 
     strptime(str1, "%H:%M:%S", &tm1);
     strptime(str2, "%H:%M:%S", &tm2);
 
-    int diff[3] ;
+    int diff[3];
     diff[0] = tm1.tm_hour - tm2.tm_hour;
-    diff[1] = tm1.tm_min  - tm2.tm_min;
-    diff[2] = tm1.tm_sec  - tm2.tm_sec;
+    diff[1] = tm1.tm_min - tm2.tm_min;
+    diff[2] = tm1.tm_sec - tm2.tm_sec;
 
     int p;
     for (p = 0; p < 3; p++) {
@@ -485,8 +483,8 @@ static int compare_time(char *str1, char *str2, int com_type, int *result, int d
     return 1;
 }
 
-
-static int compare_year(char *str1, char *str2, int com_type, int *result, int desc)
+static int
+compare_year(char *str1, char *str2, int com_type, int *result, int desc)
 {
     if (str1[0] == '\0') {
         strcpy(str1, EPOCH);
@@ -519,8 +517,10 @@ static int compare_year(char *str1, char *str2, int com_type, int *result, int d
 }
 
 /* skip some column (lenenc_str or NULL) */
-static inline gint skip_field(network_packet *packet, guint skip) {
-    guint   iter;
+static inline gint
+skip_field(network_packet *packet, guint skip)
+{
+    guint iter;
 
     for (iter = 0; iter < skip; iter++) {
         guint8 first = 0;
@@ -541,8 +541,8 @@ static inline gint skip_field(network_packet *packet, guint skip) {
 
 #define MAX_ORDER_BY_ITEMS 16
 
-static guint64 set_rec_fields_off(network_packet *packet,
-        ORDER_BY order_array[], int order_array_size)
+static guint64
+set_rec_fields_off(network_packet *packet, ORDER_BY order_array[], int order_array_size)
 {
     int i, max_pos = 0;
     int orderby_count = MIN(order_array_size, 4);
@@ -557,7 +557,7 @@ static guint64 set_rec_fields_off(network_packet *packet,
         return 0;
     }
 
-    unsigned char map[MAX_ORDER_BY_ITEMS] = {0}; /* field pos ==> order by pos */
+    unsigned char map[MAX_ORDER_BY_ITEMS] = { 0 };  /* field pos ==> order by pos */
     for (i = 0; i < orderby_count; i++) {
         /* hack: add 1 for existence probing */
         map[order_array[i].pos] = i + 1;
@@ -568,7 +568,7 @@ static guint64 set_rec_fields_off(network_packet *packet,
         value = NET_HEADER_SIZE;
     }
 
-    guint   iter;
+    guint iter;
     for (iter = 0; iter < max_pos; iter++) {
         if (packet->data->str[packet->offset] == MYSQLD_PACKET_NULL) {
             network_mysqld_proto_skip(packet, 1);
@@ -581,8 +581,7 @@ static guint64 set_rec_fields_off(network_packet *packet,
         if (next_iter < MAX_ORDER_BY_ITEMS && map[next_iter]) {
             int seq = map[next_iter] - 1;
             guint64 new_value = packet->offset;
-            g_debug("offset value:%ld, seq=%d, iter=%d %p", 
-                    new_value, seq, iter, packet->data);
+            g_debug("offset value:%ld, seq=%d, iter=%d %p", new_value, seq, iter, packet->data);
             if (new_value <= 0xFFFF) {
                 int j;
                 for (j = 0; j < seq; j++) {
@@ -606,12 +605,14 @@ static guint64 set_rec_fields_off(network_packet *packet,
  *      Row Data Packet             1-250 ("")
  *      EOF Packet                  0xfe  254
  */
-static inline guchar get_pkt_type(GString *pkt)
+static inline guchar
+get_pkt_type(GString *pkt)
 {
-    return (unsigned char) pkt->str[NET_HEADER_SIZE];
+    return (unsigned char)pkt->str[NET_HEADER_SIZE];
 }
 
-static char *retrieve_aggr_value(GString *data, GROUP_AGGR *aggr, char *str)
+static char *
+retrieve_aggr_value(GString *data, group_aggr_t * aggr, char *str)
 {
     network_packet packet;
     packet.data = data;
@@ -655,7 +656,7 @@ str_int_add(char *merged_int, char *s1, int len1, char *s2, int len2, int carry)
     } else {
         large = large + len - 1;
         for (i = len - 1; i >= 0; i--) {
-            tmp += *large - '0'; 
+            tmp += *large - '0';
             *dest = tmp % 10 + '0';
             tmp = tmp / 10;
             large--;
@@ -695,7 +696,7 @@ str_int_sub(char *merged_int, char *s1, int len1, char *s2, int len2, int borrow
     if (len != 0) {
         char *large = s1 + len - 1;
         for (i = len - 1; i >= 0; i--) {
-            tmp = (*large - '0') - borrow; 
+            tmp = (*large - '0') - borrow;
             if (tmp < 0) {
                 borrow = 1;
                 tmp = tmp + 10;
@@ -820,11 +821,12 @@ str_decimal_sub(char *merged_value, char *s1, int len1, char *s2, int len2)
     return merged_value;
 }
 
-static void trim_zero(char *s) 
+static void
+trim_zero(char *s)
 {
     char *p = s;
     char *q = NULL;
-    int  depth = 0;
+    int depth = 0;
     while (p[0] == '0') {
         if (p[1] >= '0' && p[1] <= '9') {
             depth++;
@@ -855,8 +857,7 @@ static void trim_zero(char *s)
 }
 
 static int
-dispose_sign_add(int is_integer, char *merged_value, 
-        char *s1, int len1, char *s2, int len2, int *supported)
+dispose_sign_add(int is_integer, char *merged_value, char *s1, int len1, char *s2, int len2, int *supported)
 {
     if (s1[0] != '-' && s2[0] != '-') {
         if (is_integer) {
@@ -885,9 +886,9 @@ dispose_sign_add(int is_integer, char *merged_value,
             merged_value[0] = '-';
         } else if (result < 0) {
             if (is_integer) {
-                str_int_sub(merged_value, s2, len2, s1 + 1, len1 -1,  0);
+                str_int_sub(merged_value, s2, len2, s1 + 1, len1 - 1, 0);
             } else {
-                str_decimal_sub(merged_value, s2, len2, s1 + 1, len1 -1);
+                str_decimal_sub(merged_value, s2, len2, s1 + 1, len1 - 1);
             }
             trim_zero(merged_value);
         } else {
@@ -921,31 +922,30 @@ dispose_sign_add(int is_integer, char *merged_value,
 }
 
 static char *
-str_add(int type, char *merged_value, char *s1, int len1, char *s2, 
-        int len2, int *merge_failed)
+str_add(int type, char *merged_value, char *s1, int len1, char *s2, int len2, int *merge_failed)
 {
     int is_result_padding = 0, is_integer = 0, is_need_check = 0;
 
     switch (type) {
-        case FIELD_TYPE_TINY:
-        case FIELD_TYPE_SHORT:
-        case FIELD_TYPE_LONG:
-        case FIELD_TYPE_LONGLONG:
-        case FIELD_TYPE_INT24:
-            is_integer = 1;
-            break;
-        case FIELD_TYPE_DOUBLE:
-        case FIELD_TYPE_FLOAT:      
-            is_need_check = 1;
-            break;
-        case FIELD_TYPE_NEWDECIMAL:
-        case FIELD_TYPE_DECIMAL:
-            is_result_padding = 1;
-            break;
-        default:
-            g_warning("%s: unknown type for add:%d", G_STRLOC, type);
-            *merge_failed = 1;
-            return NULL;
+    case FIELD_TYPE_TINY:
+    case FIELD_TYPE_SHORT:
+    case FIELD_TYPE_LONG:
+    case FIELD_TYPE_LONGLONG:
+    case FIELD_TYPE_INT24:
+        is_integer = 1;
+        break;
+    case FIELD_TYPE_DOUBLE:
+    case FIELD_TYPE_FLOAT:
+        is_need_check = 1;
+        break;
+    case FIELD_TYPE_NEWDECIMAL:
+    case FIELD_TYPE_DECIMAL:
+        is_result_padding = 1;
+        break;
+    default:
+        g_warning("%s: unknown type for add:%d", G_STRLOC, type);
+        *merge_failed = 1;
+        return NULL;
     }
 
     if (!is_integer) {
@@ -962,25 +962,21 @@ str_add(int type, char *merged_value, char *s1, int len1, char *s2,
             }
         }
 
-        if (!padding_zero(s1, &len1, MAX_COL_VALUE_LEN, 
-                    s2, &len2, MAX_COL_VALUE_LEN)) 
-        {
+        if (!padding_zero(s1, &len1, MAX_COL_VALUE_LEN, s2, &len2, MAX_COL_VALUE_LEN)) {
             *merge_failed = 1;
             return NULL;
         }
     }
 
-    int result = dispose_sign_add(is_integer, merged_value, s1, 
-            len1, s2, len2, merge_failed);
+    int result = dispose_sign_add(is_integer, merged_value, s1,
+                                  len1, s2, len2, merge_failed);
     if (*merge_failed) {
         return NULL;
     }
 
     if ((!result) && is_result_padding) {
         int merged_len = strlen(merged_value);
-        if (!padding_zero(merged_value, &merged_len, 2 * MAX_COL_VALUE_LEN, 
-                    s2, &len2, MAX_COL_VALUE_LEN)) 
-        {
+        if (!padding_zero(merged_value, &merged_len, 2 * MAX_COL_VALUE_LEN, s2, &len2, MAX_COL_VALUE_LEN)) {
             *merge_failed = 1;
             return NULL;
         }
@@ -989,9 +985,9 @@ str_add(int type, char *merged_value, char *s1, int len1, char *s2,
     return merged_value;
 }
 
-
-static int merge_aggr_value(int fun_type, int type, char *merged_value,
-        char *str1, char *str2, int len1, int len2, int *merge_failed)
+static int
+merge_aggr_value(int fun_type, int type, char *merged_value,
+                 char *str1, char *str2, int len1, int len2, int *merge_failed)
 {
     if (len1 == 0 || len2 == 0) {
         if (len1 == 0 && len2 == 0) {
@@ -1009,96 +1005,93 @@ static int merge_aggr_value(int fun_type, int type, char *merged_value,
 
     int is_str_type = 0;
     switch (type) {
-        case FIELD_TYPE_TIME:
-        case FIELD_TYPE_TIMESTAMP:
-        case FIELD_TYPE_DATETIME:
-        case FIELD_TYPE_YEAR:
-        case FIELD_TYPE_NEWDATE:
-        case FIELD_TYPE_DATE:
-        case FIELD_TYPE_VAR_STRING:
-        case FIELD_TYPE_STRING:
-            is_str_type = 1;
-            break;
-        default:
-            break;
+    case FIELD_TYPE_TIME:
+    case FIELD_TYPE_TIMESTAMP:
+    case FIELD_TYPE_DATETIME:
+    case FIELD_TYPE_YEAR:
+    case FIELD_TYPE_NEWDATE:
+    case FIELD_TYPE_DATE:
+    case FIELD_TYPE_VAR_STRING:
+    case FIELD_TYPE_STRING:
+        is_str_type = 1;
+        break;
+    default:
+        break;
     }
 
     switch (fun_type) {
-        case FT_SUM:
-            if (!str_add(type, merged_value, str1, len1, str2, len2, merge_failed)) {
+    case FT_SUM:
+        if (!str_add(type, merged_value, str1, len1, str2, len2, merge_failed)) {
+            return 0;
+        }
+        break;
+    case FT_MAX:
+        if (is_str_type) {
+            if (strcmp(str1, str2) >= 0) {
                 return 0;
-            }
-            break;
-        case FT_MAX:
-            if (is_str_type) {
-                if (strcmp(str1, str2) >= 0) {
-                    return 0;
-                } else {
-                    strncpy(merged_value, str2, len2);
-                    merged_value[len2] = '\0';
-                }
             } else {
-                if (cmp_str_num(str1, len1, str2, len2, merge_failed) > 0) {
-                    return 0;
-                } else {
-                    strncpy(merged_value, str2, len2);
-                    merged_value[len2] = '\0';
-                }
+                strncpy(merged_value, str2, len2);
+                merged_value[len2] = '\0';
             }
-            break;
-        case FT_MIN:
-            if (is_str_type) {
-                if (strcmp(str1, str2) <= 0) {
-                    return 0;
-                } else {
-                    strncpy(merged_value, str2, len2);
-                    merged_value[len2] = '\0';
-                }
-            } else {
-                if (cmp_str_num(str1, len1, str2, len2, merge_failed) <= 0) {
-                    return 0;
-                } else {
-                    strncpy(merged_value, str2, len2);
-                    merged_value[len2] = '\0';
-                }
-            }
-            break;
-        case FT_COUNT:
-            if (!str_add(type, merged_value, str1, len1, str2,
-                        len2, merge_failed)) 
-            {
+        } else {
+            if (cmp_str_num(str1, len1, str2, len2, merge_failed) > 0) {
                 return 0;
+            } else {
+                strncpy(merged_value, str2, len2);
+                merged_value[len2] = '\0';
             }
-            break;
+        }
+        break;
+    case FT_MIN:
+        if (is_str_type) {
+            if (strcmp(str1, str2) <= 0) {
+                return 0;
+            } else {
+                strncpy(merged_value, str2, len2);
+                merged_value[len2] = '\0';
+            }
+        } else {
+            if (cmp_str_num(str1, len1, str2, len2, merge_failed) <= 0) {
+                return 0;
+            } else {
+                strncpy(merged_value, str2, len2);
+                merged_value[len2] = '\0';
+            }
+        }
+        break;
+    case FT_COUNT:
+        if (!str_add(type, merged_value, str1, len1, str2, len2, merge_failed)) {
+            return 0;
+        }
+        break;
     }
 
     return 1;
 }
 
-
-static int modify_record(GList *cand1, GROUP_AGGR *aggr,
-        network_packet *packet1, network_packet *packet2,
-        int *orig_packet_len, int *merge_failed)
+static int
+modify_record(GList *cand1, group_aggr_t * aggr,
+              network_packet *packet1, network_packet *packet2, int *orig_packet_len, int *merge_failed)
 {
-    char str1[MAX_COL_VALUE_LEN] = {0};
-    char str2[MAX_COL_VALUE_LEN] = {0};
-    char merged_value[2 * MAX_COL_VALUE_LEN] = {0};
+    char str1[MAX_COL_VALUE_LEN] = { 0 };
+    char str2[MAX_COL_VALUE_LEN] = { 0 };
+    char merged_value[2 * MAX_COL_VALUE_LEN] = { 0 };
 
     char *before, *hit, *after;
 
     GString *pkt1 = packet1->data;
 
-    before = (char *) (pkt1->str + packet1->offset);
+    before = (char *)(pkt1->str + packet1->offset);
     skip_field(packet1, aggr->pos);
     skip_field(packet2, aggr->pos);
 
-    hit = (char *) (pkt1->str + packet1->offset);
+    hit = (char *)(pkt1->str + packet1->offset);
     network_mysqld_proto_get_column(packet1, str1, MAX_COL_VALUE_LEN);
     network_mysqld_proto_get_column(packet2, str2, MAX_COL_VALUE_LEN);
 
-    after = (char *) (pkt1->str + packet1->offset);
+    after = (char *)(pkt1->str + packet1->offset);
 
-    char buffer[MAX_PACK_LEN] = {0};
+    char buffer[MAX_PACK_LEN] = { 0 };
     char *buf_pos = buffer;
     int len = hit - before;
     memcpy(buf_pos, before, len);
@@ -1106,9 +1099,7 @@ static int modify_record(GList *cand1, GROUP_AGGR *aggr,
 
     int len1 = strlen(str1);
     int len2 = strlen(str2);
-    if (!merge_aggr_value(aggr->fun_type, aggr->type, merged_value, 
-                str1, str2, len1, len2, merge_failed)) 
-    {
+    if (!merge_aggr_value(aggr->fun_type, aggr->type, merged_value, str1, str2, len1, len2, merge_failed)) {
         return 0;
     }
 
@@ -1128,7 +1119,6 @@ static int modify_record(GList *cand1, GROUP_AGGR *aggr,
         }
     }
 
-
     if (len == len1) {
         memcpy(hit + 1, merged_value, len);
     } else {
@@ -1138,15 +1128,15 @@ static int modify_record(GList *cand1, GROUP_AGGR *aggr,
             *merge_failed = 1;
             return 0;
         }
-        
+
         strncpy(buf_pos, merged_value, len);
-        *(buf_pos - 1) = (char) len;
+        *(buf_pos - 1) = (char)len;
         buf_pos = buf_pos + len;
         memcpy(buf_pos, after, (*orig_packet_len) - (after - before));
 
         *orig_packet_len = packet_len;
         GString *packet = g_string_sized_new(NET_HEADER_SIZE + packet_len);
-        packet->len     = NET_HEADER_SIZE;
+        packet->len = NET_HEADER_SIZE;
         g_string_append_len(packet, buffer, packet_len);
         network_mysqld_proto_set_packet_len(packet, packet_len);
 
@@ -1157,9 +1147,9 @@ static int modify_record(GList *cand1, GROUP_AGGR *aggr,
 
     return 1;
 }
- 
-static gint combine_aggr_record(GList *cand1, GList *cand2,
-        aggr_by_group_para_t *para, int *merge_failed)
+
+static gint
+combine_aggr_record(GList *cand1, GList *cand2, aggr_by_group_para_t *para, int *merge_failed)
 {
     int i;
     network_packet packet1;
@@ -1178,7 +1168,7 @@ static gint combine_aggr_record(GList *cand1, GList *cand2,
     short aggr_num = para->aggr_num;
 
     for (i = 0; i < aggr_num; i++) {
-        GROUP_AGGR *aggr = para->aggr_array + (aggr_num - 1 - i);
+        group_aggr_t *aggr = para->aggr_array + (aggr_num - 1 - i);
 
         packet1.offset = NET_HEADER_SIZE;
         packet2.offset = NET_HEADER_SIZE;
@@ -1190,15 +1180,13 @@ static gint combine_aggr_record(GList *cand1, GList *cand2,
         case FIELD_TYPE_LONG:
         case FIELD_TYPE_LONGLONG:
         case FIELD_TYPE_INT24:
-            modify_record(cand1, aggr, &packet1, &packet2,
-                          &orig_packet_len, merge_failed);
+            modify_record(cand1, aggr, &packet1, &packet2, &orig_packet_len, merge_failed);
             break;
         case FIELD_TYPE_NEWDECIMAL:
         case FIELD_TYPE_DECIMAL:
         case FIELD_TYPE_FLOAT:
         case FIELD_TYPE_DOUBLE:
-            modify_record(cand1, aggr, &packet1, &packet2,
-                          &orig_packet_len, merge_failed);
+            modify_record(cand1, aggr, &packet1, &packet2, &orig_packet_len, merge_failed);
             break;
         case FIELD_TYPE_TIME:
         case FIELD_TYPE_TIMESTAMP:
@@ -1213,40 +1201,35 @@ static gint combine_aggr_record(GList *cand1, GList *cand2,
             case FT_MIN:
                 break;
             default:
-                g_warning("%s: string is not valid for aggr fun:%d",
-                          G_STRLOC, aggr->fun_type);
+                g_warning("%s: string is not valid for aggr fun:%d", G_STRLOC, aggr->fun_type);
                 *merge_failed = 1;
                 return 0;
             }
 
-            modify_record(cand1, aggr, &packet1, &packet2,
-                          &orig_packet_len, merge_failed);
+            modify_record(cand1, aggr, &packet1, &packet2, &orig_packet_len, merge_failed);
             break;
 
         default:
             *merge_failed = 1;
-            g_warning("%s:unknown Field Type: %d", G_STRLOC,
-                      para->group_array[i].type);
+            g_warning("%s:unknown Field Type: %d", G_STRLOC, para->group_array[i].type);
             return 1;
         }
     }
     return 0;
 }
 
-
 static gint
-cal_aggr_rec_rel(GList *cand1, GList *cand2,
-        aggr_by_group_para_t *para, int *merge_failed)
+cal_aggr_rec_rel(GList *cand1, GList *cand2, aggr_by_group_para_t *para, int *merge_failed)
 {
     int i, disp_flag;
-    char str1[MAX_COL_VALUE_LEN] = {0};
-    char str2[MAX_COL_VALUE_LEN] = {0};
+    char str1[MAX_COL_VALUE_LEN] = { 0 };
+    char str2[MAX_COL_VALUE_LEN] = { 0 };
     network_packet packet1;
     network_packet packet2;
     packet1.data = cand1->data;
     packet2.data = cand2->data;
 
-    GROUP_BY *group_array = para->group_array;
+    group_by_t *group_array = para->group_array;
 
     for (i = 0; i < para->group_array_size; i++) {
         disp_flag = 0;
@@ -1262,23 +1245,17 @@ cal_aggr_rec_rel(GList *cand1, GList *cand2,
 
         switch (group_array[i].type) {
         case FIELD_TYPE_DATE:
-            if (!compare_date(str1, str2, NOR_REL, &disp_flag,
-                              group_array[i].desc))
-            {
+            if (!compare_date(str1, str2, NOR_REL, &disp_flag, group_array[i].desc)) {
                 return disp_flag;
             }
             break;
         case FIELD_TYPE_TIME:
-            if (!compare_time(str1, str2, NOR_REL, &disp_flag,
-                              group_array[i].desc))
-            {
+            if (!compare_time(str1, str2, NOR_REL, &disp_flag, group_array[i].desc)) {
                 return disp_flag;
             }
             break;
         case FIELD_TYPE_YEAR:
-            if (!compare_year(str1, str2, NOR_REL, &disp_flag,
-                              group_array[i].desc))
-            {
+            if (!compare_year(str1, str2, NOR_REL, &disp_flag, group_array[i].desc)) {
                 return disp_flag;
             }
             break;
@@ -1289,9 +1266,7 @@ cal_aggr_rec_rel(GList *cand1, GList *cand2,
         case FIELD_TYPE_TIMESTAMP:
         case FIELD_TYPE_DATETIME:
         case FIELD_TYPE_STRING:
-            if (!compare_records_from_column(str1, str2,
-                    NOR_REL, group_array[i].desc, &disp_flag))
-            {
+            if (!compare_records_from_column(str1, str2, NOR_REL, group_array[i].desc, &disp_flag)) {
                 return disp_flag;
             }
 
@@ -1305,9 +1280,7 @@ cal_aggr_rec_rel(GList *cand1, GList *cand2,
         case FIELD_TYPE_NEWDECIMAL:
         case FIELD_TYPE_DECIMAL:
         case FIELD_TYPE_FLOAT:
-            if (!compare_str_num_value(str1, str2, NOR_REL, &disp_flag,
-                                       group_array[i].desc, merge_failed))
-            {
+            if (!compare_str_num_value(str1, str2, NOR_REL, &disp_flag, group_array[i].desc, merge_failed)) {
                 return disp_flag;
             }
             break;
@@ -1321,27 +1294,24 @@ cal_aggr_rec_rel(GList *cand1, GList *cand2,
     return combine_aggr_record(cand1, cand2, para, merge_failed);
 }
 
-
 static int heap_count = 0;
-
 
 static int
 compare_value_from_records(network_packet *packet1, network_packet *packet2,
-        ORDER_BY *ob, int type, int *result, int *compare_failed)
+                           ORDER_BY *ob, int type, int *result, int *compare_failed)
 {
-    char str1[MAX_COL_VALUE_LEN] = {0};
-    char str2[MAX_COL_VALUE_LEN] = {0};
+    char str1[MAX_COL_VALUE_LEN] = { 0 };
+    char str2[MAX_COL_VALUE_LEN] = { 0 };
 
     skip_field(packet1, ob->pos);
     skip_field(packet2, ob->pos);
     network_mysqld_proto_get_column(packet1, str1, MAX_COL_VALUE_LEN);
     network_mysqld_proto_get_column(packet2, str2, MAX_COL_VALUE_LEN);
 
-    switch(type) {
+    switch (type) {
     case FIELD_TYPE_LONG:
     case FIELD_TYPE_DOUBLE:
-        return compare_str_num_value(str1, str2, PRIOR_TO, result,
-                                     ob->desc, compare_failed);
+        return compare_str_num_value(str1, str2, PRIOR_TO, result, ob->desc, compare_failed);
     case FIELD_TYPE_DATE:
         return compare_date(str1, str2, PRIOR_TO, result, ob->desc);
     case FIELD_TYPE_TIME:
@@ -1352,19 +1322,17 @@ compare_value_from_records(network_packet *packet1, network_packet *packet2,
     return 1;
 }
 
-
-static int 
-compare_records_from_column(char *str1, char *str2, 
-        int com_type, int desc, int *result)
+static int
+compare_records_from_column(char *str1, char *str2, int com_type, int desc, int *result)
 {
     g_debug("%s: str1:%s, str2:%s", G_STRLOC, str1, str2);
-    int ret = 0; 
+    int ret = 0;
     if (str1[0] == '\0' && str2[0] != '\0') {
         ret = -1;
     } else if (str1[0] != '\0' && str2[0] == '\0') {
         ret = 1;
     } else if (str1[0] != '\0' && str2[0] != '\0') {
-        ret = strcasecmp(str1, str2); 
+        ret = strcasecmp(str1, str2);
     } else {
         ret = 0;
     }
@@ -1388,18 +1356,17 @@ compare_records_from_column(char *str1, char *str2,
     }
 
     g_critical("%s: reach the unreachable place", G_STRLOC);
-    
+
     return 0;
 }
 
-
-static int 
-compare_records_by_str(network_packet *packet1, network_packet *packet2, 
-        order_by_para_t *para, int pkt1_index, int pkt2_index, int i, int *result)
+static int
+compare_records_by_str(network_packet *packet1, network_packet *packet2,
+                       order_by_para_t *para, int pkt1_index, int pkt2_index, int i, int *result)
 {
     int j;
-    char str1[MAX_COL_VALUE_LEN] = {0};
-    char str2[MAX_COL_VALUE_LEN] = {0};
+    char str1[MAX_COL_VALUE_LEN] = { 0 };
+    char str2[MAX_COL_VALUE_LEN] = { 0 };
     ORDER_BY *ob = &(para->order_array[i]);
 
     guint64 mask = 0xFFFF;
@@ -1411,8 +1378,7 @@ compare_records_by_str(network_packet *packet1, network_packet *packet2,
     if (para->field_index[pkt1_index]) {
         value1 = para->field_index[pkt1_index];
     } else {
-        value1 = set_rec_fields_off(packet1, para->order_array, 
-                para->order_array_size);
+        value1 = set_rec_fields_off(packet1, para->order_array, para->order_array_size);
         para->field_index[pkt1_index] = value1;
     }
 
@@ -1425,13 +1391,12 @@ compare_records_by_str(network_packet *packet1, network_packet *packet2,
     if (expect_value == 0) {
         expect_value = NET_HEADER_SIZE;
     }
-    packet1->offset = (guint) (intptr_t) expect_value;
+    packet1->offset = (guint)(intptr_t) expect_value;
 
     if (para->field_index[pkt2_index]) {
         value2 = para->field_index[pkt2_index];
     } else {
-        value2 = set_rec_fields_off(packet2, para->order_array, 
-                para->order_array_size);
+        value2 = set_rec_fields_off(packet2, para->order_array, para->order_array_size);
         para->field_index[pkt2_index] = value2;
     }
 
@@ -1444,7 +1409,7 @@ compare_records_by_str(network_packet *packet1, network_packet *packet2,
     if (expect_value == 0) {
         expect_value = NET_HEADER_SIZE;
     }
-    packet2->offset = (guint) (intptr_t) expect_value;
+    packet2->offset = (guint)(intptr_t) expect_value;
 
     network_mysqld_proto_get_column(packet1, str1, MAX_COL_VALUE_LEN);
     network_mysqld_proto_get_column(packet2, str2, MAX_COL_VALUE_LEN);
@@ -1456,8 +1421,9 @@ compare_records_by_str(network_packet *packet1, network_packet *packet2,
  *  is_prior_to Relation(record_A *record_B) defined ORDER BY
  *  return 1 if record A is prior to record B  else 0
  */
-static gint is_prior_to(GString *pkt1, GString *pkt2, order_by_para_t *para,
-        int pkt1_index, int pkt2_index, int *is_record_equal, int *compare_failed)
+static gint
+is_prior_to(GString *pkt1, GString *pkt2, order_by_para_t *para,
+            int pkt1_index, int pkt2_index, int *is_record_equal, int *compare_failed)
 {
     int i, equal_field_cnt, result;
     network_packet packet1;
@@ -1468,7 +1434,7 @@ static gint is_prior_to(GString *pkt1, GString *pkt2, order_by_para_t *para,
 
     equal_field_cnt = 0;
 
-    g_debug("%s: call is_prior_to, index1:%d, index2:%d, count:%d, pkt1:%p, pkt2:%p", 
+    g_debug("%s: call is_prior_to, index1:%d, index2:%d, count:%d, pkt1:%p, pkt2:%p",
             G_STRLOC, pkt1_index, pkt2_index, ++heap_count, pkt1, pkt2);
 
     for (i = 0; i < para->order_array_size; i++) {
@@ -1484,9 +1450,7 @@ static gint is_prior_to(GString *pkt1, GString *pkt2, order_by_para_t *para,
         case FIELD_TYPE_LONG:
         case FIELD_TYPE_LONGLONG:
         case FIELD_TYPE_INT24:
-            if (!compare_value_from_records(&packet1, &packet2, order,
-                        FIELD_TYPE_LONG, &result, compare_failed)) 
-            {
+            if (!compare_value_from_records(&packet1, &packet2, order, FIELD_TYPE_LONG, &result, compare_failed)) {
                 return result;
             }
             equal_field_cnt++;
@@ -1494,49 +1458,39 @@ static gint is_prior_to(GString *pkt1, GString *pkt2, order_by_para_t *para,
         case FIELD_TYPE_NEWDECIMAL:
         case FIELD_TYPE_DECIMAL:
         case FIELD_TYPE_FLOAT:
-        case FIELD_TYPE_DOUBLE: 
-            if (!compare_value_from_records(&packet1, &packet2, order,
-                        FIELD_TYPE_DOUBLE, &result, compare_failed)) 
-            {
+        case FIELD_TYPE_DOUBLE:
+            if (!compare_value_from_records(&packet1, &packet2, order, FIELD_TYPE_DOUBLE, &result, compare_failed)) {
                 return result;
             }
             equal_field_cnt++;
             break;
-        case FIELD_TYPE_DATE: 
-            if (!compare_value_from_records(&packet1, &packet2, order,
-                        FIELD_TYPE_DATE, &result, compare_failed)) 
-            {
+        case FIELD_TYPE_DATE:
+            if (!compare_value_from_records(&packet1, &packet2, order, FIELD_TYPE_DATE, &result, compare_failed)) {
                 return result;
             }
-                
+
             equal_field_cnt++;
             break;
         case FIELD_TYPE_TIME:
-            if (!compare_value_from_records(&packet1, &packet2, order,
-                        FIELD_TYPE_DATE, &result, compare_failed)) 
-            {
+            if (!compare_value_from_records(&packet1, &packet2, order, FIELD_TYPE_DATE, &result, compare_failed)) {
                 return result;
             }
             equal_field_cnt++;
             break;
-        case FIELD_TYPE_YEAR: 
-            if (!compare_value_from_records(&packet1, &packet2, order,
-                        FIELD_TYPE_DATE, &result, compare_failed)) 
-            {
+        case FIELD_TYPE_YEAR:
+            if (!compare_value_from_records(&packet1, &packet2, order, FIELD_TYPE_DATE, &result, compare_failed)) {
                 return result;
             }
             equal_field_cnt++;
             break;
         case FIELD_TYPE_NEWDATE:
             return 1;
-        /* case FIELD_TYPE_VARCHAR: */
+            /* case FIELD_TYPE_VARCHAR: */
         case FIELD_TYPE_TIMESTAMP:
-        case FIELD_TYPE_DATETIME: 
+        case FIELD_TYPE_DATETIME:
         case FIELD_TYPE_VAR_STRING:
-        case FIELD_TYPE_STRING: 
-            if (!compare_records_by_str(&packet1, &packet2, para,
-                        pkt1_index, pkt2_index, i, &result)) 
-            {
+        case FIELD_TYPE_STRING:
+            if (!compare_records_by_str(&packet1, &packet2, para, pkt1_index, pkt2_index, i, &result)) {
                 return result;
             }
             equal_field_cnt++;
@@ -1567,10 +1521,9 @@ static gint is_prior_to(GString *pkt1, GString *pkt2, order_by_para_t *para,
     return 1;
 }
 
-
 /* find index of field by name, the name might be an alias */
-static int cetus_result_find_fielddef(cetus_result_t *res,
-                                      const char *table, const char *field)
+static int
+cetus_result_find_fielddef(cetus_result_t *res, const char *table, const char *field)
 {
     int i;
     for (i = 0; i < res->fielddefs->len; ++i) {
@@ -1591,9 +1544,10 @@ static int cetus_result_find_fielddef(cetus_result_t *res,
     return -1;
 }
 
-static gboolean cetus_result_parse_fielddefs(cetus_result_t *res_merge, GQueue *input)
+static gboolean
+cetus_result_parse_fielddefs(cetus_result_t *res_merge, GQueue *input)
 {
-    network_packet packet = {0};
+    network_packet packet = { 0 };
 
     res_merge->fielddefs = network_mysqld_proto_fielddefs_new();
     int i;
@@ -1615,11 +1569,11 @@ static gboolean cetus_result_parse_fielddefs(cetus_result_t *res_merge, GQueue *
     return TRUE;
 }
 
-
-static gboolean cetus_result_retrieve_field_count(GQueue *input, guint64 *p_field_count)
+static gboolean
+cetus_result_retrieve_field_count(GQueue *input, guint64 *p_field_count)
 {
     int packet_count = g_queue_get_length(input);
-    network_packet packet = {0};
+    network_packet packet = { 0 };
     packet.data = g_queue_peek_head(input); /* Number-of-Field packet */
     int err = network_mysqld_proto_skip_network_header(&packet);
     guint64 field_count;
@@ -1633,7 +1587,8 @@ static gboolean cetus_result_retrieve_field_count(GQueue *input, guint64 *p_fiel
     return TRUE;
 }
 
-static gboolean cetus_result_parse_field_count(cetus_result_t *res_merge, GQueue *input)
+static gboolean
+cetus_result_parse_field_count(cetus_result_t *res_merge, GQueue *input)
 {
     guint64 field_count = 0;
     if (cetus_result_retrieve_field_count(input, &field_count) == TRUE) {
@@ -1647,9 +1602,9 @@ static gboolean cetus_result_parse_field_count(cetus_result_t *res_merge, GQueue
 /**
  * Get order_array.pos, order_array.type
  */
-static gboolean 
-get_order_by_fields(cetus_result_t *res_merge, ORDER_BY *order_array, 
-        guint order_array_size, result_merge_t *merged_result)
+static gboolean
+get_order_by_fields(cetus_result_t *res_merge, ORDER_BY *order_array,
+                    guint order_array_size, result_merge_t *merged_result)
 {
     int i;
     for (i = 0; i < order_array_size; ++i) {
@@ -1657,62 +1612,60 @@ get_order_by_fields(cetus_result_t *res_merge, ORDER_BY *order_array,
 
         if (orderby->pos == -1) {
             int index = cetus_result_find_fielddef(res_merge,
-                                               orderby->table_name, orderby->name);
+                                                   orderby->table_name, orderby->name);
             if (index == -1) {
                 merged_result->status = RM_FAIL;
-                char msg[128] = {0};
+                char msg[128] = { 0 };
                 snprintf(msg, sizeof(msg), "order by:no %s in field list", orderby->name);
                 merged_result->detail = g_string_new(msg);
                 return FALSE;
             }
             orderby->pos = index;
         }
-        network_mysqld_proto_fielddef_t *fdef =
-            g_ptr_array_index(res_merge->fielddefs, orderby->pos);
+        network_mysqld_proto_fielddef_t *fdef = g_ptr_array_index(res_merge->fielddefs, orderby->pos);
         orderby->type = fdef->type;
     }
     return TRUE;
 }
 
-static gboolean 
-get_group_by_fields(cetus_result_t *res_merge, GROUP_BY *group_array, guint group_array_size,
-        result_merge_t *merged_result)
+static gboolean
+get_group_by_fields(cetus_result_t *res_merge, group_by_t *group_array, guint group_array_size,
+                    result_merge_t *merged_result)
 {
     int i;
     for (i = 0; i < group_array_size; ++i) {
-        GROUP_BY *groupby = &(group_array[i]);
+        group_by_t *groupby = &(group_array[i]);
         if (groupby->pos == -1) {
             int index = cetus_result_find_fielddef(res_merge,
-                             groupby->table_name, groupby->name);
+                                                   groupby->table_name, groupby->name);
             if (index == -1) {
                 merged_result->status = RM_FAIL;
-                char msg[128] = {0};
+                char msg[128] = { 0 };
                 snprintf(msg, sizeof(msg), "group by: no %s in field list", groupby->name);
                 merged_result->detail = g_string_new(msg);
                 return FALSE;
             }
             groupby->pos = index;
         }
-        network_mysqld_proto_fielddef_t *fdef =
-            g_ptr_array_index(res_merge->fielddefs, groupby->pos);
+        network_mysqld_proto_fielddef_t *fdef = g_ptr_array_index(res_merge->fielddefs, groupby->pos);
         groupby->type = fdef->type;
     }
     return TRUE;
 }
 
-static gboolean 
-fulfill_condi(char *aggr_value, having_condition_t *hav_condi, result_merge_t *merged_result) 
+static gboolean
+fulfill_condi(char *aggr_value, having_condition_t *hav_condi, result_merge_t *merged_result)
 {
     int is_num = 0;
-    switch(hav_condi->data_type) {
-        case TK_INTEGER:
-            is_num = 1;
-            break;
-        case TK_FLOAT:
-            is_num = 1;
-            break;
-        default:
-            break;
+    switch (hav_condi->data_type) {
+    case TK_INTEGER:
+        is_num = 1;
+        break;
+    case TK_FLOAT:
+        is_num = 1;
+        break;
+    default:
+        break;
     }
 
     int len1 = strlen(aggr_value);
@@ -1729,8 +1682,7 @@ fulfill_condi(char *aggr_value, having_condition_t *hav_condi, result_merge_t *m
         }
 
         int num_unsupported = 0;
-        result = cmp_str_num(aggr_value, len1, hav_condi->condition_value, 
-                len2, &num_unsupported);
+        result = cmp_str_num(aggr_value, len1, hav_condi->condition_value, len2, &num_unsupported);
         if (num_unsupported) {
             merged_result->status = RM_FAIL;
             return FALSE;
@@ -1740,63 +1692,58 @@ fulfill_condi(char *aggr_value, having_condition_t *hav_condi, result_merge_t *m
         result = strcmp(aggr_value, hav_condi->condition_value);
     }
 
-    switch(hav_condi->rel_type) {
-        case TK_LE:
-            if (result <= 0) {
-                return TRUE;
-            }
-            break;
-        case TK_GE:
-            if (result >= 0) {
-                return TRUE;
-            }
-            break;
-        case TK_LT:
-            if (result < 0) {
-                return TRUE;
-            }
-            break;
-        case TK_GT:
-            if (result > 0) {
-                return TRUE;
-            }
-            break;
-        case TK_EQ:
-            if (result == 0) {
-                return TRUE;
-            }
-            break;
-        case TK_NE:
-            if (result != 0) {
-                return TRUE;
-            }
-            break;
+    switch (hav_condi->rel_type) {
+    case TK_LE:
+        if (result <= 0) {
+            return TRUE;
+        }
+        break;
+    case TK_GE:
+        if (result >= 0) {
+            return TRUE;
+        }
+        break;
+    case TK_LT:
+        if (result < 0) {
+            return TRUE;
+        }
+        break;
+    case TK_GT:
+        if (result > 0) {
+            return TRUE;
+        }
+        break;
+    case TK_EQ:
+        if (result == 0) {
+            return TRUE;
+        }
+        break;
+    case TK_NE:
+        if (result != 0) {
+            return TRUE;
+        }
+        break;
     }
 
     return FALSE;
 }
 
-
-static int aggr_by_group(aggr_by_group_para_t *para,
-        GList **candidates, guint *pkt_count, result_merge_t *merged_result)
+static int
+aggr_by_group(aggr_by_group_para_t *para, GList **candidates, guint *pkt_count, result_merge_t *merged_result)
 {
-    guint  cand_index = 0;
-    GList *candidate = NULL; 
+    guint cand_index = 0;
+    GList *candidate = NULL;
     size_t row_cnter = 0;
-    size_t off_pos   = 0;
+    size_t off_pos = 0;
     size_t iter;
 
     GPtrArray *recv_queues = para->recv_queues;
 
-    while (row_cnter < para->limit->row_count)
-    {
-        if (!candidate ||  get_pkt_type((GString *) candidate->data) == MYSQLD_PACKET_EOF)
-        {
+    while (row_cnter < para->limit->row_count) {
+        if (!candidate || get_pkt_type((GString *)candidate->data) == MYSQLD_PACKET_EOF) {
             for (iter = 0; iter < recv_queues->len; iter++) {
                 GString *item = candidates[iter]->data;
-                if (item != NULL &&  
-                        get_pkt_type(item) != MYSQLD_PACKET_EOF)
-                {
+                if (item != NULL && get_pkt_type(item) != MYSQLD_PACKET_EOF) {
                     cand_index = iter;
                     candidate = candidates[iter];
                     break;
@@ -1804,24 +1751,19 @@ static int aggr_by_group(aggr_by_group_para_t *para,
             }
         }
         /* if candidate is still NULL, all possible candidates have been exhausted */
-        if (candidate == NULL || 
-                get_pkt_type((GString *) candidate->data) == MYSQLD_PACKET_EOF) 
-        {
+        if (candidate == NULL || get_pkt_type((GString *)candidate->data) == MYSQLD_PACKET_EOF) {
             break;
         }
 
         /* to obtain candidate ptr and its index in recv_queues by scanning candidates once */
-        for (iter = 0; iter < recv_queues->len; iter++)
-        {
+        for (iter = 0; iter < recv_queues->len; iter++) {
             /* don't compare with itself */
             if (iter == cand_index) {
                 continue;
             } else {
                 GList *tmp_list = candidates[iter];
                 /* some recv_queue may be shorter than others */
-                if (tmp_list == NULL ||
-                        get_pkt_type((GString *) tmp_list->data) == MYSQLD_PACKET_EOF)
-                {
+                if (tmp_list == NULL || get_pkt_type((GString *)tmp_list->data) == MYSQLD_PACKET_EOF) {
                     continue;
                 }
 
@@ -1847,39 +1789,37 @@ static int aggr_by_group(aggr_by_group_para_t *para,
         }
 
         g_debug("candidate:%p", candidate);
-        if (off_pos < para->limit->offset)
-        {
+        if (off_pos < para->limit->offset) {
             off_pos++;
             candidates[cand_index] = candidate->next;
             candidate = candidate->next;
             continue;
         } else {
-            char aggr_value[MAX_COL_VALUE_LEN] = {0};
+            char aggr_value[MAX_COL_VALUE_LEN] = { 0 };
             retrieve_aggr_value(candidate->data, para->aggr_array, aggr_value);
 
-            if (!para->hav_condi->rel_type || 
-                    fulfill_condi(aggr_value, para->hav_condi, merged_result)) 
-            {
-                ((GString *) candidate->data)->str[3] = (*pkt_count) + 1;
+            if (!para->hav_condi->rel_type || fulfill_condi(aggr_value, para->hav_condi, merged_result)) {
+                ((GString *)candidate->data)->str[3] = (*pkt_count) + 1;
                 ++(*pkt_count);
                 row_cnter++;
-                network_queue_append(para->send_queue, (GString *) candidate->data); 
+                network_queue_append(para->send_queue, (GString *)candidate->data);
             } else {
-                g_string_free((GString *) candidate->data, TRUE);
+                g_string_free((GString *)candidate->data, TRUE);
             }
 
             candidates[cand_index] = candidate->next;
             GList *ptr_to_unlink = candidate;
             candidate = candidate->next;
             network_queue *recv_queue = recv_queues->pdata[cand_index];
-            g_queue_delete_link(recv_queue->chunks, ptr_to_unlink); 
+            g_queue_delete_link(recv_queue->chunks, ptr_to_unlink);
         }
     }
 
     return 1;
 }
 
-void heap_adjust(heap_type *heap, int s, int m, int *compare_failed) 
+void
+heap_adjust(heap_type *heap, int s, int m, int *compare_failed)
 {
     g_debug("%s: call heap_adjust, s:%d, m:%d", G_STRLOC, s, m);
 
@@ -1908,11 +1848,9 @@ void heap_adjust(heap_type *heap, int s, int m, int *compare_failed)
                 } else {
                     is_dup = 0;
                     k = j;
-                    if (!is_prior_to(heap->element[j]->record->data, 
-                                heap->element[j + 1]->record->data, &(heap->order_para),
-                                heap->element[j]->index, heap->element[j + 1]->index,
-                                &is_dup, compare_failed)) 
-                    {
+                    if (!is_prior_to(heap->element[j]->record->data,
+                                     heap->element[j + 1]->record->data, &(heap->order_para),
+                                     heap->element[j]->index, heap->element[j + 1]->index, &is_dup, compare_failed)) {
                         j++;
                         heap->element[j]->is_prior_to = 0;
 
@@ -1939,9 +1877,7 @@ void heap_adjust(heap_type *heap, int s, int m, int *compare_failed)
         if (!rc->is_over) {
             is_dup = 0;
             if (is_prior_to(rc->record->data, heap->element[j]->record->data,
-                        &(heap->order_para), rc->index, heap->element[j]->index,
-                        &is_dup, compare_failed)) 
-            {
+                            &(heap->order_para), rc->index, heap->element[j]->index, &is_dup, compare_failed)) {
                 if (is_dup) {
                     if (heap->element[j]->is_dup) {
                         heap->element[s]->is_dup = 1;
@@ -1953,10 +1889,10 @@ void heap_adjust(heap_type *heap, int s, int m, int *compare_failed)
                 break;
             }
         }
-                
+
         heap->element[s] = heap->element[j];
         heap->element[s]->refreshed = 1;
-                    
+
         s = j;
     }
 
@@ -1964,8 +1900,8 @@ void heap_adjust(heap_type *heap, int s, int m, int *compare_failed)
     heap->element[s]->refreshed = 1;
 }
 
-static void check_server_sess_wait_for_event(network_mysqld_con *con, 
-        int pmd_index, short ev_type, struct timeval *timeout)
+static void
+check_server_sess_wait_for_event(network_mysqld_con *con, int pmd_index, short ev_type, struct timeval *timeout)
 {
     size_t i;
     for (i = 0; i < con->servers->len; i++) {
@@ -1978,31 +1914,30 @@ static void check_server_sess_wait_for_event(network_mysqld_con *con,
 
         if (!pmd->server->is_read_finished) {
             if (pmd->server->is_waiting) {
-                g_debug("%s: pmd %d is waiting", G_STRLOC, (int) i);
+                g_debug("%s: pmd %d is waiting", G_STRLOC, (int)i);
                 continue;
             }
             con->num_read_pending++;
             pmd->read_cal_flag = 0;
-            g_debug("%s: pmd %d is not read finished, read pending:%d, fd:%d, pmd index:%d", 
-                    G_STRLOC, (int) i, con->num_read_pending, pmd->server->fd, pmd->index);
-            event_set(&(pmd->server->event), pmd->server->fd, ev_type,
-                    server_session_con_handler, pmd);
+            g_debug("%s: pmd %d is not read finished, read pending:%d, fd:%d, pmd index:%d",
+                    G_STRLOC, (int)i, con->num_read_pending, pmd->server->fd, pmd->index);
+            event_set(&(pmd->server->event), pmd->server->fd, ev_type, server_session_con_handler, pmd);
             chassis_event_add_with_timeout(con->srv, &(pmd->server->event), timeout);
             g_debug("%s: call chassis_event_add_with_timeout", G_STRLOC);
             pmd->server->is_waiting = 1;
         } else {
-            g_debug("%s: pmd %d is read finished", G_STRLOC, (int) i);
+            g_debug("%s: pmd %d is read finished", G_STRLOC, (int)i);
         }
     }
 }
 
-static int check_after_limit(network_mysqld_con *con, merge_parameters_t *data,
-        int is_finished) 
+static int
+check_after_limit(network_mysqld_con *con, merge_parameters_t *data, int is_finished)
 {
     GPtrArray *recv_queues = data->recv_queues;
     GList **candidates = data->candidates;
     gboolean is_more_to_read = FALSE;
-    GList *candidate = NULL; 
+    GList *candidate = NULL;
     size_t iter;
 
     g_debug("%s: call check_after_limit", G_STRLOC);
@@ -2014,34 +1949,31 @@ static int check_after_limit(network_mysqld_con *con, merge_parameters_t *data,
             if (candidate == NULL || candidate->data == NULL) {
                 con->partially_merged = 1;
                 is_more_to_read = TRUE;
-                g_debug("%s: item is nil, index:%d", G_STRLOC, (int) iter);
+                g_debug("%s: item is nil, index:%d", G_STRLOC, (int)iter);
                 break;
             }
 
             GString *item = candidate->data;
             guchar pkt_type = get_pkt_type(item);
             if (pkt_type == MYSQLD_PACKET_EOF || pkt_type == MYSQLD_PACKET_ERR) {
-                g_debug("%s: is over true:%d, pkt type:%d", G_STRLOC,
-                        (int) iter, (int) pkt_type);
+                g_debug("%s: is over true:%d, pkt type:%d", G_STRLOC, (int)iter, (int)pkt_type);
                 is_over = TRUE;
                 break;
             }
 
             candidates[iter] = candidate->next;
-            g_debug("%s: free packet addr:%p, iter:%d, pkt_type:%d", G_STRLOC, 
-                    candidate->data, (int) iter, (int) pkt_type);
-            g_string_free((GString *) candidate->data, TRUE);
+            g_debug("%s: free packet addr:%p, iter:%d, pkt_type:%d", G_STRLOC,
+                    candidate->data, (int)iter, (int)pkt_type);
+            g_string_free((GString *)candidate->data, TRUE);
             network_queue *recv_queue = recv_queues->pdata[iter];
-            g_queue_delete_link(recv_queue->chunks, candidate); 
-        } while(!is_over);
+            g_queue_delete_link(recv_queue->chunks, candidate);
+        } while (!is_over);
     }
 
     if (is_finished && is_more_to_read) {
-        g_warning("%s: finished reading, but needs more read:%p", 
-                G_STRLOC, con);
-    }  else if ((!is_finished) && (!is_more_to_read)) {
-        g_warning("%s: not finished reading, but is_more_to_read false:%p",
-                G_STRLOC, con);
+        g_warning("%s: finished reading, but needs more read:%p", G_STRLOC, con);
+    } else if ((!is_finished) && (!is_more_to_read)) {
+        g_warning("%s: not finished reading, but is_more_to_read false:%p", G_STRLOC, con);
     }
 
     if (is_more_to_read) {
@@ -2053,19 +1985,19 @@ static int check_after_limit(network_mysqld_con *con, merge_parameters_t *data,
     return 1;
 }
 
-
-static int do_simple_merge(network_mysqld_con *con, merge_parameters_t *data, int is_finished) 
+static int
+do_simple_merge(network_mysqld_con *con, merge_parameters_t *data, int is_finished)
 {
     network_queue *send_queue = data->send_queue;
     GPtrArray *recv_queues = data->recv_queues;
     GList **candidates = data->candidates;
-    LIMIT *limit = &(data->limit);
+    limit_t *limit = &(data->limit);
     int *row_cnter = &(data->row_cnter);
-    int *off_pos   = &(data->off_pos);
+    int *off_pos = &(data->off_pos);
 
-    GList *candidate = NULL; 
+    GList *candidate = NULL;
     size_t iter;
-    
+
     heap_count = 0;
 
     int merged_output_size = con->srv->merged_output_size;
@@ -2080,47 +2012,45 @@ static int do_simple_merge(network_mysqld_con *con, merge_parameters_t *data, in
         candidate = candidates[iter];
         network_queue *recv_queue = recv_queues->pdata[iter];
 
-        g_debug("%s: analysis packets:%d", G_STRLOC, (int) iter);
+        g_debug("%s: analysis packets:%d", G_STRLOC, (int)iter);
 
-        while (candidate != NULL)
-        {
+        while (candidate != NULL) {
             if (candidate->data == NULL) {
-                g_debug("%s: candidate data is nil:%d", G_STRLOC, (int) iter);
+                g_debug("%s: candidate data is nil:%d", G_STRLOC, (int)iter);
                 break;
             }
 
             if ((*row_cnter) == limit->row_count) {
-                g_debug("%s: reach limit:%d", G_STRLOC, (int) iter);
+                g_debug("%s: reach limit:%d", G_STRLOC, (int)iter);
                 break;
             }
 
-            guchar pkt_type = get_pkt_type((GString *) candidate->data);
+            guchar pkt_type = get_pkt_type((GString *)candidate->data);
             if (pkt_type == MYSQLD_PACKET_EOF) {
-                g_debug("%s: MYSQLD_PACKET_EOF here:%d", G_STRLOC, (int) iter);
+                g_debug("%s: MYSQLD_PACKET_EOF here:%d", G_STRLOC, (int)iter);
                 break;
             }
 
             if (pkt_type == MYSQLD_PACKET_ERR) {
                 data->is_pack_err = 1;
                 data->err_pack = candidate->data;
-                g_debug("%s: MYSQLD_PACKET_ERR here:%d", G_STRLOC, (int) iter);
+                g_debug("%s: MYSQLD_PACKET_ERR here:%d", G_STRLOC, (int)iter);
                 break;
             }
 
             if ((*off_pos) < limit->offset) {
-                (*off_pos) ++;
-                g_string_free((GString *) candidate->data, TRUE);
+                (*off_pos)++;
+                g_string_free((GString *)candidate->data, TRUE);
             } else {
 
                 int packet_len = network_mysqld_proto_get_packet_len(candidate->data);
                 data->aggr_output_len += packet_len;
 
-                ((GString *) candidate->data)->str[3] = data->pkt_count + 1;
+                ((GString *)candidate->data)->str[3] = data->pkt_count + 1;
                 ++(data->pkt_count);
-                network_queue_append(send_queue, (GString *) candidate->data); 
+                network_queue_append(send_queue, (GString *)candidate->data);
                 if (data->aggr_output_len >= merged_output_size) {
-                    g_debug("%s: send_part_content_to_client:%d, iter:%d", 
-                            G_STRLOC, data->aggr_output_len, (int) iter);
+                    g_debug("%s: send_part_content_to_client:%d, iter:%d", G_STRLOC, data->aggr_output_len, (int)iter);
                     send_part_content_to_client(con);
                     data->aggr_output_len = 0;
                 }
@@ -2128,19 +2058,18 @@ static int do_simple_merge(network_mysqld_con *con, merge_parameters_t *data, in
             }
 
             candidates[iter] = candidate->next;
-            g_queue_delete_link(recv_queue->chunks, candidate); 
+            g_queue_delete_link(recv_queue->chunks, candidate);
             candidate = candidates[iter];
         }
 
         if (candidate == NULL || candidate->data == NULL) {
             server_session_t *pmd = g_ptr_array_index(con->servers, iter);
             if (pmd->server->is_waiting) {
-                g_debug("%s: is_waiting true:%d", G_STRLOC, (int) iter);
+                g_debug("%s: is_waiting true:%d", G_STRLOC, (int)iter);
                 continue;
-            }    
+            }
             candidates[iter] = NULL;
-            g_debug("%s: candidate is nil for i:%d, recv_queues:%p", 
-                    G_STRLOC, (int) iter, recv_queues);
+            g_debug("%s: candidate is nil for i:%d, recv_queues:%p", G_STRLOC, (int)iter, recv_queues);
             shortaged = TRUE;
         }
     }
@@ -2170,29 +2099,26 @@ static int do_simple_merge(network_mysqld_con *con, merge_parameters_t *data, in
     return 1;
 }
 
-
-
-static int do_sort_merge(network_mysqld_con *con, merge_parameters_t *data,
-        int is_finished, int *compare_failed) 
+static int
+do_sort_merge(network_mysqld_con *con, merge_parameters_t *data, int is_finished, int *compare_failed)
 {
     network_queue *send_queue = data->send_queue;
     GPtrArray *recv_queues = data->recv_queues;
     GList **candidates = data->candidates;
-    LIMIT *limit = &(data->limit);
+    limit_t *limit = &(data->limit);
     heap_type *heap = data->heap;
     int *row_cnter = &(data->row_cnter);
-    int *off_pos   = &(data->off_pos);
+    int *off_pos = &(data->off_pos);
     uint64_t *field_index = heap->order_para.field_index;
 
-    GList *candidate = NULL; 
+    GList *candidate = NULL;
 
     int merged_output_size = con->srv->merged_output_size;
     if (con->is_client_compressed) {
         merged_output_size = con->srv->compressed_merged_output_size;
     }
     int last_output_index = -1;
-    while ((*row_cnter) < limit->row_count)
-    {
+    while ((*row_cnter) < limit->row_count) {
         if (heap->element[0]->is_over) {
             if (heap->is_err) {
                 data->is_pack_err = 1;
@@ -2214,36 +2140,33 @@ static int do_sort_merge(network_mysqld_con *con, merge_parameters_t *data,
                     return 0;
                 }
                 cand_index = heap->element[0]->index;
-            }    
-        }   
+            }
+        }
 
         candidate = heap->element[0]->record;
         field_index[cand_index] = 0;
 
-        g_debug("%s: row counter:%d", G_STRLOC, (int) (*row_cnter));
+        g_debug("%s: row counter:%d", G_STRLOC, (int)(*row_cnter));
 
-        if (data->is_distinct && heap->element[0]->is_dup && 
-                cand_index != last_output_index) 
-        {
+        if (data->is_distinct && heap->element[0]->is_dup && cand_index != last_output_index) {
             g_debug("%s: dup element at:%d", G_STRLOC, cand_index);
-            g_string_free((GString *) candidate->data, TRUE);
+            g_string_free((GString *)candidate->data, TRUE);
         } else if ((*off_pos) < limit->offset) {
             (*off_pos)++;
-            g_string_free((GString *) candidate->data, TRUE);
-            g_debug("%s: off pos here:%d", G_STRLOC, (int) (*off_pos));
+            g_string_free((GString *)candidate->data, TRUE);
+            g_debug("%s: off pos here:%d", G_STRLOC, (int)(*off_pos));
         } else {
-            
+
             int packet_len = network_mysqld_proto_get_packet_len(candidate->data);
             data->aggr_output_len += packet_len;
-            ((GString *) candidate->data)->str[3] = data->pkt_count + 1;
+            ((GString *)candidate->data)->str[3] = data->pkt_count + 1;
             ++(data->pkt_count);
-            network_queue_append(send_queue, (GString *) candidate->data); 
+            network_queue_append(send_queue, (GString *)candidate->data);
             (*row_cnter)++;
             last_output_index = cand_index;
 
             if (data->aggr_output_len >= merged_output_size) {
-                g_debug("%s: send_part_content_to_client:%d", 
-                        G_STRLOC, data->aggr_output_len);
+                g_debug("%s: send_part_content_to_client:%d", G_STRLOC, data->aggr_output_len);
                 send_part_content_to_client(con);
                 data->aggr_output_len = 0;
             }
@@ -2257,17 +2180,15 @@ static int do_sort_merge(network_mysqld_con *con, merge_parameters_t *data,
 
         candidates[cand_index] = candidate->next;
         network_queue *recv_queue = recv_queues->pdata[cand_index];
-        g_debug("%s: remove candidate:%p for queue:%p, pmd:%d", 
-                G_STRLOC, candidate, recv_queue, cand_index);
-        g_queue_delete_link(recv_queue->chunks, candidate); 
+        g_debug("%s: remove candidate:%p for queue:%p, pmd:%d", G_STRLOC, candidate, recv_queue, cand_index);
+        g_queue_delete_link(recv_queue->chunks, candidate);
 
         if (candidates[cand_index] == NULL || candidates[cand_index]->data == NULL) {
             con->partially_merged = 1;
             g_debug("%s: item is nil, index:%d", G_STRLOC, cand_index);
             if (data->aggr_output_len >= merged_output_size) {
                 send_part_content_to_client(con);
-                g_debug("%s: send_part_content_to_client:%d", 
-                        G_STRLOC, data->aggr_output_len);
+                g_debug("%s: send_part_content_to_client:%d", G_STRLOC, data->aggr_output_len);
                 data->aggr_output_len = 0;
             }
             check_server_sess_wait_for_event(con, cand_index, EV_READ, &con->read_timeout);
@@ -2289,8 +2210,7 @@ static int do_sort_merge(network_mysqld_con *con, merge_parameters_t *data,
             heap->element[0]->is_over = 0;
         }
 
-        g_debug("%s: candidate:%p for queue:%p, pmd:%d", 
-                G_STRLOC, candidates[cand_index], recv_queue, cand_index);
+        g_debug("%s: candidate:%p for queue:%p, pmd:%d", G_STRLOC, candidates[cand_index], recv_queue, cand_index);
 
         heap_adjust(heap, 1, recv_queues->len, compare_failed);
         if (*compare_failed) {
@@ -2307,9 +2227,8 @@ static int do_sort_merge(network_mysqld_con *con, merge_parameters_t *data,
     return 1;
 }
 
-
-static int 
-create_heap_for_merge_sort(network_mysqld_con *con, merge_parameters_t *data, int *compare_failed) 
+static int
+create_heap_for_merge_sort(network_mysqld_con *con, merge_parameters_t *data, int *compare_failed)
 {
     GList **candidates = data->candidates;
     heap_type *heap = data->heap;
@@ -2357,7 +2276,8 @@ create_heap_for_merge_sort(network_mysqld_con *con, merge_parameters_t *data, in
     return 1;
 }
 
-int callback_merge(network_mysqld_con *con, merge_parameters_t *data, int is_finished)
+int
+callback_merge(network_mysqld_con *con, merge_parameters_t *data, int is_finished)
 {
     int merge_failed = 0;
     network_queue *send_queue = data->send_queue;
@@ -2408,12 +2328,12 @@ int callback_merge(network_mysqld_con *con, merge_parameters_t *data, int is_fin
     return RM_SUCCESS;
 }
 
-
-static int 
-do_merge(network_mysqld_con *con, merge_parameters_t *data, int *merge_failed) {
+static int
+do_merge(network_mysqld_con *con, merge_parameters_t *data, int *merge_failed)
+{
     heap_type *heap = data->heap;
     int is_finished = 0;
-    
+
     if (con->num_pending_servers == 0) {
         is_finished = 1;
     }
@@ -2453,15 +2373,14 @@ do_merge(network_mysqld_con *con, merge_parameters_t *data, int *merge_failed) {
     return 1;
 }
 
-
-gint check_dist_tran_resultset(network_queue *recv_queue, network_mysqld_con *con)
+gint
+check_dist_tran_resultset(network_queue *recv_queue, network_mysqld_con *con)
 {
     int fail = 0;
     GList *pkt = recv_queue->chunks->head;
     /* only check the first packet in each recv_queue */
-    if (pkt != NULL && pkt->data != NULL && ((GString *) pkt->data)->len > NET_HEADER_SIZE) 
-    {
-        guchar pkt_type = get_pkt_type((GString *) pkt->data);
+    if (pkt != NULL && pkt->data != NULL && ((GString *)pkt->data)->len > NET_HEADER_SIZE) {
+        guchar pkt_type = get_pkt_type((GString *)pkt->data);
         g_debug("%s: pkt type:%d", G_STRLOC, pkt_type);
         if (pkt_type == MYSQLD_PACKET_ERR) {
             network_packet packet;
@@ -2470,41 +2389,40 @@ gint check_dist_tran_resultset(network_queue *recv_queue, network_mysqld_con *co
             network_mysqld_err_packet_t *err_packet;
             err_packet = network_mysqld_err_packet_new();
             if (!network_mysqld_proto_get_err_packet(&packet, err_packet)) {
-                int checked = 0; 
+                int checked = 0;
                 switch (err_packet->errcode) {
-                    case ER_XA_RBROLLBACK:
-                        g_message("%s: ER_XA_RBROLLBACK for con:%p", G_STRLOC, con);
+                case ER_XA_RBROLLBACK:
+                    g_message("%s: ER_XA_RBROLLBACK for con:%p", G_STRLOC, con);
+                    fail = 1;
+                    checked = 1;
+                    break;
+                case ER_XA_RBDEADLOCK:
+                    g_message("%s: ER_XA_RBDEADLOCK for con:%p", G_STRLOC, con);
+                    fail = 1;
+                    checked = 1;
+                    break;
+                case ER_XA_RBTIMEOUT:
+                    g_message("%s: ER_XA_RBTIMEOUT for con:%p", G_STRLOC, con);
+                    fail = 1;
+                    checked = 1;
+                    break;
+                case ER_LOCK_DEADLOCK:
+                case ER_LOCK_WAIT_TIMEOUT:
+                    fail = 1;
+                    checked = 1;
+                    break;
+                case ER_DUP_ENTRY:
+                    g_message("%s: ER_DUP_ENTRY here:%d", G_STRLOC, con->last_resp_num);
+                    if (con->last_resp_num > 1) {
                         fail = 1;
-                        checked = 1;
-                        break;
-                    case ER_XA_RBDEADLOCK:
-                        g_message("%s: ER_XA_RBDEADLOCK for con:%p", G_STRLOC, con);
-                        fail = 1;
-                        checked = 1;
-                        break;
-                    case ER_XA_RBTIMEOUT:
-                        g_message("%s: ER_XA_RBTIMEOUT for con:%p", G_STRLOC, con);
-                        fail = 1;
-                        checked = 1;
-                        break;
-                    case ER_LOCK_DEADLOCK:
-                    case ER_LOCK_WAIT_TIMEOUT:
-                        fail = 1;
-                        checked = 1;
-                        break;
-                    case ER_DUP_ENTRY:
-                        g_message("%s: ER_DUP_ENTRY here:%d", G_STRLOC, 
-                                con->last_resp_num);
-                        if (con->last_resp_num > 1) {
-                            fail = 1;
-                        } else {
-                            fail = 0;
-                        }
-                        checked = 1;
-                        break;
-                    default:
+                    } else {
                         fail = 0;
-                        break;
+                    }
+                    checked = 1;
+                    break;
+                default:
+                    fail = 0;
+                    break;
                 }
                 if (!checked) {
                     if (strncasecmp(err_packet->sqlstate->str, "XA", 2) == 0) {
@@ -2529,8 +2447,9 @@ gint check_dist_tran_resultset(network_queue *recv_queue, network_mysqld_con *co
     return 0;
 }
 
-static int log_packet_error_info(network_socket *client, network_socket *server, char *orig_sql, 
-        GString *packet_str, uint64_t uniq_id)
+static int
+log_packet_error_info(network_socket *client, network_socket *server, char *orig_sql,
+                      GString *packet_str, uint64_t uniq_id)
 {
     network_mysqld_err_packet_t *err_packet;
     network_packet packet;
@@ -2540,25 +2459,21 @@ static int log_packet_error_info(network_socket *client, network_socket *server,
 
     err_packet = network_mysqld_err_packet_new();
 
-   if (network_mysqld_proto_get_err_packet(&packet, err_packet)) {
-       g_message("%s:clt:%s,src:%s,dst:%s,db:%s,%s",
-               G_STRLOC, client->src->name->str, server->src->name->str,
-               server->dst->name->str, server->default_db->str, orig_sql);
-       network_mysqld_err_packet_free(err_packet);
-       return -1;
-   }
+    if (network_mysqld_proto_get_err_packet(&packet, err_packet)) {
+        g_message("%s:dst:%s, sql:%s", G_STRLOC, server->dst->name->str, orig_sql);
+        network_mysqld_err_packet_free(err_packet);
+        return -1;
+    }
 
-   g_message("%s: id:%llu,clt:%s,src:%s,dst:%s,db:%s,%s, error code:%d, errmsg:%s, sqlstate:%s",
-           G_STRLOC, (unsigned long long) uniq_id, client->src->name->str, server->src->name->str,
-           server->dst->name->str, server->default_db->str, orig_sql, (int) err_packet->errcode,
-           err_packet->errmsg->str, err_packet->sqlstate->str);
-   network_mysqld_err_packet_free(err_packet);
-   return 0;
+    g_message("%s:dst:%s,sql:%s,errmsg:%s", G_STRLOC, server->dst->name->str, orig_sql, err_packet->errmsg->str);
+
+    network_mysqld_err_packet_free(err_packet);
+    return 0;
 }
 
 static int
-merge_for_modify(sql_context_t *context, network_queue *send_queue, GPtrArray *recv_queues, 
-        network_mysqld_con *con, cetus_result_t *res_merge, result_merge_t *merged_result)
+merge_for_modify(sql_context_t *context, network_queue *send_queue, GPtrArray *recv_queues,
+                 network_mysqld_con *con, cetus_result_t *res_merge, result_merge_t *merged_result)
 {
     /* INSERT/UPDATE/DELETE expecting OK packet */
     int total_affected_rows = 0;
@@ -2577,8 +2492,8 @@ merge_for_modify(sql_context_t *context, network_queue *send_queue, GPtrArray *r
 
         guchar pkt_type = get_pkt_type(pkt);
         switch (pkt_type) {
-        case MYSQLD_PACKET_OK: {
-            network_packet packet = {pkt, 0};
+        case MYSQLD_PACKET_OK:{
+            network_packet packet = { pkt, 0 };
             network_mysqld_ok_packet_t one_ok;
             network_mysqld_proto_skip_network_header(&packet);
             if (!network_mysqld_proto_get_ok_packet(&packet, &one_ok)) {
@@ -2614,16 +2529,14 @@ merge_for_modify(sql_context_t *context, network_queue *send_queue, GPtrArray *r
         total_affected_rows /= recv_queues->len;
     }
 
-    network_mysqld_con_send_ok_full(con->client, total_affected_rows,
-            0, 0x02, total_warnings);
+    network_mysqld_con_send_ok_full(con->client, total_affected_rows, 0, 0x02, total_warnings);
 
     return 1;
 }
 
-
 static gboolean
 disp_orderby_info(sql_column_list_t *sel_orderby, cetus_result_t *res_merge,
-        ORDER_BY *order_array, int order_array_size, result_merge_t *merged_result)
+                  ORDER_BY *order_array, int order_array_size, result_merge_t *merged_result)
 {
     int i;
 
@@ -2631,13 +2544,13 @@ disp_orderby_info(sql_column_list_t *sel_orderby, cetus_result_t *res_merge,
         sql_column_t *col = g_ptr_array_index(sel_orderby, i);
         sql_expr_t *expr = col->expr;
         ORDER_BY *ord_col = &(order_array[i]);
-        ord_col->pos = -1; /* initial invalid value: -1 */
+        ord_col->pos = -1;      /* initial invalid value: -1 */
         if (expr->op == TK_ID) {
             strncpy(ord_col->name, expr->token_text, MAX_NAME_LEN - 1);
         } else if (expr->op == TK_INTEGER) {
             gint64 v;
             sql_expr_get_int(expr, &v);
-            ord_col->pos = (v > 0 && v <= res_merge->field_count) ? (int)v-1 : -1;
+            ord_col->pos = (v > 0 && v <= res_merge->field_count) ? (int)v - 1 : -1;
         } else if (expr->op == TK_FUNCTION) {
             strncpy(ord_col->name, expr->start, expr->end - expr->start);
         } else if (expr->op == TK_DOT) {
@@ -2659,14 +2572,14 @@ disp_orderby_info(sql_column_list_t *sel_orderby, cetus_result_t *res_merge,
 
 static gboolean
 disp_groupby_info(sql_column_list_t *sel_groupby, cetus_result_t *res_merge,
-        GROUP_BY *group_array, int group_array_size, result_merge_t *merged_result)
+                  group_by_t *group_array, int group_array_size, result_merge_t *merged_result)
 {
     int i;
     for (i = 0; i < sel_groupby->len; ++i) {
         sql_expr_t *expr = g_ptr_array_index(sel_groupby, i);
-        GROUP_BY *group_col = &(group_array[i]);
-        group_col->pos = -1; /* initial invalid value: -1 */
-        if (expr->op == TK_ID) {/* TODO: wrap sql_expr_t in list */
+        group_by_t *group_col = &(group_array[i]);
+        group_col->pos = -1;    /* initial invalid value: -1 */
+        if (expr->op == TK_ID) {    /* TODO: wrap sql_expr_t in list */
             strncpy(group_col->name, expr->token_text, MAX_NAME_LEN - 1);
         } else if (expr->op == TK_DOT) {
             strncpy(group_col->table_name, expr->left->token_text, MAX_NAME_LEN - 1);
@@ -2674,7 +2587,7 @@ disp_groupby_info(sql_column_list_t *sel_groupby, cetus_result_t *res_merge,
         } else if (expr->op == TK_INTEGER) {
             gint64 v;
             sql_expr_get_int(expr, &v);
-            group_col->pos = (v > 0 && v <= res_merge->field_count) ? (int)v-1 : -1;
+            group_col->pos = (v > 0 && v <= res_merge->field_count) ? (int)v - 1 : -1;
         } else if (expr->op == TK_FUNCTION) {
             strncpy(group_col->name, expr->start, expr->end - expr->start);
         } else {
@@ -2692,20 +2605,20 @@ disp_groupby_info(sql_column_list_t *sel_groupby, cetus_result_t *res_merge,
 
 static gboolean
 retrieve_orderby_info_from_groupby_info(sql_column_list_t *sel_groupby, cetus_result_t *res_merge,
-        ORDER_BY *order_array, int order_array_size, result_merge_t *merged_result)
+                                        ORDER_BY *order_array, int order_array_size, result_merge_t *merged_result)
 {
     int i;
 
     for (i = 0; i < sel_groupby->len; ++i) {
         sql_expr_t *expr = g_ptr_array_index(sel_groupby, i);
         ORDER_BY *ord_col = &(order_array[i]);
-        ord_col->pos = -1; /* initial invalid value: -1 */
+        ord_col->pos = -1;      /* initial invalid value: -1 */
         if (expr->op == TK_ID) {
             strncpy(ord_col->name, expr->token_text, MAX_NAME_LEN - 1);
         } else if (expr->op == TK_INTEGER) {
             gint64 v;
             sql_expr_get_int(expr, &v);
-            ord_col->pos = (v > 0 && v <= res_merge->field_count) ? (int)v-1 : -1;
+            ord_col->pos = (v > 0 && v <= res_merge->field_count) ? (int)v - 1 : -1;
         } else if (expr->op == TK_FUNCTION) {
             strncpy(ord_col->name, expr->start, expr->end - expr->start);
         } else if (expr->op == TK_DOT) {
@@ -2725,8 +2638,8 @@ retrieve_orderby_info_from_groupby_info(sql_column_list_t *sel_groupby, cetus_re
 }
 
 static int
-check_network_packet_err(GList **candidates, GPtrArray *recv_queues, 
-        network_queue *send_queue, cetus_result_t *res_merge, result_merge_t *merged_result)
+check_network_packet_err(GList **candidates, GPtrArray *recv_queues,
+                         network_queue *send_queue, cetus_result_t *res_merge, result_merge_t *merged_result)
 {
     int i;
     for (i = 0; i < recv_queues->len; i++) {
@@ -2734,8 +2647,8 @@ check_network_packet_err(GList **candidates, GPtrArray *recv_queues,
         /* only check the first packet in incoming row packets */
         if (pkt != NULL && pkt->len > NET_HEADER_SIZE) {
             guchar pkt_type = get_pkt_type(pkt);
-            if (pkt_type == MYSQLD_PACKET_ERR) {    
-                network_queue_append(send_queue, pkt);    
+            if (pkt_type == MYSQLD_PACKET_ERR) {
+                network_queue_append(send_queue, pkt);
                 network_queue *recv_queue = g_ptr_array_index(recv_queues, i);
                 g_queue_remove(recv_queue->chunks, pkt);
                 cetus_result_destroy(res_merge);
@@ -2752,7 +2665,7 @@ check_network_packet_err(GList **candidates, GPtrArray *recv_queues,
     return 1;
 }
 
-static int 
+static int
 check_field_count_consistant(GPtrArray *recv_queues, result_merge_t *merged_result, guint64 *field_count)
 {
     int i;
@@ -2767,8 +2680,8 @@ check_field_count_consistant(GPtrArray *recv_queues, result_merge_t *merged_resu
 
         if (last_field_count) {
             if (last_field_count != (*field_count)) {
-                g_warning("%s:field count different, field_count1:%d, field_count2:%d", 
-                        G_STRLOC, (int) last_field_count, (int) (*field_count));
+                g_warning("%s:field count different, field_count1:%d, field_count2:%d",
+                          G_STRLOC, (int)last_field_count, (int)(*field_count));
                 merged_result->status = RM_FAIL;
                 return 0;
             }
@@ -2781,8 +2694,8 @@ check_field_count_consistant(GPtrArray *recv_queues, result_merge_t *merged_resu
 }
 
 static int
-prepare_for_row_process(GList **candidates, GPtrArray *recv_queues, network_queue *send_queue, 
-        guint pkt_count, result_merge_t *merged_result)
+prepare_for_row_process(GList **candidates, GPtrArray *recv_queues, network_queue *send_queue,
+                        guint pkt_count, result_merge_t *merged_result)
 {
     int i, candidate_iter = 0;
 
@@ -2798,8 +2711,7 @@ prepare_for_row_process(GList **candidates, GPtrArray *recv_queues, network_queu
         for (j = pkt_count; j > 0; --j) {
             GString *packet = g_queue_pop_head(recv_q->chunks);
             if (packet == NULL) {
-                g_warning("%s:packet null, enlarge max_header_size, pkt cnt:%d",
-                        G_STRLOC, pkt_count);
+                g_warning("%s:packet null, enlarge max_header_size, pkt cnt:%d", G_STRLOC, pkt_count);
                 merged_result->status = RM_FAIL;
                 return 0;
             }
@@ -2816,11 +2728,10 @@ prepare_for_row_process(GList **candidates, GPtrArray *recv_queues, network_queu
         rows_start = g_queue_peek_head_link(recv_q->chunks);
 
         if (rows_start) {
-            candidates[candidate_iter] = rows_start;  
+            candidates[candidate_iter] = rows_start;
             candidate_iter++;
         } else {
-            g_warning("%s:rows start null, enlarge max_header_size, pkt cnt:%d",
-                    G_STRLOC, pkt_count);
+            g_warning("%s:rows start null, enlarge max_header_size, pkt cnt:%d", G_STRLOC, pkt_count);
             merged_result->status = RM_FAIL;
             return 0;
         }
@@ -2829,10 +2740,9 @@ prepare_for_row_process(GList **candidates, GPtrArray *recv_queues, network_queu
     return 1;
 }
 
-
-static int 
-merge_for_show_warnings(network_queue *send_queue, GPtrArray *recv_queues, 
-        network_mysqld_con *con, cetus_result_t *res_merge, result_merge_t *merged_result)
+static int
+merge_for_show_warnings(network_queue *send_queue, GPtrArray *recv_queues,
+                        network_mysqld_con *con, cetus_result_t *res_merge, result_merge_t *merged_result)
 {
     guint64 field_count = 0;
     if (!check_field_count_consistant(recv_queues, merged_result, &field_count)) {
@@ -2844,17 +2754,13 @@ merge_for_show_warnings(network_queue *send_queue, GPtrArray *recv_queues,
     /* field-count-packet + eof-packet */
     guint pkt_count = res_merge->field_count + 2;
 
-    if (!prepare_for_row_process(candidates, recv_queues, 
-                send_queue, pkt_count, merged_result)) 
-    {
+    if (!prepare_for_row_process(candidates, recv_queues, send_queue, pkt_count, merged_result)) {
         g_warning("%s:prepare_for_row_process failed", G_STRLOC);
         g_free(candidates);
         return 0;
     }
 
-    if (!check_network_packet_err(candidates, recv_queues, 
-                send_queue, res_merge, merged_result)) 
-    {
+    if (!check_network_packet_err(candidates, recv_queues, send_queue, res_merge, merged_result)) {
         g_warning("%s:packet err is met", G_STRLOC);
         g_free(candidates);
         return 0;
@@ -2896,9 +2802,9 @@ merge_for_show_warnings(network_queue *send_queue, GPtrArray *recv_queues,
     return 1;
 }
 
-static int 
-merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *recv_queues, 
-        network_mysqld_con *con, cetus_result_t *res_merge, result_merge_t *merged_result)
+static int
+merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *recv_queues,
+                 network_mysqld_con *con, cetus_result_t *res_merge, result_merge_t *merged_result)
 {
     sql_select_t *select = (sql_select_t *)context->sql_statement;
 
@@ -2908,7 +2814,8 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
     }
     res_merge->field_count = field_count;
 
-    GROUP_AGGR aggr_array[MAX_AGGR_FUNS] = {{0}};
+    group_aggr_t aggr_array[MAX_AGGR_FUNS] = { {0}
+    };
     int aggr_num = sql_expr_list_find_aggregates(select->columns, aggr_array);
     sql_column_list_t *sel_orderby = select->orderby_clause;
     sql_expr_list_t *sel_groupby = select->groupby_clause;
@@ -2927,22 +2834,18 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
     if (sel_orderby && sel_orderby->len > 0) {
         memset(order_array, 0, sizeof(ORDER_BY) * MAX_ORDER_COLS);
         order_array_size = MIN(MAX_ORDER_COLS, sel_orderby->len);
-        if (!disp_orderby_info(sel_orderby, res_merge, order_array,
-                    order_array_size, merged_result))
-        {
+        if (!disp_orderby_info(sel_orderby, res_merge, order_array, order_array_size, merged_result)) {
             g_warning("%s:disp_orderby_info failed:%s", G_STRLOC, con->orig_sql->str);
             return 0;
         }
     }
 
-    GROUP_BY group_array[MAX_GROUP_COLS];
-    int group_array_size = 0;   /* number of GROUP_BY Columns */
+    group_by_t group_array[MAX_GROUP_COLS];
+    int group_array_size = 0;   /* number of group_by_t Columns */
     if (sel_groupby && sel_groupby->len > 0) {
-        memset(group_array, 0, sizeof(GROUP_BY) * MAX_GROUP_COLS);
+        memset(group_array, 0, sizeof(group_by_t) * MAX_GROUP_COLS);
         group_array_size = MIN(MAX_GROUP_COLS, sel_groupby->len);
-        if (!disp_groupby_info(sel_groupby, res_merge, group_array,
-                    group_array_size, merged_result))
-        {
+        if (!disp_groupby_info(sel_groupby, res_merge, group_array, group_array_size, merged_result)) {
             g_warning("%s:disp_groupby_info failed:%s", G_STRLOC, con->orig_sql->str);
             return 0;
         }
@@ -2955,10 +2858,8 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
                 memset(order_array, 0, sizeof(ORDER_BY) * MAX_ORDER_COLS);
                 order_array_size = group_array_size;
                 if (!retrieve_orderby_info_from_groupby_info(sel_groupby, res_merge,
-                            order_array, order_array_size, merged_result))
-                {
-                    g_warning("%s:disp_orderby_info from group by failed:%s",
-                            G_STRLOC, con->orig_sql->str);
+                                                             order_array, order_array_size, merged_result)) {
+                    g_warning("%s:disp_orderby_info from group by failed:%s", G_STRLOC, con->orig_sql->str);
                     return 0;
                 }
             }
@@ -2967,8 +2868,7 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
 
     int i, index = 0;
     for (i = 0; i < aggr_num; i++) {
-        network_mysqld_proto_fielddef_t *fdef =
-            g_ptr_array_index(res_merge->fielddefs, aggr_array[index].pos);
+        network_mysqld_proto_fielddef_t *fdef = g_ptr_array_index(res_merge->fielddefs, aggr_array[index].pos);
         aggr_array[index].type = fdef->type;
         index++;
     }
@@ -2977,23 +2877,19 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
     /* field-count-packet + eof-packet */
     guint pkt_count = res_merge->field_count + 2;
 
-    if (!prepare_for_row_process(candidates, recv_queues, 
-                send_queue, pkt_count, merged_result)) 
-    {
+    if (!prepare_for_row_process(candidates, recv_queues, send_queue, pkt_count, merged_result)) {
         g_warning("%s:prepare_for_row_process failed", G_STRLOC);
         g_free(candidates);
         return 0;
     }
 
-    if (!check_network_packet_err(candidates, recv_queues, 
-                send_queue, res_merge, merged_result)) 
-    {
+    if (!check_network_packet_err(candidates, recv_queues, send_queue, res_merge, merged_result)) {
         g_warning("%s:packet err is met", G_STRLOC);
         g_free(candidates);
         return 0;
     }
 
-    LIMIT limit;
+    limit_t limit;
     limit.offset = 0;
     limit.row_count = G_MAXINT32;
     sql_expr_get_int(select->limit, &limit.row_count);
@@ -3019,7 +2915,7 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
             return 0;
         }
         g_free(candidates);
-    } else { 
+    } else {
         merge_parameters_t *data = g_new0(merge_parameters_t, 1);
         heap_type *heap = g_new0(heap_type, 1);
         data->heap = heap;
@@ -3030,11 +2926,11 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
         size_t iter;
         for (iter = 0; iter < recv_queues->len; iter++) {
             heap->element[iter] = elements + iter;
-            heap->element[iter]->is_dup = 0; 
-            heap->element[iter]->is_err = 0; 
-            heap->element[iter]->refreshed = 0; 
-            heap->element[iter]->is_prior_to = 0; 
-        }    
+            heap->element[iter]->is_dup = 0;
+            heap->element[iter]->is_err = 0;
+            heap->element[iter]->refreshed = 0;
+            heap->element[iter]->is_prior_to = 0;
+        }
 
         data->send_queue = send_queue;
         data->recv_queues = recv_queues;
@@ -3044,8 +2940,7 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
         data->limit.row_count = limit.row_count;
 
         for (iter = 0; iter < order_array_size; iter++) {
-            memcpy((heap->order_para).order_array + iter, order_array + iter,
-                    sizeof(ORDER_BY));
+            memcpy((heap->order_para).order_array + iter, order_array + iter, sizeof(ORDER_BY));
         }
 
         data->pack_err_met = 0;
@@ -3097,8 +2992,9 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
     return 1;
 }
 
-static int check_fail_met(sql_context_t *context, network_queue *send_queue, GPtrArray *recv_queues, 
-        network_mysqld_con *con, uint64_t *uniq_id, int *call_fail_met, result_merge_t *merged_result) 
+static int
+check_fail_met(sql_context_t *context, network_queue *send_queue, GPtrArray *recv_queues,
+               network_mysqld_con *con, uint64_t *uniq_id, int *call_fail_met, result_merge_t *merged_result)
 {
     int p;
     char *orig_sql = con->orig_sql->str;
@@ -3111,8 +3007,7 @@ static int check_fail_met(sql_context_t *context, network_queue *send_queue, GPt
             if (pkt_type == MYSQLD_PACKET_ERR || pkt_type == MYSQLD_PACKET_EOF) {
                 server_session_t *pmd = g_ptr_array_index(con->servers, p);
                 if (pkt_type == MYSQLD_PACKET_ERR) {
-                    g_warning("%s: failed query:%s, server:%s",
-                            G_STRLOC, orig_sql, pmd->server->dst->name->str);
+                    g_warning("%s: failed query:%s, server:%s", G_STRLOC, orig_sql, pmd->server->dst->name->str);
                 }
                 if (context->stmt_type == STMT_CALL) {
                     if (!(*call_fail_met)) {
@@ -3123,11 +3018,11 @@ static int check_fail_met(sql_context_t *context, network_queue *send_queue, GPt
                     log_packet_error_info(con->client, pmd->server, orig_sql, pkt, *uniq_id);
                     continue;
                 } else {
-                    network_queue_append(send_queue, pkt);   
-                    g_queue_pop_head(recv_q->chunks); 
+                    network_queue_append(send_queue, pkt);
+                    g_queue_pop_head(recv_q->chunks);
                     if (context->rw_flag & CF_DDL) {
                         g_warning("%s: failed ddl query:%s, server:%s",
-                                G_STRLOC, orig_sql, pmd->server->dst->name->str);
+                                  G_STRLOC, orig_sql, pmd->server->dst->name->str);
                     }
                     return 0;
                 }
@@ -3142,19 +3037,17 @@ static int check_fail_met(sql_context_t *context, network_queue *send_queue, GPt
     return 1;
 }
 
-
-void resultset_merge(network_queue *send_queue, GPtrArray *recv_queues,
-                                      network_mysqld_con *con, uint64_t *uniq_id, 
-                                      result_merge_t *merged_result)
+void
+resultset_merge(network_queue *send_queue, GPtrArray *recv_queues,
+                network_mysqld_con *con, uint64_t *uniq_id, result_merge_t *merged_result)
 {
     shard_plugin_con_t *st = con->plugin_con_state;
     sql_context_t *context = st->sql_context;
 
-    cetus_result_t res_merge = {0};
+    cetus_result_t res_merge = { 0 };
 
     if (!send_queue || !recv_queues || recv_queues->len <= 0 || !context) {
-        g_warning("%s: packet->str[NET_HEADER_SIZE] != MYSQLD_PACKET_EOF",
-                G_STRLOC);
+        g_warning("%s: packet->str[NET_HEADER_SIZE] != MYSQLD_PACKET_EOF", G_STRLOC);
         merged_result->status = RM_FAIL;
         return;
     }
@@ -3183,41 +3076,34 @@ void resultset_merge(network_queue *send_queue, GPtrArray *recv_queues,
     }
 
     switch (context->stmt_type) {
-        case STMT_SHOW_WARNINGS: 
-            if (!merge_for_show_warnings(send_queue, recv_queues, con, 
-                        &res_merge, merged_result)) 
-            {
-                cetus_result_destroy(&res_merge);
-                return;
-            }
-            break;
-        case STMT_SELECT: 
-            if (!merge_for_select(context, send_queue, recv_queues, con, 
-                        &res_merge, merged_result)) 
-            {
-                cetus_result_destroy(&res_merge);
-                return;
-            }
-            break;
-        case STMT_INSERT:
-        case STMT_UPDATE:
-        case STMT_DELETE:
-        case STMT_CALL: /* Response should have no records */
-        case STMT_SET:
-        case STMT_START:
-        case STMT_COMMIT:
-        case STMT_ROLLBACK:
-        default: 
-            if (!merge_for_modify(context, send_queue, recv_queues, con, 
-                        &res_merge, merged_result)) 
-            {
-                cetus_result_destroy(&res_merge);
-                return;
-            }
-            break;
+    case STMT_SHOW_WARNINGS:
+        if (!merge_for_show_warnings(send_queue, recv_queues, con, &res_merge, merged_result)) {
+            cetus_result_destroy(&res_merge);
+            return;
+        }
+        break;
+    case STMT_SELECT:
+        if (!merge_for_select(context, send_queue, recv_queues, con, &res_merge, merged_result)) {
+            cetus_result_destroy(&res_merge);
+            return;
+        }
+        break;
+    case STMT_INSERT:
+    case STMT_UPDATE:
+    case STMT_DELETE:
+    case STMT_CALL:            /* Response should have no records */
+    case STMT_SET:
+    case STMT_START:
+    case STMT_COMMIT:
+    case STMT_ROLLBACK:
+    default:
+        if (!merge_for_modify(context, send_queue, recv_queues, con, &res_merge, merged_result)) {
+            cetus_result_destroy(&res_merge);
+            return;
+        }
+        break;
     }
 
     cetus_result_destroy(&res_merge);
     merged_result->status = RM_SUCCESS;
 }
-

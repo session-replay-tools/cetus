@@ -23,11 +23,11 @@
 #endif
 
 #ifdef HAVE_SYS_WAIT_H
-#include <sys/wait.h> /* wait4 */
+#include <sys/wait.h>           /* wait4 */
 #endif
 #include <sys/stat.h>
 #ifdef HAVE_SYS_RESOURCE_H
-#include <sys/resource.h> /* getrusage */
+#include <sys/resource.h>       /* getrusage */
 #endif
 
 #include <stdlib.h>
@@ -49,7 +49,9 @@
  * 
  * UNIX-version
  */
-void chassis_unix_daemonize(void) {
+void
+chassis_unix_daemonize(void)
+{
 #ifdef SIGTTOU
     signal(SIGTTOU, SIG_IGN);
 #endif
@@ -59,23 +61,27 @@ void chassis_unix_daemonize(void) {
 #ifdef SIGTSTP
     signal(SIGTSTP, SIG_IGN);
 #endif
-    if (fork() != 0) exit(0);
+    if (fork() != 0)
+        exit(0);
 
-    if (setsid() == -1) exit(0);
+    if (setsid() == -1)
+        exit(0);
 
     signal(SIGHUP, SIG_IGN);
 
-    if (fork() != 0) exit(0);
+    if (fork() != 0)
+        exit(0);
 
     umask(0);
 }
 
-
 /**
  * forward the signal to the process group, but not us
  */
-static void chassis_unix_signal_forward(int sig) {
-    signal(sig, SIG_IGN); /* we don't want to create a loop here */
+static void
+chassis_unix_signal_forward(int sig)
+{
+    signal(sig, SIG_IGN);       /* we don't want to create a loop here */
 
     kill(0, sig);
 }
@@ -86,7 +92,9 @@ static void chassis_unix_signal_forward(int sig) {
  * if we or the child gets a SIGTERM, we quit too
  * on everything else we restart it
  */
-int chassis_unix_proc_keepalive(int *child_exit_status) {
+int
+chassis_unix_proc_keepalive(int *child_exit_status)
+{
     int nprocs = 0;
     pid_t child_pid = -1;
 
@@ -106,27 +114,17 @@ int chassis_unix_proc_keepalive(int *child_exit_status) {
             if (pid == 0) {
                 /* child */
 
-                g_debug("%s: we are the child: %d, nprocs:%d",
-                        G_STRLOC,
-                        getpid(), 
-                        nprocs);
+                g_debug("%s: we are the child: %d, nprocs:%d", G_STRLOC, getpid(), nprocs);
                 return 0;
             } else if (pid < 0) {
                 /* fork() failed */
 
-                g_critical("%s: fork() failed: %s (%d), nprocs:%d",
-                        G_STRLOC,
-                        g_strerror(errno),
-                        errno,
-                        nprocs);
+                g_critical("%s: fork() failed: %s (%d), nprocs:%d", G_STRLOC, g_strerror(errno), errno, nprocs);
 
                 return -1;
             } else {
                 /* we are the angel, let's see what the child did */
-                g_message("%s: [angel] we try to keep PID=%d alive, nprocs:%d",
-                        G_STRLOC,
-                        pid,
-                        nprocs);
+                g_message("%s: [angel] we try to keep PID=%d alive, nprocs:%d", G_STRLOC, pid, nprocs);
 
                 /* forward a few signals that are sent to us to the child instead */
                 signal(SIGINT, chassis_unix_signal_forward);
@@ -145,41 +143,32 @@ int chassis_unix_proc_keepalive(int *child_exit_status) {
             int exit_status;
             pid_t exit_pid;
 
-            g_debug("%s: waiting for %d",
-                    G_STRLOC,
-                    child_pid);
+            g_debug("%s: waiting for %d", G_STRLOC, child_pid);
 #ifdef HAVE_WAIT4
             exit_pid = wait4(child_pid, &exit_status, 0, &rusage);
 #else
             /* make sure everything is zero'ed out */
-            memset(&rusage, 0, sizeof(rusage)); 
+            memset(&rusage, 0, sizeof(rusage));
             exit_pid = waitpid(child_pid, &exit_status, 0);
 #endif
-            g_debug("%s: %d returned: %d",
-                    G_STRLOC,
-                    child_pid,
-                    exit_pid);
+            g_debug("%s: %d returned: %d", G_STRLOC, child_pid, exit_pid);
 
             if (exit_pid == child_pid) {
                 /* our child returned, let's see how it went */
                 if (WIFEXITED(exit_status)) {
                     g_message("%s: PID=%d exited with %d (%ld kBytes max)",
-                            G_STRLOC,
-                            child_pid,
-                            WEXITSTATUS(exit_status),
-                            rusage.ru_maxrss / 1024);
+                              G_STRLOC, child_pid, WEXITSTATUS(exit_status), rusage.ru_maxrss / 1024);
                     if (child_exit_status) {
                         *child_exit_status = WEXITSTATUS(exit_status);
                     }
 
-                    if (WEXITSTATUS(exit_status) != EXIT_SUCCESS && 
-                            WEXITSTATUS(exit_status) != EXIT_FAILURE) 
-                    {
+                    if (WEXITSTATUS(exit_status) != EXIT_SUCCESS && WEXITSTATUS(exit_status) != EXIT_FAILURE) {
                         int time_towait = 2;
                         signal(SIGINT, SIG_DFL);
                         signal(SIGTERM, SIG_DFL);
                         signal(SIGHUP, SIG_DFL);
-                        while (time_towait > 0) time_towait = sleep(time_towait);
+                        while (time_towait > 0)
+                            time_towait = sleep(time_towait);
                         nprocs--;
                         child_pid = -1;
                     } else {
@@ -194,10 +183,7 @@ int chassis_unix_proc_keepalive(int *child_exit_status) {
                      * log it and restart */
 
                     g_critical("%s: PID=%d died on signal=%d (%ld kBytes max)",
-                            G_STRLOC,
-                            child_pid,
-                            WTERMSIG(exit_status),
-                            rusage.ru_maxrss / 1024);
+                               G_STRLOC, child_pid, WTERMSIG(exit_status), rusage.ru_maxrss / 1024);
 
                     /**
                      * to make sure we don't loop as fast as we can, 
@@ -207,7 +193,8 @@ int chassis_unix_proc_keepalive(int *child_exit_status) {
                     signal(SIGINT, SIG_DFL);
                     signal(SIGTERM, SIG_DFL);
                     signal(SIGHUP, SIG_DFL);
-                    while (time_towait > 0) time_towait = sleep(time_towait);
+                    while (time_towait > 0)
+                        time_towait = sleep(time_towait);
 
                     nprocs--;
                     child_pid = -1;
@@ -219,11 +206,7 @@ int chassis_unix_proc_keepalive(int *child_exit_status) {
                 /* EINTR is ok, all others bad */
                 if (EINTR != errno) {
                     /* how can this happen ? */
-                    g_critical("%s: wait4(%d, ...) failed: %s (%d)",
-                            G_STRLOC,
-                            child_pid,
-                            g_strerror(errno),
-                            errno);
+                    g_critical("%s: wait4(%d, ...) failed: %s (%d)", G_STRLOC, child_pid, g_strerror(errno), errno);
 
                     return -1;
                 }
@@ -233,4 +216,3 @@ int chassis_unix_proc_keepalive(int *child_exit_status) {
         }
     }
 }
-

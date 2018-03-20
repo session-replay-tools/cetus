@@ -46,11 +46,9 @@ typedef int network_socklen_t;
 typedef socklen_t network_socklen_t;
 #endif
 
-
 #define NETWORK_ADDRESS_ERROR network_address_error()
 
-GQuark
-network_address_error(void);
+GQuark network_address_error(void);
 
 enum {
     NETWORK_ADDRESS_ERROR_UNKNOWN,
@@ -69,10 +67,10 @@ typedef struct {
         struct sockaddr common;
     } addr;
 
-    GString *name; 
+    GString *name;
     network_socklen_t len;
     /* set TRUE *only *after successful bind */
-    gboolean can_unlink_socket; 
+    gboolean can_unlink_socket;
 } network_address;
 
 NETWORK_API network_address *network_address_new(void);

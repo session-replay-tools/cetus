@@ -21,13 +21,15 @@
 #include <glib.h>
 
 #include <errno.h>
-#include <stdlib.h> /* for realpath */
+#include <stdlib.h>             /* for realpath */
 #include <string.h>
 
 #include "glib-ext.h"
 #include "chassis-path.h"
 
-gchar *chassis_get_basedir(const gchar *prgname) {
+gchar *
+chassis_get_basedir(const gchar *prgname)
+{
     gchar *absolute_path;
     gchar *bin_dir;
     gchar r_path[PATH_MAX];
@@ -35,7 +37,7 @@ gchar *chassis_get_basedir(const gchar *prgname) {
 
     if (g_path_is_absolute(prgname)) {
         /* No need to dup, just to get free right */
-        absolute_path = g_strdup(prgname); 
+        absolute_path = g_strdup(prgname);
     } else {
         /**
          * the path wasn't absolute
@@ -69,10 +71,7 @@ gchar *chassis_get_basedir(const gchar *prgname) {
      * to get this working we need a "clean" basedir, no .../foo/./bin/ 
      */
     if (NULL == realpath(absolute_path, r_path)) {
-        g_critical("%s: realpath(%s) failed: %s",
-                G_STRLOC,
-                absolute_path,
-                g_strerror(errno));
+        g_critical("%s: realpath(%s) failed: %s", G_STRLOC, absolute_path, g_strerror(errno));
 
         return NULL;
     }
@@ -86,13 +85,15 @@ gchar *chassis_get_basedir(const gchar *prgname) {
     return base_dir;
 }
 
-gchar *chassis_resolve_path(const char *base_dir, gchar *filename) {
+gchar *
+chassis_resolve_path(const char *base_dir, gchar *filename)
+{
 
     if (!base_dir || !filename)
         return NULL;
 
-    if (g_path_is_absolute(filename)) return filename;
+    if (g_path_is_absolute(filename))
+        return filename;
 
     return g_build_filename(base_dir, G_DIR_SEPARATOR_S, filename, NULL);
 }
-

@@ -28,17 +28,16 @@
  * @returns FALSE on error, TRUE on success
  * @added in 0.8.3
  */
-gboolean chassis_keyfile_to_options_with_error(GKeyFile *keyfile,
-        const gchar *ini_group_name, GList *config_entries,
-        GError **_gerr)
+gboolean
+chassis_keyfile_to_options_with_error(GKeyFile *keyfile,
+                                      const gchar *ini_group_name, GList *config_entries, GError **_gerr)
 {
     GError *gerr = NULL;
     gboolean ret = TRUE;
     int j;
 
     if (NULL == keyfile) {
-        g_set_error(_gerr, G_FILE_ERROR, G_FILE_ERROR_INVAL,
-                "keyfile has to be set");
+        g_set_error(_gerr, G_FILE_ERROR, G_FILE_ERROR_INVAL, "keyfile has to be set");
         return FALSE;
     }
 
@@ -66,10 +65,10 @@ gboolean chassis_keyfile_to_options_with_error(GKeyFile *keyfile,
         switch (entry->arg) {
         case OPTION_ARG_STRING:
             /* is this option set already */
-            if (entry->arg_data == NULL || *(char **)entry->arg_data != NULL) break;
+            if (entry->arg_data == NULL || *(char **)entry->arg_data != NULL)
+                break;
 
-            arg_string = g_key_file_get_string(keyfile, ini_group_name,
-                                               entry->long_name, &gerr);
+            arg_string = g_key_file_get_string(keyfile, ini_group_name, entry->long_name, &gerr);
             if (!gerr) {
                 /* strip trailing spaces */
                 *(gchar **)(entry->arg_data) = g_strchomp(arg_string);
@@ -77,10 +76,10 @@ gboolean chassis_keyfile_to_options_with_error(GKeyFile *keyfile,
             break;
         case OPTION_ARG_STRING_ARRAY:
             /* is this option set already */
-            if (entry->arg_data == NULL || *(char **)entry->arg_data != NULL) break;
+            if (entry->arg_data == NULL || *(char **)entry->arg_data != NULL)
+                break;
 
-            arg_string_array = g_key_file_get_string_list(keyfile,
-                                ini_group_name, entry->long_name, &len, &gerr);
+            arg_string_array = g_key_file_get_string_list(keyfile, ini_group_name, entry->long_name, &len, &gerr);
             if (!gerr) {
                 for (j = 0; arg_string_array[j]; j++) {
                     arg_string_array[j] = g_strstrip(arg_string_array[j]);
@@ -89,29 +88,25 @@ gboolean chassis_keyfile_to_options_with_error(GKeyFile *keyfile,
             }
             break;
         case OPTION_ARG_NONE:
-            arg_bool = g_key_file_get_boolean(keyfile, ini_group_name,
-                                              entry->long_name, &gerr);
+            arg_bool = g_key_file_get_boolean(keyfile, ini_group_name, entry->long_name, &gerr);
             if (!gerr) {
                 *(gboolean *)(entry->arg_data) = arg_bool;
             }
             break;
         case OPTION_ARG_INT:
-            arg_int = g_key_file_get_integer(keyfile, ini_group_name,
-                                             entry->long_name, &gerr);
+            arg_int = g_key_file_get_integer(keyfile, ini_group_name, entry->long_name, &gerr);
             if (!gerr) {
                 *(gint *)(entry->arg_data) = arg_int;
             }
             break;
         case OPTION_ARG_DOUBLE:
-            arg_double = g_key_file_get_double(keyfile, ini_group_name,
-                                               entry->long_name, &gerr);
+            arg_double = g_key_file_get_double(keyfile, ini_group_name, entry->long_name, &gerr);
             if (!gerr) {
                 *(gdouble *)(entry->arg_data) = arg_double;
             }
             break;
         default:
-            g_error("%s: (keyfile) the option %d can't be handled",
-                    G_STRLOC, entry->arg);
+            g_error("%s: (keyfile) the option %d can't be handled", G_STRLOC, entry->arg);
             break;
         }
 
@@ -132,4 +127,3 @@ gboolean chassis_keyfile_to_options_with_error(GKeyFile *keyfile,
     }
     return ret;
 }
-

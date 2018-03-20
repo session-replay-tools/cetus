@@ -21,7 +21,7 @@
 #ifndef _CHASSIS_SHUTDOWN_HOOKS_H_
 #define _CHASSIS_SHUTDOWN_HOOKS_H_
 
-#include <glib.h>    /* GPtrArray */
+#include <glib.h>               /* GPtrArray */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -30,7 +30,7 @@
 #include "chassis-exports.h"
 
 typedef struct {
-    void (*func)(gpointer _udata);
+    void (*func) (gpointer _udata);
     gpointer udata;
     gboolean is_called;
 } chassis_shutdown_hook_t;

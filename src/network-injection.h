@@ -43,11 +43,11 @@ typedef struct {
     /*
      * < if set, the row data is binary encoded. we need the metadata to decode 
      */
-    gboolean binary_encoded; 
+    gboolean binary_encoded;
 
     /**
      * MYSQLD_PACKET_OK or MYSQLD_PACKET_ERR
-     */	
+     */
     guint8 query_status;
 } query_status;
 
@@ -55,19 +55,19 @@ typedef struct {
     GString *query;
 
     /**< a unique id set by the scripts to map the query to a handler */
-    int id;                                 
+    int id;
 
     /* the userdata's need them */
     GQueue *result_queue;                   /**< the data to parse */
 
     /**< summary information about the query status */
-    query_status qstat;                     
+    query_status qstat;
 
-    guint64      rows;
-    guint64      bytes;
+    guint64 rows;
+    guint64 bytes;
 
     /**< flag to announce if we have to buffer the result for later processing */
-    gboolean     resultset_is_needed;       
+    gboolean resultset_is_needed;
 } injection;
 
 /**
@@ -95,8 +95,8 @@ typedef struct {
 
     query_status qstat;     /**< state of this query */
 
-    guint64      rows;
-    guint64      bytes;
+    guint64 rows;
+    guint64 bytes;
 } proxy_resultset_t;
 
 NETWORK_API injection *injection_new(int id, GString *query);

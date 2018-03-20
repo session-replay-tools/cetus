@@ -31,11 +31,9 @@
  * parse the configfile options into option entries
  *
  */
-gboolean chassis_keyfile_to_options_with_error(GKeyFile *keyfile, 
-        const gchar *groupname, GList *config_entries, GError **gerr);
-
+gboolean chassis_keyfile_to_options_with_error(GKeyFile *keyfile,
+                                               const gchar *groupname, GList *config_entries, GError **gerr);
 
 /*@}*/
 
 #endif
-

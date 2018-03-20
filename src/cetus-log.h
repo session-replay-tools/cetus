@@ -86,5 +86,3 @@ void tc_log_info(int level, int err, const char *fmt, ...);
 #endif /* TC_DEBUG */
 
 #endif /* TC_LOG_INCLUDED */
-
-

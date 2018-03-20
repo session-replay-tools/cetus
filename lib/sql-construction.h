@@ -23,7 +23,6 @@
 
 #include "sql-expression.h"
 
-
 GString *sql_construct_expr(sql_expr_t *expr);
 
 /* TODO: don't alloc inside function */

@@ -813,17 +813,8 @@ static void disp_err_packet(network_mysqld_con *con, network_packet *packet)
     err_packet = network_mysqld_err_packet_new();
 
     if (!network_mysqld_proto_get_err_packet(packet, err_packet)) {
-        g_message("%s:clt:%s,src:%s,dst:%s,db:%s,%s,\
-                error code:%d,errmsg:%s,sqlstate:%s, con:%p", 
-                G_STRLOC, con->client->src->name->str,
-                con->server->src->name->str,
-                con->server->dst->name->str,
-                con->server->default_db->str,
-                con->orig_sql->str,
-                (int) err_packet->errcode,
-                err_packet->errmsg->str, 
-                err_packet->sqlstate->str,
-                con);
+        g_message("%s: dst:%s, sql:%s, errmsg:%s", 
+                G_STRLOC, con->server->dst->name->str, con->orig_sql->str, err_packet->errmsg->str);
         if (con->dist_tran) {
             int checked = 0;
             switch (err_packet->errcode) {

@@ -2541,17 +2541,14 @@ static int log_packet_error_info(network_socket *client, network_socket *server,
     err_packet = network_mysqld_err_packet_new();
 
    if (network_mysqld_proto_get_err_packet(&packet, err_packet)) {
-       g_message("%s:clt:%s,src:%s,dst:%s,db:%s,%s",
-               G_STRLOC, client->src->name->str, server->src->name->str,
-               server->dst->name->str, server->default_db->str, orig_sql);
+       g_message("%s:dst:%s, sql:%s", G_STRLOC, server->dst->name->str, orig_sql);
        network_mysqld_err_packet_free(err_packet);
        return -1;
    }
 
-   g_message("%s: id:%llu,clt:%s,src:%s,dst:%s,db:%s,%s, error code:%d, errmsg:%s, sqlstate:%s",
-           G_STRLOC, (unsigned long long) uniq_id, client->src->name->str, server->src->name->str,
-           server->dst->name->str, server->default_db->str, orig_sql, (int) err_packet->errcode,
-           err_packet->errmsg->str, err_packet->sqlstate->str);
+   g_message("%s:dst:%s,sql:%s,errmsg:%s", G_STRLOC, server->dst->name->str,
+           orig_sql, err_packet->errmsg->str);
+
    network_mysqld_err_packet_free(err_packet);
    return 0;
 }

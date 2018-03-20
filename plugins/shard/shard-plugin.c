@@ -1194,7 +1194,7 @@ static int proxy_get_server_list(network_mysqld_con *con)
 
     if (con->last_record_updated || con->srv->master_preferred ||
         st->sql_context->rw_flag & CF_WRITE ||
-        st->sql_context->rw_flag & CF_FORCE_MASTER || /*# mode = READWRITE */
+        st->sql_context->rw_flag & CF_FORCE_MASTER ||
         !con->is_auto_commit || rv == USE_SAME)
     {
         if (!con->client->is_server_conn_reserved) {

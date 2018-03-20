@@ -29,10 +29,9 @@
 #include "network-mysqld.h"
 #include "network-mysqld-proto.h"
 
-
-#define MAX_NAME_LEN 64 
-#define MAX_ORDER_COLS 16 
-#define MAX_GROUP_COLS 16 
+#define MAX_NAME_LEN 64
+#define MAX_ORDER_COLS 16
+#define MAX_GROUP_COLS 16
 #define MAX_LIMIT G_MAXINT32
 #define MAX_SHARD_NUM MAX_SERVER_NUM
 
@@ -88,8 +87,7 @@ typedef struct aggr_by_group_para_s {
 } aggr_by_group_para_t;
 
 NETWORK_API int callback_merge(network_mysqld_con *, merge_parameters_t *, int);
-NETWORK_API void resultset_merge(network_queue *,  GPtrArray *, network_mysqld_con *, 
-        uint64_t *, result_merge_t *); 
+NETWORK_API void resultset_merge(network_queue *, GPtrArray *, network_mysqld_con *, uint64_t *, result_merge_t *);
 
 NETWORK_API gint check_dist_tran_resultset(network_queue *recv_queue, network_mysqld_con *);
 

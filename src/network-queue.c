@@ -26,7 +26,9 @@
 #include "network-queue.h"
 #include "network-mysqld-proto.h"
 
-network_queue *network_queue_new() {
+network_queue *
+network_queue_new()
+{
     network_queue *queue;
 
     queue = g_new0(network_queue, 1);
@@ -36,10 +38,13 @@ network_queue *network_queue_new() {
     return queue;
 }
 
-void network_queue_free(network_queue *queue) {
+void
+network_queue_free(network_queue *queue)
+{
     GString *packet;
 
-    if (!queue) return;
+    if (!queue)
+        return;
 
     while ((packet = g_queue_pop_head(queue->chunks))) {
         g_string_free(packet, TRUE);
@@ -50,9 +55,11 @@ void network_queue_free(network_queue *queue) {
     g_free(queue);
 }
 
-void network_queue_clear(network_queue *queue)
+void
+network_queue_clear(network_queue *queue)
 {
-    if (!queue) return;
+    if (!queue)
+        return;
     GString *packet;
     while ((packet = g_queue_pop_head(queue->chunks)) != NULL) {
         g_string_free(packet, TRUE);
@@ -60,13 +67,15 @@ void network_queue_clear(network_queue *queue)
     queue->len = queue->offset = 0;
 }
 
-int network_queue_append(network_queue *queue, GString *s) {
+int
+network_queue_append(network_queue *queue, GString *s)
+{
     if (s->len == 0) {
-        g_warning("%s: packet len:%d", G_STRLOC, (int) s->len);
+        g_warning("%s: packet len:%d", G_STRLOC, (int)s->len);
     }
 
     if (s->len > PACKET_LEN_MAX) {
-        g_warning("%s: packet len:%d is too long", G_STRLOC, (int) s->len);
+        g_warning("%s: packet len:%d is too long", G_STRLOC, (int)s->len);
     }
 
     queue->len += s->len;
@@ -85,10 +94,11 @@ int network_queue_append(network_queue *queue, GString *s) {
  * @return NULL if not enough data
  *         if dest is not NULL, dest, otherwise a new GString containing the data
  */
-GString *network_queue_peek_str(network_queue *queue, gsize peek_len, GString *dest) {
+GString *
+network_queue_peek_str(network_queue *queue, gsize peek_len, GString *dest)
+{
     gsize we_want = peek_len;
     GList *node;
-
 
     /* 
      * TODO: convert to DTrace probe
@@ -109,8 +119,7 @@ GString *network_queue_peek_str(network_queue *queue, gsize peek_len, GString *d
         GString *chunk = node->data;
 
         if (node == queue->chunks->head) {
-            gsize we_have = we_want < (chunk->len - queue->offset) ? 
-                we_want : (chunk->len - queue->offset);
+            gsize we_have = we_want < (chunk->len - queue->offset) ? we_want : (chunk->len - queue->offset);
 
             g_string_append_len(dest, chunk->str + queue->offset, we_have);
 
@@ -131,7 +140,7 @@ GString *network_queue_peek_str(network_queue *queue, gsize peek_len, GString *d
  * get a string from the head of the queue and remove the chunks from the queue 
  */
 GString *
-network_queue_pop_str(network_queue *queue, gsize steal_len, GString *dest) 
+network_queue_pop_str(network_queue *queue, gsize steal_len, GString *dest)
 {
     gsize we_want = steal_len;
     GString *chunk;
@@ -141,8 +150,7 @@ network_queue_pop_str(network_queue *queue, gsize steal_len, GString *dest)
     }
 
     while ((chunk = g_queue_peek_head(queue->chunks))) {
-        gsize we_have = we_want < (chunk->len - queue->offset) ? 
-            we_want : (chunk->len - queue->offset);
+        gsize we_have = we_want < (chunk->len - queue->offset) ? we_want : (chunk->len - queue->offset);
 
         if (!dest && (queue->offset == 0) && (chunk->len == steal_len)) {
             /* optimize the common case that we want to have to full chunk
@@ -162,7 +170,7 @@ network_queue_pop_str(network_queue *queue, gsize steal_len, GString *dest)
         g_string_append_len(dest, chunk->str + queue->offset, we_have);
 
         queue->offset += we_have;
-        queue->len    -= we_have;
+        queue->len -= we_have;
         we_want -= we_have;
 
         if (chunk->len == queue->offset) {
@@ -176,5 +184,3 @@ network_queue_pop_str(network_queue *queue, gsize steal_len, GString *dest)
 
     return dest;
 }
-
-

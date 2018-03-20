@@ -32,17 +32,17 @@
 #ifdef HAVE_OPENSSL
 #include <openssl/rsa.h>
 #endif
-typedef enum { 
-    BACKEND_STATE_UNKNOWN, 
-    BACKEND_STATE_UP, 
+typedef enum {
+    BACKEND_STATE_UNKNOWN,
+    BACKEND_STATE_UP,
     BACKEND_STATE_DOWN,
     BACKEND_STATE_MAINTAINING,
     BACKEND_STATE_DELETED,
 } backend_state_t;
 
-typedef enum { 
-    BACKEND_TYPE_UNKNOWN, 
-    BACKEND_TYPE_RW, 
+typedef enum {
+    BACKEND_TYPE_UNKNOWN,
+    BACKEND_TYPE_RW,
     BACKEND_TYPE_RO,
 } backend_type_t;
 
@@ -56,17 +56,17 @@ typedef struct backend_config {
     GString *default_username;
     GString *default_db;
 
-    int     max_conn_pool;
-    int     mid_conn_pool;
+    int max_conn_pool;
+    int mid_conn_pool;
 
-    gchar   charset;
+    gchar charset;
 
 } backend_config;
 
 typedef struct {
     network_address *addr;
     GString *server_group;
-    GString *address; /* original address, might be domain name or ip */
+    GString *address;           /* original address, might be domain name or ip */
 
     backend_state_t state;   /**< UP or DOWN */
     backend_type_t type;     /**< ReadWrite or ReadOnly */
@@ -76,45 +76,43 @@ typedef struct {
     network_connection_pool *pool; /**< the pool of open connections */
 
     /**< number of open connections to this backend for SQF */
-    int connected_clients; 
+    int connected_clients;
 
     /**< the UUID of the backend */
-    GString           *uuid;
+    GString *uuid;
 
-    backend_config    *config;
-    GPtrArray         *challenges;
-    int                chal_ndx;
-    time_t             last_check_time;
-    int slave_delay_msec; /* valid if this is a ReadOnly slave */
+    backend_config *config;
+    GPtrArray *challenges;
+    int chal_ndx;
+    time_t last_check_time;
+    int slave_delay_msec;       /* valid if this is a ReadOnly slave */
 } network_backend_t;
 
 NETWORK_API network_backend_t *network_backend_new();
 NETWORK_API void network_backend_free(network_backend_t *b);
 NETWORK_API int network_backend_conns_count(network_backend_t *b);
 NETWORK_API int network_backend_init_extra(network_backend_t *b, chassis *chas);
-void network_backend_save_challenge(network_backend_t *b,
-                                   const network_mysqld_auth_challenge *);
+void network_backend_save_challenge(network_backend_t *b, const network_mysqld_auth_challenge *);
 network_mysqld_auth_challenge *network_backend_get_challenge(network_backend_t *b);
 
 typedef struct {
     unsigned int ro_server_num;
     unsigned int read_count;
-    GPtrArray  *backends;
+    GPtrArray *backends;
 #ifdef HAVE_OPENSSL
-    RSA  *rsa;
+    RSA *rsa;
 #endif
     /* GHashTable *ip_table; */
     GTimeVal backend_last_check;
-    GPtrArray *groups; /* GPtrArray<network_group_t *> */
+    GPtrArray *groups;          /* GPtrArray<network_group_t *> */
 } network_backends_t;
 
 NETWORK_API network_backends_t *network_backends_new();
 NETWORK_API void network_backends_free(network_backends_t *);
-NETWORK_API int network_backends_add(network_backends_t *, const gchar *, 
-        backend_type_t , backend_state_t, void *);
+NETWORK_API int network_backends_add(network_backends_t *, const gchar *, backend_type_t, backend_state_t, void *);
 NETWORK_API int network_backends_remove(network_backends_t *bs, guint index);
 NETWORK_API int network_backends_check(network_backends_t *bs);
-NETWORK_API int network_backends_modify(network_backends_t *, guint , backend_type_t, backend_state_t);
+NETWORK_API int network_backends_modify(network_backends_t *, guint, backend_type_t, backend_state_t);
 NETWORK_API network_backend_t *network_backends_get(network_backends_t *bs, guint ndx);
 NETWORK_API guint network_backends_count(network_backends_t *bs);
 NETWORK_API gboolean network_backends_load_user_profile(network_backends_t *, chassis *);
@@ -124,8 +122,7 @@ NETWORK_API gboolean network_backends_load_config(network_backends_t *, chassis 
 /* get backend index by ip:port string */
 int network_backends_find_address(network_backends_t *bs, const char *);
 
-network_mysqld_auth_challenge *
-network_backends_get_challenge(network_backends_t *b, int back_ndx);
+network_mysqld_auth_challenge *network_backends_get_challenge(network_backends_t *b, int back_ndx);
 
 #define MAX_GROUP_SLAVES 4
 
@@ -152,4 +149,3 @@ int network_backends_idle_conns(network_backends_t *);
 int network_backends_used_conns(network_backends_t *);
 
 #endif /* _BACKEND_H_ */
-

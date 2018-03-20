@@ -22,7 +22,8 @@
 
 #include <string.h>
 
-sharding_plan_t *sharding_plan_new(const GString *orig_sql)
+sharding_plan_t *
+sharding_plan_new(const GString *orig_sql)
 {
     sharding_plan_t *plan = g_new0(sharding_plan_t, 1);
     plan->orig_sql = orig_sql;
@@ -30,7 +31,8 @@ sharding_plan_t *sharding_plan_new(const GString *orig_sql)
     return plan;
 }
 
-void sharding_plan_free(sharding_plan_t *plan)
+void
+sharding_plan_free(sharding_plan_t *plan)
 {
     g_ptr_array_free(plan->groups, TRUE);
     if (plan->sql_list) {
@@ -47,8 +49,8 @@ void sharding_plan_free(sharding_plan_t *plan)
     g_free(plan);
 }
 
-static struct _group_sql_pair *sharding_plan_get_mapping(sharding_plan_t *plan,
-                                                       const GString *gp)
+static struct _group_sql_pair *
+sharding_plan_get_mapping(sharding_plan_t *plan, const GString *gp)
 {
     if (plan->mapping) {
         GList *l = plan->mapping;
@@ -62,7 +64,8 @@ static struct _group_sql_pair *sharding_plan_get_mapping(sharding_plan_t *plan,
     return NULL;
 }
 
-gboolean sharding_plan_has_group(sharding_plan_t *plan, const GString *gp)
+gboolean
+sharding_plan_has_group(sharding_plan_t *plan, const GString *gp)
 {
     if (plan->groups) {
         int i;
@@ -76,8 +79,8 @@ gboolean sharding_plan_has_group(sharding_plan_t *plan, const GString *gp)
     return FALSE;
 }
 
-static void sharding_plan_add_mapping(sharding_plan_t *plan,
-                                      const GString *group, const GString *sql)
+static void
+sharding_plan_add_mapping(sharding_plan_t *plan, const GString *group, const GString *sql)
 {
     struct _group_sql_pair *pair = sharding_plan_get_mapping(plan, group);
     if (pair) {
@@ -90,7 +93,8 @@ static void sharding_plan_add_mapping(sharding_plan_t *plan,
     }
 }
 
-void sharding_plan_add_group(sharding_plan_t *plan, GString *gp_name)
+void
+sharding_plan_add_group(sharding_plan_t *plan, GString *gp_name)
 {
     if (!sharding_plan_has_group(plan, gp_name)) {
         g_ptr_array_add(plan->groups, gp_name);
@@ -98,7 +102,8 @@ void sharding_plan_add_group(sharding_plan_t *plan, GString *gp_name)
     sharding_plan_add_mapping(plan, gp_name, NULL);
 }
 
-void sharding_plan_add_groups(sharding_plan_t *plan, GPtrArray *groups)
+void
+sharding_plan_add_groups(sharding_plan_t *plan, GPtrArray *groups)
 {
     if (!groups) {
         return;
@@ -109,13 +114,15 @@ void sharding_plan_add_groups(sharding_plan_t *plan, GPtrArray *groups)
     }
 }
 
-void sharding_plan_clear_group(sharding_plan_t *plan)
+void
+sharding_plan_clear_group(sharding_plan_t *plan)
 {
     GPtrArray *groups = plan->groups;
     g_ptr_array_remove_range(groups, 0, groups->len);
 }
 
-void sharding_plan_add_group_sql(sharding_plan_t *plan, GString *gp_name, GString *sql)
+void
+sharding_plan_add_group_sql(sharding_plan_t *plan, GString *gp_name, GString *sql)
 {
     plan->sql_list = g_list_append(plan->sql_list, sql);
     if (!sharding_plan_has_group(plan, gp_name)) {
@@ -124,7 +131,8 @@ void sharding_plan_add_group_sql(sharding_plan_t *plan, GString *gp_name, GStrin
     sharding_plan_add_mapping(plan, gp_name, sql);
 }
 
-const GString *sharding_plan_get_sql(sharding_plan_t *plan, const GString *group)
+const GString *
+sharding_plan_get_sql(sharding_plan_t *plan, const GString *group)
 {
     struct _group_sql_pair *pair = sharding_plan_get_mapping(plan, group);
     if (pair) {
@@ -137,21 +145,23 @@ const GString *sharding_plan_get_sql(sharding_plan_t *plan, const GString *group
     return NULL;
 }
 
-
-void sharding_plan_set_modified_sql(sharding_plan_t *plan, GString *sql)
+void
+sharding_plan_set_modified_sql(sharding_plan_t *plan, GString *sql)
 {
     plan->is_modified = TRUE;
     plan->modified_sql = sql;
 }
 
-static gint gstr_comp(gconstpointer a1, gconstpointer a2)
+static gint
+gstr_comp(gconstpointer a1, gconstpointer a2)
 {
     GString *s1 = *(GString **)a1;
     GString *s2 = *(GString **)a2;
     return strcmp(s1->str, s2->str);
 }
 
-void sharding_plan_sort_groups(sharding_plan_t *plan)
+void
+sharding_plan_sort_groups(sharding_plan_t *plan)
 {
     g_ptr_array_sort(plan->groups, gstr_comp);
 }

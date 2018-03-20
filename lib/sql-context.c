@@ -23,18 +23,20 @@
 #include "mylexer.l.h"
 #include "sql-property.h"
 
-void sqlParser(void *yyp,int yymajor, sql_token_t yyminor, sql_context_t *);
-void sqlParserFree(void *p,void(*freeProc)(void *));
-void *sqlParserAlloc(void *(*mallocProc)(size_t));
+void sqlParser(void *yyp, int yymajor, sql_token_t yyminor, sql_context_t *);
+void sqlParserFree(void *p, void (*freeProc) (void *));
+void *sqlParserAlloc(void *(*mallocProc) (size_t));
 void sqlParserTrace(FILE *TraceFILE, char *zTracePrompt);
 void yylex_restore_buffer(void *);
 
-void sql_context_init(sql_context_t *p)
+void
+sql_context_init(sql_context_t *p)
 {
     memset(p, 0, sizeof(sql_context_t));
 }
 
-void sql_context_destroy(sql_context_t *p)
+void
+sql_context_destroy(sql_context_t *p)
 {
     if (p->sql_statement)
         sql_statement_free(p->sql_statement, p->stmt_type);
@@ -44,13 +46,15 @@ void sql_context_destroy(sql_context_t *p)
         sql_property_free(p->property);
 }
 
-void sql_context_reset(sql_context_t *p)
+void
+sql_context_reset(sql_context_t *p)
 {
     sql_context_destroy(p);
     sql_context_init(p);
 }
 
-void sql_context_append_msg(sql_context_t *p, char *msg)
+void
+sql_context_append_msg(sql_context_t *p, char *msg)
 {
     int len = strlen(msg);
     int orig_len = 0;
@@ -66,14 +70,15 @@ void sql_context_append_msg(sql_context_t *p, char *msg)
     strcpy(p->message + orig_len, msg);
 }
 
-void sql_context_set_error(sql_context_t *p, int err, char *msg)
+void
+sql_context_set_error(sql_context_t *p, int err, char *msg)
 {
     p->rc = err;
     sql_context_append_msg(p, msg);
 }
 
-void sql_context_add_stmt(sql_context_t *p,
-                          enum sql_stmt_type_t type, void *clause)
+void
+sql_context_add_stmt(sql_context_t *p, enum sql_stmt_type_t type, void *clause)
 {
     if (p->stmt_count == 0) {
         p->stmt_type = type;
@@ -85,13 +90,14 @@ void sql_context_add_stmt(sql_context_t *p,
     }
 }
 
-gboolean sql_context_has_sharding_property(sql_context_t *p)
+gboolean
+sql_context_has_sharding_property(sql_context_t *p)
 {
     return p && p->property && (p->property->table || p->property->group);
 }
 
-static void parse_token(sql_context_t *context, int code, sql_token_t token,
-                        void *parser, sql_property_parser_t *prop_parser)
+static void
+parse_token(sql_context_t *context, int code, sql_token_t token, void *parser, sql_property_parser_t *prop_parser)
 {
     if (code == TK_PROPERTY_START) {
         prop_parser->is_parsing = TRUE;
@@ -119,9 +125,9 @@ static void parse_token(sql_context_t *context, int code, sql_token_t token,
         return;
     }
 
-    if (prop_parser->is_parsing) {/*# K = V */
+    if (prop_parser->is_parsing) {  /*# K = V */
         int rc = sql_property_parser_parse(prop_parser,
-                          token.z, token.n, context->property);
+                                           token.z, token.n, context->property);
         if (!rc) {
             sql_property_free(context->property);
             context->property = NULL;
@@ -137,7 +143,8 @@ static void parse_token(sql_context_t *context, int code, sql_token_t token,
 /* Parse user allocated sql string
   sql->str must be terminated with 2 NUL
   sql->len is length including the 2 NUL */
-void sql_context_parse_len(sql_context_t *context, GString *sql)
+void
+sql_context_parse_len(sql_context_t *context, GString *sql)
 {
     yyscan_t scanner;
     yylex_init(&scanner);
@@ -145,17 +152,17 @@ void sql_context_parse_len(sql_context_t *context, GString *sql)
 #if PARSER_TRACE
     sqlParserTrace(stdout, "---ParserTrace: ");
 #endif
-    
+
     void *parser = sqlParserAlloc(malloc);
     sql_context_reset(context);
 
     static sql_property_parser_t comment_parser;
     sql_property_parser_reset(&comment_parser);
-    
+
     int code;
     int last_parsed_token;
     sql_token_t token;
-    while ((code = yylex(scanner)) > 0) { /* 0 on EOF */
+    while ((code = yylex(scanner)) > 0) {   /* 0 on EOF */
         token.z = yyget_text(scanner);
         token.n = yyget_leng(scanner);
 #if PARSER_TRACE
@@ -166,8 +173,8 @@ void sql_context_parse_len(sql_context_t *context, GString *sql)
 
         last_parsed_token = code;
 
-        if (context->rc != PARSE_OK) {/* break on PARSE_HEAD, other error */
-            yylex_restore_buffer(scanner);/* restore the input string */
+        if (context->rc != PARSE_OK) {  /* break on PARSE_HEAD, other error */
+            yylex_restore_buffer(scanner);  /* restore the input string */
             break;
         }
     }
@@ -183,7 +190,8 @@ void sql_context_parse_len(sql_context_t *context, GString *sql)
     yylex_destroy(scanner);
 }
 
-gboolean sql_context_is_autocommit_on(sql_context_t *context)
+gboolean
+sql_context_is_autocommit_on(sql_context_t *context)
 {
     if (context->stmt_type == STMT_SET) {
         sql_expr_list_t *set_list = context->sql_statement;
@@ -200,7 +208,8 @@ gboolean sql_context_is_autocommit_on(sql_context_t *context)
     return FALSE;
 }
 
-gboolean sql_context_is_autocommit_off(sql_context_t *context)
+gboolean
+sql_context_is_autocommit_off(sql_context_t *context)
 {
     if (context->stmt_type == STMT_SET) {
         sql_expr_list_t *set_list = context->sql_statement;
@@ -217,13 +226,14 @@ gboolean sql_context_is_autocommit_off(sql_context_t *context)
     return FALSE;
 }
 
-gboolean sql_context_is_single_node_trx(sql_context_t *context)
+gboolean
+sql_context_is_single_node_trx(sql_context_t *context)
 {
-    return context && context->property
-        && context->property->transaction == TRX_SINGLE_NODE;
+    return context && context->property && context->property->transaction == TRX_SINGLE_NODE;
 }
 
-gboolean sql_context_is_cacheable(sql_context_t *context)
+gboolean
+sql_context_is_cacheable(sql_context_t *context)
 {
     if (context->stmt_type != STMT_SELECT)
         return FALSE;
@@ -235,7 +245,7 @@ gboolean sql_context_is_cacheable(sql_context_t *context)
     if (select->lock_read)
         return FALSE;
     int i = 0;
-    for (i = 0; i < select->columns->len; ++i) { /* only allow aggreate functions */
+    for (i = 0; i < select->columns->len; ++i) {    /* only allow aggreate functions */
         sql_expr_t *col = g_ptr_array_index(select->columns, i);
         if (col->flags & EP_FUNCTION && !(col->flags & EP_AGGREGATE))
             return FALSE;

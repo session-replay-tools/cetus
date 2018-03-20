@@ -4,7 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-void cetus_variables_init_stats(cetus_variable_t **vars, chassis *chas)
+void
+cetus_variables_init_stats(cetus_variable_t **vars, chassis *chas)
 {
     query_stats_t *stats = &(chas->query_stats);
 
@@ -27,7 +28,8 @@ void cetus_variables_init_stats(cetus_variable_t **vars, chassis *chas)
     memcpy(*vars, stats_variables, length);
 }
 
-char *cetus_variable_get_value_str(cetus_variable_t *var)
+char *
+cetus_variable_get_value_str(cetus_variable_t *var)
 {
     char *value = NULL;
     switch (var->type) {

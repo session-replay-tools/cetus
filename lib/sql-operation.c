@@ -29,13 +29,15 @@
 #include "sql-filter-variables.h"
 #include "myparser.y.h"
 
-void sql_select(sql_context_t *st, sql_select_t *select)
+void
+sql_select(sql_context_t *st, sql_select_t *select)
 {
     st->rw_flag |= CF_READ;
     sql_context_add_stmt(st, STMT_SELECT, select);
 }
 
-void sql_delete(sql_context_t *st, sql_delete_t *del)
+void
+sql_delete(sql_context_t *st, sql_delete_t *del)
 {
     if (st->rc != PARSE_OK) {
         g_warning("Delete Parse Error");
@@ -44,7 +46,8 @@ void sql_delete(sql_context_t *st, sql_delete_t *del)
     sql_context_add_stmt(st, STMT_DELETE, del);
 }
 
-void sql_update(sql_context_t *st, sql_update_t *update)
+void
+sql_update(sql_context_t *st, sql_update_t *update)
 {
     if (st->rc != PARSE_OK) {
         g_warning("Update Parse Error");
@@ -53,8 +56,8 @@ void sql_update(sql_context_t *st, sql_update_t *update)
     sql_context_add_stmt(st, STMT_UPDATE, update);
 }
 
-
-void sql_insert(sql_context_t *st, sql_insert_t *insert)
+void
+sql_insert(sql_context_t *st, sql_insert_t *insert)
 {
     if (st->rc != PARSE_OK) {
         g_warning("Insert Parse Error");
@@ -63,7 +66,8 @@ void sql_insert(sql_context_t *st, sql_insert_t *insert)
     sql_context_add_stmt(st, STMT_INSERT, insert);
 }
 
-void sql_start_transaction(sql_context_t *st)
+void
+sql_start_transaction(sql_context_t *st)
 {
     if (st->rc != PARSE_OK) {
         g_warning("Start transaction parse Error");
@@ -72,7 +76,8 @@ void sql_start_transaction(sql_context_t *st)
     sql_context_add_stmt(st, STMT_START, NULL);
 }
 
-void sql_commit_transaction(sql_context_t *st)
+void
+sql_commit_transaction(sql_context_t *st)
 {
     if (st->rc != PARSE_OK) {
         g_warning("COMMIT transaction parse Error");
@@ -81,7 +86,8 @@ void sql_commit_transaction(sql_context_t *st)
     sql_context_add_stmt(st, STMT_COMMIT, NULL);
 }
 
-void sql_rollback_transaction(sql_context_t *st)
+void
+sql_rollback_transaction(sql_context_t *st)
 {
     if (st->rc != PARSE_OK) {
         g_warning("ROLLBACK transaction parse Error");
@@ -90,7 +96,8 @@ void sql_rollback_transaction(sql_context_t *st)
     sql_context_add_stmt(st, STMT_ROLLBACK, NULL);
 }
 
-void sql_savepoint(sql_context_t *st, int tk, char *name)
+void
+sql_savepoint(sql_context_t *st, int tk, char *name)
 {
     if (st->rc != PARSE_OK) {
         g_warning("SAVE POINT parse Error");
@@ -99,21 +106,22 @@ void sql_savepoint(sql_context_t *st, int tk, char *name)
     sql_context_add_stmt(st, STMT_SAVEPOINT, name);
 }
 
-static gboolean string_array_contains(const char **sa, int size, const char *str)
+static gboolean
+string_array_contains(const char **sa, int size, const char *str)
 {
     int i = 0;
-    for (;i < size; ++i) {
+    for (; i < size; ++i) {
         if (strcasecmp(sa[i], str) == 0)
             return TRUE;
     }
     return FALSE;
 }
 
-void sql_set_variable(sql_context_t *ps, sql_expr_list_t *exps)
+void
+sql_set_variable(sql_context_t *ps, sql_expr_list_t *exps)
 {
     if (ps->property) {
-        sql_context_set_error(ps, PARSE_NOT_SUPPORT,
-                                    "Commanding comment is not allowed in SET clause");
+        sql_context_set_error(ps, PARSE_NOT_SUPPORT, "Commanding comment is not allowed in SET clause");
         goto out;
     }
     g_assert(exps);
@@ -122,13 +130,11 @@ void sql_set_variable(sql_context_t *ps, sql_expr_list_t *exps)
     for (i = 0; i < exps->len; ++i) {
         sql_expr_t *p = g_ptr_array_index(exps, i);
         if (!p || p->op != TK_EQ || !sql_expr_is_id(p->left, NULL)) {
-            sql_context_set_error(ps, PARSE_SYNTAX_ERR,
-                                        "syntax error in SET");
+            sql_context_set_error(ps, PARSE_SYNTAX_ERR, "syntax error in SET");
             goto out;
         }
         if (p->left && p->left->var_scope == SCOPE_GLOBAL) {
-            sql_context_set_error(ps, PARSE_NOT_SUPPORT,
-                                        "Only session scope SET is supported now");
+            sql_context_set_error(ps, PARSE_NOT_SUPPORT, "Only session scope SET is supported now");
             goto out;
         }
         const char *var_name = p->left->token_text;
@@ -136,8 +142,7 @@ void sql_set_variable(sql_context_t *ps, sql_expr_list_t *exps)
         if (strcasecmp(var_name, "sql_mode") == 0) {
             gboolean supported = sql_filter_vars_is_allowed(var_name, value);
             if (!supported) {
-                sql_context_set_error(ps, PARSE_NOT_SUPPORT,
-                                      "This sql_mode is not supported");
+                sql_context_set_error(ps, PARSE_NOT_SUPPORT, "This sql_mode is not supported");
                 goto out;
             }
         } else if (!sql_filter_vars_is_allowed(var_name, value)) {
@@ -147,22 +152,22 @@ void sql_set_variable(sql_context_t *ps, sql_expr_list_t *exps)
             goto out;
         }
     }
-out:
+  out:
     sql_context_add_stmt(ps, STMT_SET, exps);
 }
 
-void sql_set_names(sql_context_t *ps, char *val)
+void
+sql_set_names(sql_context_t *ps, char *val)
 {
     if (ps->property) {
-        sql_context_set_error(ps, PARSE_NOT_SUPPORT,
-                              "Commanding comment is not allowed in SET clause");
+        sql_context_set_error(ps, PARSE_NOT_SUPPORT, "Commanding comment is not allowed in SET clause");
         g_free(val);
         return;
     }
-    const char *charsets[] = {"latin1", "ascii", "gb2312", "gbk", "utf8", "utf8mb4", "big5"};
+    const char *charsets[] = { "latin1", "ascii", "gb2312", "gbk", "utf8", "utf8mb4", "big5" };
     int cs_size = sizeof(charsets) / sizeof(char *);
     if (!string_array_contains(charsets, cs_size, val)) {
-        char msg[64] = {0};
+        char msg[64] = { 0 };
         snprintf(msg, 64, "Unknown character set: %s", val);
         sql_context_set_error(ps, PARSE_NOT_SUPPORT, msg);
         g_free(val);
@@ -171,16 +176,15 @@ void sql_set_names(sql_context_t *ps, char *val)
     sql_context_add_stmt(ps, STMT_SET_NAMES, val);
 }
 
-void sql_set_transaction(sql_context_t *ps, int scope, int rw_feature, int level)
+void
+sql_set_transaction(sql_context_t *ps, int scope, int rw_feature, int level)
 {
     if (ps->property) {
-        sql_context_set_error(ps, PARSE_NOT_SUPPORT,
-                                    "Commanding comment is not allowed in SET clause");
+        sql_context_set_error(ps, PARSE_NOT_SUPPORT, "Commanding comment is not allowed in SET clause");
         return;
     }
     if (scope == SCOPE_GLOBAL) {
-        sql_context_set_error(ps, PARSE_NOT_SUPPORT,
-                                    "GLOBAL scope SET TRANSACTION is not supported now");
+        sql_context_set_error(ps, PARSE_NOT_SUPPORT, "GLOBAL scope SET TRANSACTION is not supported now");
         return;
     }
     sql_set_transaction_t *set_tran = g_new0(sql_set_transaction_t, 1);
@@ -190,13 +194,15 @@ void sql_set_transaction(sql_context_t *ps, int scope, int rw_feature, int level
     sql_context_add_stmt(ps, STMT_SET_TRANSACTION, set_tran);
 }
 
-void sql_use_database(sql_context_t *ps, char *val)
+void
+sql_use_database(sql_context_t *ps, char *val)
 {
     ps->rw_flag |= CF_READ;
     sql_context_add_stmt(ps, STMT_USE, val);
 }
 
-void sql_explain_table(sql_context_t *ps, sql_src_list_t *table)
+void
+sql_explain_table(sql_context_t *ps, sql_src_list_t *table)
 {
     ps->rw_flag |= CF_READ;
     sql_context_add_stmt(ps, STMT_EXPLAIN_TABLE, table);

@@ -30,35 +30,45 @@ enum _value_type_t {
     VAL_UNKNOWN = -1,
     VAL_INT = 1,
     VAL_STRING,
-    VAL_STRING_CSV, /* comma seperated string value */
+    VAL_STRING_CSV,             /* comma seperated string value */
 };
 
-static enum _value_type_t value_type(const char *str)
+static enum _value_type_t
+value_type(const char *str)
 {
-    if (strcasecmp(str, "int") == 0) return VAL_INT;
-    else if (strcasecmp(str, "string") == 0) return VAL_STRING;
-    else if (strcasecmp(str, "string-csv") == 0) return VAL_STRING_CSV;
-    else return VAL_UNKNOWN;
+    if (strcasecmp(str, "int") == 0)
+        return VAL_INT;
+    else if (strcasecmp(str, "string") == 0)
+        return VAL_STRING;
+    else if (strcasecmp(str, "string-csv") == 0)
+        return VAL_STRING_CSV;
+    else
+        return VAL_UNKNOWN;
 }
 
 struct sql_variable_t {
     char *name;
     enum _value_type_t type;
-    GList *silent_values; /* GList<char *> */
-    GList *allowed_values; /* GList<char *> */
+    GList *silent_values;       /* GList<char *> */
+    GList *allowed_values;      /* GList<char *> */
     gboolean allow_all;
     gboolean silence_all;
 };
 
-static void sql_variable_free(struct sql_variable_t *p)
+static void
+sql_variable_free(struct sql_variable_t *p)
 {
-    if (p->name) g_free(p->name);
-    if (p->silent_values) g_list_free_full(p->silent_values, g_free);
-    if (p->allowed_values) g_list_free_full(p->allowed_values, g_free);
+    if (p->name)
+        g_free(p->name);
+    if (p->silent_values)
+        g_list_free_full(p->silent_values, g_free);
+    if (p->allowed_values)
+        g_list_free_full(p->allowed_values, g_free);
     g_free(p);
 }
 
-static gboolean sql_variable_is_silent_value(struct sql_variable_t *p, const char *value)
+static gboolean
+sql_variable_is_silent_value(struct sql_variable_t *p, const char *value)
 {
     GList *l;
     for (l = p->silent_values; l; l = l->next) {
@@ -69,7 +79,8 @@ static gboolean sql_variable_is_silent_value(struct sql_variable_t *p, const cha
     return FALSE;
 }
 
-static gboolean sql_variable_is_allowed_value(struct sql_variable_t *p, const char *value)
+static gboolean
+sql_variable_is_allowed_value(struct sql_variable_t *p, const char *value)
 {
     GList *l;
     for (l = p->allowed_values; l; l = l->next) {
@@ -82,14 +93,16 @@ static gboolean sql_variable_is_allowed_value(struct sql_variable_t *p, const ch
 
 static GHashTable *cetus_variables = NULL;
 
-void sql_filter_vars_destroy()
+void
+sql_filter_vars_destroy()
 {
     if (cetus_variables) {
         g_hash_table_destroy(cetus_variables);
     }
 }
 
-gboolean sql_filter_vars_load_rules(char *filename)
+gboolean
+sql_filter_vars_load_rules(char *filename)
 {
     char *buffer = NULL;
 
@@ -104,25 +117,29 @@ gboolean sql_filter_vars_load_rules(char *filename)
     return rc;
 }
 
-gboolean str_case_equal(gconstpointer v1, gconstpointer v2)
+gboolean
+str_case_equal(gconstpointer v1, gconstpointer v2)
 {
-    if (!v1 || !v2) return FALSE;
-    return strcasecmp((const char*)v1, (const char*)v2)==0;
+    if (!v1 || !v2)
+        return FALSE;
+    return strcasecmp((const char *)v1, (const char *)v2) == 0;
 }
 
-guint str_case_hash(gconstpointer v)
+guint
+str_case_hash(gconstpointer v)
 {
-    char* lower = g_ascii_strdown((const char*)v, -1);
+    char *lower = g_ascii_strdown((const char *)v, -1);
     guint hash = g_str_hash(lower);
     g_free(lower);
     return hash;
 }
 
-gboolean sql_filter_vars_load_str_rules(const char *json_str)
+gboolean
+sql_filter_vars_load_str_rules(const char *json_str)
 {
     if (!cetus_variables) {
         cetus_variables = g_hash_table_new_full(str_case_hash, str_case_equal,
-                                              NULL, (GDestroyNotify)sql_variable_free);
+                                                NULL, (GDestroyNotify) sql_variable_free);
     }
     cJSON *root = cJSON_Parse(json_str);
     if (!root) {
@@ -152,8 +169,7 @@ gboolean sql_filter_vars_load_str_rules(const char *json_str)
                     var->silence_all = TRUE;
                     break;
                 }
-                var->silent_values = g_list_append(var->silent_values,
-                                                   g_strdup(silent->valuestring));
+                var->silent_values = g_list_append(var->silent_values, g_strdup(silent->valuestring));
             }
         }
         cJSON *allowed_array = cJSON_GetObjectItem(cur, "allowed_values");
@@ -164,8 +180,7 @@ gboolean sql_filter_vars_load_str_rules(const char *json_str)
                     var->allow_all = TRUE;
                     break;
                 }
-                var->allowed_values = g_list_append(var->allowed_values,
-                                                    g_strdup(allowed->valuestring));
+                var->allowed_values = g_list_append(var->allowed_values, g_strdup(allowed->valuestring));
             }
         }
         /* if duplicated, replace and free the old (key & value) */
@@ -175,7 +190,8 @@ gboolean sql_filter_vars_load_str_rules(const char *json_str)
     return TRUE;
 }
 
-gboolean sql_filter_vars_is_silent(const char *name, const char *val)
+gboolean
+sql_filter_vars_is_silent(const char *name, const char *val)
 {
     if (!name) {
         return FALSE;
@@ -193,7 +209,7 @@ gboolean sql_filter_vars_is_silent(const char *name, const char *val)
     switch (var->type) {
     case VAL_STRING:
         return sql_variable_is_silent_value(var, val);
-    case VAL_STRING_CSV: {
+    case VAL_STRING_CSV:{
         gchar **values = g_strsplit_set(val, ", ", -1);
         int i = 0;
         for (i = 0; values[i] != NULL; ++i) {
@@ -212,7 +228,8 @@ gboolean sql_filter_vars_is_silent(const char *name, const char *val)
     return FALSE;
 }
 
-gboolean sql_filter_vars_is_allowed(const char *name, const char *val)
+gboolean
+sql_filter_vars_is_allowed(const char *name, const char *val)
 {
     if (!name) {
         return FALSE;
@@ -230,7 +247,7 @@ gboolean sql_filter_vars_is_allowed(const char *name, const char *val)
     switch (var->type) {
     case VAL_STRING:
         return sql_variable_is_allowed_value(var, val);
-    case VAL_STRING_CSV: {
+    case VAL_STRING_CSV:{
         gchar **values = g_strsplit_set(val, ", ", -1);
         int i = 0;
         for (i = 0; values[i] != NULL; ++i) {
@@ -249,7 +266,8 @@ gboolean sql_filter_vars_is_allowed(const char *name, const char *val)
     return FALSE;
 }
 
-void sql_filter_vars_load_default_rules()
+void
+sql_filter_vars_load_default_rules()
 {
     static const char *default_var_rule = "{"
         "  \"variables\": ["
@@ -281,24 +299,19 @@ void sql_filter_vars_load_default_rules()
         "      \"name\": \"character_set_results\","
         "      \"type\": \"string\","
         "      \"allowed_values\": [\"latin1\",\"ascii\",\"gb2312\",\"gbk\",\"utf8\",\"utf8mb4\",\"binary\",\"big5\",\"NULL\"]"
-        "    }"
-        "  ]"
-        "}";
+        "    }" "  ]" "}";
     gboolean rc = sql_filter_vars_load_str_rules(default_var_rule);
     g_assert(rc);
 }
 
-void sql_filter_vars_shard_load_default_rules()
+void
+sql_filter_vars_shard_load_default_rules()
 {
     static const char *default_var_rule = "{"
         "  \"variables\": ["
         "    {"
         "      \"name\": \"autocommit\","
-        "      \"type\": \"string\","
-        "      \"allowed_values\": [\"*\"]"
-        "    }"
-        "  ]"
-        "}";
+        "      \"type\": \"string\"," "      \"allowed_values\": [\"*\"]" "    }" "  ]" "}";
     gboolean rc = sql_filter_vars_load_str_rules(default_var_rule);
     g_assert(rc);
 }

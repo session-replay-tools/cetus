@@ -17,7 +17,6 @@
 
 #define tc_cpymem(d, s, l) (((char *) memcpy(d, (void *) s, l)) + (l))
 
-
 static int log_fd = -1;
 static int last_hour = -1;
 static const char *file_name_prefix = NULL;
@@ -27,21 +26,20 @@ static int update_time();
 
 struct tc_log_level_t {
     char *level;
-    int   len;
+    int len;
 };
 
 static struct tc_log_level_t tc_log_levels[] = {
-    { "[unknown]", 9 }, 
-    { "[emerg]", 7 },
-    { "[alert]", 7 },
-    { "[crit]", 6 },
-    { "[error]", 7 },
-    { "[warn]", 6 },
-    { "[notice]", 8},
-    { "[info]", 6},
-    { "[debug]", 7 }
+    {"[unknown]", 9},
+    {"[emerg]", 7},
+    {"[alert]", 7},
+    {"[crit]", 6},
+    {"[error]", 7},
+    {"[warn]", 6},
+    {"[notice]", 8},
+    {"[info]", 6},
+    {"[debug]", 7}
 };
-
 
 static int
 tc_vscnprintf(char *buf, size_t size, const char *fmt, va_list args)
@@ -53,7 +51,7 @@ tc_vscnprintf(char *buf, size_t size, const char *fmt, va_list args)
      */
     i = vsnprintf(buf, size, fmt, args);
 
-    if (i < (int) size) {
+    if (i < (int)size) {
         return i;
     }
 
@@ -64,17 +62,16 @@ tc_vscnprintf(char *buf, size_t size, const char *fmt, va_list args)
     }
 }
 
-
 static void
 tc_localtime(time_t sec, struct tm *tm)
 {
 #if (HAVE_LOCALTIME_R)
-    (void) localtime_r(&sec, tm);
+    (void)localtime_r(&sec, tm);
 #else
-    struct tm *t; 
+    struct tm *t;
 
     t = localtime(&sec);
-    *tm = *t; 
+    *tm = *t;
 #endif
 
     tm->tm_mon++;
@@ -84,7 +81,7 @@ tc_localtime(time_t sec, struct tm *tm)
 static int
 tc_scnprintf(char *buf, size_t size, const char *fmt, ...)
 {
-    int     i;
+    int i;
     va_list args;
 
     va_start(args, fmt);
@@ -94,11 +91,10 @@ tc_scnprintf(char *buf, size_t size, const char *fmt, ...)
     return i;
 }
 
-
 static int
 tc_create_new_file(const char *file, int hour)
 {
-    int  len;
+    int len;
     char new_file_path[512], *p;
 
     if (file == NULL) {
@@ -129,9 +125,9 @@ tc_create_new_file(const char *file, int hour)
     file = new_file_path;
 
 #if (PROXY_O_SYNC)
-    log_fd = open(file, O_RDWR|O_CREAT|O_APPEND|O_SYNC, 0644);
+    log_fd = open(file, O_RDWR | O_CREAT | O_APPEND | O_SYNC, 0644);
 #else
-    log_fd = open(file, O_RDWR|O_CREAT|O_APPEND, 0644);
+    log_fd = open(file, O_RDWR | O_CREAT | O_APPEND, 0644);
 #endif
 
     if (log_fd == -1) {
@@ -170,13 +166,13 @@ tc_log_end(void)
     log_fd = -1;
 }
 
-
-static int 
-update_time() {
-    int             status; 
-    time_t          sec;
-    struct tm       tm;
-    struct timeval  tv;
+static int
+update_time()
+{
+    int status;
+    time_t sec;
+    struct tm tm;
+    struct timeval tv;
 
     status = gettimeofday(&tv, NULL);
     if (status >= 0) {
@@ -185,12 +181,9 @@ update_time() {
 
         tc_localtime(sec, &tm);
 
-        snprintf(tc_error_log_time, TC_ERR_LOG_TIME_STR_LEN, 
-                "%4d/%02d/%02d %02d:%02d:%02d +%03d",
-                tm.tm_year, tm.tm_mon,
-                tm.tm_mday, tm.tm_hour,
-                tm.tm_min, tm.tm_sec,
-                (int) msec);
+        snprintf(tc_error_log_time, TC_ERR_LOG_TIME_STR_LEN,
+                 "%4d/%02d/%02d %02d:%02d:%02d +%03d",
+                 tm.tm_year, tm.tm_mon, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec, (int)msec);
         if (tm.tm_hour != last_hour) {
             if (last_hour == -1) {
                 last_hour = tm.tm_hour;
@@ -204,13 +197,12 @@ update_time() {
     return 0;
 }
 
-
 void
 tc_log_info(int level, int err, const char *fmt, ...)
 {
-    int             n, len;
-    char            buffer[LOG_MAX_LEN], *p;
-    va_list         args;
+    int n, len;
+    char buffer[LOG_MAX_LEN], *p;
+    va_list args;
     struct tc_log_level_t *ll;
 
     if (log_fd == -1) {
@@ -256,4 +248,3 @@ tc_log_info(int level, int err, const char *fmt, ...)
 
     write(log_fd, buffer, p - buffer);
 }
-

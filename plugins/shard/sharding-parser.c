@@ -32,32 +32,37 @@
 #include "sql-property.h"
 #include "sharding-config.h"
 
-static gboolean is_compare_op(int op) {
-    return op == TK_EQ || op == TK_NE
-        || op == TK_LT || op == TK_LE || op == TK_GT || op == TK_GE;
+static gboolean
+is_compare_op(int op)
+{
+    return op == TK_EQ || op == TK_NE || op == TK_LT || op == TK_LE || op == TK_GT || op == TK_GE;
 }
 
-static gboolean is_logical_op(int op) {
+static gboolean
+is_logical_op(int op)
+{
     return op == TK_AND || op == TK_OR || op == TK_NOT;
 }
 
-static gboolean is_arithmetic_op(int op) {
-    return op == TK_PLUS || op == TK_MINUS || op == TK_STAR
-        || op == TK_SLASH || op == TK_REM;
+static gboolean
+is_arithmetic_op(int op)
+{
+    return op == TK_PLUS || op == TK_MINUS || op == TK_STAR || op == TK_SLASH || op == TK_REM;
 }
 
-static gboolean expr_is_sharding_key(sql_expr_t *p, const sql_src_item_t *tb,
-                                     const char *key) {
-    if (p->op == TK_DOT) {/* table.colmun or db.table.col */
+static gboolean
+expr_is_sharding_key(sql_expr_t *p, const sql_src_item_t *tb, const char *key)
+{
+    if (p->op == TK_DOT) {      /* table.colmun or db.table.col */
         assert(tb->table_name);
         assert(p->left && p->right);
-        if (p->right->op == TK_DOT) { /* db.table.col */
-            if (tb->dbname && strcasecmp(p->left->token_text, tb->dbname)==0
+        if (p->right->op == TK_DOT) {   /* db.table.col */
+            if (tb->dbname && strcasecmp(p->left->token_text, tb->dbname) == 0
                 && sql_expr_is_dotted_name(p->right, tb->table_name, key))
                 return TRUE;
-        } else if (strcasecmp(p->right->token_text, key)==0) {
-            char* prefix = p->left->token_text;
-            if (strcasecmp(prefix, tb->table_name)==0) {
+        } else if (strcasecmp(p->right->token_text, key) == 0) {
+            char *prefix = p->left->token_text;
+            if (strcasecmp(prefix, tb->table_name) == 0) {
                 return TRUE;
             }
             if (tb->table_alias && strcmp(prefix, tb->table_alias) == 0) {
@@ -71,14 +76,14 @@ static gboolean expr_is_sharding_key(sql_expr_t *p, const sql_src_item_t *tb,
     return FALSE;
 }
 
-static gboolean expr_is_compound_value(sql_expr_t *p)
+static gboolean
+expr_is_compound_value(sql_expr_t *p)
 {
     if (!p)
         return FALSE;
-    return p->op == TK_FUNCTION ||
-        p->op == TK_SELECT || /* subquery */
-        p->op == TK_ID || p->op == TK_DOT || /* col, tbl.col */
-        is_arithmetic_op(p->op); /* 1+1, 3%2, 4 * 5, etc */
+    return p->op == TK_FUNCTION || p->op == TK_SELECT ||    /* subquery */
+        p->op == TK_ID || p->op == TK_DOT ||    /* col, tbl.col */
+        is_arithmetic_op(p->op);    /* 1+1, 3%2, 4 * 5, etc */
 }
 
 static unsigned int
@@ -98,7 +103,7 @@ supplemental_hash(unsigned int value)
 static unsigned int
 cetus_str_hash(const unsigned char *key)
 {
-    int len = strlen((const char *) key);
+    int len = strlen((const char *)key);
     unsigned int hashcode_head = 0;
     int i = 0;
     int max = 8;
@@ -123,11 +128,11 @@ cetus_str_hash(const unsigned char *key)
     }
 }
 
-
-static GString *sql_modify_limit(sql_select_t *select)
+static GString *
+sql_modify_limit(sql_select_t *select)
 {
     GString *new_sql = NULL;
-    if (select->offset && select->offset->num_value > 0 && select->limit) {/* TODO: +ddd */
+    if (select->offset && select->offset->num_value > 0 && select->limit) { /* TODO: +ddd */
         guint64 limit_bak = 0;
         guint64 offset_bak = 0;
         if (select->offset && select->offset->op == TK_INTEGER) {
@@ -163,7 +168,8 @@ static GString *sql_modify_limit(sql_select_t *select)
     }
 }
 
-static GString *sql_modify_orderby(sql_select_t *select)
+static GString *
+sql_modify_orderby(sql_select_t *select)
 {
     GString *new_sql = NULL;
     if (select->flags & SF_REWRITE_ORDERBY) {
@@ -230,7 +236,7 @@ sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi)
                     hav_condi->data_type = val->op;
                 }
             }
-            select->having_clause = NULL;/* temporarily remove HAVING */
+            select->having_clause = NULL;   /* temporarily remove HAVING */
         }
         gboolean has_function = FALSE;
         GString *modified_sql = NULL;
@@ -255,8 +261,8 @@ sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi)
     return NULL;
 }
 
-static gboolean sql_select_contains_sharding_table(sql_select_t *select,
-    char **current_db /* in_out */, char **table /* out */)
+static gboolean
+sql_select_contains_sharding_table(sql_select_t *select, char **current_db /* in_out */ , char **table /* out */ )
 {
     char *db = *current_db;
     while (select) {
@@ -285,7 +291,7 @@ struct condition_t {
     union {
         gint64 num;
         const char *str;
-    }v;
+    } v;
 };
 
 /**
@@ -294,13 +300,14 @@ struct condition_t {
  *   if exists X -> (low, high] that satifies X > 42, return true
  *   if it doesn't exist such an X, return false;
  */
-static gboolean partition_satisfies(sharding_partition_t *partition, struct condition_t cond)
+static gboolean
+partition_satisfies(sharding_partition_t *partition, struct condition_t cond)
 {
     /* partition value -> (low, high] */
     const sharding_vdb_t *conf = partition->vdb;
     if (conf->method == SHARD_METHOD_HASH) {
-        int64_t hash_value =  (conf->key_type == SHARD_DATA_TYPE_STR)
-            ? cetus_str_hash((const unsigned char *) cond.v.str) : cond.v.num;
+        int64_t hash_value = (conf->key_type == SHARD_DATA_TYPE_STR)
+            ? cetus_str_hash((const unsigned char *)cond.v.str) : cond.v.num;
 
         int32_t hash_mod = hash_value % conf->logic_shard_num;
 
@@ -313,7 +320,7 @@ static gboolean partition_satisfies(sharding_partition_t *partition, struct cond
     /* vvv SHARD_METHOD_RANGE vvv */
     if (conf->key_type == SHARD_DATA_TYPE_STR) {
         const char *low = partition->low_value;
-        const char *high = partition->value;  // high is NULL means unlimited
+        const char *high = partition->value;    // high is NULL means unlimited
         const char *val = cond.v.str;
         switch (cond.op) {
         case TK_EQ:
@@ -331,9 +338,9 @@ static gboolean partition_satisfies(sharding_partition_t *partition, struct cond
         default:
             g_warning(G_STRLOC ":error condition");
         }
-    } else {/* int and datetime */
-        int low = (int) (int64_t)partition->low_value;
-        int high = (int) (int64_t)partition->value; /* high range OR hash value */
+    } else {                    /* int and datetime */
+        int low = (int)(int64_t) partition->low_value;
+        int high = (int)(int64_t) partition->value; /* high range OR hash value */
         int val = cond.v.num;
         switch (cond.op) {
         case TK_EQ:
@@ -341,13 +348,13 @@ static gboolean partition_satisfies(sharding_partition_t *partition, struct cond
         case TK_GT:
             return val < high;
         case TK_LT:
-            return val > low+1;
+            return val > low + 1;
         case TK_GE:
             return val <= high;
         case TK_LE:
             return val > low;
         case TK_NE:
-            if (val == high && high == (low+1)) {
+            if (val == high && high == (low + 1)) {
                 return FALSE;
             } else {
                 return TRUE;
@@ -357,13 +364,14 @@ static gboolean partition_satisfies(sharding_partition_t *partition, struct cond
             return FALSE;
         }
     }
-            
+
     g_warning(G_STRLOC ":error reach here");
     return false;
 }
 
 /* filter out those which not satisfy cond */
-static void partitions_filter(GPtrArray *partitions, struct condition_t cond)
+static void
+partitions_filter(GPtrArray *partitions, struct condition_t cond)
 {
     int i = 0;
     for (i = 0; i < partitions->len; ++i) {
@@ -376,8 +384,8 @@ static void partitions_filter(GPtrArray *partitions, struct condition_t cond)
 }
 
 /* collect those which satisfy cond */
-static void partitions_collect(GPtrArray *from_partitions, struct condition_t cond,
-                                 GPtrArray *to_partitions)
+static void
+partitions_collect(GPtrArray *from_partitions, struct condition_t cond, GPtrArray *to_partitions)
 {
     int i = 0;
     for (i = 0; i < from_partitions->len; ++i) {
@@ -389,7 +397,8 @@ static void partitions_collect(GPtrArray *from_partitions, struct condition_t co
 }
 
 /* get first group that satisfies cond */
-sharding_partition_t *partitions_get(GPtrArray *from_partitions, struct condition_t cond)
+sharding_partition_t *
+partitions_get(GPtrArray *from_partitions, struct condition_t cond)
 {
     int i = 0;
     for (i = 0; i < from_partitions->len; ++i) {
@@ -401,7 +410,8 @@ sharding_partition_t *partitions_get(GPtrArray *from_partitions, struct conditio
     return NULL;
 }
 
-static void partitions_merge(GPtrArray *partitions, GPtrArray *other)
+static void
+partitions_merge(GPtrArray *partitions, GPtrArray *other)
 {
     int i = 0;
     for (i = 0; i < other->len; ++i) {
@@ -411,7 +421,8 @@ static void partitions_merge(GPtrArray *partitions, GPtrArray *other)
     }
 }
 
-static GPtrArray *partitions_dup(GPtrArray *partitions)
+static GPtrArray *
+partitions_dup(GPtrArray *partitions)
 {
     int i = 0;
     GPtrArray *dup = g_ptr_array_new();
@@ -425,13 +436,13 @@ static GPtrArray *partitions_dup(GPtrArray *partitions)
 /**
  * parse cond.v from a string
  */
-static int string_to_sharding_value(const char *str, int expected, struct condition_t *cond)
+static int
+string_to_sharding_value(const char *str, int expected, struct condition_t *cond)
 {
     assert(cond);
     if (expected == SHARD_DATA_TYPE_STR) {
         cond->v.str = str;
-    } else if (expected == SHARD_DATA_TYPE_DATE
-               || expected == SHARD_DATA_TYPE_DATETIME) {
+    } else if (expected == SHARD_DATA_TYPE_DATE || expected == SHARD_DATA_TYPE_DATETIME) {
         gboolean ok;
         cond->v.num = chassis_epoch_from_string(str, &ok);
         if (!ok) {
@@ -455,7 +466,8 @@ static int string_to_sharding_value(const char *str, int expected, struct condit
 /**
  * parse cond.v from sql expression
  */
-static int expr_parse_sharding_value(sql_expr_t *p, int expected, struct condition_t *cond)
+static int
+expr_parse_sharding_value(sql_expr_t *p, int expected, struct condition_t *cond)
 {
     assert(p);
     assert(cond);
@@ -474,7 +486,8 @@ static int expr_parse_sharding_value(sql_expr_t *p, int expected, struct conditi
     return PARSE_OK;
 }
 
-static int partitions_filter_inequation_expr(GPtrArray *partitions, sql_expr_t *expr)
+static int
+partitions_filter_inequation_expr(GPtrArray *partitions, sql_expr_t *expr)
 {
     const sharding_vdb_t *conf = NULL;
     g_assert(partitions);
@@ -485,7 +498,7 @@ static int partitions_filter_inequation_expr(GPtrArray *partitions, sql_expr_t *
         return PARSE_OK;
     }
 
-    struct condition_t cond = {0};
+    struct condition_t cond = { 0 };
     cond.op = expr->op;
     int rc = expr_parse_sharding_value(expr->right, conf->key_type, &cond);
     if (rc != PARSE_OK)
@@ -494,7 +507,8 @@ static int partitions_filter_inequation_expr(GPtrArray *partitions, sql_expr_t *
     return PARSE_OK;
 }
 
-static int partitions_filter_BETWEEN_expr(GPtrArray *partitions, sql_expr_t *expr)
+static int
+partitions_filter_BETWEEN_expr(GPtrArray *partitions, sql_expr_t *expr)
 {
     const sharding_vdb_t *conf = NULL;
     g_assert(partitions);
@@ -505,7 +519,7 @@ static int partitions_filter_BETWEEN_expr(GPtrArray *partitions, sql_expr_t *exp
         return PARSE_OK;
     }
 
-    struct condition_t cond = {0};
+    struct condition_t cond = { 0 };
     sql_expr_list_t *btlist = expr->list;
     if (btlist && btlist->len == 2) {
         sql_expr_t *low = g_ptr_array_index(btlist, 0);
@@ -525,7 +539,8 @@ static int partitions_filter_BETWEEN_expr(GPtrArray *partitions, sql_expr_t *exp
     return PARSE_OK;
 }
 
-static int partitions_collect_IN_expr(GPtrArray *partitions, sql_expr_t *expr)
+static int
+partitions_collect_IN_expr(GPtrArray *partitions, sql_expr_t *expr)
 {
     const sharding_vdb_t *conf = NULL;
     g_assert(partitions);
@@ -536,7 +551,7 @@ static int partitions_collect_IN_expr(GPtrArray *partitions, sql_expr_t *expr)
         return PARSE_OK;
     }
 
-    struct condition_t cond = {0};
+    struct condition_t cond = { 0 };
     if (expr->list && expr->list->len > 0) {
         GPtrArray *partitions = g_ptr_array_new();
 
@@ -569,7 +584,8 @@ static int partitions_collect_IN_expr(GPtrArray *partitions, sql_expr_t *expr)
     }
 }
 
-static int partitions_filter_expr(GPtrArray *partitions, sql_expr_t *expr)
+static int
+partitions_filter_expr(GPtrArray *partitions, sql_expr_t *expr)
 {
     g_assert(partitions);
     if (partitions->len == 0) {
@@ -581,7 +597,7 @@ static int partitions_filter_expr(GPtrArray *partitions, sql_expr_t *expr)
     g_queue_push_head(stack, expr);
 
     /* for each condition in where clause */
-    while (!g_queue_is_empty(stack)) {/* TODO: NOT op is not supported */
+    while (!g_queue_is_empty(stack)) {  /* TODO: NOT op is not supported */
         sql_expr_t *p = g_queue_pop_head(stack);
         if (p->op == TK_OR) {
             GPtrArray *new_partitions = partitions_dup(partitions);
@@ -606,7 +622,7 @@ static int partitions_filter_expr(GPtrArray *partitions, sql_expr_t *expr)
                 g_queue_push_head(stack, p->left);
             continue;
         }
-        if (p->flags & EP_SHARD_COND) {/* HACK: SHARD_COND under TK_NOT is skipped */
+        if (p->flags & EP_SHARD_COND) { /* HACK: SHARD_COND under TK_NOT is skipped */
             if (is_compare_op(p->op) && !(p->flags & EP_JOIN_LINK)) {
                 rc = partitions_filter_inequation_expr(partitions, p);
             } else if (p->op == TK_BETWEEN) {
@@ -623,13 +639,20 @@ static int partitions_filter_expr(GPtrArray *partitions, sql_expr_t *expr)
     return rc;
 }
 
-static int flip_compare_op(int op) { /* flip horizontally */
+static int
+flip_compare_op(int op)
+{                               /* flip horizontally */
     switch (op) {
-    case TK_LE:return TK_GE;
-    case TK_GE:return TK_LE;
-    case TK_LT:return TK_GT;
-    case TK_GT:return TK_LT;
-    default:return op;
+    case TK_LE:
+        return TK_GE;
+    case TK_GE:
+        return TK_LE;
+    case TK_LT:
+        return TK_GT;
+    case TK_GT:
+        return TK_LT;
+    default:
+        return op;
     }
 }
 
@@ -641,8 +664,8 @@ static int flip_compare_op(int op) { /* flip horizontally */
  * @param field the sharding column name
  * @return number of occurance of sharding key
  */
-static int optimize_sharding_condition(sql_expr_t *where, const sql_src_item_t *src,
-                                       const char *field)
+static int
+optimize_sharding_condition(sql_expr_t *where, const sql_src_item_t *src, const char *field)
 {
     if (!where) {
         return FALSE;
@@ -651,7 +674,7 @@ static int optimize_sharding_condition(sql_expr_t *where, const sql_src_item_t *
     g_queue_push_head(stack, where);
     gboolean key_occur = 0;
 
-    while (!g_queue_is_empty(stack)) {/* TODO: NOT op is not supported */
+    while (!g_queue_is_empty(stack)) {  /* TODO: NOT op is not supported */
         sql_expr_t *p = g_queue_pop_head(stack);
         if (is_logical_op(p->op)) {
             if (p->right)
@@ -698,7 +721,8 @@ static int optimize_sharding_condition(sql_expr_t *where, const sql_src_item_t *
     return key_occur;
 }
 
-static void partitions_get_group_names(GPtrArray *partitions, GPtrArray *groups)
+static void
+partitions_get_group_names(GPtrArray *partitions, GPtrArray *groups)
 {
     int i = 0;
     for (i = 0; i < partitions->len; ++i) {
@@ -712,10 +736,10 @@ static void partitions_get_group_names(GPtrArray *partitions, GPtrArray *groups)
  * 1. record it in linkage array
  * 2. mark the expression 'p' as EP_JOIN_LINK;
  */
-static void find_linkage(sql_expr_t *p, const GPtrArray *tables,
-                         const GPtrArray *keys, gint8 *linkage)
+static void
+find_linkage(sql_expr_t *p, const GPtrArray *tables, const GPtrArray *keys, gint8 * linkage)
 {
-    int i,j;
+    int i, j;
     int N = tables->len;
     for (i = 0; i < N; ++i) {
         sql_src_item_t *t1 = g_ptr_array_index(tables, i);
@@ -730,7 +754,7 @@ static void find_linkage(sql_expr_t *p, const GPtrArray *tables,
                 && expr_is_sharding_key(p->right, t2, key2)) {
                 p->flags |= EP_JOIN_LINK;
                 /* only record linkage from lower index to higher index */
-                i < j ? (linkage[i *N + j] = 1) : (linkage[j *N + i] = 1);
+                i < j ? (linkage[i * N + j] = 1) : (linkage[j * N + i] = 1);
                 return;
             }
         }
@@ -742,11 +766,11 @@ static void find_linkage(sql_expr_t *p, const GPtrArray *tables,
  * 2.check if there exists tableA.key = tableB.key,
  * 3.and mark that equation with EP_JOIN_LINK
  */
-static gboolean join_on_sharding_key(char *default_db, GPtrArray *sharding_tables,
-                                     sql_expr_t *where)
+static gboolean
+join_on_sharding_key(char *default_db, GPtrArray *sharding_tables, sql_expr_t *where)
 {
     int first_vdb_id;
-    GPtrArray *sharding_keys = g_ptr_array_new(); /* array<const char *> */
+    GPtrArray *sharding_keys = g_ptr_array_new();   /* array<const char *> */
     int i;
     for (i = 0; i < sharding_tables->len; ++i) {
         sql_src_item_t *src = g_ptr_array_index(sharding_tables, i);
@@ -764,7 +788,7 @@ static gboolean join_on_sharding_key(char *default_db, GPtrArray *sharding_table
 
     /* 2-d array of table linkage */
     int N = sharding_tables->len;
-    gint8 *linkage = g_new0(gint8, N *N);
+    gint8 *linkage = g_new0(gint8, N * N);
 
     /* for each equation in WHERE clause */
     GQueue *stack = g_queue_new();
@@ -779,7 +803,7 @@ static gboolean join_on_sharding_key(char *default_db, GPtrArray *sharding_table
         }
     }
 
-    while (!g_queue_is_empty(stack)) {/* TODO: NOT op is not supported */
+    while (!g_queue_is_empty(stack)) {  /* TODO: NOT op is not supported */
         sql_expr_t *p = g_queue_pop_head(stack);
         if (is_logical_op(p->op)) {
             if (p->right)
@@ -788,8 +812,7 @@ static gboolean join_on_sharding_key(char *default_db, GPtrArray *sharding_table
                 g_queue_push_head(stack, p->left);
             continue;
         }
-        if (p->op == TK_EQ
-            && sql_expr_is_field_name(p->left)
+        if (p->op == TK_EQ && sql_expr_is_field_name(p->left)
             && sql_expr_is_field_name(p->right)) {
             find_linkage(p, sharding_tables, sharding_keys, linkage);
         }
@@ -797,14 +820,15 @@ static gboolean join_on_sharding_key(char *default_db, GPtrArray *sharding_table
     g_queue_free(stack);
 
     int num_linkage = 0;
-    for (i = 0; i < N *N; ++i) num_linkage += linkage[i];
+    for (i = 0; i < N * N; ++i)
+        num_linkage += linkage[i];
     g_free(linkage);
     g_ptr_array_free(sharding_keys, TRUE);
     return num_linkage + 1 == sharding_tables->len;
 }
 
-static void sql_select_get_single_tables(sql_select_t *select,
-    char* current_db, GList** single_tables /*out*/)
+static void
+sql_select_get_single_tables(sql_select_t *select, char *current_db, GList **single_tables /*out */ )
 {
     char *db = current_db;
     while (select) {
@@ -823,9 +847,9 @@ static void sql_select_get_single_tables(sql_select_t *select,
     }
 }
 
-static int routing_select(sql_context_t *context, const sql_select_t *select,
-                          char *default_db, guint32 fixture, query_stats_t *stats,
-                          GPtrArray *groups /* out */)
+static int
+routing_select(sql_context_t *context, const sql_select_t *select,
+               char *default_db, guint32 fixture, query_stats_t *stats, GPtrArray *groups /* out */ )
 {
     sql_src_list_t *sources = select->from_src;
     if (!sources) {
@@ -841,7 +865,7 @@ static int routing_select(sql_context_t *context, const sql_select_t *select,
         sql_src_item_t *src = g_ptr_array_index(sources, i);
         char *table = NULL;
         if (src->select && sql_select_contains_sharding_table(src->select, &db, &table)) {
-            sharding_filter_sql(context); /* sharding table inside sub-query, should be filterd */
+            sharding_filter_sql(context);   /* sharding table inside sub-query, should be filterd */
             if (context->rc == PARSE_NOT_SUPPORT) {
                 g_ptr_array_free(sharding_tables, TRUE);
                 return ERROR_UNPARSABLE;
@@ -850,7 +874,7 @@ static int routing_select(sql_context_t *context, const sql_select_t *select,
             g_ptr_array_free(sharding_tables, TRUE);
             return USE_ALL_SHARDINGS;
         }
-        if (src->select) { /* subquery not contain sharding table, try to find single table */
+        if (src->select) {      /* subquery not contain sharding table, try to find single table */
             sql_select_get_single_tables(src->select, db, &single_tables);
         }
         db = src->dbname ? src->dbname : db;
@@ -900,8 +924,7 @@ static int routing_select(sql_context_t *context, const sql_select_t *select,
     if (sharding_tables->len >= 2) {
         if (!join_on_sharding_key(default_db, sharding_tables, select->where_clause)) {
             g_ptr_array_free(sharding_tables, TRUE);
-            sql_context_append_msg(context,
-                 "(proxy)JOIN must inside VDB and have explicit join-on condition");
+            sql_context_append_msg(context, "(proxy)JOIN must inside VDB and have explicit join-on condition");
             return ERROR_UNPARSABLE;
         }
     }
@@ -915,14 +938,13 @@ static int routing_select(sql_context_t *context, const sql_select_t *select,
 
         /* join tables have same sharding key, we are graunteed tableA.key = tableB.key
            so tableA.key = x also applies to tableB */
-        if (optimize_sharding_condition(select->where_clause,
-                                        shard_table, shard_info->pkey->str)) {
+        if (optimize_sharding_condition(select->where_clause, shard_table, shard_info->pkey->str)) {
             has_sharding_key = TRUE;
         }
     }
 
     if (has_sharding_key) {
-        GPtrArray *partitions = g_ptr_array_new(); /* GPtrArray<sharding_partition_t *> */
+        GPtrArray *partitions = g_ptr_array_new();  /* GPtrArray<sharding_partition_t *> */
         for (i = 0; i < sharding_tables->len; ++i) {
             sql_src_item_t *shard_table = g_ptr_array_index(sharding_tables, 0);
             db = shard_table->dbname ? shard_table->dbname : db;
@@ -951,8 +973,8 @@ static int routing_select(sql_context_t *context, const sql_select_t *select,
         g_ptr_array_free(sharding_tables, TRUE);
         return USE_SHARDING;
     } else {
-         /* has sharding table, but no sharding key
-            OR sharding key filter out all groups */
+        /* has sharding table, but no sharding key
+           OR sharding key filter out all groups */
         for (i = 0; i < sharding_tables->len; ++i) {
             sql_src_item_t *shard_table = g_ptr_array_index(sharding_tables, 0);
             db = shard_table->dbname ? shard_table->dbname : db;
@@ -963,7 +985,8 @@ static int routing_select(sql_context_t *context, const sql_select_t *select,
     }
 }
 
-static gboolean expr_same_with_sharding_cond(sql_expr_t *equation, sql_expr_t *where)
+static gboolean
+expr_same_with_sharding_cond(sql_expr_t *equation, sql_expr_t *where)
 {
     GQueue *stack = g_queue_new();
     g_queue_push_head(stack, where);
@@ -981,7 +1004,7 @@ static gboolean expr_same_with_sharding_cond(sql_expr_t *equation, sql_expr_t *w
         /* HACK: SHARD_COND under TK_NOT is skipped */
         if ((p->flags & EP_SHARD_COND) && p->op == TK_EQ) {
             if (sql_expr_equals(equation->left, p->left)
-            && sql_expr_equals(equation->right, p->right)) {
+                && sql_expr_equals(equation->right, p->right)) {
                 is_same = TRUE;
             }
         }
@@ -990,9 +1013,9 @@ static gboolean expr_same_with_sharding_cond(sql_expr_t *equation, sql_expr_t *w
     return is_same;
 }
 
-static int routing_update(sql_context_t *context, sql_update_t *update,
-                          char *default_db, sharding_plan_t *plan,
-                          GPtrArray *groups, guint32 fixture)
+static int
+routing_update(sql_context_t *context, sql_update_t *update,
+               char *default_db, sharding_plan_t *plan, GPtrArray *groups, guint32 fixture)
 {
     char *db = default_db;
     sql_src_list_t *tables = update->table;
@@ -1028,10 +1051,9 @@ static int routing_update(sql_context_t *context, sql_update_t *update,
             return ERROR_UNPARSABLE;
         }
         if (expr_is_sharding_key(equation->left, table, shard_info->pkey->str)) {
-            if (!(key_occur == 1 /* "update set k = 1 where k = 1" is legal */
+            if (!(key_occur == 1    /* "update set k = 1 where k = 1" is legal */
                   && expr_same_with_sharding_cond(equation, update->where_clause))) {
-                sql_context_append_msg(context,
-                "(proxy)update of sharding key is not allowed");
+                sql_context_append_msg(context, "(proxy)update of sharding key is not allowed");
                 return ERROR_UNPARSABLE;
             }
         }
@@ -1061,8 +1083,8 @@ static int routing_update(sql_context_t *context, sql_update_t *update,
     }
 }
 
-static void group_insert_values(GHashTable *groups, sharding_partition_t *part,
-                                sql_select_t *new_values)
+static void
+group_insert_values(GHashTable *groups, sharding_partition_t *part, sql_select_t *new_values)
 {
     sql_select_t *values = g_hash_table_lookup(groups, part);
     if (values) {
@@ -1073,7 +1095,8 @@ static void group_insert_values(GHashTable *groups, sharding_partition_t *part,
     }
 }
 
-static sql_select_t *merge_insert_values(GHashTable *groups, sql_select_t *residual)
+static sql_select_t *
+merge_insert_values(GHashTable *groups, sql_select_t *residual)
 {
     sql_select_t *merged_values = NULL;
     GList *values_list = g_hash_table_get_values(groups);
@@ -1098,10 +1121,10 @@ static sql_select_t *merge_insert_values(GHashTable *groups, sql_select_t *resid
     return merged_values;
 }
 
-static int insert_multi_value(sql_context_t *context, sql_insert_t *insert,
-                              const char *db, const char *table,
-                              sharding_table_t *shard_info,
-                              int shard_key_index, sharding_plan_t *plan)
+static int
+insert_multi_value(sql_context_t *context, sql_insert_t *insert,
+                   const char *db, const char *table,
+                   sharding_table_t *shard_info, int shard_key_index, sharding_plan_t *plan)
 {
     int rc = 0;
 
@@ -1111,7 +1134,7 @@ static int insert_multi_value(sql_context_t *context, sql_insert_t *insert,
     GHashTable *value_groups = g_hash_table_new(g_direct_hash, g_direct_equal);
 
     sql_select_t *values = insert->sel_val;
-    insert->sel_val = NULL; /* take away from insert AST */
+    insert->sel_val = NULL;     /* take away from insert AST */
 
     while (values) {
         if (values->columns->len <= shard_key_index) {
@@ -1120,7 +1143,7 @@ static int insert_multi_value(sql_context_t *context, sql_insert_t *insert,
             rc = ERROR_UNPARSABLE;
             goto out;
         }
-        struct condition_t cond = {TK_EQ, {0}};
+        struct condition_t cond = { TK_EQ, {0} };
         sql_expr_t *val = g_ptr_array_index(values->columns, shard_key_index);
         int rc = expr_parse_sharding_value(val, shard_info->shard_key_type, &cond);
         if (rc != PARSE_OK) {
@@ -1135,7 +1158,7 @@ static int insert_multi_value(sql_context_t *context, sql_insert_t *insert,
         }
         sql_select_t *node = values;
         values = values->prior;
-        node->prior = NULL; /* must be single values node */
+        node->prior = NULL;     /* must be single values node */
         group_insert_values(value_groups, part, node);
     }
     GHashTableIter iter;
@@ -1150,17 +1173,17 @@ static int insert_multi_value(sql_context_t *context, sql_insert_t *insert,
     }
     rc = plan->groups->len > 1 ? USE_DIS_TRAN : USE_NON_SHARDING_TABLE;
 
- out:
+  out:
     /* restore the INSERT-AST */
     insert->sel_val = merge_insert_values(value_groups, values);
-    
+
     g_hash_table_destroy(value_groups);
     g_ptr_array_free(partitions, TRUE);
     return rc;
 }
 
-static int routing_insert(sql_context_t *context, sql_insert_t *insert,
-                          char *default_db, sharding_plan_t *plan, guint32 fixture)
+static int
+routing_insert(sql_context_t *context, sql_insert_t *insert, char *default_db, sharding_plan_t *plan, guint32 fixture)
 {
     sql_src_list_t *src_list = insert->table;
     assert(src_list && src_list->len > 0);
@@ -1195,8 +1218,7 @@ static int routing_insert(sql_context_t *context, sql_insert_t *insert,
     sql_id_list_t *cols = insert->columns;
     if (cols == NULL) {
         g_warning("%s:unsupported INSERT format", G_STRLOC);
-        sql_context_append_msg(context,
-            "(proxy)INSERT must use explicit column names");
+        sql_context_append_msg(context, "(proxy)INSERT must use explicit column names");
         return ERROR_UNPARSABLE;
     }
     const char *shard_key = shard_info->pkey->str;
@@ -1211,8 +1233,7 @@ static int routing_insert(sql_context_t *context, sql_insert_t *insert,
     }
     if (shard_key_index == -1) {
         g_warning(G_STRLOC ":cannot find sharding colomn %s", shard_key);
-        sql_context_append_msg(context,
-            "(proxy)INSERTion into sharding table must use sharding key");
+        sql_context_append_msg(context, "(proxy)INSERTion into sharding table must use sharding key");
         return ERROR_UNPARSABLE;
     }
     sql_select_t *sel_val = insert->sel_val;
@@ -1222,8 +1243,7 @@ static int routing_insert(sql_context_t *context, sql_insert_t *insert,
         return ERROR_UNPARSABLE;
     }
     if (sel_val->flags & SF_MULTI_VALUE) {
-        return insert_multi_value(context, insert, db, table,
-                                  shard_info, shard_key_index, plan);
+        return insert_multi_value(context, insert, db, table, shard_info, shard_key_index, plan);
     }
 
     /* SINGLE VALUE */
@@ -1234,7 +1254,7 @@ static int routing_insert(sql_context_t *context, sql_insert_t *insert,
         return ERROR_UNPARSABLE;
     }
 
-    struct condition_t cond = {TK_EQ, {0}};
+    struct condition_t cond = { TK_EQ, {0} };
     sql_expr_t *val = g_ptr_array_index(values, shard_key_index);
     int rc = expr_parse_sharding_value(val, shard_info->shard_key_type, &cond);
     if (rc != PARSE_OK) {
@@ -1256,16 +1276,16 @@ static int routing_insert(sql_context_t *context, sql_insert_t *insert,
         /* TODO: return code when pkey out of range; */
         return USE_NON_SHARDING_TABLE;
     } else {
-        if (plan->groups->len != 1) {/* can't happen */
+        if (plan->groups->len != 1) {   /* can't happen */
             return ERROR_UNPARSABLE;
         }
         return USE_SHARDING;
     }
 }
 
-static int routing_delete(sql_context_t *context, sql_delete_t *delete,
-                          char *default_db, sharding_plan_t *plan,
-                          GPtrArray *groups, guint32 fixture)
+static int
+routing_delete(sql_context_t *context, sql_delete_t *delete,
+               char *default_db, sharding_plan_t *plan, GPtrArray *groups, guint32 fixture)
 {
     if (!delete) {
         g_warning(G_STRLOC ":delete ast error");
@@ -1312,8 +1332,7 @@ static int routing_delete(sql_context_t *context, sql_delete_t *delete,
     sharding_table_t *shard_info = shard_conf_get_info(db, table->table_name);
     GPtrArray *partitions = g_ptr_array_new();
     shard_conf_table_partitions(partitions, db, table->table_name);
-    gboolean has_sharding_key =
-        optimize_sharding_condition(delete->where_clause, table, shard_info->pkey->str);
+    gboolean has_sharding_key = optimize_sharding_condition(delete->where_clause, table, shard_info->pkey->str);
     int rc = PARSE_OK;
     if (has_sharding_key) {
         rc = partitions_filter_expr(partitions, delete->where_clause);
@@ -1341,8 +1360,8 @@ static int routing_delete(sql_context_t *context, sql_delete_t *delete,
     return ERROR_UNPARSABLE;
 }
 
-int routing_by_property(sql_context_t *context, sql_property_t *property,
-                        char *default_db, GPtrArray *groups/* out */)
+int
+routing_by_property(sql_context_t *context, sql_property_t *property, char *default_db, GPtrArray *groups /* out */ )
 {
     if (property->table) {
         char *db = default_db;
@@ -1353,12 +1372,12 @@ int routing_by_property(sql_context_t *context, sql_property_t *property,
         if (p) {
             *p = '\0';
             db = property->table;
-            table = p+1;
+            table = p + 1;
         }
         GPtrArray *partitions = g_ptr_array_new();
         shard_conf_table_partitions(partitions, db, table);
         if (property->key) {
-            struct condition_t cond = {TK_EQ, {0}};
+            struct condition_t cond = { TK_EQ, {0} };
             sharding_table_t *info = shard_conf_get_info(db, table);
             if (!info) {
                 g_ptr_array_free(partitions, TRUE);
@@ -1390,7 +1409,7 @@ int routing_by_property(sql_context_t *context, sql_property_t *property,
             }
             return USE_SHARDING;
         } else {
-            char msg[256] = {0};
+            char msg[256] = { 0 };
             snprintf(msg, 256, "no group: %s for db: %s", property->group, default_db);
             g_warning("%s", msg);
             sql_context_append_msg(context, msg);
@@ -1401,8 +1420,9 @@ int routing_by_property(sql_context_t *context, sql_property_t *property,
     return ERROR_UNPARSABLE;
 }
 
-int sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t *stats,
-                          guint32 fixture, sharding_plan_t *plan)
+int
+sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t *stats,
+                      guint32 fixture, sharding_plan_t *plan)
 {
     GPtrArray *groups = g_ptr_array_new();
     if (context == NULL) {
@@ -1425,41 +1445,38 @@ int sharding_parse_groups(GString *default_db, sql_context_t *context, query_sta
 
     int rc = ERROR_UNPARSABLE;
     switch (context->stmt_type) {
-    case STMT_SELECT: {
+    case STMT_SELECT:{
         sql_select_t *select = context->sql_statement;
         while (select) {
             rc = routing_select(context, select, db, fixture, stats, groups);
             if (rc < 0) {
                 break;
             }
-            select = select->prior;/* select->prior UNION select */
+            select = select->prior; /* select->prior UNION select */
         }
         sharding_plan_add_groups(plan, groups);
         g_ptr_array_free(groups, TRUE);
 
         if ((rc == USE_SHARDING || rc == USE_ALL_SHARDINGS) && plan->groups->len > 1) {
-            sharding_filter_sql(context); /* only filter queries with sharding table */
+            sharding_filter_sql(context);   /* only filter queries with sharding table */
             if (context->rc == PARSE_NOT_SUPPORT) {
                 sharding_plan_clear_group(plan);
                 return ERROR_UNPARSABLE;
             }
         }
-        return rc; /* TODO: result of first select */
+        return rc;              /* TODO: result of first select */
     }
     case STMT_UPDATE:
-        rc = routing_update(context, context->sql_statement,
-                            db, plan, groups, fixture);
+        rc = routing_update(context, context->sql_statement, db, plan, groups, fixture);
         sharding_plan_add_groups(plan, groups);
         g_ptr_array_free(groups, TRUE);
         return rc;
     case STMT_INSERT:
-        rc = routing_insert(context, context->sql_statement,
-                            db, plan, fixture);
+        rc = routing_insert(context, context->sql_statement, db, plan, fixture);
         g_ptr_array_free(groups, TRUE);
         return rc;
     case STMT_DELETE:
-        rc = routing_delete(context, context->sql_statement,
-                            db, plan, groups, fixture);
+        rc = routing_delete(context, context->sql_statement, db, plan, groups, fixture);
         sharding_plan_add_groups(plan, groups);
         g_ptr_array_free(groups, TRUE);
         return rc;
@@ -1468,7 +1485,7 @@ int sharding_parse_groups(GString *default_db, sql_context_t *context, query_sta
         return USE_PREVIOUS_WARNING_CONN;
     case STMT_SHOW_COLUMNS:
     case STMT_SHOW_CREATE:
-    case STMT_EXPLAIN_TABLE: {/* DESCRIBE tablename; */
+    case STMT_EXPLAIN_TABLE:{  /* DESCRIBE tablename; */
         sql_src_list_t *tables = context->sql_statement;
         sql_src_item_t *src_item = g_ptr_array_index(tables, 0);
         g_assert(src_item);
@@ -1511,7 +1528,7 @@ int sharding_parse_groups(GString *default_db, sql_context_t *context, query_sta
     case STMT_ROLLBACK:
         g_ptr_array_free(groups, TRUE);
         return USE_PREVIOUS_TRAN_CONNS;
-    case STMT_COMMON_DDL: /* ddl without comments sent to all */
+    case STMT_COMMON_DDL:      /* ddl without comments sent to all */
     case STMT_CALL:
         shard_conf_get_all_groups(groups, default_db->str);
         sharding_plan_add_groups(plan, groups);
@@ -1532,7 +1549,8 @@ int sharding_parse_groups(GString *default_db, sql_context_t *context, query_sta
 }
 
 /* is ORDERBY column a subset of SELECT column */
-static gboolean select_compare_orderby(sql_select_t *select)
+static gboolean
+select_compare_orderby(sql_select_t *select)
 {
     sql_expr_list_t *columns = select->columns;
     sql_column_list_t *ord_cols = select->orderby_clause;
@@ -1540,13 +1558,12 @@ static gboolean select_compare_orderby(sql_select_t *select)
     if (ord_cols == NULL) {
         sql_expr_t *mcol = g_ptr_array_index(columns, 0);
         if (mcol->op == TK_STAR) {
-            return FALSE; /* reject: select DISTINCT *where .. */
-        } else if (mcol->op == TK_DOT && mcol->right
-            && mcol->right->op == TK_STAR) {
-            return FALSE; /* reject: select DISTINCT t.* where .. */
+            return FALSE;       /* reject: select DISTINCT *where .. */
+        } else if (mcol->op == TK_DOT && mcol->right && mcol->right->op == TK_STAR) {
+            return FALSE;       /* reject: select DISTINCT t.* where .. */
         }
         select->flags |= SF_REWRITE_ORDERBY;
-        return TRUE; /* accept: select DISTINCT a, b where .., rewrite later */
+        return TRUE;            /* accept: select DISTINCT a, b where .., rewrite later */
     }
 
     if (columns->len >= ord_cols->len) {
@@ -1559,14 +1576,14 @@ static gboolean select_compare_orderby(sql_select_t *select)
                 if (match) {
                     match->flags |= EP_ORDER_BY;
                 } else {
-                    return FALSE; /* reject: select DISTINCT a,b,c ORDER BY x,y */
+                    return FALSE;   /* reject: select DISTINCT a,b,c ORDER BY x,y */
                 }
             } else if (sql_expr_is_dotted_name(ord, NULL, NULL)) {
                 sql_expr_t *match = sql_expr_list_find_fullname(columns, ord);
                 if (match) {
                     match->flags |= EP_ORDER_BY;
                 } else {
-                    return FALSE; /* reject: select DISTINCT a,b,c ORDER BY x,y */
+                    return FALSE;   /* reject: select DISTINCT a,b,c ORDER BY x,y */
                 }
             } else {
                 g_warning(G_STRLOC ":unrecognized order by column");
@@ -1575,19 +1592,20 @@ static gboolean select_compare_orderby(sql_select_t *select)
         }
         if (columns->len != ord_cols->len)
             select->flags |= SF_REWRITE_ORDERBY;
-        return TRUE; /* accept: 1) select DISTINCT a,b,c,d ORDER BY b,c,a. rewrite later */
-                     /*         2) select DISTINCT a,b,c,d ORDER BY a,c,b,d. no rewrite */
+        return TRUE;            /* accept: 1) select DISTINCT a,b,c,d ORDER BY b,c,a. rewrite later */
+        /*         2) select DISTINCT a,b,c,d ORDER BY a,c,b,d. no rewrite */
     }
-    return FALSE; /* reject: DISTINCT a ORDER BY a,b,c. might be syntax error */
+    return FALSE;               /* reject: DISTINCT a ORDER BY a,b,c. might be syntax error */
 }
 
-static gboolean select_check_HAVING_column(sql_select_t *select)
+static gboolean
+select_check_HAVING_column(sql_select_t *select)
 {
     sql_expr_t *having = select->having_clause;
-    if (!(having && having->left)) {/* no HAVING is alright */
+    if (!(having && having->left)) {    /* no HAVING is alright */
         return TRUE;
     }
-    gboolean found = FALSE; /* found having cond in columns */
+    gboolean found = FALSE;     /* found having cond in columns */
     int num_aggregate = 0;
     const char *having_func = having->left->token_text;
     sql_expr_list_t *columns = select->columns;
@@ -1598,27 +1616,26 @@ static gboolean select_check_HAVING_column(sql_select_t *select)
             if (strcasecmp(having_func, col->token_text) == 0) {
                 found = TRUE;
             }
-            if (col->alias && strcasecmp(having_func, col->alias)==0) {
+            if (col->alias && strcasecmp(having_func, col->alias) == 0) {
                 found = TRUE;
             }
             ++num_aggregate;
         }
     }
-    if (num_aggregate > 1) /* if HAVING is used, only 1 aggregate can appear in column */
+    if (num_aggregate > 1)      /* if HAVING is used, only 1 aggregate can appear in column */
         return FALSE;
     return found;
 }
 
-static gboolean select_has_distincted_aggregate(sql_select_t *select,
-                                                int has_subquery, char **aggr_name)
+static gboolean
+select_has_distincted_aggregate(sql_select_t *select, int has_subquery, char **aggr_name)
 {
     int i;
     for (i = 0; select->columns && i < select->columns->len; ++i) {
         sql_expr_t *expr = g_ptr_array_index(select->columns, i);
         if (expr->op == TK_FUNCTION && expr->flags & EP_DISTINCT) {
             if (strcasecmp(expr->token_text, "count") == 0
-                ||strcasecmp(expr->token_text, "sum") == 0
-                ||strcasecmp(expr->token_text, "avg") == 0) {
+                || strcasecmp(expr->token_text, "sum") == 0 || strcasecmp(expr->token_text, "avg") == 0) {
                 *aggr_name = expr->token_text;
                 return TRUE;
             }
@@ -1634,7 +1651,8 @@ static gboolean select_has_distincted_aggregate(sql_select_t *select,
     return FALSE;
 }
 
-static gboolean select_has_AVG(sql_select_t *select)
+static gboolean
+select_has_AVG(sql_select_t *select)
 {
     int i;
     for (i = 0; select->columns && i < select->columns->len; ++i) {
@@ -1648,7 +1666,8 @@ static gboolean select_has_AVG(sql_select_t *select)
 }
 
 /* group by & order by have only 1 column, and they are same */
-static gboolean select_groupby_orderby_have_same_column(sql_select_t *select)
+static gboolean
+select_groupby_orderby_have_same_column(sql_select_t *select)
 {
     g_assert(select->groupby_clause && select->orderby_clause);
     sql_expr_list_t *grp = select->groupby_clause;
@@ -1661,15 +1680,16 @@ static gboolean select_groupby_orderby_have_same_column(sql_select_t *select)
     return g_strcmp0(ord_col->expr->token_text, grp_expr->token_text) == 0;
 }
 
-void sharding_filter_sql(sql_context_t *context)/* TODO:should be in sql-operations.c */
-{
+void
+sharding_filter_sql(sql_context_t *context)
+{                               /* TODO:should be in sql-operations.c */
     if (context->stmt_type == STMT_SELECT) {
         sql_select_t *select = context->sql_statement;
         if (select->flags & SF_DISTINCT) {
             gboolean same = select_compare_orderby(select);
             if (!same) {
                 sql_context_set_error(context, PARSE_NOT_SUPPORT,
-                    "(proxy)ORDER BY columns must be a subset of DISTINCT columns");
+                                      "(proxy)ORDER BY columns must be a subset of DISTINCT columns");
                 return;
             }
         }
@@ -1677,14 +1697,13 @@ void sharding_filter_sql(sql_context_t *context)/* TODO:should be in sql-operati
         /* grauntee HAVING condition show up in column */
         if (select->having_clause) {
             if (!is_compare_op(select->having_clause->op)) {
-                sql_context_set_error(context, PARSE_NOT_SUPPORT,
-                    "(cetus) Only support simple HAVING condition");
+                sql_context_set_error(context, PARSE_NOT_SUPPORT, "(cetus) Only support simple HAVING condition");
                 return;
             }
             if (!select_check_HAVING_column(select)) {
                 sql_context_set_error(context, PARSE_NOT_SUPPORT,
-                    "(cetus) HAVING condition must show up in column, "
-                    "and only 1 aggregate can appear in column when HAVING is used");
+                                      "(cetus) HAVING condition must show up in column, "
+                                      "and only 1 aggregate can appear in column when HAVING is used");
                 return;
             }
         }
@@ -1695,22 +1714,19 @@ void sharding_filter_sql(sql_context_t *context)/* TODO:should be in sql-operati
             for (i = 0; i < groupby->len; ++i) {
                 sql_expr_t *col = g_ptr_array_index(groupby, i);
                 if (col->op == TK_CASE) {
-                    sql_context_set_error(context, PARSE_NOT_SUPPORT,
-                         "(proxy) group by CASE-WHEN not supported");
+                    sql_context_set_error(context, PARSE_NOT_SUPPORT, "(proxy) group by CASE-WHEN not supported");
                     return;
                 }
             }
         }
         if (select_has_AVG(select)) {
             sql_context_set_error(context, PARSE_NOT_SUPPORT,
-                 "(cetus)this AVG would be routed to multiple shards, not allowed");
+                                  "(cetus)this AVG would be routed to multiple shards, not allowed");
             return;
         }
-        if (select->groupby_clause && select->orderby_clause &&
-            !select_groupby_orderby_have_same_column(select))
-        {
+        if (select->groupby_clause && select->orderby_clause && !select_groupby_orderby_have_same_column(select)) {
             sql_context_set_error(context, PARSE_NOT_SUPPORT,
-                 "(cetus) can't ORDER BY and GROUP BY different columns on sharded sql");
+                                  "(cetus) can't ORDER BY and GROUP BY different columns on sharded sql");
             return;
         }
         /* reject SELECT COUNT(DISTINCT) / SUM(DISTINCT) / AVG(DISTINCT) */

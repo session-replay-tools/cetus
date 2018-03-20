@@ -64,7 +64,8 @@ struct cetus_monitor_t {
     char *config_id;
 };
 
-static void mysql_conn_free(gpointer e)
+static void
+mysql_conn_free(gpointer e)
 {
     MYSQL *conn = e;
     if (conn) {
@@ -72,7 +73,8 @@ static void mysql_conn_free(gpointer e)
     }
 }
 
-static char *get_current_sys_timestr(void)
+static char *
+get_current_sys_timestr(void)
 {
     struct timeval tv;
     gettimeofday(&tv, NULL);
@@ -84,7 +86,8 @@ static char *get_current_sys_timestr(void)
     return time_micro;
 }
 
-static MYSQL *get_mysql_connection(cetus_monitor_t *monitor, char *addr)
+static MYSQL *
+get_mysql_connection(cetus_monitor_t *monitor, char *addr)
 {
     MYSQL *conn = g_hash_table_lookup(monitor->backend_conns, addr);
     if (conn) {
@@ -108,11 +111,8 @@ static MYSQL *get_mysql_connection(cetus_monitor_t *monitor, char *addr)
     char **ip_port = g_strsplit(addr, ":", -1);
     int port = atoi(ip_port[1]);
     char *user = monitor->chas->default_username;
-    if (mysql_real_connect(conn, ip_port[0], user, monitor->db_passwd->str,
-                           NULL, port, NULL, 0) == NULL)
-    {
-        g_critical("monitor thread cannot connect to backend: %s@%s",
-                   monitor->chas->default_username, addr);
+    if (mysql_real_connect(conn, ip_port[0], user, monitor->db_passwd->str, NULL, port, NULL, 0) == NULL) {
+        g_critical("monitor thread cannot connect to backend: %s@%s", monitor->chas->default_username, addr);
         mysql_conn_free(conn);
         g_strfreev(ip_port);
         return NULL;
@@ -129,7 +129,8 @@ static MYSQL *get_mysql_connection(cetus_monitor_t *monitor, char *addr)
     event_base_set(monitor->evloop, &(monitor->ev_struct));\
     evtimer_add(&(monitor->ev_struct), &timeout);
 
-static void check_backend_alive(int fd, short what, void *arg)
+static void
+check_backend_alive(int fd, short what, void *arg)
 {
     cetus_monitor_t *monitor = arg;
     chassis *chas = monitor->chas;
@@ -138,8 +139,7 @@ static void check_backend_alive(int fd, short what, void *arg)
     network_backends_t *bs = chas->priv->backends;
     for (i = 0; i < network_backends_count(bs); i++) {
         network_backend_t *backend = network_backends_get(bs, i);
-        if (backend->state == BACKEND_STATE_DELETED ||
-           backend->state == BACKEND_STATE_MAINTAINING) 
+        if (backend->state == BACKEND_STATE_DELETED || backend->state == BACKEND_STATE_MAINTAINING)
             continue;
 
         char *backend_addr = backend->addr->name->str;
@@ -147,7 +147,8 @@ static void check_backend_alive(int fd, short what, void *arg)
         MYSQL *conn = NULL;
         while (++check_count <= CHECK_ALIVE_TIMES) {
             conn = get_mysql_connection(monitor, backend_addr);
-            if (conn) break;
+            if (conn)
+                break;
         }
 
         if (conn == NULL) {
@@ -165,14 +166,15 @@ static void check_backend_alive(int fd, short what, void *arg)
         }
     }
 
-    struct timeval timeout = {0};
+    struct timeval timeout = { 0 };
     timeout.tv_sec = CHECK_ALIVE_INTERVAL;
     ADD_MONITOR_TIMER(check_alive_timer, check_backend_alive, timeout);
 }
 
 static void check_slave_timestamp(int fd, short what, void *arg);
 
-static void update_master_timestamp(int fd, short what, void *arg)
+static void
+update_master_timestamp(int fd, short what, void *arg)
 {
     cetus_monitor_t *monitor = arg;
     chassis *chas = monitor->chas;
@@ -188,8 +190,7 @@ static void update_master_timestamp(int fd, short what, void *arg)
      */
     for (i = 0; i < network_backends_count(bs); i++) {
         network_backend_t *backend = network_backends_get(bs, i);
-        if (backend->state == BACKEND_STATE_DELETED ||
-            backend->state == BACKEND_STATE_MAINTAINING)
+        if (backend->state == BACKEND_STATE_DELETED || backend->state == BACKEND_STATE_MAINTAINING)
             continue;
 
         if (backend->type == BACKEND_TYPE_RW) {
@@ -211,7 +212,7 @@ static void update_master_timestamp(int fd, short what, void *arg)
                     network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP);
                     g_message("Backend %s is set to UP.", backend_addr);
                 }
-                static int previous_result[256] = {0}; /* for each backend group */
+                static int previous_result[256] = { 0 };    /* for each backend group */
                 int result = mysql_real_query(conn, L(sql));
                 if (result != previous_result[i] && result != 0) {
                     g_critical("Update heartbeat error: %d, text: %s, backend: %s",
@@ -226,12 +227,13 @@ static void update_master_timestamp(int fd, short what, void *arg)
     }
 
     /* Wait 50ms for RO write data */
-    struct timeval timeout = {0};
+    struct timeval timeout = { 0 };
     timeout.tv_usec = 50 * 1000;
     ADD_MONITOR_TIMER(read_slave_timer, check_slave_timestamp, timeout);
 }
 
-static void check_slave_timestamp(int fd, short what, void *arg)
+static void
+check_slave_timestamp(int fd, short what, void *arg)
 {
     cetus_monitor_t *monitor = arg;
     chassis *chas = monitor->chas;
@@ -241,7 +243,7 @@ static void check_slave_timestamp(int fd, short what, void *arg)
     /* Read delay sec and set slave UP/DOWN according to delay_secs */
     for (i = 0; i < network_backends_count(bs); i++) {
         network_backend_t *backend = network_backends_get(bs, i);
-        if (backend->type == BACKEND_TYPE_RW ||backend->state == BACKEND_STATE_DELETED ||
+        if (backend->type == BACKEND_TYPE_RW || backend->state == BACKEND_STATE_DELETED ||
             backend->state == BACKEND_STATE_MAINTAINING)
             continue;
 
@@ -259,11 +261,11 @@ static void check_slave_timestamp(int fd, short what, void *arg)
         static char sql[512];
         snprintf(sql, sizeof(sql), "select p_ts from %s.tb_heartbeat where p_id='%s'",
                  HEARTBEAT_DB, monitor->config_id);
-        static int previous_result[256] = {0}; /* for each backend group */
+        static int previous_result[256] = { 0 };    /* for each backend group */
         int result = mysql_real_query(conn, L(sql));
         if (result != previous_result[i] && result != 0) {
             g_critical("Select heartbeat error: %d, text: %s, backend: %s",
-                        mysql_errno(conn), mysql_error(conn), backend_addr);
+                       mysql_errno(conn), mysql_error(conn), backend_addr);
         } else if (result != previous_result[i] && result == 0) {
             g_message("Select heartbeat success. backend: %s", backend_addr);
         }
@@ -273,11 +275,11 @@ static void check_slave_timestamp(int fd, short what, void *arg)
             MYSQL_ROW row = mysql_fetch_row(rs_set);
             double ts_slave;
             if (row != NULL) {
-                if (strstr(row[0],".") != NULL) {
+                if (strstr(row[0], ".") != NULL) {
                     char **tms = g_strsplit(row[0], ".", -1);
                     glong ts_slave_sec = chassis_epoch_from_string(tms[0], NULL);
                     double ts_slave_msec = atof(tms[1]);
-                    ts_slave = ts_slave_sec + ts_slave_msec/1000;
+                    ts_slave = ts_slave_sec + ts_slave_msec / 1000;
                     g_strfreev(tms);
                 } else {
                     ts_slave = chassis_epoch_from_string(row[0], NULL);
@@ -289,17 +291,13 @@ static void check_slave_timestamp(int fd, short what, void *arg)
             if (ts_slave != 0) {
                 struct timeval tv;
                 gettimeofday(&tv, NULL);
-                double ts_now = tv.tv_sec + ((double)tv.tv_usec)/1000000;
+                double ts_now = tv.tv_sec + ((double)tv.tv_usec) / 1000000;
                 double delay_secs = ts_now - ts_slave;
-                backend->slave_delay_msec = (int)delay_secs * 1000;
-                if (delay_secs > chas->slave_delay_down_threshold_sec &&
-                    backend->state != BACKEND_STATE_DOWN)
-                {
+                backend->slave_delay_msec = (int)delay_secs *1000;
+                if (delay_secs > chas->slave_delay_down_threshold_sec && backend->state != BACKEND_STATE_DOWN) {
                     network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN);
                     g_critical("Slave delay %.3f seconds. Set slave to DOWN.", delay_secs);
-                } else if (delay_secs <= chas->slave_delay_recover_threshold_sec &&
-                           backend->state != BACKEND_STATE_UP)
-                {
+                } else if (delay_secs <= chas->slave_delay_recover_threshold_sec && backend->state != BACKEND_STATE_UP) {
                     network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP);
                     g_message("Slave delay %.3f seconds. Recovered. Set slave to UP.", delay_secs);
                 }
@@ -307,7 +305,7 @@ static void check_slave_timestamp(int fd, short what, void *arg)
             mysql_free_result(rs_set);
         }
     }
-    struct timeval timeout = {0};
+    struct timeval timeout = { 0 };
     timeout.tv_usec = CHECK_DELAY_INTERVAL;
     ADD_MONITOR_TIMER(write_master_timer, update_master_timestamp, timeout);
 }
@@ -321,19 +319,20 @@ struct monitored_object_t {
 
 struct event config_reload_timer;
 
-static void check_config_worker(int fd, short what, void *arg)
+static void
+check_config_worker(int fd, short what, void *arg)
 {
     cetus_monitor_t *monitor = arg;
     chassis *chas = monitor->chas;
     chassis_config_t *conf = chas->config_manager;
-    struct timeval timeout = {0};
+    struct timeval timeout = { 0 };
     GList *l;
 
     for (l = monitor->registered_objects; l; l = l->next) {
         struct monitored_object_t *ob = l->data;
         if (chassis_config_is_object_outdated(conf, ob->name)) {
             /* if (evtimer_pending(&config_reload_timer, NULL))
-              break; */
+               break; */
             g_message("monitor: object `%s` is outdated, try updating...", ob->name);
 
             /* first read in object from remote in monitor thread */
@@ -343,7 +342,7 @@ static void check_config_worker(int fd, short what, void *arg)
             evtimer_set(&config_reload_timer, ob->func, ob->arg);
             event_base_set(chas->event_base, &config_reload_timer);
             evtimer_add(&config_reload_timer, &timeout);
-            break; /* TODO: for now, only update one object each time */
+            break;              /* TODO: for now, only update one object each time */
         }
     }
 
@@ -351,7 +350,8 @@ static void check_config_worker(int fd, short what, void *arg)
     ADD_MONITOR_TIMER(check_config_timer, check_config_worker, timeout);
 }
 
-void cetus_monitor_open(cetus_monitor_t *monitor, monitor_type_t monitor_type) 
+void
+cetus_monitor_open(cetus_monitor_t *monitor, monitor_type_t monitor_type)
 {
     struct timeval timeout;
     switch (monitor_type) {
@@ -378,7 +378,8 @@ void cetus_monitor_open(cetus_monitor_t *monitor, monitor_type_t monitor_type)
     }
 }
 
-void cetus_monitor_close(cetus_monitor_t *monitor, monitor_type_t monitor_type)
+void
+cetus_monitor_close(cetus_monitor_t *monitor, monitor_type_t monitor_type)
 {
     switch (monitor_type) {
     case MONITOR_TYPE_CHECK_ALIVE:
@@ -407,7 +408,8 @@ void cetus_monitor_close(cetus_monitor_t *monitor, monitor_type_t monitor_type)
     }
 }
 
-static void *cetus_monitor_mainloop(void *data)
+static void *
+cetus_monitor_mainloop(void *data)
 {
     cetus_monitor_t *monitor = data;
 
@@ -421,14 +423,12 @@ static void *cetus_monitor_mainloop(void *data)
         return NULL;
     }
 
-    cetus_users_get_server_pwd(chas->priv->users,
-                               chas->default_username, monitor->db_passwd);
+    cetus_users_get_server_pwd(chas->priv->users, chas->default_username, monitor->db_passwd);
     if (monitor->db_passwd->len == 0) { /* TODO: retry */
         g_warning("no password for %s, monitor will not work", chas->default_username);
         return NULL;
     }
-    monitor->backend_conns = g_hash_table_new_full(
-            g_str_hash, g_str_equal, g_free, mysql_conn_free);
+    monitor->backend_conns = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, mysql_conn_free);
 
     if (!chas->check_slave_delay) {
         cetus_monitor_open(monitor, MONITOR_TYPE_CHECK_ALIVE);
@@ -441,8 +441,7 @@ static void *cetus_monitor_mainloop(void *data)
 #endif
     chassis_event_loop(loop);
 
-    g_message("monitor thread closing %d mysql conns",
-              g_hash_table_size(monitor->backend_conns));
+    g_message("monitor thread closing %d mysql conns", g_hash_table_size(monitor->backend_conns));
     g_hash_table_destroy(monitor->backend_conns);
     mysql_thread_end();
 
@@ -451,7 +450,8 @@ static void *cetus_monitor_mainloop(void *data)
     return NULL;
 }
 
-void cetus_monitor_start_thread(cetus_monitor_t *monitor, chassis *chas)
+void
+cetus_monitor_start_thread(cetus_monitor_t *monitor, chassis *chas)
 {
     monitor->chas = chas;
     if (chas->disable_threads) {
@@ -464,14 +464,12 @@ void cetus_monitor_start_thread(cetus_monitor_t *monitor, chassis *chas)
     GThread *new_thread = NULL;
 #if !GLIB_CHECK_VERSION(2, 32, 0)
     GError *error = NULL;
-    new_thread = g_thread_create(cetus_monitor_mainloop,
-                                 monitor, TRUE, &error);
+    new_thread = g_thread_create(cetus_monitor_mainloop, monitor, TRUE, &error);
     if (new_thread == NULL && error != NULL) {
         g_critical("Create thread error: %s", error->message);
     }
 #else
-    new_thread = g_thread_new("monitor-thread",
-                              cetus_monitor_mainloop, monitor);
+    new_thread = g_thread_new("monitor-thread", cetus_monitor_mainloop, monitor);
     if (new_thread == NULL) {
         g_critical("Create thread error.");
     }
@@ -481,7 +479,8 @@ void cetus_monitor_start_thread(cetus_monitor_t *monitor, chassis *chas)
     g_message("monitor thread started");
 }
 
-void cetus_monitor_stop_thread(cetus_monitor_t *monitor)
+void
+cetus_monitor_stop_thread(cetus_monitor_t *monitor)
 {
     if (monitor->thread) {
         g_message("Waiting for monitor thread to quit ...");
@@ -490,7 +489,8 @@ void cetus_monitor_stop_thread(cetus_monitor_t *monitor)
     }
 }
 
-cetus_monitor_t *cetus_monitor_new()
+cetus_monitor_t *
+cetus_monitor_new()
 {
     cetus_monitor_t *monitor = g_new0(cetus_monitor_t, 1);
 
@@ -498,17 +498,19 @@ cetus_monitor_t *cetus_monitor_new()
     return monitor;
 }
 
-void cetus_monitor_free(cetus_monitor_t *monitor)
+void
+cetus_monitor_free(cetus_monitor_t *monitor)
 {
     /* backend_conns should be freed in its own thread, not here */
     g_string_free(monitor->db_passwd, TRUE);
     g_list_free_full(monitor->registered_objects, g_free);
-    if (monitor->config_id) g_free(monitor->config_id);
+    if (monitor->config_id)
+        g_free(monitor->config_id);
     g_free(monitor);
 }
 
-void cetus_monitor_register_object(cetus_monitor_t *monitor,
-                                    const char *name, monitor_callback_fn func, void *arg)
+void
+cetus_monitor_register_object(cetus_monitor_t *monitor, const char *name, monitor_callback_fn func, void *arg)
 {
     GList *l;
     struct monitored_object_t *object = NULL;

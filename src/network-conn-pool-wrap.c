@@ -51,9 +51,11 @@
  * make sure we know about connection close from the server side
  * - wait_timeout
  */
-static void network_mysqld_con_idle_handle(int event_fd, short events, void *user_data) {
+static void
+network_mysqld_con_idle_handle(int event_fd, short events, void *user_data)
+{
     network_connection_pool_entry *pool_entry = user_data;
-    network_connection_pool *pool             = pool_entry->pool;
+    network_connection_pool *pool = pool_entry->pool;
 
     if (events == EV_READ) {
         int b = -1;
@@ -63,11 +65,9 @@ static void network_mysqld_con_idle_handle(int event_fd, short events, void *use
          *        up to now we just ignore it
          */
         if (ioctlsocket(event_fd, FIONREAD, &b)) {
-            g_critical("ioctl(%d, FIONREAD) failed: %s", event_fd,
-                    g_strerror(errno));
+            g_critical("ioctl(%d, FIONREAD) failed: %s", event_fd, g_strerror(errno));
         } else if (b != 0) {
-            g_critical("ioctl(%d, FIONREAD) said something to read, oops: %d",
-                    event_fd, b);
+            g_critical("ioctl(%d, FIONREAD) said something to read, oops: %d", event_fd, b);
         } else {
             /* the server decided the close the connection (wait_timeout, crash, ... )
              *
@@ -76,20 +76,21 @@ static void network_mysqld_con_idle_handle(int event_fd, short events, void *use
             network_connection_pool_remove(pool, pool_entry);
             if (pool->srv) {
                 chassis *srv = pool->srv;
-                srv->complement_conn_cnt++; 
+                srv->complement_conn_cnt++;
             }
-            
+
             g_message("%s:the server decided the close the connection", G_STRLOC);
         }
     }
 }
 
-int network_pool_add_idle_conn(network_connection_pool *pool, chassis *srv, network_socket *server) {
+int
+network_pool_add_idle_conn(network_connection_pool *pool, chassis *srv, network_socket *server)
+{
     network_connection_pool_entry *pool_entry = NULL;
     pool_entry = network_connection_pool_add(pool, server);
-    event_set(&(server->event), server->fd, EV_READ,
-            network_mysqld_con_idle_handle, pool_entry);
-    g_debug("%s: ev:%p add network_mysqld_con_idle_handle for server:%p, fd:%d", 
+    event_set(&(server->event), server->fd, EV_READ, network_mysqld_con_idle_handle, pool_entry);
+    g_debug("%s: ev:%p add network_mysqld_con_idle_handle for server:%p, fd:%d",
             G_STRLOC, &(server->event), server, server->fd);
     chassis_event_add(srv, &(server->event));
     return 0;
@@ -99,13 +100,16 @@ int network_pool_add_idle_conn(network_connection_pool *pool, chassis *srv, netw
  * move the con->server into connection pool and disconnect the
  * proxy from its backend *only RW-edition
  */
-int network_pool_add_conn(network_mysqld_con *con, int is_swap) {
+int
+network_pool_add_conn(network_mysqld_con *con, int is_swap)
+{
     proxy_plugin_con_t *st = con->plugin_con_state;
     chassis *srv = con->srv;
     chassis_private *g = srv->priv;
 
     /* con-server is already disconnected, got out */
-    if (!con->server) return -1;
+    if (!con->server)
+        return -1;
 
     if (!con->server->response) {
         g_warning("%s: server response is null:%p", G_STRLOC, con);
@@ -118,25 +122,21 @@ int network_pool_add_conn(network_mysqld_con *con, int is_swap) {
     }
 
     if (con->prepare_stmt_count > 0) {
-        g_debug("%s: con valid_prepare_stmt_cnt:%d for con:%p",
-                G_STRLOC, con->prepare_stmt_count, con);
+        g_debug("%s: con valid_prepare_stmt_cnt:%d for con:%p", G_STRLOC, con->prepare_stmt_count, con);
         return -1;
     }
 
     if (con->is_in_sess_context) {
         if (st->backend->type == BACKEND_TYPE_RW) {
-            g_message("%s: transact feature is changed:%p",
-                    G_STRLOC, con);
+            g_message("%s: transact feature is changed:%p", G_STRLOC, con);
             return -1;
         } else {
-            g_message("%s: now transact feature is changed, orig is read server:%p",
-                    G_STRLOC, con);
+            g_message("%s: now transact feature is changed, orig is read server:%p", G_STRLOC, con);
         }
     }
 
     if (con->server->is_in_sess_context) {
-        g_message("%s: server is in sess context true:%p",
-                    G_STRLOC, con);
+        g_message("%s: server is in sess context true:%p", G_STRLOC, con);
         return -1;
     }
 
@@ -144,9 +144,7 @@ int network_pool_add_conn(network_mysqld_con *con, int is_swap) {
 
     if (!is_swap && con->servers == NULL) {
         if (con->srv->is_reduce_conns) {
-            if (network_conn_pool_do_reduce_conns_verdict(st->backend->pool, 
-                        st->backend->connected_clients)) 
-            {
+            if (network_conn_pool_do_reduce_conns_verdict(st->backend->pool, st->backend->connected_clients)) {
                 to_be_put_to_pool = FALSE;
             }
         }
@@ -155,8 +153,7 @@ int network_pool_add_conn(network_mysqld_con *con, int is_swap) {
     if (to_be_put_to_pool == FALSE) {
         if (con->server->recv_queue->chunks->length > 0) {
             g_critical("%s: recv queue length :%d, state:%s",
-                    G_STRLOC, con->server->recv_queue->chunks->length,
-                    network_mysqld_con_st_name(con->state));
+                       G_STRLOC, con->server->recv_queue->chunks->length, network_mysqld_con_st_name(con->state));
         }
 
         GString *packet;
@@ -166,7 +163,7 @@ int network_pool_add_conn(network_mysqld_con *con, int is_swap) {
 
         st->backend->connected_clients--;
 
-        network_socket_free(con->server); 
+        network_socket_free(con->server);
 
         st->backend = NULL;
         st->backend_ndx = -1;
@@ -200,9 +197,8 @@ int network_pool_add_conn(network_mysqld_con *con, int is_swap) {
                 g_debug("%s: add conn fd:%d to pool:%p ", G_STRLOC, server->fd, backend->pool);
                 server->is_multi_stmt_set = con->client->is_multi_stmt_set;
                 pool_entry = network_connection_pool_add(backend->pool, server);
-                event_set(&(server->event), server->fd, EV_READ,
-                        network_mysqld_con_idle_handle, pool_entry);
-                g_debug("%s: ev:%p add network_mysqld_con_idle_handle for server:%p, fd:%d", 
+                event_set(&(server->event), server->fd, EV_READ, network_mysqld_con_idle_handle, pool_entry);
+                g_debug("%s: ev:%p add network_mysqld_con_idle_handle for server:%p, fd:%d",
                         G_STRLOC, &(server->event), server, server->fd);
 
                 chassis_event_add(con->srv, &(server->event));
@@ -231,17 +227,15 @@ int network_pool_add_conn(network_mysqld_con *con, int is_swap) {
         g_debug("%s: con:%p, set prepare_stmt_count 0", G_STRLOC, con);
         CHECK_PENDING_EVENT(&(con->server->event));
 
-        g_debug("%s: add conn fd:%d to pool:%p", G_STRLOC, con->server->fd,
-                st->backend->pool);
+        g_debug("%s: add conn fd:%d to pool:%p", G_STRLOC, con->server->fd, st->backend->pool);
         con->server->is_multi_stmt_set = con->client->is_multi_stmt_set;
         /* insert the server socket into the connection pool */
         pool_entry = network_connection_pool_add(st->backend->pool, con->server);
 
-        event_set(&(con->server->event), con->server->fd, EV_READ,
-                network_mysqld_con_idle_handle, pool_entry);
+        event_set(&(con->server->event), con->server->fd, EV_READ, network_mysqld_con_idle_handle, pool_entry);
 
-        g_debug("%s: ev:%p add network_mysqld_con_idle_handle for server:%p, fd:%d", 
-            G_STRLOC, &(con->server->event), con->server, con->server->fd);
+        g_debug("%s: ev:%p add network_mysqld_con_idle_handle for server:%p, fd:%d",
+                G_STRLOC, &(con->server->event), con->server, con->server->fd);
 
         chassis_event_add(con->srv, &(con->server->event));
 
@@ -258,9 +252,8 @@ int network_pool_add_conn(network_mysqld_con *con, int is_swap) {
     return 0;
 }
 
-
-void mysqld_con_reserved_connections_add(network_mysqld_con *con,
-        network_socket *sock, int backend_idx)
+void
+mysqld_con_reserved_connections_add(network_mysqld_con *con, network_socket *sock, int backend_idx)
 {
     proxy_plugin_con_t *st = con->plugin_con_state;
     if (st->backend_ndx_array == NULL) {
@@ -271,14 +264,14 @@ void mysqld_con_reserved_connections_add(network_mysqld_con *con,
     if (con->servers == NULL) {
         con->servers = g_ptr_array_new();
         g_ptr_array_add(con->servers, con->server); /* current sock index = 0 */
-        con->multiple_server_mode = 1; /* TODO: redundant var */
+        con->multiple_server_mode = 1;  /* TODO: redundant var */
     }
     g_ptr_array_add(con->servers, sock);
     st->backend_ndx_array[backend_idx] = con->servers->len;
 }
 
-
-network_socket *mysqld_con_reserved_connections_get(network_mysqld_con *con, int backend_idx)
+network_socket *
+mysqld_con_reserved_connections_get(network_mysqld_con *con, int backend_idx)
 {
     proxy_plugin_con_t *st = con->plugin_con_state;
     if (con->servers) {
@@ -301,7 +294,9 @@ network_socket *mysqld_con_reserved_connections_get(network_mysqld_con *con, int
  * @return NULL if swapping failed
  *         the new backend on success
  */
-network_socket *network_connection_pool_swap(network_mysqld_con *con, int backend_ndx) {
+network_socket *
+network_connection_pool_swap(network_mysqld_con *con, int backend_ndx)
+{
     network_backend_t *backend = NULL;
     proxy_plugin_con_t *st = con->plugin_con_state;
     chassis_private *g = con->srv->priv;
@@ -311,10 +306,10 @@ network_socket *network_connection_pool_swap(network_mysqld_con *con, int backen
      * in the connection pool and connected
      */
     backend = network_backends_get(g->backends, backend_ndx);
-    if (!backend) return NULL;
+    if (!backend)
+        return NULL;
 
-    g_debug(G_STRLOC ": user: %s",
-            con->client->response ? "nil" : con->client->response->username->str);
+    g_debug(G_STRLOC ": user: %s", con->client->response ? "nil" : con->client->response->username->str);
 
     g_debug("%s: check server switch for conn:%p, prep_stmt_cnt:%d, orig ndx:%d, now:%d",
             G_STRLOC, con, con->prepare_stmt_count, st->backend_ndx, backend_ndx);
@@ -322,9 +317,7 @@ network_socket *network_connection_pool_swap(network_mysqld_con *con, int backen
      * TODO only valid for successful prepare statements, not valid for data partition
      */
     gboolean server_switch_need_add = FALSE;
-    if (st->backend_ndx != -1 && con->prepare_stmt_count > 0 &&
-            st->backend_ndx != backend_ndx)
-    {
+    if (st->backend_ndx != -1 && con->prepare_stmt_count > 0 && st->backend_ndx != backend_ndx) {
         if (backend->type == BACKEND_TYPE_RW || con->use_slave_forced) {
             server_switch_need_add = TRUE;
             g_debug("%s: server switch is true", G_STRLOC);
@@ -364,7 +357,7 @@ network_socket *network_connection_pool_swap(network_mysqld_con *con, int backen
     con->rob_other_conn = is_robbed;
 
     if (server_switch_need_add) {
-         mysqld_con_reserved_connections_add(con, sock, backend_ndx);
+        mysqld_con_reserved_connections_add(con, sock, backend_ndx);
     } else {
         if (con->server) {
             if (network_pool_add_conn(con, 1) != 0) {
@@ -386,4 +379,3 @@ network_socket *network_connection_pool_swap(network_mysqld_con *con, int backen
 
     return sock;
 }
-

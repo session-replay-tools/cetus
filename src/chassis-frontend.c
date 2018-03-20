@@ -47,7 +47,9 @@
 /**
  * initialize the basic components of the chassis
  */
-int chassis_frontend_init_glib() {
+int
+chassis_frontend_init_glib()
+{
     const gchar *check_str = NULL;
 #if 0
     g_mem_set_vtable(glib_mem_profiler_table);
@@ -55,19 +57,18 @@ int chassis_frontend_init_glib() {
 
     if (!GLIB_CHECK_VERSION(2, 6, 0)) {
         g_critical("the glib header is too old, need at least 2.6.0, got: %d.%d.%d",
-                GLIB_MAJOR_VERSION, GLIB_MINOR_VERSION, GLIB_MICRO_VERSION);
+                   GLIB_MAJOR_VERSION, GLIB_MINOR_VERSION, GLIB_MICRO_VERSION);
 
         return -1;
     }
 
-    check_str = glib_check_version(GLIB_MAJOR_VERSION,
-            GLIB_MINOR_VERSION, GLIB_MICRO_VERSION);
+    check_str = glib_check_version(GLIB_MAJOR_VERSION, GLIB_MINOR_VERSION, GLIB_MICRO_VERSION);
 
     if (check_str) {
         g_critical("%s, got: lib=%d.%d.%d, headers=%d.%d.%d",
-                check_str,
-                glib_major_version, glib_minor_version, glib_micro_version,
-                GLIB_MAJOR_VERSION, GLIB_MINOR_VERSION, GLIB_MICRO_VERSION);
+                   check_str,
+                   glib_major_version, glib_minor_version, glib_micro_version,
+                   GLIB_MAJOR_VERSION, GLIB_MINOR_VERSION, GLIB_MICRO_VERSION);
 
         return -1;
     }
@@ -76,7 +77,6 @@ int chassis_frontend_init_glib() {
         g_critical("loading modules is not supported on this platform");
         return -1;
     }
-
 #if !GLIB_CHECK_VERSION(2, 32, 0)
     /* GLIB below 2.32 must call thread_init */
     g_thread_init(NULL);
@@ -85,18 +85,17 @@ int chassis_frontend_init_glib() {
     return 0;
 }
 
-
 /**
  * setup and check the basedir if nessesary
  */
-int chassis_frontend_init_basedir(const char *prg_name, char **_base_dir) {
+int
+chassis_frontend_init_basedir(const char *prg_name, char **_base_dir)
+{
     char *base_dir = *_base_dir;
 
-    if (base_dir) { /* basedir is already known, check if it is absolute */
+    if (base_dir) {             /* basedir is already known, check if it is absolute */
         if (!g_path_is_absolute(base_dir)) {
-            g_critical("%s: --basedir option must be an absolute path, but was %s",
-                    G_STRLOC,
-                    base_dir);
+            g_critical("%s: --basedir option must be an absolute path, but was %s", G_STRLOC, base_dir);
             return -1;
         } else {
             return 0;
@@ -108,8 +107,7 @@ int chassis_frontend_init_basedir(const char *prg_name, char **_base_dir) {
      */
     base_dir = chassis_get_basedir(prg_name);
     if (!base_dir) {
-        g_critical("%s: Failed to get base directory",
-                G_STRLOC);
+        g_critical("%s: Failed to get base directory", G_STRLOC);
         return -1;
     }
 
@@ -119,10 +117,13 @@ int chassis_frontend_init_basedir(const char *prg_name, char **_base_dir) {
 
 }
 
-int chassis_frontend_init_plugin_dir(char **_plugin_dir, const char *base_dir) {
+int
+chassis_frontend_init_plugin_dir(char **_plugin_dir, const char *base_dir)
+{
     char *plugin_dir = *_plugin_dir;
 
-    if (plugin_dir) return 0;
+    if (plugin_dir)
+        return 0;
 
     plugin_dir = g_build_filename(base_dir, "lib", PACKAGE, "plugins", NULL);
 
@@ -131,8 +132,8 @@ int chassis_frontend_init_plugin_dir(char **_plugin_dir, const char *base_dir) {
     return 0;
 }
 
-int chassis_frontend_load_plugins(GPtrArray *plugins,
-        const gchar *plugin_dir, gchar **plugin_names)
+int
+chassis_frontend_load_plugins(GPtrArray *plugins, const gchar *plugin_dir, gchar **plugin_names)
 {
     int i;
 
@@ -149,17 +150,14 @@ int chassis_frontend_load_plugins(GPtrArray *plugins,
         char *plugin_filename;
         /* skip trying to load a plugin when the parameter was --plugins=
            that will never work...
-           */
+         */
         if (!g_strcmp0("", plugin_names[i])) {
             continue;
         }
 
         plugin_filename = g_strdup_printf("%s%c%s%s.%s",
-                plugin_dir,
-                G_DIR_SEPARATOR,
-                G_MODULE_PREFIX,
-                plugin_names[i],
-                SHARED_LIBRARY_SUFFIX);
+                                          plugin_dir,
+                                          G_DIR_SEPARATOR, G_MODULE_PREFIX, plugin_names[i], SHARED_LIBRARY_SUFFIX);
 
         p = chassis_plugin_load(plugin_filename);
         g_free(plugin_filename);
@@ -175,12 +173,11 @@ int chassis_frontend_load_plugins(GPtrArray *plugins,
     return 0;
 }
 
-int chassis_frontend_init_plugins(GPtrArray *plugins,
-        chassis_options_t *opts, chassis_config_t *config_manager,
-        int *argc_p, char ***argv_p,
-        GKeyFile *keyfile,
-        const char *keyfile_section_name,
-        GError **gerr)
+int
+chassis_frontend_init_plugins(GPtrArray *plugins,
+                              chassis_options_t *opts, chassis_config_t *config_manager,
+                              int *argc_p, char ***argv_p,
+                              GKeyFile *keyfile, const char *keyfile_section_name, GError **gerr)
 {
     guint i;
     for (i = 0; i < plugins->len; i++) {
@@ -195,9 +192,7 @@ int chassis_frontend_init_plugins(GPtrArray *plugins,
             }
             /* parse the new options */
             if (keyfile) {
-                if (FALSE == chassis_keyfile_to_options_with_error(keyfile,
-                            keyfile_section_name, config_entries, gerr))
-                {
+                if (FALSE == chassis_keyfile_to_options_with_error(keyfile, keyfile_section_name, config_entries, gerr)) {
                     return -1;
                 }
             }
@@ -211,11 +206,8 @@ int chassis_frontend_init_plugins(GPtrArray *plugins,
     return 0;
 }
 
-
-int chassis_frontend_init_base_options(int *argc_p, char ***argv_p,
-        int *print_version,
-        char **config_file,
-        GError **gerr)
+int
+chassis_frontend_init_base_options(int *argc_p, char ***argv_p, int *print_version, char **config_file, GError **gerr)
 {
     int ret = 0;
     chassis_options_t *opts = chassis_options_new();
@@ -230,7 +222,9 @@ int chassis_frontend_init_base_options(int *argc_p, char ***argv_p,
     return ret;
 }
 
-GKeyFile *chassis_frontend_open_config_file(const char *filename, GError **gerr) {
+GKeyFile *
+chassis_frontend_open_config_file(const char *filename, GError **gerr)
+{
     GKeyFile *keyfile;
 
     if (chassis_filemode_check_full(filename, CHASSIS_FILEMODE_SECURE_MASK, gerr) != 0) {
@@ -251,23 +245,20 @@ GKeyFile *chassis_frontend_open_config_file(const char *filename, GError **gerr)
 /**
  * setup the options that can only appear on the command-line
  */
-int chassis_options_set_cmdline_only_options(chassis_options_t *opts,
-        int *print_version,
-        char **config_file) {
+int
+chassis_options_set_cmdline_only_options(chassis_options_t *opts, int *print_version, char **config_file)
+{
 
-    chassis_options_add(opts,
-            "version", 'V', 0, OPTION_ARG_NONE, print_version,
-            "Show version", NULL);
+    chassis_options_add(opts, "version", 'V', 0, OPTION_ARG_NONE, print_version, "Show version", NULL);
 
-    chassis_options_add(opts,
-            "defaults-file", 0, 0, OPTION_ARG_STRING, config_file,
-            "configuration file", "<file>");
+    chassis_options_add(opts, "defaults-file", 0, 0, OPTION_ARG_STRING, config_file, "configuration file", "<file>");
 
     return 0;
 }
 
-
-int chassis_frontend_print_version() {
+int
+chassis_frontend_print_version()
+{
     /*
      * allow to pass down a build-tag at build-time
      * which gets hard-coded into the binary
@@ -276,12 +267,14 @@ int chassis_frontend_print_version() {
 #ifdef CHASSIS_BUILD_TAG
     g_print("  build: %s\n", CHASSIS_BUILD_TAG);
 #endif
-    g_print("  glib2: %d.%d.%d\n", GLIB_MAJOR_VERSION,GLIB_MINOR_VERSION,GLIB_MICRO_VERSION);
+    g_print("  glib2: %d.%d.%d\n", GLIB_MAJOR_VERSION, GLIB_MINOR_VERSION, GLIB_MICRO_VERSION);
     g_print("  libevent: %s\n", event_get_version());
     return 0;
 }
 
-int chassis_frontend_print_plugin_versions(GPtrArray *plugins) {
+int
+chassis_frontend_print_plugin_versions(GPtrArray *plugins)
+{
     guint i;
 
     g_print("-- modules\n");
@@ -298,7 +291,9 @@ int chassis_frontend_print_plugin_versions(GPtrArray *plugins) {
 /**
  * log the versions of the initialized plugins
  */
-int chassis_frontend_log_plugin_versions(GPtrArray *plugins) {
+int
+chassis_frontend_log_plugin_versions(GPtrArray *plugins)
+{
     guint i;
 
     for (i = 0; i < plugins->len; i++) {
@@ -310,7 +305,9 @@ int chassis_frontend_log_plugin_versions(GPtrArray *plugins) {
     return 0;
 }
 
-int chassis_frontend_write_pidfile(const char *pid_file, GError **gerr) {
+int
+chassis_frontend_write_pidfile(const char *pid_file, GError **gerr)
+{
     int fd;
     int ret = 0;
 
@@ -320,14 +317,10 @@ int chassis_frontend_write_pidfile(const char *pid_file, GError **gerr) {
      * write the PID file
      */
 
-    if (-1 == (fd = open(pid_file, O_WRONLY|O_TRUNC|O_CREAT, 0600))) {
+    if (-1 == (fd = open(pid_file, O_WRONLY | O_TRUNC | O_CREAT, 0600))) {
         g_set_error(gerr,
-                G_FILE_ERROR,
-                g_file_error_from_errno(errno),
-                "%s: open(%s) failed: %s",
-                G_STRLOC,
-                pid_file,
-                g_strerror(errno));
+                    G_FILE_ERROR,
+                    g_file_error_from_errno(errno), "%s: open(%s) failed: %s", G_STRLOC, pid_file, g_strerror(errno));
 
         return -1;
     }
@@ -336,13 +329,9 @@ int chassis_frontend_write_pidfile(const char *pid_file, GError **gerr) {
 
     if (write(fd, pid_str, strlen(pid_str)) < 0) {
         g_set_error(gerr,
-                G_FILE_ERROR,
-                g_file_error_from_errno(errno),
-                "%s: write(%s) of %s failed: %s",
-                G_STRLOC,
-                pid_file,
-                pid_str,
-                g_strerror(errno));
+                    G_FILE_ERROR,
+                    g_file_error_from_errno(errno),
+                    "%s: write(%s) of %s failed: %s", G_STRLOC, pid_file, pid_str, g_strerror(errno));
         ret = -1;
     }
     g_free(pid_str);
@@ -351,4 +340,3 @@ int chassis_frontend_write_pidfile(const char *pid_file, GError **gerr) {
 
     return ret;
 }
-

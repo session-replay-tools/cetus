@@ -27,6 +27,6 @@
 #include <sys/stat.h>
 #define CHASSIS_FILEMODE_SECURE_MASK (S_IROTH|S_IWOTH|S_IXOTH)
 
-CHASSIS_API int chassis_filemode_check_full(const gchar *, int , GError **);
+CHASSIS_API int chassis_filemode_check_full(const gchar *, int, GError **);
 
 #endif

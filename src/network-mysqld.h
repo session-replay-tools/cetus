@@ -91,72 +91,72 @@ typedef struct network_mysqld_con network_mysqld_con;   /* forward declaration *
  */
 typedef struct {
     /**
-	 * Called when a new client connection to cetus was created.
-	 */
+     * Called when a new client connection to cetus was created.
+     */
     NETWORK_MYSQLD_PLUGIN_FUNC(con_init);
     /**
-	 * Called when cetus needs to establish a connection to a backend server
-	 *
-	 * Returning a handshake response packet from this callback will 
+     * Called when cetus needs to establish a connection to a backend server
+     *
+     * Returning a handshake response packet from this callback will 
      * cause the con_read_handshake step to be skipped.
      *
-	 * The next state then is con_send_handshake.
-	 */
+     * The next state then is con_send_handshake.
+     */
     NETWORK_MYSQLD_PLUGIN_FUNC(con_connect_server);
     /**
-	 * Called when cetus has read the handshake packet from the server.
-	 */
+     * Called when cetus has read the handshake packet from the server.
+     */
     NETWORK_MYSQLD_PLUGIN_FUNC(con_read_handshake);
     /**
-	 * Called when cetus wants to send the handshake packet to the client.
-	 * 
-	 * @note No known plugins actually implement this step right now, 
+     * Called when cetus wants to send the handshake packet to the client.
+     * 
+     * @note No known plugins actually implement this step right now, 
      * but rather return a handshake challenge from con_init instead.
-	 */
+     */
     NETWORK_MYSQLD_PLUGIN_FUNC(con_send_handshake);
     /**
-	 * Called when cetus has read the authentication packet from the client.
-	 */
+     * Called when cetus has read the authentication packet from the client.
+     */
     NETWORK_MYSQLD_PLUGIN_FUNC(con_read_auth);
     /**
-	 * Called when cetus wants to send the authentication packet to the server.
-	 * 
-	 * @note No known plugins actually implement this step.
-	 */
+     * Called when cetus wants to send the authentication packet to the server.
+     * 
+     * @note No known plugins actually implement this step.
+     */
     NETWORK_MYSQLD_PLUGIN_FUNC(con_send_auth);
     /**
-	 * Called when cetus has read the authentication result 
+     * Called when cetus has read the authentication result 
      * from the backend server, in response to con_send_auth.
-	 */
+     */
     NETWORK_MYSQLD_PLUGIN_FUNC(con_read_auth_result);
     /**
-	 * Called when cetus wants to send the authentication response packet to the client.
-	 * 
-	 * @note No known plugins implement this callback, but the default 
+     * Called when cetus wants to send the authentication response packet to the client.
+     * 
+     * @note No known plugins implement this callback, but the default 
      * implementation deals with the important case that
      *
-	 * the authentication response used the pre-4.1 password hash method, but the client didn't.
-	 * @see network_mysqld_con::auth_result_state
-	 */
+     * the authentication response used the pre-4.1 password hash method, but the client didn't.
+     * @see network_mysqld_con::auth_result_state
+     */
     NETWORK_MYSQLD_PLUGIN_FUNC(con_send_auth_result);
     /**
-	 * Called when cetus receives a COM_QUERY packet from a client.
-	 */
+     * Called when cetus receives a COM_QUERY packet from a client.
+     */
     NETWORK_MYSQLD_PLUGIN_FUNC(con_read_query);
     NETWORK_MYSQLD_PLUGIN_FUNC(con_get_server_conn_list);
     /**
-	 * Called when cetus receives a result set from the server.
-	 */
+     * Called when cetus receives a result set from the server.
+     */
     NETWORK_MYSQLD_PLUGIN_FUNC(con_read_query_result);
     /**
-	 * Called when cetus sends a result set to the client.
-	 * 
-	 * The proxy plugin, for example, uses this state to inject more queries 
+     * Called when cetus sends a result set to the client.
+     * 
+     * The proxy plugin, for example, uses this state to inject more queries 
      * into the connection, possibly in response to a result set received from a server.
-	 * 
-	 * This callback should not cause multiple result sets to be sent to the client.
-	 * @see network_mysqld_con_injection::sent_resultset
-	 */
+     * 
+     * This callback should not cause multiple result sets to be sent to the client.
+     * @see network_mysqld_con_injection::sent_resultset
+     */
     NETWORK_MYSQLD_PLUGIN_FUNC(con_send_query_result);
     /**
      * Called when either side of a connection was either 

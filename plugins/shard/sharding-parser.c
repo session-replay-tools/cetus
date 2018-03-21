@@ -776,9 +776,14 @@ join_on_sharding_key(char *default_db, GPtrArray *sharding_tables, sql_expr_t *w
         sql_src_item_t *src = g_ptr_array_index(sharding_tables, i);
         char *db = src->dbname ? src->dbname : default_db;
         sharding_table_t *tinfo = shard_conf_get_info(db, src->table_name);
-        assert(tinfo);
-        if (i == 0)
+        if (!tinfo) {
+            g_ptr_array_free(sharding_keys, TRUE);
+            g_warning(G_STRLOC "%s.%s is not sharding table", db, src->table_name);
+            return FALSE;
+        }
+        if (i == 0) {
             first_vdb_id = tinfo->vdb_id;
+        }
         if (tinfo->vdb_id != first_vdb_id) {
             g_ptr_array_free(sharding_keys, TRUE);
             return FALSE;
@@ -922,7 +927,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
     }
 
     if (sharding_tables->len >= 2) {
-        if (!join_on_sharding_key(default_db, sharding_tables, select->where_clause)) {
+        if (!join_on_sharding_key(db, sharding_tables, select->where_clause)) {
             g_ptr_array_free(sharding_tables, TRUE);
             sql_context_append_msg(context, "(proxy)JOIN must inside VDB and have explicit join-on condition");
             return ERROR_UNPARSABLE;

@@ -17,7 +17,11 @@
  02110-1301  USA
 
  $%ENDLICENSE%$ */
+
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
+
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>

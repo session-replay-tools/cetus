@@ -10,6 +10,7 @@
 
 `SELECT * FROM backends`
 
+
 查看后端信息。
 
 | backend_ndx | address             | state | type | uuid | connected_clients |

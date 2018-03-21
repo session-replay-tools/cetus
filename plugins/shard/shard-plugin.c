@@ -2129,7 +2129,8 @@ sharding_conf_reload_callback(int fd, short what, void *arg)
     if (!ok || !shard_json) {
         g_critical("error on sharding configuration reloading.");
     }
-    if (shard_conf_load(shard_json)) {
+    int num_groups = chas->priv->backends->groups->len;
+    if (shard_conf_load(shard_json, num_groups)) {
         g_message("sharding config is updated");
     } else {
         g_warning("sharding config update failed");
@@ -2213,7 +2214,7 @@ network_mysqld_shard_plugin_apply_config(chassis *chas, chassis_plugin_config *c
     char *shard_json = NULL;
     gboolean ok = chassis_config_query_object(chas->config_manager,
                                               "sharding", &shard_json);
-    if (!ok || !shard_json || !shard_conf_load(shard_json)) {
+    if (!ok || !shard_json || !shard_conf_load(shard_json, g->backends->groups->len)) {
         g_critical("sharding configuration load error, exit program.");
         exit(0);
     }

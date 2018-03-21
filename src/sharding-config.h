@@ -110,7 +110,7 @@ GPtrArray *shard_conf_table_partitions(GPtrArray *partitions, const char *db, co
  */
 void shard_conf_find_groups(GPtrArray *groups, const char *match, const char *db);
 
-gboolean shard_conf_load(char *);
+gboolean shard_conf_load(char *, int);
 
 void shard_conf_destroy(void);
 

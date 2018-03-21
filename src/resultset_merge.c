@@ -18,7 +18,10 @@
 
  $%ENDLICENSE%$ */
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
+
 #include <glib.h>
 #include <string.h>
 #include <stdlib.h>

@@ -124,18 +124,22 @@ network_backend_conns_count(network_backend_t *b)
 void
 network_backend_save_challenge(network_backend_t *b, const network_mysqld_auth_challenge *chal)
 {
-    if (b->challenges->len < 256) {
-        static const guint32 not_supported = CLIENT_SSL | CLIENT_LOCAL_FILES | CLIENT_DEPRECATE_EOF;
-
-        network_mysqld_auth_challenge *challenge = network_mysqld_auth_challenge_copy(chal);
-
-        challenge->capabilities &= ~not_supported;
-        char *old_str = challenge->server_version_str;
-        challenge->server_version_str = g_strdup_printf("%s (%s)", old_str, PACKAGE_STRING);
-        g_free(old_str);
-
-        g_ptr_array_add(b->challenges, challenge);
+    if (b->challenges->len >= 1024) {
+        network_mysqld_auth_challenge *challenge;
+        challenge = g_ptr_array_remove_index(b->challenges, 0);
+        network_mysqld_auth_challenge_free(challenge);
     }
+
+    static const guint32 not_supported = CLIENT_SSL | CLIENT_LOCAL_FILES | CLIENT_DEPRECATE_EOF;
+
+    network_mysqld_auth_challenge *challenge = network_mysqld_auth_challenge_copy(chal);
+
+    challenge->capabilities &= ~not_supported;
+    char *old_str = challenge->server_version_str;
+    challenge->server_version_str = g_strdup_printf("%s (%s)", old_str, PACKAGE_STRING);
+    g_free(old_str);
+
+    g_ptr_array_add(b->challenges, challenge);
 }
 
 struct network_mysqld_auth_challenge *
@@ -145,8 +149,10 @@ network_backend_get_challenge(network_backend_t *b)
         g_message("challenges len 0 for backend:%s", b->addr->name->str);
         return NULL;
     }
-    int ndx = b->chal_ndx % b->challenges->len;
-    b->chal_ndx++;
+
+    int ndx = g_random_int_range(0, 1024);
+    ndx = ndx % b->challenges->len;
+
     network_mysqld_auth_challenge *challenge = g_ptr_array_index(b->challenges, ndx);
     return challenge;
 }

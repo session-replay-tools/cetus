@@ -83,7 +83,6 @@ typedef struct {
 
     backend_config *config;
     GPtrArray *challenges;
-    int chal_ndx;
     time_t last_check_time;
     int slave_delay_msec;       /* valid if this is a ReadOnly slave */
 } network_backend_t;

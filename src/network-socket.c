@@ -22,7 +22,10 @@
 #include "config.h"
 #endif
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
+
 #include <sys/uio.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>

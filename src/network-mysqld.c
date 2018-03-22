@@ -1367,12 +1367,12 @@ shard_set_autocommit(network_mysqld_con *con)
 
     g_debug("%s: set autocommit here", G_STRLOC);
     for (i = 0; i < con->servers->len; i++) {
-        server_session_t *pmd = g_ptr_array_index(con->servers, i);
-        if (!pmd->participated || pmd->attr_consistent) {
+        server_session_t *ss = g_ptr_array_index(con->servers, i);
+        if (!ss->participated || ss->attr_consistent) {
             continue;
         }
 
-        pmd->attr_adjusted_now = 0;
+        ss->attr_adjusted_now = 0;
         int len = con->client->charset->len + NET_HEADER_SIZE + 1 + 32;
         GString *packet = g_string_sized_new(len);
         packet->len = NET_HEADER_SIZE;
@@ -1389,10 +1389,10 @@ shard_set_autocommit(network_mysqld_con *con)
 
         network_mysqld_proto_set_packet_len(packet, 1 + strlen(command));
         network_mysqld_proto_set_packet_id(packet, 0);
-        g_queue_push_tail(pmd->server->send_queue->chunks, packet);
+        g_queue_push_tail(ss->server->send_queue->chunks, packet);
 
-        pmd->server->parse.qs_state = PARSE_COM_QUERY_INIT;
-        pmd->attr_adjusted_now = 1;
+        ss->server->parse.qs_state = PARSE_COM_QUERY_INIT;
+        ss->attr_adjusted_now = 1;
 
         con->resp_expected_num++;
     }
@@ -1413,16 +1413,16 @@ shard_set_multi_stmt_consistant(network_mysqld_con *con)
     gboolean result = TRUE;
 
     for (i = 0; i < con->servers->len; i++) {
-        server_session_t *pmd = g_ptr_array_index(con->servers, i);
-        if (!pmd->participated || pmd->attr_consistent) {
+        server_session_t *ss = g_ptr_array_index(con->servers, i);
+        if (!ss->participated || ss->attr_consistent) {
             continue;
         }
 
-        pmd->attr_adjusted_now = 0;
-        if ((pmd->attr_diff & ATTR_DIF_SET_OPTION) == 0) {
+        ss->attr_adjusted_now = 0;
+        if ((ss->attr_diff & ATTR_DIF_SET_OPTION) == 0) {
             continue;
         }
-        if (con->client->is_multi_stmt_set != pmd->server->is_multi_stmt_set) {
+        if (con->client->is_multi_stmt_set != ss->server->is_multi_stmt_set) {
             int len = NET_HEADER_SIZE + 12;
             GString *new_packet = g_string_sized_new(len);
             new_packet->len = NET_HEADER_SIZE;
@@ -1437,11 +1437,11 @@ shard_set_multi_stmt_consistant(network_mysqld_con *con)
             network_mysqld_proto_set_packet_id(new_packet, 0);
             network_mysqld_proto_set_packet_len(new_packet, 1 + 1 + 1);
 
-            g_queue_push_tail(pmd->server->send_queue->chunks, new_packet);
+            g_queue_push_tail(ss->server->send_queue->chunks, new_packet);
             g_debug("%s: adjust multi stmt", G_STRLOC);
 
-            pmd->server->is_multi_stmt_set = con->client->is_multi_stmt_set;
-            pmd->attr_adjusted_now = 1;
+            ss->server->is_multi_stmt_set = con->client->is_multi_stmt_set;
+            ss->attr_adjusted_now = 1;
             con->resp_expected_num++;
             result = FALSE;
         } else {
@@ -1457,13 +1457,13 @@ shard_set_charset_consistant(network_mysqld_con *con)
 {
     size_t i;
     for (i = 0; i < con->servers->len; i++) {
-        server_session_t *pmd = g_ptr_array_index(con->servers, i);
-        if (!pmd->participated || pmd->attr_consistent) {
+        server_session_t *ss = g_ptr_array_index(con->servers, i);
+        if (!ss->participated || ss->attr_consistent) {
             continue;
         }
 
-        pmd->attr_adjusted_now = 0;
-        if ((pmd->attr_diff & ATTR_DIF_CHARSET) == 0) {
+        ss->attr_adjusted_now = 0;
+        if ((ss->attr_diff & ATTR_DIF_CHARSET) == 0) {
             continue;
         }
 
@@ -1484,15 +1484,15 @@ shard_set_charset_consistant(network_mysqld_con *con)
         }
 
         network_mysqld_proto_set_packet_id(packet, 0);
-        g_queue_push_tail(pmd->server->send_queue->chunks, packet);
+        g_queue_push_tail(ss->server->send_queue->chunks, packet);
 
-        pmd->attr_adjusted_now = 1;
+        ss->attr_adjusted_now = 1;
         g_debug("%s: adjust default charset for server, clt:%s, srv:%s",
-                G_STRLOC, con->client->charset->str, pmd->server->charset->str);
-        pmd->server->parse.qs_state = PARSE_COM_QUERY_INIT;
+                G_STRLOC, con->client->charset->str, ss->server->charset->str);
+        ss->server->parse.qs_state = PARSE_COM_QUERY_INIT;
         con->resp_expected_num++;
 
-        g_string_assign(pmd->server->charset, con->client->charset->str);
+        g_string_assign(ss->server->charset, con->client->charset->str);
     }
     return TRUE;
 }
@@ -1510,19 +1510,19 @@ shard_set_default_db_consistant(network_mysqld_con *con)
     gboolean result = TRUE;
 
     for (i = 0; i < con->servers->len; i++) {
-        server_session_t *pmd = g_ptr_array_index(con->servers, i);
-        if (!pmd->participated || pmd->attr_consistent) {
+        server_session_t *ss = g_ptr_array_index(con->servers, i);
+        if (!ss->participated || ss->attr_consistent) {
             continue;
         }
 
-        pmd->attr_adjusted_now = 0;
+        ss->attr_adjusted_now = 0;
 
-        if ((pmd->attr_diff & ATTR_DIF_DEFAULT_DB) == 0) {
+        if ((ss->attr_diff & ATTR_DIF_DEFAULT_DB) == 0) {
             continue;
         }
 
         GString *clt_default_db = con->client->default_db;
-        GString *srv_default_db = pmd->server->default_db;
+        GString *srv_default_db = ss->server->default_db;
 
         if (clt_default_db && clt_default_db->len > 0) {
             if (!g_string_equal(clt_default_db, srv_default_db)) {
@@ -1533,8 +1533,8 @@ shard_set_default_db_consistant(network_mysqld_con *con)
                 g_string_append_len(new_packet, S(clt_default_db));
                 network_mysqld_proto_set_packet_len(new_packet, 1 + clt_default_db->len);
                 network_mysqld_proto_set_packet_id(new_packet, 0);
-                g_queue_push_tail(pmd->server->send_queue->chunks, new_packet);
-                pmd->attr_adjusted_now = 1;
+                g_queue_push_tail(ss->server->send_queue->chunks, new_packet);
+                ss->attr_adjusted_now = 1;
                 g_debug("%s: adjust default db for server, clt:%s, srv:%s",
                         G_STRLOC, clt_default_db->str, srv_default_db->str);
 
@@ -1622,27 +1622,27 @@ build_attr_statements(network_mysqld_con *con)
 }
 
 void
-shard_build_xa_query(network_mysqld_con *con, server_session_t *pmd)
+shard_build_xa_query(network_mysqld_con *con, server_session_t *ss)
 {
     network_socket *recv_sock = con->client;
     GList *chunk = recv_sock->recv_queue->chunks->head;
     GString *packet = (GString *)(chunk->data);
 
-    g_debug("%s:packet id:%d when get server", G_STRLOC, pmd->server->last_packet_id);
+    g_debug("%s:packet id:%d when get server", G_STRLOC, ss->server->last_packet_id);
 
-    pmd->server->parse.qs_state = PARSE_COM_QUERY_INIT;
+    ss->server->parse.qs_state = PARSE_COM_QUERY_INIT;
 
     if (con->parse.command == COM_QUERY) {
         GString *payload = g_string_new(0);
-        network_mysqld_proto_append_query_packet(payload, pmd->sql->str);
-        network_mysqld_queue_reset(pmd->server);
-        network_mysqld_queue_append(pmd->server, pmd->server->send_queue, S(payload));
+        network_mysqld_proto_append_query_packet(payload, ss->sql->str);
+        network_mysqld_queue_reset(ss->server);
+        network_mysqld_queue_append(ss->server, ss->server->send_queue, S(payload));
         g_string_free(payload, TRUE);
     } else {
-        network_queue_append(pmd->server->send_queue, g_string_new_len(packet->str, packet->len));
+        network_queue_append(ss->server->send_queue, g_string_new_len(packet->str, packet->len));
     }
 
-    pmd->state = NET_RW_STATE_NONE;
+    ss->state = NET_RW_STATE_NONE;
 
     con->is_xa_query_sent = 1;
     con->all_participate_num++;
@@ -1650,32 +1650,32 @@ shard_build_xa_query(network_mysqld_con *con, server_session_t *pmd)
 }
 
 static void
-build_xa_command(network_mysqld_con *con, server_session_t *pmd, int end, char *buffer_log)
+build_xa_command(network_mysqld_con *con, server_session_t *ss, int end, char *buffer_log)
 {
     char buffer[XA_CMD_BUF_LEN];
 
-    switch (pmd->dist_tran_state) {
+    switch (ss->dist_tran_state) {
     case NEXT_ST_XA_END:
         snprintf(buffer, XA_CMD_BUF_LEN, "XA END %s", con->xid_str);
         if (con->dist_tran_failed) {
-            pmd->dist_tran_state = NEXT_ST_XA_ROLLBACK;
+            ss->dist_tran_state = NEXT_ST_XA_ROLLBACK;
             con->is_commit_or_rollback = 1;
             g_debug("%s: set is_commit_or_rollback when xa end", G_STRLOC);
         } else {
-            pmd->dist_tran_state = NEXT_ST_XA_PREPARE;
+            ss->dist_tran_state = NEXT_ST_XA_PREPARE;
         }
 
-        g_debug("%s:XA END %s, server:%s", G_STRLOC, con->xid_str, pmd->server->dst->name->str);
+        g_debug("%s:XA END %s, server:%s", G_STRLOC, con->xid_str, ss->server->dst->name->str);
 
         break;
     case NEXT_ST_XA_PREPARE:
         if (con->servers->len == 1) {
             snprintf(buffer, XA_CMD_BUF_LEN, "XA COMMIT %s ONE PHASE", con->xid_str);
-            pmd->dist_tran_state = NEXT_ST_XA_CANDIDATE_OVER;
+            ss->dist_tran_state = NEXT_ST_XA_CANDIDATE_OVER;
             con->dist_tran_decided = 1;
         } else {
             snprintf(buffer, XA_CMD_BUF_LEN, "XA PREPARE %s", con->xid_str);
-            pmd->dist_tran_state = NEXT_ST_XA_COMMIT;
+            ss->dist_tran_state = NEXT_ST_XA_COMMIT;
         }
         if (buffer_log) {
             strcpy(buffer_log, buffer);
@@ -1683,7 +1683,7 @@ build_xa_command(network_mysqld_con *con, server_session_t *pmd, int end, char *
         break;
     case NEXT_ST_XA_COMMIT:
         snprintf(buffer, XA_CMD_BUF_LEN, "XA COMMIT %s", con->xid_str);
-        pmd->dist_tran_state = NEXT_ST_XA_CANDIDATE_OVER;
+        ss->dist_tran_state = NEXT_ST_XA_CANDIDATE_OVER;
         if (buffer_log) {
             strcpy(buffer_log, buffer);
         }
@@ -1695,12 +1695,12 @@ build_xa_command(network_mysqld_con *con, server_session_t *pmd, int end, char *
             strcpy(buffer_log, buffer);
         }
         con->dist_tran_decided = 1;
-        pmd->dist_tran_state = NEXT_ST_XA_CANDIDATE_OVER;
+        ss->dist_tran_state = NEXT_ST_XA_CANDIDATE_OVER;
         break;
     default:
-        pmd->dist_tran_state = NEXT_ST_XA_OVER;
-        pmd->is_xa_over = 1;
-        pmd->dist_tran_participated = 0;
+        ss->dist_tran_state = NEXT_ST_XA_OVER;
+        ss->is_xa_over = 1;
+        ss->dist_tran_participated = 0;
         if (end) {
             con->dist_tran_state = NEXT_ST_XA_OVER;
             g_debug("%s: set dist_tran_state NEXT_ST_XA_OVER for con:%p", G_STRLOC, con);
@@ -1719,18 +1719,18 @@ build_xa_command(network_mysqld_con *con, server_session_t *pmd, int end, char *
     }
 
     if (end) {
-        g_debug("%s: set con dist_tran_state:%d", G_STRLOC, pmd->dist_tran_state);
-        con->dist_tran_state = pmd->dist_tran_state;
+        g_debug("%s: set con dist_tran_state:%d", G_STRLOC, ss->dist_tran_state);
+        con->dist_tran_state = ss->dist_tran_state;
         con->state = ST_SEND_QUERY;
     }
 
-    if (pmd->server->unavailable) {
+    if (ss->server->unavailable) {
         return;
     }
 
-    g_debug("%s:packet id:%d when get server", G_STRLOC, pmd->server->last_packet_id);
+    g_debug("%s:packet id:%d when get server", G_STRLOC, ss->server->last_packet_id);
 
-    pmd->server->parse.qs_state = PARSE_COM_QUERY_INIT;
+    ss->server->parse.qs_state = PARSE_COM_QUERY_INIT;
 
     GString *srv_packet;
 
@@ -1741,67 +1741,67 @@ build_xa_command(network_mysqld_con *con, server_session_t *pmd, int end, char *
     network_mysqld_proto_set_packet_len(srv_packet, 1 + strlen(buffer));
     network_mysqld_proto_set_packet_id(srv_packet, 0);
 
-    g_queue_push_tail(pmd->server->send_queue->chunks, srv_packet);
+    g_queue_push_tail(ss->server->send_queue->chunks, srv_packet);
 
-    pmd->state = NET_RW_STATE_NONE;
+    ss->state = NET_RW_STATE_NONE;
 
     con->resp_expected_num++;
 }
 
 static void
-disp_xa_abnormal_resultset(network_mysqld_con *con, server_session_t *pmd,
+disp_xa_abnormal_resultset(network_mysqld_con *con, server_session_t *ss,
                            int *is_xa_cmd_met, char **p_buffer, char *buffer, int end)
 {
     if (con->dist_tran_state <= NEXT_ST_XA_QUERY) {
-        pmd->dist_tran_state = NEXT_ST_XA_END;
-        build_xa_command(con, pmd, end, NULL);
+        ss->dist_tran_state = NEXT_ST_XA_END;
+        build_xa_command(con, ss, end, NULL);
     } else if (con->dist_tran_state <= NEXT_ST_XA_COMMIT) {
-        pmd->dist_tran_state = NEXT_ST_XA_ROLLBACK;
+        ss->dist_tran_state = NEXT_ST_XA_ROLLBACK;
         if (*is_xa_cmd_met) {
-            build_xa_command(con, pmd, end, NULL);
+            build_xa_command(con, ss, end, NULL);
             (*p_buffer)[0] = ',';
         } else {
             *is_xa_cmd_met = 1;
-            build_xa_command(con, pmd, end, *p_buffer);
+            build_xa_command(con, ss, end, *p_buffer);
             *p_buffer = *p_buffer + strlen(*p_buffer);
             (*p_buffer)[0] = ' ';
         }
         (*p_buffer)++;
         snprintf(*p_buffer, XA_BUF_LEN - (*p_buffer - buffer), "%s@%d",
-                 pmd->server->dst->name->str, pmd->server->challenge->thread_id);
+                 ss->server->dst->name->str, ss->server->challenge->thread_id);
         *p_buffer = *p_buffer + strlen(*p_buffer);
 
     } else if (con->dist_tran_state <= NEXT_ST_XA_ROLLBACK) {
-        if (pmd->dist_tran_state < con->dist_tran_state) {
-            pmd->dist_tran_state = con->dist_tran_state;
-            g_message("%s:adjust pmd dist state:%d to %d", G_STRLOC, pmd->dist_tran_state, con->dist_tran_state);
+        if (ss->dist_tran_state < con->dist_tran_state) {
+            ss->dist_tran_state = con->dist_tran_state;
+            g_message("%s:adjust ss dist state:%d to %d", G_STRLOC, ss->dist_tran_state, con->dist_tran_state);
         }
 
         if (*is_xa_cmd_met) {
-            build_xa_command(con, pmd, end, NULL);
+            build_xa_command(con, ss, end, NULL);
             (*p_buffer)[0] = ',';
         } else {
             *is_xa_cmd_met = 1;
-            build_xa_command(con, pmd, end, *p_buffer);
+            build_xa_command(con, ss, end, *p_buffer);
             *p_buffer = *p_buffer + strlen(*p_buffer);
             (*p_buffer)[0] = ' ';
         }
         (*p_buffer)++;
         snprintf(*p_buffer, XA_BUF_LEN - (*p_buffer - buffer), "%s@%d",
-                 pmd->server->dst->name->str, pmd->server->challenge->thread_id);
+                 ss->server->dst->name->str, ss->server->challenge->thread_id);
         *p_buffer = *p_buffer + strlen(*p_buffer);
 
     } else if (con->dist_tran_state <= NEXT_ST_XA_CANDIDATE_OVER) {
-        build_xa_command(con, pmd, end, NULL);
+        build_xa_command(con, ss, end, NULL);
     }
 }
 
 static void
-disp_xa_according_state(network_mysqld_con *con, server_session_t *pmd,
+disp_xa_according_state(network_mysqld_con *con, server_session_t *ss,
                         int *is_xa_cmd_met, int *is_xa_query, char **p_buffer, char *buffer, int end)
 {
-    if (pmd->dist_tran_state == NEXT_ST_XA_QUERY) {
-        pmd->xa_start_already_sent = 1;
+    if (ss->dist_tran_state == NEXT_ST_XA_QUERY) {
+        ss->xa_start_already_sent = 1;
         con->state = ST_SEND_QUERY;
         if (*is_xa_cmd_met) {
             (*p_buffer)[0] = ',';
@@ -1810,35 +1810,35 @@ disp_xa_according_state(network_mysqld_con *con, server_session_t *pmd,
             *is_xa_cmd_met = 1;
         }
         snprintf(*p_buffer, XA_BUF_LEN - (*p_buffer - buffer), "%s@%d",
-                 pmd->server->dst->name->str, pmd->server->challenge->thread_id);
+                 ss->server->dst->name->str, ss->server->challenge->thread_id);
         *p_buffer = *p_buffer + strlen(*p_buffer);
-        shard_build_xa_query(con, pmd);
+        shard_build_xa_query(con, ss);
         *is_xa_query = 1;
         g_debug("%s:set is xa query true for con:%p", G_STRLOC, con);
         if (con->is_auto_commit) {
-            pmd->dist_tran_state = NEXT_ST_XA_END;
+            ss->dist_tran_state = NEXT_ST_XA_END;
         }
     } else {
-        switch (pmd->dist_tran_state) {
+        switch (ss->dist_tran_state) {
         case NEXT_ST_XA_PREPARE:
         case NEXT_ST_XA_COMMIT:
         case NEXT_ST_XA_ROLLBACK:
             if (*is_xa_cmd_met) {
-                build_xa_command(con, pmd, end, NULL);
+                build_xa_command(con, ss, end, NULL);
                 (*p_buffer)[0] = ',';
             } else {
                 *is_xa_cmd_met = 1;
-                build_xa_command(con, pmd, end, *p_buffer);
+                build_xa_command(con, ss, end, *p_buffer);
                 *p_buffer = *p_buffer + strlen(*p_buffer);
                 (*p_buffer)[0] = ' ';
             }
             (*p_buffer)++;
             snprintf(*p_buffer, XA_BUF_LEN - (*p_buffer - buffer), "%s@%d",
-                     pmd->server->dst->name->str, pmd->server->challenge->thread_id);
+                     ss->server->dst->name->str, ss->server->challenge->thread_id);
             *p_buffer = *p_buffer + strlen(*p_buffer);
             break;
         default:
-            build_xa_command(con, pmd, end, NULL);
+            build_xa_command(con, ss, end, NULL);
             break;
         }
     }
@@ -1865,19 +1865,19 @@ build_xa_statements(network_mysqld_con *con)
     char *p_buffer = buffer;
 
     for (iter = 0; iter < len; iter++) {
-        server_session_t *pmd = g_ptr_array_index(con->servers, iter);
-        g_debug("%s: pmd %d, xa state:%d for con:%p", G_STRLOC, iter, pmd->dist_tran_state, con);
+        server_session_t *ss = g_ptr_array_index(con->servers, iter);
+        g_debug("%s: ss %d, xa state:%d for con:%p", G_STRLOC, iter, ss->dist_tran_state, con);
 
-        if (!con->is_commit_or_rollback && !pmd->participated) {
+        if (!con->is_commit_or_rollback && !ss->participated) {
             g_debug("%s: stop processing for this server:%d", G_STRLOC, iter);
             continue;
         }
 
-        if (!pmd->dist_tran_participated) {
+        if (!ss->dist_tran_participated) {
             continue;
         }
 
-        if (pmd->server->unavailable) {
+        if (ss->server->unavailable) {
             g_message("%s: server unavailable and stop processing here:%d", G_STRLOC, iter);
             continue;
         }
@@ -1888,26 +1888,26 @@ build_xa_statements(network_mysqld_con *con)
             end = 1;
         }
 
-        pmd->participated = 1;
-        network_socket *server = pmd->server;
+        ss->participated = 1;
+        network_socket *server = ss->server;
         int result = 0;
         if (con->dist_tran_failed) {
             result = -1;
             if (server->recv_queue->chunks->head) {
                 if (check_dist_tran_resultset(server->recv_queue, con) == -1) {
-                    pmd->xa_query_status_error_and_abort = 1;
+                    ss->xa_query_status_error_and_abort = 1;
                     con->xa_query_status_error_and_abort = 1;
                 }
             }
         } else {
-            pmd->xa_query_status_error_and_abort = 0;
+            ss->xa_query_status_error_and_abort = 0;
 
             if (server->recv_queue->chunks->head) {
                 result = check_dist_tran_resultset(server->recv_queue, con);
             }
 
             if (result == -1) {
-                pmd->xa_query_status_error_and_abort = 1;
+                ss->xa_query_status_error_and_abort = 1;
                 con->dist_tran_failed = 1;
                 con->xa_query_status_error_and_abort = 1;
                 g_message("%s: query status not ok, xid:%llu", G_STRLOC, con->xa_id);
@@ -1919,12 +1919,12 @@ build_xa_statements(network_mysqld_con *con)
         }
 
         if (result == -1) {
-            disp_xa_abnormal_resultset(con, pmd, &is_xa_cmd_met, &p_buffer, buffer, end);
+            disp_xa_abnormal_resultset(con, ss, &is_xa_cmd_met, &p_buffer, buffer, end);
         } else {
-            disp_xa_according_state(con, pmd, &is_xa_cmd_met, &is_xa_query, &p_buffer, buffer, end);
+            disp_xa_according_state(con, ss, &is_xa_cmd_met, &is_xa_query, &p_buffer, buffer, end);
         }
 
-        global_xa_state = pmd->dist_tran_state;
+        global_xa_state = ss->dist_tran_state;
     }
 
     if (workers == 0) {
@@ -1959,15 +1959,15 @@ retrieve_error_info_for_xa_trans(network_mysqld_con *con)
     int len = con->servers->len;
 
     for (iter = 0; iter < len; iter++) {
-        server_session_t *pmd = g_ptr_array_index(con->servers, iter);
-        if (!pmd->xa_query_status_error_and_abort) {
+        server_session_t *ss = g_ptr_array_index(con->servers, iter);
+        if (!ss->xa_query_status_error_and_abort) {
             continue;
         }
 
         GQueue *out;
         network_queue *in;
 
-        out = pmd->server->recv_queue->chunks;
+        out = ss->server->recv_queue->chunks;
         in = con->client->send_queue;
 
         GString *packet = g_queue_pop_head(out);
@@ -1994,13 +1994,13 @@ retrieve_one_resp_for_xa_trans(network_mysqld_con *con)
     int len = con->servers->len;
 
     for (iter = 0; iter < len; iter++) {
-        server_session_t *pmd = g_ptr_array_index(con->servers, iter);
-        if (pmd->server->unavailable || !pmd->participated) {
+        server_session_t *ss = g_ptr_array_index(con->servers, iter);
+        if (ss->server->unavailable || !ss->participated) {
             continue;
         }
 
-        g_debug("%s: retrieve packets for server:%p, index:%d", G_STRLOC, pmd->server, iter);
-        out = pmd->server->recv_queue->chunks;
+        g_debug("%s: retrieve packets for server:%p, index:%d", G_STRLOC, ss->server, iter);
+        out = ss->server->recv_queue->chunks;
         in = con->client->send_queue;
 
         packet = g_queue_pop_head(out);
@@ -2027,9 +2027,9 @@ normal_result_merge(network_mysqld_con *con)
     /* get all participants' receive queues */
     int i;
     for (i = 0; i < len; i++) {
-        server_session_t *pmd = g_ptr_array_index(con->servers, i);
-        if (pmd->participated) {
-            g_ptr_array_add(recv_queues, pmd->server->recv_queue);
+        server_session_t *ss = g_ptr_array_index(con->servers, i);
+        if (ss->participated) {
+            g_ptr_array_add(recv_queues, ss->server->recv_queue);
         }
     }
 
@@ -2103,23 +2103,23 @@ disp_query_after_consistant_attr(network_mysqld_con *con)
 
     size_t i;
     for (i = 0; i < con->servers->len; i++) {
-        server_session_t *pmd = g_ptr_array_index(con->servers, i);
-        if (!con->is_commit_or_rollback && !pmd->participated) {
+        server_session_t *ss = g_ptr_array_index(con->servers, i);
+        if (!con->is_commit_or_rollback && !ss->participated) {
             continue;
         }
-        g_debug("%s:packet id:%d when get server, pmd state:%d",
-                G_STRLOC, pmd->server->last_packet_id, pmd->dist_tran_state);
+        g_debug("%s:packet id:%d when get server, ss state:%d",
+                G_STRLOC, ss->server->last_packet_id, ss->dist_tran_state);
 
-        pmd->server->parse.qs_state = PARSE_COM_QUERY_INIT;
+        ss->server->parse.qs_state = PARSE_COM_QUERY_INIT;
 
         if (con->dist_tran) {
-            pmd->xa_start_already_sent = 1;
-            if (pmd->dist_tran_state == NEXT_ST_XA_START) {
-                network_mysqld_send_xa_start(pmd->server, con->xid_str);
-                g_debug("%s: %s, server:%s", G_STRLOC, con->xid_str, pmd->server->dst->name->str);
+            ss->xa_start_already_sent = 1;
+            if (ss->dist_tran_state == NEXT_ST_XA_START) {
+                network_mysqld_send_xa_start(ss->server, con->xid_str);
+                g_debug("%s: %s, server:%s", G_STRLOC, con->xid_str, ss->server->dst->name->str);
                 con->resp_expected_num++;
-                pmd->dist_tran_state = NEXT_ST_XA_QUERY;
-                pmd->xa_start_already_sent = 0;
+                ss->dist_tran_state = NEXT_ST_XA_QUERY;
+                ss->xa_start_already_sent = 0;
                 con->xa_start_phase = 1;
             } else {
                 continue;
@@ -2127,17 +2127,17 @@ disp_query_after_consistant_attr(network_mysqld_con *con)
         } else {
             if (con->parse.command == COM_QUERY) {
                 GString *payload = g_string_new(0);
-                network_mysqld_proto_append_query_packet(payload, pmd->sql->str);
-                network_mysqld_queue_reset(pmd->server);
-                network_mysqld_queue_append(pmd->server, pmd->server->send_queue, S(payload));
+                network_mysqld_proto_append_query_packet(payload, ss->sql->str);
+                network_mysqld_queue_reset(ss->server);
+                network_mysqld_queue_append(ss->server, ss->server->send_queue, S(payload));
                 g_string_free(payload, TRUE);
             } else {
-                network_queue_append(pmd->server->send_queue, g_string_new_len(packet->str, packet->len));
+                network_queue_append(ss->server->send_queue, g_string_new_len(packet->str, packet->len));
             }
             con->resp_expected_num++;
         }
 
-        pmd->state = NET_RW_STATE_NONE;
+        ss->state = NET_RW_STATE_NONE;
     }
 
     if (!con->dist_tran) {
@@ -2308,29 +2308,29 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
 }
 
 static void
-process_write_to_server(network_mysqld_con *con, server_session_t *pmd, int *write_wait)
+process_write_to_server(network_mysqld_con *con, server_session_t *ss, int *write_wait)
 {
     network_socket_retval_t ret;
 
     con->num_write_pending++;
-    ret = network_mysqld_write(con->srv, pmd->server);
+    ret = network_mysqld_write(con->srv, ss->server);
 
     switch (ret) {
     case NETWORK_SOCKET_SUCCESS:
         con->num_pending_servers++;
         con->num_servers_visited++;
         con->num_read_pending++;
-        pmd->read_cal_flag = 0;
-        g_debug("%s:num_read_pending:%d, pmd->index:%d, reset 0 for con:%p",
-                G_STRLOC, con->num_read_pending, pmd->index, con);
+        ss->read_cal_flag = 0;
+        g_debug("%s:num_read_pending:%d, ss->index:%d, reset 0 for con:%p",
+                G_STRLOC, con->num_read_pending, ss->index, con);
         con->num_write_pending--;
-        pmd->state = NET_RW_STATE_READ;
+        ss->state = NET_RW_STATE_READ;
         break;
     case NETWORK_SOCKET_WAIT_FOR_EVENT:
-        pmd->state = NET_RW_STATE_WRITE;
+        ss->state = NET_RW_STATE_WRITE;
 
         g_debug("%s:write waits for con:%p", G_STRLOC, con);
-        server_sess_wait_for_event(pmd, EV_WRITE, &con->write_timeout);
+        server_sess_wait_for_event(ss, EV_WRITE, &con->write_timeout);
 
         *write_wait = 1;
         break;
@@ -2369,31 +2369,31 @@ process_shard_write(network_mysqld_con *con, int *disp_flag)
 
     int i, write_wait = 0;
     for (i = 0; i < con->servers->len; i++) {
-        server_session_t *pmd = g_ptr_array_index(con->servers, i);
-        pmd->index = i;
-        pmd->fresh = 0;
-        pmd->server->compressed_packet_id = 0;
-        pmd->server->resp_len = 0;
-        pmd->server->is_read_finished = 0;
-        pmd->server->is_waiting = 0;
+        server_session_t *ss = g_ptr_array_index(con->servers, i);
+        ss->index = i;
+        ss->fresh = 0;
+        ss->server->compressed_packet_id = 0;
+        ss->server->resp_len = 0;
+        ss->server->is_read_finished = 0;
+        ss->server->is_waiting = 0;
 
-        if (!pmd->participated || pmd->server->unavailable) {
+        if (!ss->participated || ss->server->unavailable) {
             g_debug("%s:not participated or unavailable:%d for con%p", G_STRLOC, i, con);
             continue;
         }
 
         if (con->attr_adj_state != ATTR_START) {
-            if (!pmd->attr_adjusted_now) {
+            if (!ss->attr_adjusted_now) {
                 g_debug("%s:skip here for con:%p", G_STRLOC, con);
                 continue;
             }
         }
-        pmd->server->parse.command = con->parse.command;
-        pmd->state = NET_RW_STATE_NONE;
-        pmd->server->resp_len = 0;
+        ss->server->parse.command = con->parse.command;
+        ss->state = NET_RW_STATE_NONE;
+        ss->server->resp_len = 0;
 
-        if (!g_queue_is_empty(pmd->server->send_queue->chunks)) {
-            process_write_to_server(con, pmd, &write_wait);
+        if (!g_queue_is_empty(ss->server->send_queue->chunks)) {
+            process_write_to_server(con, ss, &write_wait);
         }
     }                           /* for each server */
 
@@ -2521,15 +2521,15 @@ handle_send_query_to_servers(network_mysqld_con *con, network_mysqld_con_state_t
 }
 
 static int
-shard_read_response(network_mysqld_con *con, server_session_t *pmd)
+shard_read_response(network_mysqld_con *con, server_session_t *ss)
 {
-    if (pmd->server->resp_len == 0 && pmd->server->to_read == 0) {
-        switch (network_socket_to_read(pmd->server)) {
+    if (ss->server->resp_len == 0 && ss->server->to_read == 0) {
+        switch (network_socket_to_read(ss->server)) {
         case NETWORK_SOCKET_SUCCESS:
-            if (pmd->server->to_read == 0) {
-                pmd->state = NET_RW_STATE_READ;
+            if (ss->server->to_read == 0) {
+                ss->state = NET_RW_STATE_READ;
                 g_debug("%s:read wait here for con:%p", G_STRLOC, con);
-                server_sess_wait_for_event(pmd, EV_READ, &con->read_timeout);
+                server_sess_wait_for_event(ss, EV_READ, &con->read_timeout);
                 return DISP_CONTINUE;
             }
             break;
@@ -2549,61 +2549,61 @@ shard_read_response(network_mysqld_con *con, server_session_t *pmd)
     }
 
     int is_finished = 0;
-    switch (network_mysqld_read_mul_packets(con->srv, con, pmd->server, &is_finished)) {
+    switch (network_mysqld_read_mul_packets(con->srv, con, ss->server, &is_finished)) {
     case NETWORK_SOCKET_SUCCESS:
         if (is_finished) {
             con->num_pending_servers--;
-            if (pmd->read_cal_flag == 0) {
+            if (ss->read_cal_flag == 0) {
                 con->num_read_pending--;
-                pmd->read_cal_flag = 1;
+                ss->read_cal_flag = 1;
             }
 
-            set_conn_attr(con, pmd->server);
-            pmd->state = NET_RW_STATE_FINISHED;
-            pmd->server->is_read_finished = 1;
-            pmd->server->is_waiting = 0;
+            set_conn_attr(con, ss->server);
+            ss->state = NET_RW_STATE_FINISHED;
+            ss->server->is_read_finished = 1;
+            ss->server->is_waiting = 0;
             break;
         } else {
-            pmd->state = NET_RW_STATE_READ;
+            ss->state = NET_RW_STATE_READ;
             g_debug("%s:server_sess_wait_for_event for con:%p", G_STRLOC, con);
-            server_sess_wait_for_event(pmd, EV_READ, &con->read_timeout);
+            server_sess_wait_for_event(ss, EV_READ, &con->read_timeout);
             con->num_read_pending++;
-            pmd->read_cal_flag = 0;
-            g_debug("%s:num_read_pending:%d, pmd->index:%d for con:%p",
-                    G_STRLOC, con->num_read_pending, pmd->index, con);
+            ss->read_cal_flag = 0;
+            g_debug("%s:num_read_pending:%d, ss->index:%d for con:%p",
+                    G_STRLOC, con->num_read_pending, ss->index, con);
 
             break;
         }
     case NETWORK_SOCKET_WAIT_FOR_EVENT:
         if (con->candidate_tcp_streamed) {
-            if (!pmd->server->max_header_size_reached) {
-                pmd->state = NET_RW_STATE_READ;
-                server_sess_wait_for_event(pmd, EV_READ, &con->read_timeout);
+            if (!ss->server->max_header_size_reached) {
+                ss->state = NET_RW_STATE_READ;
+                server_sess_wait_for_event(ss, EV_READ, &con->read_timeout);
             } else {
                 if (con->num_servers_visited > 1) {
-                    pmd->state = NET_RW_STATE_PART_FINISHED;
-                    if (pmd->read_cal_flag == 0) {
+                    ss->state = NET_RW_STATE_PART_FINISHED;
+                    if (ss->read_cal_flag == 0) {
                         con->num_read_pending--;
-                        pmd->read_cal_flag = 1;
+                        ss->read_cal_flag = 1;
                     }
-                    g_debug("%s:num read pending:%d for fd:%d", G_STRLOC, con->num_read_pending, pmd->server->fd);
+                    g_debug("%s:num read pending:%d for fd:%d", G_STRLOC, con->num_read_pending, ss->server->fd);
                     if (con->num_read_pending == 0) {
-                        set_conn_attr(con, pmd->server);
+                        set_conn_attr(con, ss->server);
                     }
                 } else {
                     g_message("%s: here, we send_part_content_to_client", G_STRLOC);
                     send_part_content_to_client(con);
-                    pmd->state = NET_RW_STATE_READ;
-                    g_debug("%s:num_read_pending:%d, pmd->index:%d for con:%p",
-                            G_STRLOC, con->num_read_pending, pmd->index, con);
-                    server_sess_wait_for_event(pmd, EV_READ, &con->read_timeout);
+                    ss->state = NET_RW_STATE_READ;
+                    g_debug("%s:num_read_pending:%d, ss->index:%d for con:%p",
+                            G_STRLOC, con->num_read_pending, ss->index, con);
+                    server_sess_wait_for_event(ss, EV_READ, &con->read_timeout);
                 }
             }
         } else {
-            pmd->state = NET_RW_STATE_READ;
-            g_debug("%s:num_read_pending:%d for fd:%d, pmd->index:%d",
-                    G_STRLOC, con->num_read_pending, pmd->server->fd, pmd->index);
-            server_sess_wait_for_event(pmd, EV_READ, &con->read_timeout);
+            ss->state = NET_RW_STATE_READ;
+            g_debug("%s:num_read_pending:%d for fd:%d, ss->index:%d",
+                    G_STRLOC, con->num_read_pending, ss->server->fd, ss->index);
+            server_sess_wait_for_event(ss, EV_READ, &con->read_timeout);
         }
         break;
     case NETWORK_SOCKET_ERROR:
@@ -2699,13 +2699,13 @@ read_server_resp(network_mysqld_con *con, int *disp_flag)
     int i;
 
     for (i = 0; i < con->servers->len; i++) {
-        server_session_t *pmd = g_ptr_array_index(con->servers, i);
+        server_session_t *ss = g_ptr_array_index(con->servers, i);
 
-        if (!pmd->participated || (con->dist_tran && con->xa_start_phase && pmd->xa_start_already_sent)) {
+        if (!ss->participated || (con->dist_tran && con->xa_start_phase && ss->xa_start_already_sent)) {
             g_debug("%s: server not participated", G_STRLOC);
             continue;
         }
-        network_socket *server = pmd->server;
+        network_socket *server = ss->server;
 
         if (server->unavailable || server->is_waiting) {
             g_debug("%s: omit here", G_STRLOC);
@@ -2713,18 +2713,18 @@ read_server_resp(network_mysqld_con *con, int *disp_flag)
         }
 
         if (con->attr_adj_state >= ATTR_DIF_CHANGE_USER) {
-            if (pmd->attr_adjusted_now == 0 || pmd->attr_consistent) {
+            if (ss->attr_adjusted_now == 0 || ss->attr_consistent) {
                 g_debug("%s: server attr consistent, adj state:%d for con:%p", G_STRLOC, con->attr_adj_state, con);
                 continue;
             }
         }
 
-        if (pmd->state == NET_RW_STATE_FINISHED || pmd->state == NET_RW_STATE_WRITE) {
+        if (ss->state == NET_RW_STATE_FINISHED || ss->state == NET_RW_STATE_WRITE) {
             g_debug("%s: omit here", G_STRLOC);
             continue;
         }
 
-        if (pmd->state == NET_RW_STATE_ERROR) {
+        if (ss->state == NET_RW_STATE_ERROR) {
             g_message("%s: read server error", G_STRLOC);
             if (con->dist_tran) {
                 record_xa_log_for_mending(con, server);
@@ -2734,8 +2734,8 @@ read_server_resp(network_mysqld_con *con, int *disp_flag)
             } else {
                 int j;
                 for (j = 0; j < i; j++) {
-                    pmd = g_ptr_array_index(con->servers, j);
-                    network_mysqld_con_send_command(pmd->server, COM_STMT_RESET, "\x00\x00");
+                    ss = g_ptr_array_index(con->servers, j);
+                    network_mysqld_con_send_command(ss->server, COM_STMT_RESET, "\x00\x00");
                 }
 
                 network_mysqld_con_send_error(con->client, C("server error"));
@@ -2753,7 +2753,7 @@ read_server_resp(network_mysqld_con *con, int *disp_flag)
             }
         }
 
-        if (shard_read_response(con, pmd) == DISP_STOP) {
+        if (shard_read_response(con, ss) == DISP_STOP) {
             *disp_flag = DISP_STOP;
             return 0;
         }
@@ -2773,36 +2773,36 @@ check_server_status(network_mysqld_con *con, int *srv_down_count, int *srv_respo
     int i;
 
     for (i = 0; i < con->servers->len; i++) {
-        server_session_t *pmd = g_ptr_array_index(con->servers, i);
+        server_session_t *ss = g_ptr_array_index(con->servers, i);
 
-        if (!pmd->participated) {
+        if (!ss->participated) {
             g_debug("%s: server not participated", G_STRLOC);
             continue;
         }
 
-        network_socket *server = pmd->server;
+        network_socket *server = ss->server;
         if (server->unavailable) {
             (*srv_down_count)++;
             continue;
         }
 
         if (con->attr_adj_state >= ATTR_DIF_CHANGE_USER) {
-            if (pmd->attr_consistent) {
+            if (ss->attr_consistent) {
                 continue;
             }
-            if (!pmd->attr_adjusted_now) {
+            if (!ss->attr_adjusted_now) {
                 continue;
             }
         }
 
-        if (pmd->state != NET_RW_STATE_FINISHED && pmd->state != NET_RW_STATE_PART_FINISHED) {
-            if (pmd->state == NET_RW_STATE_ERROR) {
+        if (ss->state != NET_RW_STATE_FINISHED && ss->state != NET_RW_STATE_PART_FINISHED) {
+            if (ss->state == NET_RW_STATE_ERROR) {
                 while (con->servers->len > 0) {
-                    pmd = g_ptr_array_remove_index_fast(con->servers, 0);
-                    network_socket_free(pmd->server);
-                    pmd->sql = NULL;
-                    pmd->server = NULL;
-                    server_session_free(pmd);
+                    ss = g_ptr_array_remove_index_fast(con->servers, 0);
+                    network_socket_free(ss->server);
+                    ss->sql = NULL;
+                    ss->server = NULL;
+                    server_session_free(ss);
                 }
 
                 network_mysqld_con_send_error(con->client, C("server error"));
@@ -2823,7 +2823,7 @@ check_server_status(network_mysqld_con *con, int *srv_down_count, int *srv_respo
             g_debug("fd(%d) srv_response_count added", server->fd);
             (*srv_response_count)++;
         }
-    }                           /* for each pmd server */
+    }                           /* for each ss server */
 }
 
 static void
@@ -2918,27 +2918,27 @@ disp_resp_workers_not_matched(network_mysqld_con *con, int *disp_flag)
 static void
 disp_single_resp(network_mysqld_con *con)
 {
-    server_session_t *pmd = NULL;
+    server_session_t *ss = NULL;
 
     if (con->dist_tran) {
         int iter;
         for (iter = 0; iter < con->servers->len; iter++) {
-            server_session_t *candidate_pmd = g_ptr_array_index(con->servers, iter);
-            if (candidate_pmd->participated && !candidate_pmd->server->unavailable) {
-                pmd = candidate_pmd;
+            server_session_t *candidate_ss = g_ptr_array_index(con->servers, iter);
+            if (candidate_ss->participated && !candidate_ss->server->unavailable) {
+                ss = candidate_ss;
                 break;
             }
         }
 
     } else {
-        pmd = g_ptr_array_index(con->servers, 0);
+        ss = g_ptr_array_index(con->servers, 0);
     }
 
-    if (pmd != NULL) {
+    if (ss != NULL) {
         GQueue *out;
         network_queue *in;
 
-        out = pmd->server->recv_queue->chunks;
+        out = ss->server->recv_queue->chunks;
         in = con->client->send_queue;
 
         GString *packet = g_queue_pop_head(out);
@@ -3192,15 +3192,15 @@ process_service_unavailable(network_mysqld_con *con)
         g_debug("%s: server num :%d for con:%p", G_STRLOC, (int)con->servers->len, con);
         size_t i;
         for (i = 0; i < con->servers->len; i++) {
-            server_session_t *pmd = g_ptr_array_index(con->servers, i);
-            if (pmd->fresh) {
-                network_pool_add_idle_conn(pmd->backend->pool, con->srv, pmd->server);
-                pmd->backend->connected_clients--;
+            server_session_t *ss = g_ptr_array_index(con->servers, i);
+            if (ss->fresh) {
+                network_pool_add_idle_conn(ss->backend->pool, con->srv, ss->server);
+                ss->backend->connected_clients--;
                 g_message("%s: connected_clients sub:%d, %d ndx for con:%p", G_STRLOC,
-                          pmd->backend->connected_clients, (int)i, con);
-                g_ptr_array_remove(con->servers, pmd);
-                pmd->server = NULL;
-                server_session_free(pmd);
+                          ss->backend->connected_clients, (int)i, con);
+                g_ptr_array_remove(con->servers, ss);
+                ss->server = NULL;
+                server_session_free(ss);
                 i--;
             }
         }

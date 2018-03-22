@@ -24,7 +24,7 @@
 #include "network-socket.h"
 #include "network-mysqld.h"
 
-void server_session_free(server_session_t *pmd);
+void server_session_free(server_session_t *ss);
 
 void server_session_con_handler(int event_fd, short events, void *user_data);
 

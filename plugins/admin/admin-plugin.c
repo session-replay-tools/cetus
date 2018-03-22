@@ -436,12 +436,12 @@ admin_send_backend_detail_info(network_mysqld_con *admin_con, const char *sql)
         }
 
         for (j = 0; j < con->servers->len; j++) {
-            server_session_t *pmd = g_ptr_array_index(con->servers, j);
+            server_session_t *ss = g_ptr_array_index(con->servers, j);
 
             GHashTable *table = g_hash_table_lookup(back_user_conn_hash_table,
-                                                    pmd->backend->addr->name->str);
+                                                    ss->backend->addr->name->str);
             if (table == NULL) {
-                g_warning("%s: table is null for backend:%s", G_STRLOC, pmd->backend->addr->name->str);
+                g_warning("%s: table is null for backend:%s", G_STRLOC, ss->backend->addr->name->str);
                 continue;
             }
 
@@ -734,14 +734,14 @@ admin_show_connectionlist(network_mysqld_con *admin_con, const char *sql)
             int j;
             GString *servers = g_string_new(NULL);
             for (j = 0; j < con->servers->len; j++) {
-                server_session_t *pmd = g_ptr_array_index(con->servers, j);
-                if (pmd && pmd->server) {
-                    if (pmd->server->src) {
-                        g_string_append_len(servers, S(pmd->server->src->name));
+                server_session_t *ss = g_ptr_array_index(con->servers, j);
+                if (ss && ss->server) {
+                    if (ss->server->src) {
+                        g_string_append_len(servers, S(ss->server->src->name));
                         char *delim = "->";
                         g_string_append_len(servers, delim, strlen(delim));
                     }
-                    g_string_append_len(servers, S(pmd->server->dst->name));
+                    g_string_append_len(servers, S(ss->server->dst->name));
                     g_string_append_c(servers, ' ');
                 }
             }

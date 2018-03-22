@@ -43,9 +43,9 @@ shard_plugin_con_free(network_mysqld_con *con, shard_plugin_con_t *st)
     if (con->servers) {
         int i;
         for (i = 0; i < con->servers->len; i++) {
-            server_session_t *pmd = g_ptr_array_index(con->servers, i);
-            pmd->sql = NULL;
-            g_free(pmd);
+            server_session_t *ss = g_ptr_array_index(con->servers, i);
+            ss->sql = NULL;
+            g_free(ss);
         }
         con->server = NULL;
     } else {

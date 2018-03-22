@@ -169,7 +169,7 @@ Cetus内置监控功能，可通过配置选择开启或关闭。开启后Cetus�
 支持利用域名连接数据库后端，Cetus设有相关的启动配置选项disable-dns-cache，选择是否开启解析连接到后端的域名功能，开启后可以通过设置域名并利用域名访问后端。
 
 ### 9.insert批量操作
-支持在insert语句中写多个value，value之间用","隔开，前面的insert语句可省略，例如：
+支持在insert语句中写多个value，value之间用","隔开，例如：
 INSERT INTO table (field1,field2,field3) VALUES ('a',"b","c"), ('a',"b","c"),('a',"b","c");
 
 ## 注意事项
@@ -220,7 +220,7 @@ INSERT INTO table (field1,field2,field3) VALUES ('a',"b","c"), ('a',"b","c"),('a
 
 1. 在Select语句中尽量为表达式列或函数计算列添加别名，比如“select count(\*) rowcnt from ...”，以利于提高SQL解释器的分析水平。 
 2. Sql文本要简洁，针对sharding表，如果有条件，请务必加sharding key做为过滤条件。
-3. 开启事务请使用start transaction。
+3. 开启事务推荐使用start transaction。
 4. 少用子查询这种写法，必须用的话，可以用关联查询语法进行替换。
 5. Update/delete操作要根据sharding key进行过滤后操作（仅针对分片表）。
 6. For update语句不建议使用，锁开销严重，建议在应用端处理该业务逻辑，比如引入分布式锁或者先分配给redis等等。

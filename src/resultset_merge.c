@@ -1904,32 +1904,32 @@ heap_adjust(heap_type *heap, int s, int m, int *compare_failed)
 }
 
 static void
-check_server_sess_wait_for_event(network_mysqld_con *con, int pmd_index, short ev_type, struct timeval *timeout)
+check_server_sess_wait_for_event(network_mysqld_con *con, int ss_index, short ev_type, struct timeval *timeout)
 {
     size_t i;
     for (i = 0; i < con->servers->len; i++) {
-        server_session_t *pmd = g_ptr_array_index(con->servers, i);
-        if (pmd_index >= 0) {
-            if (pmd_index != i) {
+        server_session_t *ss = g_ptr_array_index(con->servers, i);
+        if (ss_index >= 0) {
+            if (ss_index != i) {
                 continue;
             }
         }
 
-        if (!pmd->server->is_read_finished) {
-            if (pmd->server->is_waiting) {
-                g_debug("%s: pmd %d is waiting", G_STRLOC, (int)i);
+        if (!ss->server->is_read_finished) {
+            if (ss->server->is_waiting) {
+                g_debug("%s: ss %d is waiting", G_STRLOC, (int)i);
                 continue;
             }
             con->num_read_pending++;
-            pmd->read_cal_flag = 0;
-            g_debug("%s: pmd %d is not read finished, read pending:%d, fd:%d, pmd index:%d",
-                    G_STRLOC, (int)i, con->num_read_pending, pmd->server->fd, pmd->index);
-            event_set(&(pmd->server->event), pmd->server->fd, ev_type, server_session_con_handler, pmd);
-            chassis_event_add_with_timeout(con->srv, &(pmd->server->event), timeout);
+            ss->read_cal_flag = 0;
+            g_debug("%s: ss %d is not read finished, read pending:%d, fd:%d, ss index:%d",
+                    G_STRLOC, (int)i, con->num_read_pending, ss->server->fd, ss->index);
+            event_set(&(ss->server->event), ss->server->fd, ev_type, server_session_con_handler, ss);
+            chassis_event_add_with_timeout(con->srv, &(ss->server->event), timeout);
             g_debug("%s: call chassis_event_add_with_timeout", G_STRLOC);
-            pmd->server->is_waiting = 1;
+            ss->server->is_waiting = 1;
         } else {
-            g_debug("%s: pmd %d is read finished", G_STRLOC, (int)i);
+            g_debug("%s: ss %d is read finished", G_STRLOC, (int)i);
         }
     }
 }
@@ -2066,8 +2066,8 @@ do_simple_merge(network_mysqld_con *con, merge_parameters_t *data, int is_finish
         }
 
         if (candidate == NULL || candidate->data == NULL) {
-            server_session_t *pmd = g_ptr_array_index(con->servers, iter);
-            if (pmd->server->is_waiting) {
+            server_session_t *ss = g_ptr_array_index(con->servers, iter);
+            if (ss->server->is_waiting) {
                 g_debug("%s: is_waiting true:%d", G_STRLOC, (int)iter);
                 continue;
             }
@@ -2183,7 +2183,7 @@ do_sort_merge(network_mysqld_con *con, merge_parameters_t *data, int is_finished
 
         candidates[cand_index] = candidate->next;
         network_queue *recv_queue = recv_queues->pdata[cand_index];
-        g_debug("%s: remove candidate:%p for queue:%p, pmd:%d", G_STRLOC, candidate, recv_queue, cand_index);
+        g_debug("%s: remove candidate:%p for queue:%p, ss:%d", G_STRLOC, candidate, recv_queue, cand_index);
         g_queue_delete_link(recv_queue->chunks, candidate);
 
         if (candidates[cand_index] == NULL || candidates[cand_index]->data == NULL) {
@@ -2213,7 +2213,7 @@ do_sort_merge(network_mysqld_con *con, merge_parameters_t *data, int is_finished
             heap->element[0]->is_over = 0;
         }
 
-        g_debug("%s: candidate:%p for queue:%p, pmd:%d", G_STRLOC, candidates[cand_index], recv_queue, cand_index);
+        g_debug("%s: candidate:%p for queue:%p, ss:%d", G_STRLOC, candidates[cand_index], recv_queue, cand_index);
 
         heap_adjust(heap, 1, recv_queues->len, compare_failed);
         if (*compare_failed) {
@@ -3008,9 +3008,9 @@ check_fail_met(sql_context_t *context, network_queue *send_queue, GPtrArray *rec
         if (pkt != NULL && pkt->len > NET_HEADER_SIZE) {
             guchar pkt_type = get_pkt_type(pkt);
             if (pkt_type == MYSQLD_PACKET_ERR || pkt_type == MYSQLD_PACKET_EOF) {
-                server_session_t *pmd = g_ptr_array_index(con->servers, p);
+                server_session_t *ss = g_ptr_array_index(con->servers, p);
                 if (pkt_type == MYSQLD_PACKET_ERR) {
-                    g_warning("%s: failed query:%s, server:%s", G_STRLOC, orig_sql, pmd->server->dst->name->str);
+                    g_warning("%s: failed query:%s, server:%s", G_STRLOC, orig_sql, ss->server->dst->name->str);
                 }
                 if (context->stmt_type == STMT_CALL) {
                     if (!(*call_fail_met)) {
@@ -3018,14 +3018,14 @@ check_fail_met(sql_context_t *context, network_queue *send_queue, GPtrArray *rec
                         chassis *srv = con->srv;
                         *uniq_id = incremental_guid_get_next(&(srv->guid_state));
                     }
-                    log_packet_error_info(con->client, pmd->server, orig_sql, pkt, *uniq_id);
+                    log_packet_error_info(con->client, ss->server, orig_sql, pkt, *uniq_id);
                     continue;
                 } else {
                     network_queue_append(send_queue, pkt);
                     g_queue_pop_head(recv_q->chunks);
                     if (context->rw_flag & CF_DDL) {
                         g_warning("%s: failed ddl query:%s, server:%s",
-                                  G_STRLOC, orig_sql, pmd->server->dst->name->str);
+                                  G_STRLOC, orig_sql, ss->server->dst->name->str);
                     }
                     return 0;
                 }

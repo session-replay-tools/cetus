@@ -498,10 +498,10 @@ proxy_put_shard_conn_to_pool(network_mysqld_con *con)
     int is_reduced = 0;
 
     for (i = 0; i < con->servers->len; i++) {
-        server_session_t *pmd = (server_session_t *)g_ptr_array_index(con->servers, i);
-        if (pmd) {
-            network_connection_pool *pool = pmd->backend->pool;
-            network_socket *server = pmd->server;
+        server_session_t *ss = (server_session_t *)g_ptr_array_index(con->servers, i);
+        if (ss) {
+            network_connection_pool *pool = ss->backend->pool;
+            network_socket *server = ss->server;
             int is_put_to_pool_allowed = 1;
 
             if (con->server_to_be_closed) {
@@ -516,7 +516,7 @@ proxy_put_shard_conn_to_pool(network_mysqld_con *con)
                 is_put_to_pool_allowed = 0;
                 g_debug("%s: is_in_tran_context is true", G_STRLOC);
             }
-            if (is_put_to_pool_allowed && pmd->is_in_xa && !pmd->is_xa_over) {
+            if (is_put_to_pool_allowed && ss->is_in_xa && !ss->is_xa_over) {
                 is_put_to_pool_allowed = 0;
                 g_warning("%s: xa is not over yet", G_STRLOC);
             }
@@ -532,7 +532,7 @@ proxy_put_shard_conn_to_pool(network_mysqld_con *con)
 
             is_reduced = 0;
             if (con->srv->is_reduce_conns && is_put_to_pool_allowed) {
-                if (network_conn_pool_do_reduce_conns_verdict(pool, pmd->backend->connected_clients)) {
+                if (network_conn_pool_do_reduce_conns_verdict(pool, ss->backend->connected_clients)) {
                     is_reduced = 1;
                     is_put_to_pool_allowed = 0;
                 }
@@ -553,12 +553,12 @@ proxy_put_shard_conn_to_pool(network_mysqld_con *con)
                 }
             }
 
-            pmd->backend->connected_clients--;
+            ss->backend->connected_clients--;
             g_debug("%s: conn clients sub, total len:%d, backend:%p, value:%d con:%p",
-                    G_STRLOC, con->servers->len, pmd->backend, pmd->backend->connected_clients, con);
+                    G_STRLOC, con->servers->len, ss->backend, ss->backend->connected_clients, con);
 
-            pmd->sql = NULL;
-            g_free(pmd);
+            ss->sql = NULL;
+            g_free(ss);
         }
     }
 
@@ -581,14 +581,14 @@ remove_mul_server_recv_packets(network_mysqld_con *con)
     }
 
     for (iter = 0; iter < con->servers->len; iter++) {
-        server_session_t *pmd = g_ptr_array_index(con->servers, iter);
-        g_debug("%s: remove packets for server:%p", G_STRLOC, pmd->server);
-        GQueue *out = pmd->server->recv_queue->chunks;
+        server_session_t *ss = g_ptr_array_index(con->servers, iter);
+        g_debug("%s: remove packets for server:%p", G_STRLOC, ss->server);
+        GQueue *out = ss->server->recv_queue->chunks;
         GString *packet = g_queue_pop_head(out);
         while (packet) {
             g_string_free(packet, TRUE);
             packet = g_queue_pop_head(out);
         }
-        network_mysqld_queue_reset(pmd->server);
+        network_mysqld_queue_reset(ss->server);
     }
 }

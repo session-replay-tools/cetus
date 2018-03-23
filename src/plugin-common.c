@@ -338,9 +338,10 @@ do_connect_cetus(network_mysqld_con *con, network_backend_t **backend, int *back
     }
 
     if (*backend == NULL) {
-        network_mysqld_con_send_error_pre41(con->client, C("(proxy) all backends are down"));
-        g_critical("%s: Cannot connect, all backends are down.", G_STRLOC);
-        return NETWORK_SOCKET_ERROR;
+        network_mysqld_con_send_error(con->client, C("(proxy) all backends are down"));
+         con->state = ST_SEND_AUTH_RESULT;
+         g_critical("%s: Cannot connect, all backends are down.", G_STRLOC);
+        return NETWORK_SOCKET_SUCCESS;
     }
 
     network_mysqld_auth_challenge *challenge = network_backends_get_challenge(g->backends, *backend_ndx);

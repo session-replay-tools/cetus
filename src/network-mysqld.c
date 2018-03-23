@@ -567,14 +567,14 @@ network_mysqld_con_send_ok(network_socket *con)
 static int
 network_mysqld_con_send_error_full_all(network_socket *con,
                                        const char *errmsg, gsize errmsg_len, guint errorcode,
-                                       const gchar *sqlstate, gboolean is_41_protocol)
+                                       const gchar *sqlstate)
 {
     GString *packet;
     network_mysqld_err_packet_t *err_packet;
 
     packet = g_string_sized_new(10 + errmsg_len);
 
-    err_packet = is_41_protocol ? network_mysqld_err_packet_new() : network_mysqld_err_packet_new_pre41();
+    err_packet = network_mysqld_err_packet_new();
     err_packet->errcode = errorcode;
     if (errmsg)
         g_string_assign_len(err_packet->errmsg, errmsg, errmsg_len);
@@ -612,7 +612,7 @@ int
 network_mysqld_con_send_error_full(network_socket *con, const char *errmsg,
                                    gsize errmsg_len, guint errorcode, const gchar *sqlstate)
 {
-    return network_mysqld_con_send_error_full_all(con, errmsg, errmsg_len, errorcode, sqlstate, TRUE);
+    return network_mysqld_con_send_error_full_all(con, errmsg, errmsg_len, errorcode, sqlstate);
 }
 
 /**
@@ -630,37 +630,6 @@ int
 network_mysqld_con_send_error(network_socket *con, const char *errmsg, gsize errmsg_len)
 {
     return network_mysqld_con_send_error_full(con, errmsg, errmsg_len, ER_UNKNOWN_ERROR, NULL);
-}
-
-/**
- * send a error packet to the client connection (pre-4.1 protocol)
- *
- * @param con         the client connection
- * @param errmsg      the error message
- * @param errmsg_len  byte-len of the error-message
- * @param errorcode   mysql error-code we want to send
- *
- * @return 0 on success
- */
-int
-network_mysqld_con_send_error_pre41_full(network_socket *con, const char *errmsg, gsize errmsg_len, guint errorcode)
-{
-    return network_mysqld_con_send_error_full_all(con, errmsg, errmsg_len, errorcode, NULL, FALSE);
-}
-
-/**
- * send a error-packet to the client connection (pre-4.1 protocol)
- *
- * @param con         the client connection
- * @param errmsg      the error message
- * @param errmsg_len  byte-len of the error-message
- *
- * @see network_mysqld_con_send_error_pre41_full
- */
-int
-network_mysqld_con_send_error_pre41(network_socket *con, const char *errmsg, gsize errmsg_len)
-{
-    return network_mysqld_con_send_error_pre41_full(con, errmsg, errmsg_len, ER_UNKNOWN_ERROR);
 }
 
 /**
@@ -3519,7 +3488,7 @@ process_read_event(network_mysqld_con *con, int event_fd)
              */
             con->prev_state = con->state;
             con->state = ST_CLOSE_CLIENT;
-            g_debug("%s:client needs to closed for con:%p", G_STRLOC, con);
+            g_debug("%s:client needs to be closed for con:%p", G_STRLOC, con);
         } else if (con->server && event_fd == con->server->fd && con->com_quit_seen) {
             con->state = ST_CLOSE_SERVER;
         } else {

@@ -2024,7 +2024,6 @@ network_mysqld_shard_connection_init(network_mysqld_con *con)
     con->plugins.con_read_handshake = NULL;
     con->plugins.con_read_auth = proxy_read_auth;
     con->plugins.con_read_auth_result = NULL;
-    con->plugins.con_read_auth_old_password = NULL;
     con->plugins.con_read_query = proxy_read_query;
     con->plugins.con_get_server_conn_list = proxy_get_server_conn_list;
     con->plugins.con_read_query_result = NULL;

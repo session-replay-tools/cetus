@@ -176,9 +176,6 @@ typedef struct {
      */
     NETWORK_MYSQLD_PLUGIN_FUNC(con_cleanup);
 
-    NETWORK_MYSQLD_PLUGIN_FUNC(con_read_auth_old_password);
-    NETWORK_MYSQLD_PLUGIN_FUNC(con_send_auth_old_password);
-
     NETWORK_MYSQLD_PLUGIN_FUNC(con_timeout);
 } network_mysqld_hooks;
 
@@ -714,9 +711,6 @@ NETWORK_API int network_mysqld_con_send_ok_full(network_socket *con, guint64 aff
 NETWORK_API int network_mysqld_con_send_error(network_socket *con, const gchar *errmsg, gsize errmsg_len);
 NETWORK_API int network_mysqld_con_send_error_full(network_socket *con, const char *errmsg,
                                                    gsize errmsg_len, guint errorcode, const gchar *sqlstate);
-NETWORK_API int network_mysqld_con_send_error_pre41(network_socket *con, const gchar *errmsg, gsize errmsg_len);
-NETWORK_API int network_mysqld_con_send_error_full_pre41(network_socket *con, const char *errmsg,
-                                                         gsize errmsg_len, guint errorcode);
 NETWORK_API int network_mysqld_con_send_resultset(network_socket *con, GPtrArray *fields, GPtrArray *rows);
 int network_mysqld_con_send_current_date(network_socket *, const char *);
 int network_mysqld_con_send_cetus_version(network_socket *);

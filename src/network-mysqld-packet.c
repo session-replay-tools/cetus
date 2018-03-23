@@ -968,12 +968,6 @@ network_mysqld_err_packet_new()
     return network_mysqld_err_packet_new_full(NETWORK_MYSQLD_PROTOCOL_VERSION_41);
 }
 
-network_mysqld_err_packet_t *
-network_mysqld_err_packet_new_pre41()
-{
-    return network_mysqld_err_packet_new_full(NETWORK_MYSQLD_PROTOCOL_VERSION_PRE41);
-}
-
 void
 network_mysqld_err_packet_free(network_mysqld_err_packet_t *err_packet)
 {

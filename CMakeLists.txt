@@ -199,6 +199,13 @@ else(OPENSSL_FOUND)
   set(OPENSSL_LIBRARIES "")
 endif(OPENSSL_FOUND)
 
+find_package(ZLIB REQUIRED)
+if (ZLIB_FOUND)
+  message("-- ZLIB version: ${ZLIB_VERSION_STRING}")
+else(ZLIB_FOUND)
+  message("-- ZLIB not found")
+endif(ZLIB_FOUND)
+
 IF(${HAVE_SYS_TYPES_H})
 	SET(CMAKE_EXTRA_INCLUDE_FILES sys/types.h)
 	CHECK_TYPE_SIZE(ulong HAVE_ULONG)

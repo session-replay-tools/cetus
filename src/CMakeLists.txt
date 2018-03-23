@@ -136,6 +136,7 @@ TARGET_LINK_LIBRARIES(mysql-chassis-proxy
   mysql-chassis-glibext
   mysql-chassis-timing
   ${OPENSSL_LIBRARIES}
+  ${ZLIB_LIBRARIES}
   )
 
 TARGET_LINK_LIBRARIES(cetus
@@ -148,6 +149,7 @@ TARGET_LINK_LIBRARIES(cetus
 	${GTHREAD_LIBRARIES}
 	${EVENT_LIBRARIES}
 	${MYSQL_LIBRARIES}
+    ${ZLIB_LIBRARIES}
 )
 
 # Unix platforms provide a wrapper script to avoid relinking at install time

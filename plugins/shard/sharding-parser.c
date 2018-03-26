@@ -1724,10 +1724,18 @@ sharding_filter_sql(sql_context_t *context)
                 }
             }
         }
-        if (select_has_AVG(select)) {
-            sql_context_set_error(context, PARSE_NOT_SUPPORT,
-                                  "(cetus)this AVG would be routed to multiple shards, not allowed");
-            return;
+        if (context->clause_flags & CF_AGGREGATE) {
+            if (select_has_AVG(select)) {
+                sql_context_set_error(context, PARSE_NOT_SUPPORT,
+                                      "(cetus)this AVG would be routed to multiple shards, not allowed");
+                return;
+            }
+            /* if we can't find simple aggregates, it's inside complex expressions */
+            if (sql_expr_list_find_aggregate(select->columns) == 0) {
+                sql_context_set_error(context, PARSE_NOT_SUPPORT,
+                                      "(cetus) Complex aggregate function not allowed on sharded sql");
+                return;
+            }
         }
         if (select->groupby_clause && select->orderby_clause && !select_groupby_orderby_have_same_column(select)) {
             sql_context_set_error(context, PARSE_NOT_SUPPORT,

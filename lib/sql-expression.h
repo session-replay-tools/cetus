@@ -120,6 +120,7 @@ enum sql_clause_flag_t {
     CF_LOCAL_QUERY = 0x20,
     CF_DISTINCT_AGGR = 0x40,
     CF_SUBQUERY = 0x80,
+    CF_AGGREGATE = 0x0100,
 };
 
 enum sql_sort_order_t {

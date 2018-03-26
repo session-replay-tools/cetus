@@ -202,7 +202,7 @@ Default: 10485760 (10MB)
 
 Proxy在读写分离时可以指定访问的库
 
-参数未设置时，没有限制；设置为true时仅访问读写后端(主库)
+参数未设置时，没有限制；设置为true时仅访问读写后端(主库)，除非利用注释强制走从库
 
 > master-preferred = true
 
@@ -212,17 +212,9 @@ Proxy在读写分离时可以指定访问的库
 
 > read-master-percentage = 50
 
-### disable-auto-connect
-
-Default: false
-
-禁用自动创建连接，连接将在新请求到来时创建
-
-> disable-auto-connect = false
-
 ### reduce-connections
 
-允许减少无效连接
+自动减少空闲连接
 
 > reduce-connections = true
 
@@ -360,7 +352,7 @@ Default: 根据操作系统
 
 Default: 33554432 (32MB)
 
-最大允许的包大小
+最大允许报文大小
 
 > max-allowed-packet = 1024
 
@@ -376,7 +368,7 @@ Default: false
 
 Default: 65536 (millisecond)
 
-最长查询时间(毫秒)
+慢查询记录阈值(毫秒)
 
 > long-query-time = 500
 
@@ -400,7 +392,7 @@ Default: false
 
 Default: 8192
 
-tcp流式结果集合并输出大小
+tcp流式结果集合并输出阈值，超过此大小，则输出
 
 > merged-output-size = 2048
 
@@ -408,7 +400,7 @@ tcp流式结果集合并输出大小
 
 Default: 100
 
-Proxy连接后端的超时时间
+设置query cache的默认超时时间，单位为ms
 
 > default-query-cache-timeout = 60
 
@@ -422,6 +414,6 @@ Proxy连接后端的超时时间
 
 Default:  65536
 
-tcp-stream最大报头大小
+设置响应中header最大大小，供tcp stream使用，如果响应头部特别大，需要设置更大的大小
 
-> max-header-size = 1024
+> max-header-size = 131072

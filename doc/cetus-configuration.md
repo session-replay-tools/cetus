@@ -312,7 +312,7 @@ Default: 60 (seconds)
 
 从库延迟超过该秒，状态将被设置为DOWN
 
-> slave-delay-down = 120
+> slave-delay-down = 10
 
 ### slave-delay-recover
 
@@ -320,7 +320,7 @@ Default: slave-delay-down / 2  (seconds)
 
 从库延迟少于该秒数，状态将恢复为UP
 
-> slave-delay-recover = 30
+> slave-delay-recover = 5
 
 ## 其它
 
@@ -406,6 +406,8 @@ Default: 100
 
 ### enable-query-cache
 
+Default: false
+
 开启Proxy请求缓存
 
 > enable-query-cache = true
@@ -420,7 +422,7 @@ Default:  65536
 
 ### enable-tcp-stream
 
-Default:  false
+Default: false
 
 采用tcp stream来输出响应，规避内存炸裂等问题
 

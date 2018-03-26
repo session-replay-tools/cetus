@@ -64,7 +64,7 @@ PID文件路径
 
 ### log-xa-file
 
-xa日志路径
+xa日志路径（分库中有效）
 
 > log-xa-file = logs/cetus.log
 
@@ -72,7 +72,7 @@ xa日志路径
 
 Default: false
 
-记录xa日志详情
+记录xa日志详情（分库中有效）
 
 > log-xa-in-detail = true
 
@@ -202,9 +202,9 @@ Default: 10485760 (10MB)
 
 Proxy在读写分离时可以指定访问的库
 
-参数未设置时，没有限制；设置为ture时仅访问读写后端(主库)
+参数未设置时，没有限制；设置为true时仅访问读写后端(主库)
 
-> master-preferred = ture
+> master-preferred = true
 
 ### read-master-percentage
 
@@ -224,7 +224,7 @@ Default: false
 
 允许减少无效连接
 
-> reduce-connections = ture
+> reduce-connections = true
 
 ### default-charset
 
@@ -394,7 +394,7 @@ Default: false
 
 启用后端传给Cetus的结果集压缩，一般不启用
 
-> enable-back-compress ＝ ture
+> enable-back-compress ＝ true
 
 ### merged-output-size
 
@@ -416,7 +416,7 @@ Proxy连接后端的超时时间
 
 开启Proxy请求缓存
 
-> enable-query-cache = ture
+> enable-query-cache = true
 
 ### max-header-size
 

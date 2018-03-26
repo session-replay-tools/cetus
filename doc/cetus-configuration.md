@@ -417,3 +417,11 @@ Default:  65536
 设置响应中header最大大小，供tcp stream使用，如果响应头部特别大，需要设置更大的大小
 
 > max-header-size = 131072
+
+### enable-tcp-stream
+
+Default:  false
+
+采用tcp stream来输出响应，规避内存炸裂等问题
+
+> enable-tcp-stream = true

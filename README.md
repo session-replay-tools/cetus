@@ -68,15 +68,17 @@ Cetus分为读写分离和分库两个版本。
 
 3. [Cetus 配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-profile.md)
 
-4. [Cetus 使用约束说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-constraint.md)
+4. [Cetus 启动配置选项说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-configuration.md)
 
-5. [Cetus 读写分离版使用指南](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw.md)
+5. [Cetus 使用约束说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-constraint.md)
 
-6. [Cetus 读写分离版管理手册](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw-admin.md)
+6. [Cetus 读写分离版使用指南](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw.md)
 
-7. [Cetus 分库(sharding)版使用指南](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-sharding.md)
+7. [Cetus 读写分离版管理手册](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw-admin.md)
 
-8. [Cetus 分库(sharding)版管理手册](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-shard-admin.md)
+8. [Cetus 分库(sharding)版使用指南](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-sharding.md)
+
+9. [Cetus 分库(sharding)版管理手册](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-shard-admin.md)
 
 ### Cetus架构与设计
 

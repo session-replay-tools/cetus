@@ -226,26 +226,6 @@ Default: false
 
 > reduce-connections = ture
 
-### enable-reset-connection
-
-允许重启连接
-
-> enable-reset-connection = ture
-
-### all-write-mode
-
-Default: ture
-
-发送更新/删除/插入到所有的默认组
-
-> enable-reset-connection = ture
-
-### disable-dist-tran-mode
-
-禁用分布式事务
-
-> disable-dist-tran-mode ＝ ture
-
 ### default-charset
 
 默认数据库字符标码方式

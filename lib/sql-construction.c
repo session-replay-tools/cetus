@@ -25,11 +25,12 @@
 
 static void sql_expr_traverse(GString *s, sql_expr_t *expr);
 
-static void string_append_quoted(GString *s, const char *p, char quote)
+static void
+string_append_quoted(GString *s, const char *p, char quote)
 {
     g_string_append_c(s, quote);
     for (; *p != '\0'; ++p) {
-        if (*p == quote) { /* escape quote inside string */
+        if (*p == quote) {      /* escape quote inside string */
             g_string_append_c(s, '\\');
         }
         g_string_append_c(s, *p);
@@ -38,21 +39,38 @@ static void string_append_quoted(GString *s, const char *p, char quote)
 }
 
 /* sql construction */
-static void sql_append_expr(GString *s, sql_expr_t *p)
+static void
+sql_append_expr(GString *s, sql_expr_t *p)
 {
     switch (p->op) {
     case TK_ID:
         g_string_append(s, " ");
         g_string_append(s, p->token_text);
         break;
-    case TK_EQ: g_string_append(s, "="); break;
-    case TK_LT: g_string_append(s, "<"); break;
-    case TK_GT: g_string_append(s, ">"); break;
-    case TK_LE: g_string_append(s, "<="); break;
-    case TK_GE: g_string_append(s, ">="); break;
-    case TK_NE: g_string_append(s, "<>"); break;
-    case TK_AND: g_string_append(s, " AND "); break;
-    case TK_OR: g_string_append(s, " OR "); break;
+    case TK_EQ:
+        g_string_append(s, "=");
+        break;
+    case TK_LT:
+        g_string_append(s, "<");
+        break;
+    case TK_GT:
+        g_string_append(s, ">");
+        break;
+    case TK_LE:
+        g_string_append(s, "<=");
+        break;
+    case TK_GE:
+        g_string_append(s, ">=");
+        break;
+    case TK_NE:
+        g_string_append(s, "<>");
+        break;
+    case TK_AND:
+        g_string_append(s, " AND ");
+        break;
+    case TK_OR:
+        g_string_append(s, " OR ");
+        break;
     case TK_DOT:
         g_string_append(s, " ");
         g_string_append(s, p->left->token_text);
@@ -61,16 +79,19 @@ static void sql_append_expr(GString *s, sql_expr_t *p)
         break;
     case TK_UPLUS:
     case TK_UMINUS:
-    case TK_INTEGER: {
-        char valstr[32] = {0};
+    case TK_INTEGER:{
+        char valstr[32] = { 0 };
         char *pstr = valstr;
-        if (p->op == TK_UMINUS) {*pstr='-'; ++pstr;}
+        if (p->op == TK_UMINUS) {
+            *pstr = '-';
+            ++pstr;
+        }
         sprintf(pstr, "%" PRIu64, p->num_value);
         g_string_append(s, valstr);
         break;
     }
     case TK_STRING:
-        if (sql_is_quoted_string(p->token_text)) {/* TODO: dequote all */
+        if (sql_is_quoted_string(p->token_text)) {  /* TODO: dequote all */
             g_string_append(s, " ");
             g_string_append(s, p->token_text);
         } else {
@@ -78,7 +99,7 @@ static void sql_append_expr(GString *s, sql_expr_t *p)
             string_append_quoted(s, p->token_text, '\'');
         }
         break;
-    case TK_FUNCTION: {
+    case TK_FUNCTION:{
         g_string_append(s, " ");
         g_string_append(s, p->token_text);
         g_string_append(s, "(");
@@ -88,7 +109,7 @@ static void sql_append_expr(GString *s, sql_expr_t *p)
             for (i = 0; i < args->len; ++i) {
                 sql_expr_t *arg = g_ptr_array_index(args, i);
                 sql_expr_traverse(s, arg);
-                if (i < args->len-1) {
+                if (i < args->len - 1) {
                     g_string_append(s, ",");
                 }
             }
@@ -96,7 +117,7 @@ static void sql_append_expr(GString *s, sql_expr_t *p)
         g_string_append(s, ")");
         break;
     }
-    case TK_BETWEEN: {
+    case TK_BETWEEN:{
         sql_append_expr(s, p->left);
         g_string_append(s, " BETWEEN ");
         sql_expr_list_t *args = p->list;
@@ -109,7 +130,7 @@ static void sql_append_expr(GString *s, sql_expr_t *p)
         }
         break;
     }
-    case TK_IN: {
+    case TK_IN:{
         sql_append_expr(s, p->left);
         g_string_append(s, " IN (");
         if (p->list) {
@@ -118,7 +139,7 @@ static void sql_append_expr(GString *s, sql_expr_t *p)
             for (i = 0; args && i < args->len; ++i) {
                 sql_expr_t *arg = g_ptr_array_index(args, i);
                 sql_append_expr(s, arg);
-                if (i < args->len-1) {
+                if (i < args->len - 1) {
                     g_string_append_c(s, ',');
                 }
             }
@@ -132,7 +153,7 @@ static void sql_append_expr(GString *s, sql_expr_t *p)
         g_string_append(s, ")");
         break;
     }
-    case TK_EXISTS: {
+    case TK_EXISTS:{
         g_string_append(s, " EXISTS (");
         GString *sel = sql_construct_select(p->select);
         if (sel) {
@@ -166,7 +187,7 @@ static void sql_append_expr(GString *s, sql_expr_t *p)
         sql_expr_traverse(s, p->left);
         g_string_append_c(s, ')');
         break;
-    case TK_SELECT: {/* subselect as an expression */
+    case TK_SELECT:{           /* subselect as an expression */
         g_string_append(s, "(");
         GString *sel = sql_construct_select(p->select);
         if (sel) {
@@ -176,10 +197,18 @@ static void sql_append_expr(GString *s, sql_expr_t *p)
         g_string_append(s, ")");
         break;
     }
-    case TK_IS: g_string_append(s, " IS ");break;
-    case TK_ISNOT: g_string_append(s, " IS NOT ");break;
-    case TK_PLUS: g_string_append_c(s, '+');break;
-    case TK_MINUS: g_string_append_c(s, '-');break;
+    case TK_IS:
+        g_string_append(s, " IS ");
+        break;
+    case TK_ISNOT:
+        g_string_append(s, " IS NOT ");
+        break;
+    case TK_PLUS:
+        g_string_append_c(s, '+');
+        break;
+    case TK_MINUS:
+        g_string_append_c(s, '-');
+        break;
     default:
         g_string_append(s, " ");
         g_string_append(s, p->token_text);
@@ -187,18 +216,20 @@ static void sql_append_expr(GString *s, sql_expr_t *p)
 }
 
 /* these expr will be processed as leaf node */
-static gboolean sql_expr_is_leaf_node(sql_expr_t *expr)
+static gboolean
+sql_expr_is_leaf_node(sql_expr_t *expr)
 {
-    return (expr->op == TK_DOT && expr->left && expr->right) /* db.table */
-        || (expr->op == TK_UMINUS && expr->left) /* -3 */
-        || (expr->op == TK_UPLUS && expr->left) /* +4 */
-        || (expr->op == TK_BETWEEN)
+    return (expr->op == TK_DOT && expr->left && expr->right)    /* db.table */
+        ||(expr->op == TK_UMINUS && expr->left) /* -3 */
+        ||(expr->op == TK_UPLUS && expr->left)  /* +4 */
+        ||(expr->op == TK_BETWEEN)
         || (expr->op == TK_NOT)
         || (expr->op == TK_EXISTS)
         || (expr->op == TK_IN);
 }
 
-static void sql_expr_traverse(GString *s, sql_expr_t *expr)
+static void
+sql_expr_traverse(GString *s, sql_expr_t *expr)
 {
     if (!expr)
         return;
@@ -229,7 +260,8 @@ static void sql_expr_traverse(GString *s, sql_expr_t *expr)
     }
 }
 
-static void sql_construct_join(GString *s, int flag)
+static void
+sql_construct_join(GString *s, int flag)
 {
     if (flag == JT_INNER) {
         g_string_append(s, " JOIN ");
@@ -256,12 +288,14 @@ static void sql_construct_join(GString *s, int flag)
     g_string_append(s, "JOIN ");
 }
 
-static inline void append_sql_expr(GString *s, sql_expr_t *expr)
+static inline void
+append_sql_expr(GString *s, sql_expr_t *expr)
 {
     g_string_append_len(s, expr->start, expr->end - expr->start);
 }
 
-GString *sql_construct_select(sql_select_t *select)
+GString *
+sql_construct_select(sql_select_t *select)
 {
     int i = 0;
     GString *s = g_string_new(NULL);
@@ -369,19 +403,21 @@ GString *sql_construct_select(sql_select_t *select)
 }
 
 /* format as " expr1,expr2,expr3 "*/
-void sql_append_expr_list(GString *s, sql_expr_list_t *exprlist)
+void
+sql_append_expr_list(GString *s, sql_expr_list_t *exprlist)
 {
     int i = 0;
     for (i = 0; i < exprlist->len; ++i) {
         sql_expr_t *expr = g_ptr_array_index(exprlist, i);
         append_sql_expr(s, expr);
-        if (i != exprlist->len -1) {
+        if (i != exprlist->len - 1) {
             g_string_append_c(s, ',');
         }
     }
 }
 
-void sql_construct_insert(GString *s, sql_insert_t *p)
+void
+sql_construct_insert(GString *s, sql_insert_t *p)
 {
     g_string_append(s, "INSERT INTO ");
     if (p->table && p->table->len > 0) {
@@ -396,7 +432,7 @@ void sql_construct_insert(GString *s, sql_insert_t *p)
     if (p->columns && p->columns->len > 0) {
         g_string_append_c(s, '(');
         int i = 0;
-        for (i =0; i < p->columns->len; ++i) {
+        for (i = 0; i < p->columns->len; ++i) {
             const char *col = g_ptr_array_index(p->columns, i);
             g_string_append(s, col);
             if (i != p->columns->len - 1) {
@@ -415,13 +451,13 @@ void sql_construct_insert(GString *s, sql_insert_t *p)
             /* expression values */
             g_string_append(s, "VALUES");
             sql_select_t *values = p->sel_val;
-            for (;values; values = values->prior) {
+            for (; values; values = values->prior) {
                 sql_expr_list_t *cols = values->columns;
                 g_string_append_c(s, '(');
                 sql_append_expr_list(s, cols);
                 g_string_append(s, "),");
             }
-            s->str[s->len-1] = ' ';/* no comma at the end */
+            s->str[s->len - 1] = ' ';   /* no comma at the end */
         }
     }
 }

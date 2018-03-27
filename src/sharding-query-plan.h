@@ -38,11 +38,11 @@ enum sharding_table_type_t {
 };
 
 typedef struct sharding_plan_t {
-    GPtrArray *groups; /* GPtrArray<GString *> */
+    GPtrArray *groups;          /* GPtrArray<GString *> */
 
-    GList *sql_list; /* GList<GString *> */
+    GList *sql_list;            /* GList<GString *> */
 
-    GList *mapping; /* GList<struct _group_sql_pair *> */
+    GList *mapping;             /* GList<struct _group_sql_pair *> */
 
     gboolean is_modified;
     const GString *orig_sql;

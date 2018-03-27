@@ -78,9 +78,7 @@ CHASSIS_API int chassis_frontend_init_plugin_dir(char **, const char *);
  *                       NULL in case the possible error should be ignored
  */
 CHASSIS_API int chassis_frontend_init_base_options(int *argc_p, char ***argv_p,
-        int *print_version,
-        char **config_file,
-        GError **gerr);
+                                                   int *print_version, char **config_file, GError **gerr);
 
 /**
  * load the plugins
@@ -96,9 +94,7 @@ CHASSIS_API int chassis_frontend_init_base_options(int *argc_p, char ***argv_p,
  *
  * @see chassis_frontend_init_plugins
  */
-CHASSIS_API int chassis_frontend_load_plugins(GPtrArray *plugins,
-        const gchar *plugin_dir,
-        gchar **plugin_names);
+CHASSIS_API int chassis_frontend_load_plugins(GPtrArray *plugins, const gchar *plugin_dir, gchar **plugin_names);
 
 /**
  * init the loaded plugins and setup their config
@@ -116,12 +112,10 @@ CHASSIS_API int chassis_frontend_load_plugins(GPtrArray *plugins,
  */
 struct remote_config_t;
 CHASSIS_API int chassis_frontend_init_plugins(GPtrArray *plugins,
-        chassis_options_t *option_ctx,
-        struct chassis_config_t *config_manager,
-        int *argc_p, char ***argv_p,
-        GKeyFile *keyfile,
-        const char *keyfile_section_name,
-        GError **gerr);
+                                              chassis_options_t *option_ctx,
+                                              struct chassis_config_t *config_manager,
+                                              int *argc_p, char ***argv_p,
+                                              GKeyFile *keyfile, const char *keyfile_section_name, GError **gerr);
 
 /**
  * print the version of the program 
@@ -148,7 +142,6 @@ CHASSIS_API int chassis_frontend_log_plugin_versions(GPtrArray *plugins);
 CHASSIS_API int chassis_frontend_write_pidfile(const char *pid_file, GError **gerr);
 
 CHASSIS_API int chassis_options_set_cmdline_only_options(chassis_options_t *opts,
-        int *print_version,
-        char **config_file);
+                                                         int *print_version, char **config_file);
 
 #endif

@@ -951,6 +951,9 @@ func_expr(A) ::= ID(X) LP distinct(D) exprlist(Y) RP(R). {
     }
     if (sql_func_type(X.z) != FT_UNKNOWN) {
         A->flags |= EP_AGGREGATE;
+        if (context->parsing_place == SELECT_COLUMN) {
+            context->clause_flags |= CF_AGGREGATE;
+        }
     }
     if (D) {
         A->flags |= EP_DISTINCT;
@@ -961,6 +964,9 @@ func_expr(A) ::= ID(X) LP STAR RP(R). {
     A = function_expr_new(&X, 0, &R);
     if (sql_func_type(X.z) != FT_UNKNOWN) {
         A->flags |= EP_AGGREGATE;
+        if (context->parsing_place == SELECT_COLUMN) {
+            context->clause_flags |= CF_AGGREGATE;
+        }
     }
 }
 func_expr(A) ::= JOIN_KW(N) LP expr(X) COMMA expr(Y) RP(R). {

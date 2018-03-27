@@ -18,7 +18,10 @@
 
  $%ENDLICENSE%$ */
 
+#ifndef _GNU_SOURCE
 #define _GNU_SOURCE
+#endif
+
 #include <glib.h>
 #include <time.h>
 #include <math.h>
@@ -26,20 +29,21 @@
 #include "chassis-timings.h"
 #include "glib-ext.h"
 
-int chassis_epoch_from_string(const char *str, gboolean *ok)
+int
+chassis_epoch_from_string(const char *str, gboolean *ok)
 {
     if (!str) {
         *ok = FALSE;
         return 0;
     }
-    struct tm t = {0};
-    if (strptime(str, "%Y-%m-%d %H:%M:%S", &t)) {/* %Y-%m-%d will fail */
+    struct tm t = { 0 };
+    if (strptime(str, "%Y-%m-%d %H:%M:%S", &t)) {   /* %Y-%m-%d will fail */
         if (ok)
             *ok = TRUE;
         return mktime(&t);
     }
-    struct tm d = {0};
-    if (strptime(str, "%Y-%m-%d", &d)) { /* %Y-%m-%d %H:%M:%S will also pass, with 'd' set wrong */
+    struct tm d = { 0 };
+    if (strptime(str, "%Y-%m-%d", &d)) {    /* %Y-%m-%d %H:%M:%S will also pass, with 'd' set wrong */
         if (ok)
             *ok = TRUE;
         return mktime(&d);
@@ -49,7 +53,8 @@ int chassis_epoch_from_string(const char *str, gboolean *ok)
     return 0;
 }
 
-gboolean chassis_timeval_from_double(struct timeval *dst, double t)
+gboolean
+chassis_timeval_from_double(struct timeval *dst, double t)
 {
     g_return_val_if_fail(dst != NULL, FALSE);
     g_return_val_if_fail(t >= 0, FALSE);
@@ -60,7 +65,8 @@ gboolean chassis_timeval_from_double(struct timeval *dst, double t)
     return TRUE;
 }
 
-void chassis_epoch_to_string(time_t *epoch, char *str, int len)
+void
+chassis_epoch_to_string(time_t *epoch, char *str, int len)
 {
     struct tm *local = localtime(epoch);
     if (local) {

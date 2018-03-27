@@ -33,9 +33,9 @@ typedef struct {
     /**< index into the backend-array, start from 0 */
     int backend_ndx;
 
-	struct sql_context_t *sql_context;
-    int trx_read_write; /* default TF_READ_WRITE */
-    int trx_isolation_level; /* default TF_REPEATABLE_READ */
+    struct sql_context_t *sql_context;
+    int trx_read_write;         /* default TF_READ_WRITE */
+    int trx_isolation_level;    /* default TF_REPEATABLE_READ */
 
 } shard_plugin_con_t;
 

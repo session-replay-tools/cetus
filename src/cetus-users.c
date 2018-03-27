@@ -31,7 +31,8 @@ struct pwd_pair_t {
     char *server;
 };
 
-static struct pwd_pair_t *pwd_pair_new(const char *c, const char *s)
+static struct pwd_pair_t *
+pwd_pair_new(const char *c, const char *s)
 {
     struct pwd_pair_t *pwd = g_new0(struct pwd_pair_t, 1);
     pwd->client = g_strdup(c);
@@ -39,8 +40,8 @@ static struct pwd_pair_t *pwd_pair_new(const char *c, const char *s)
     return pwd;
 }
 
-static void pwd_pair_set_pwd(struct pwd_pair_t *pwd,
-                             const char *new_pass, enum cetus_pwd_type t)
+static void
+pwd_pair_set_pwd(struct pwd_pair_t *pwd, const char *new_pass, enum cetus_pwd_type t)
 {
     switch (t) {
     case CETUS_CLIENT_PWD:
@@ -56,8 +57,8 @@ static void pwd_pair_set_pwd(struct pwd_pair_t *pwd,
     }
 }
 
-static gboolean pwd_pair_same_pwd(struct pwd_pair_t *pwd,
-                             const char *new_pass, enum cetus_pwd_type t)
+static gboolean
+pwd_pair_same_pwd(struct pwd_pair_t *pwd, const char *new_pass, enum cetus_pwd_type t)
 {
     switch (t) {
     case CETUS_CLIENT_PWD:
@@ -69,7 +70,8 @@ static gboolean pwd_pair_same_pwd(struct pwd_pair_t *pwd,
     }
 }
 
-static void pwd_pair_free(struct pwd_pair_t *pwd)
+static void
+pwd_pair_free(struct pwd_pair_t *pwd)
 {
     if (pwd) {
         g_free(pwd->client);
@@ -78,15 +80,16 @@ static void pwd_pair_free(struct pwd_pair_t *pwd)
     }
 }
 
-cetus_users_t *cetus_users_new()
+cetus_users_t *
+cetus_users_new()
 {
     cetus_users_t *users = g_new0(cetus_users_t, 1);
-    users->records = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
-                                           (GDestroyNotify)pwd_pair_free);
+    users->records = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, (GDestroyNotify) pwd_pair_free);
     return users;
 }
 
-void cetus_users_free(cetus_users_t *users)
+void
+cetus_users_free(cetus_users_t *users)
 {
     if (users) {
         if (users->records)
@@ -95,7 +98,8 @@ void cetus_users_free(cetus_users_t *users)
     }
 }
 
-static void cetus_users_set_records(cetus_users_t *users, GHashTable *new_records)
+static void
+cetus_users_set_records(cetus_users_t *users, GHashTable *new_records)
 {
     if (users->records) {
         g_hash_table_destroy(users->records);
@@ -103,7 +107,8 @@ static void cetus_users_set_records(cetus_users_t *users, GHashTable *new_record
     users->records = new_records;
 }
 
-static gboolean cetus_users_parse_json(cetus_users_t *users, char *buffer)
+static gboolean
+cetus_users_parse_json(cetus_users_t *users, char *buffer)
 {
     cJSON *root = cJSON_Parse(buffer);
     if (!root) {
@@ -114,7 +119,7 @@ static gboolean cetus_users_parse_json(cetus_users_t *users, char *buffer)
     gboolean success = FALSE;
 
     GHashTable *user_records = g_hash_table_new_full(g_str_hash, g_str_equal,
-                                                     g_free, (GDestroyNotify)pwd_pair_free);
+                                                     g_free, (GDestroyNotify) pwd_pair_free);
 
     cJSON *users_node = cJSON_GetObjectItem(root, "users");
     cJSON *user_node = users_node ? users_node->child : NULL;
@@ -130,14 +135,16 @@ static gboolean cetus_users_parse_json(cetus_users_t *users, char *buffer)
             g_critical(G_STRLOC ":user conf error, at least one of client/server is needed");
             goto out;
         }
-        if (client_pwd && !server_pwd) server_pwd = client_pwd;
-        if (!client_pwd && server_pwd) client_pwd = server_pwd;
+        if (client_pwd && !server_pwd)
+            server_pwd = client_pwd;
+        if (!client_pwd && server_pwd)
+            client_pwd = server_pwd;
         g_hash_table_insert(user_records, g_strdup(username->valuestring),
                             pwd_pair_new(client_pwd->valuestring, server_pwd->valuestring));
     }
 
     success = TRUE;
-out:
+  out:
     cJSON_Delete(root);
     if (success) {
         cetus_users_set_records(users, user_records);
@@ -147,7 +154,8 @@ out:
     return success;
 }
 
-gboolean cetus_users_read_json(cetus_users_t *users, chassis_config_t *conf)
+gboolean
+cetus_users_read_json(cetus_users_t *users, chassis_config_t *conf)
 {
     users->conf_manager = conf;
     char *buffer = NULL;
@@ -163,8 +171,8 @@ gboolean cetus_users_read_json(cetus_users_t *users, chassis_config_t *conf)
     return success;
 }
 
-gboolean cetus_users_update_record(cetus_users_t *users, const char *user,
-                                   const char *pass, enum cetus_pwd_type type)
+gboolean
+cetus_users_update_record(cetus_users_t *users, const char *user, const char *pass, enum cetus_pwd_type type)
 {
     struct pwd_pair_t *pwd = g_hash_table_lookup(users->records, user);
     if (pwd) {
@@ -179,7 +187,8 @@ gboolean cetus_users_update_record(cetus_users_t *users, const char *user,
     return TRUE;
 }
 
-gboolean cetus_users_delete_record(cetus_users_t *users, const char *user)
+gboolean
+cetus_users_delete_record(cetus_users_t *users, const char *user)
 {
     gboolean found = g_hash_table_remove(users->records, user);
     if (found)
@@ -187,7 +196,8 @@ gboolean cetus_users_delete_record(cetus_users_t *users, const char *user)
     return found;
 }
 
-gboolean cetus_users_write_json(cetus_users_t *users)
+gboolean
+cetus_users_write_json(cetus_users_t *users)
 {
     cJSON *users_node = cJSON_CreateArray();
     if (users_node == NULL) {
@@ -199,7 +209,7 @@ gboolean cetus_users_write_json(cetus_users_t *users)
     char *username = NULL;
     struct pwd_pair_t *pwd = NULL;
     g_hash_table_iter_init(&iter, users->records);
-    while (g_hash_table_iter_next(&iter, (gpointer *)&username, (gpointer *)&pwd)) {
+    while (g_hash_table_iter_next(&iter, (gpointer *) & username, (gpointer *) & pwd)) {
         cJSON *node = cJSON_CreateObject();
         cJSON_AddStringToObject(node, "user", username);
         cJSON_AddStringToObject(node, "client_pwd", pwd->client);
@@ -218,9 +228,9 @@ gboolean cetus_users_write_json(cetus_users_t *users)
     return TRUE;
 }
 
-gboolean cetus_users_authenticate_client(cetus_users_t *users,
-                                  network_mysqld_auth_challenge *challenge,
-                                  network_mysqld_auth_response *response)
+gboolean
+cetus_users_authenticate_client(cetus_users_t *users,
+                                network_mysqld_auth_challenge *challenge, network_mysqld_auth_response *response)
 {
     char *user_name = response->username->str;
 
@@ -234,8 +244,7 @@ gboolean cetus_users_authenticate_client(cetus_users_t *users,
         GString *sha1_pwd = g_string_new(NULL);
         network_mysqld_proto_password_hash(sha1_pwd, pwd->client, strlen(pwd->client));
         GString *expected_response = g_string_new(NULL);
-        network_mysqld_proto_password_scramble(expected_response,
-                       S(challenge->auth_plugin_data), S(sha1_pwd));
+        network_mysqld_proto_password_scramble(expected_response, S(challenge->auth_plugin_data), S(sha1_pwd));
 
         if (g_string_equal(response->auth_plugin_data, expected_response)) {
             g_string_free(expected_response, TRUE);
@@ -248,8 +257,8 @@ gboolean cetus_users_authenticate_client(cetus_users_t *users,
     return FALSE;
 }
 
-void cetus_users_get_hashed_pwd(cetus_users_t *users, const char *user_name,
-                                enum cetus_pwd_type type, GString *sha1pwd)
+void
+cetus_users_get_hashed_pwd(cetus_users_t *users, const char *user_name, enum cetus_pwd_type type, GString *sha1pwd)
 {
     if (type == CETUS_CLIENT_PWD) {
         cetus_users_get_hashed_client_pwd(users, user_name, sha1pwd);
@@ -258,8 +267,8 @@ void cetus_users_get_hashed_pwd(cetus_users_t *users, const char *user_name,
     }
 }
 
-void cetus_users_get_hashed_client_pwd(cetus_users_t *users,
-                                     const char *user_name, GString *sha1_pwd)
+void
+cetus_users_get_hashed_client_pwd(cetus_users_t *users, const char *user_name, GString *sha1_pwd)
 {
     struct pwd_pair_t *pwd = g_hash_table_lookup(users->records, user_name);
     if (pwd == NULL) {
@@ -270,8 +279,8 @@ void cetus_users_get_hashed_client_pwd(cetus_users_t *users,
     }
 }
 
-void cetus_users_get_hashed_server_pwd(cetus_users_t *users,
-                                     const char *user_name, GString *sha1_pwd)
+void
+cetus_users_get_hashed_server_pwd(cetus_users_t *users, const char *user_name, GString *sha1_pwd)
 {
     struct pwd_pair_t *pwd = g_hash_table_lookup(users->records, user_name);
     if (pwd == NULL) {
@@ -282,8 +291,8 @@ void cetus_users_get_hashed_server_pwd(cetus_users_t *users,
     }
 }
 
-void cetus_users_get_server_pwd(cetus_users_t *users, const char *user_name,
-                                GString *res_pwd)
+void
+cetus_users_get_server_pwd(cetus_users_t *users, const char *user_name, GString *res_pwd)
 {
     struct pwd_pair_t *pwd = g_hash_table_lookup(users->records, user_name);
     if (pwd == NULL) {
@@ -294,12 +303,14 @@ void cetus_users_get_server_pwd(cetus_users_t *users, const char *user_name,
     }
 }
 
-gboolean cetus_users_contains(cetus_users_t *users, const char *user_name)
+gboolean
+cetus_users_contains(cetus_users_t *users, const char *user_name)
 {
     return g_hash_table_lookup(users->records, user_name) ? TRUE : FALSE;
 }
 
-void cetus_users_reload_callback(int fd, short what, void *arg)
+void
+cetus_users_reload_callback(int fd, short what, void *arg)
 {
     cetus_users_t *users = arg;
     gboolean ok = cetus_users_read_json(users, users->conf_manager);

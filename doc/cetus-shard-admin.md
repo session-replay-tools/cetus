@@ -82,10 +82,10 @@ sharding版本管理端口提供了34条语句对cetus进行管理，具体用�
 
 ```
 状态说明
-unknown:     后端初始状态，还未建立连接;
+unknown:     后端初始状态，还未建立连接；
 up:          能与后端正常建立连接；
-down:        与后端无法联通(如果开启后端状态检测，能连通后自动变为UP);
-maintaining: 后端正在维护，无法建立连接或自动切换状态(此状态由管理员手动设置);
+down:        与后端无法联通(如果开启后端状态检测，能连通后自动变为UP)；
+maintaining: 后端正在维护，无法建立连接或自动切换状态(此状态由管理员手动设置)；
 delete:      后端已被删除，无法再建立连接。
 ```
 
@@ -247,13 +247,26 @@ delete:      后端已被删除，无法再建立连接。
 * db: 数据库名称;
 * Command: 执行的sql，"Sleep"代表当前空闲;
 * Time: 已执行的时间;
-* Trans: 是否在事务中;
-* PS：是否存在prepare;
+* Trans: 是否在事务中（Y｜N）;
+* PS：是否存在prepare（Y｜N）;
 * State: 连接当前的状态，"READ_QUERY"代表在等待获取命令;
-* Xa：是否存在分布式事务;
+* Xa：分布式事务状态（NX|XS|XQ|XE|XP|XC|XR|XCO|XO）;
 * Xid：分布式事务的xid;
 * Server: 后端地址;
 * Info: 暂未知。
+
+```
+Xa状态说明
+NX:     未处于分布式事务状态中；
+XS:     处于XA START状态；
+XQ:     处于XA QUERY状态；
+XE:     处于XA END状态；
+XP:     处于XA PREPARE状态；
+XC:     处于XA COMMIT状态；
+XR:     处于XA ROLLBACK状态；
+XCO:    处于XA CANDIDATE OVER状态；
+XO:     处于XA OVER状态。
+```
 
 ### 查看某用户对某后端的连接数
 

@@ -27,23 +27,22 @@
 #include <stdio.h>
 
 enum sql_join_type_t {
-    JT_INNER     =0x01,    /* Any kind of inner or cross join */
-    JT_CROSS     =0x02,    /* Explicit use of the CROSS keyword */
-    JT_NATURAL   =0x04,    /* True for a "natural" join */
-    JT_LEFT      =0x08,    /* Left outer join */
-    JT_RIGHT     =0x10,    /* Right outer join */
-    JT_OUTER     =0x20,    /* The "OUTER" keyword is present */
-    JT_ERROR     =0x40,    /* unknown or unsupported join type */
+    JT_INNER = 0x01,            /* Any kind of inner or cross join */
+    JT_CROSS = 0x02,            /* Explicit use of the CROSS keyword */
+    JT_NATURAL = 0x04,          /* True for a "natural" join */
+    JT_LEFT = 0x08,             /* Left outer join */
+    JT_RIGHT = 0x10,            /* Right outer join */
+    JT_OUTER = 0x20,            /* The "OUTER" keyword is present */
+    JT_ERROR = 0x40,            /* unknown or unsupported join type */
 };
 
 #define MAX_AGGR_FUNS 8
 
-typedef struct GROUP_AGGR {
+typedef struct group_aggr_t {
     uint8_t type;
     int pos;
     unsigned int fun_type;
-} GROUP_AGGR;
-
+} group_aggr_t;
 
 typedef struct sql_token_t sql_token_t;
 typedef struct sql_expr_t sql_expr_t;
@@ -86,8 +85,8 @@ enum sql_stmt_type_t {
     STMT_SHOW_WARNINGS,
 };
 struct sql_token_t {
-    const char *z; /* pointer to token text, not NUL-terminated */
-    uint32_t n; /* length of token text in bytes */
+    const char *z;              /* pointer to token text, not NUL-terminated */
+    uint32_t n;                 /* length of token text in bytes */
 };
 
 enum sql_var_scope_t {
@@ -121,6 +120,7 @@ enum sql_clause_flag_t {
     CF_LOCAL_QUERY = 0x20,
     CF_DISTINCT_AGGR = 0x40,
     CF_SUBQUERY = 0x80,
+    CF_AGGREGATE = 0x0100,
 };
 
 enum sql_sort_order_t {
@@ -154,24 +154,24 @@ enum sql_func_type_t {
 };
 
 struct sql_expr_t {
-    uint16_t op;                 /* Operation performed by this node */
-    char *token_text;          /* Token value. Zero terminated and dequoted */
-    uint64_t num_value;        /* Non-negative integer value */
+    uint16_t op;                /* Operation performed by this node */
+    char *token_text;           /* Token value. Zero terminated and dequoted */
+    uint64_t num_value;         /* Non-negative integer value */
     sql_expr_t *left;
     sql_expr_t *right;
 
-    sql_expr_list_t *list;     /* op = IN, EXISTS, SELECT, CASE, FUNCTION, BETWEEN */
-    sql_select_t *select;     /* EP_xIsSelect and op = IN, EXISTS, SELECT */
+    sql_expr_list_t *list;      /* op = IN, EXISTS, SELECT, CASE, FUNCTION, BETWEEN */
+    sql_select_t *select;       /* EP_xIsSelect and op = IN, EXISTS, SELECT */
 
-    int height;           /* Height of the tree headed by this node */
+    int height;                 /* Height of the tree headed by this node */
     char *alias;
     enum sql_expr_flags_t flags;
     enum sql_var_scope_t var_scope; /* variable scope: SESSION(default) or GLOBAL */
-    const char *start; /* first char of expr in original sql */
-    const char *end; /* one char past the end of expr in orig sql */
+    const char *start;          /* first char of expr in original sql */
+    const char *end;            /* one char past the end of expr in orig sql */
 };
 
-enum select_flag_t{
+enum select_flag_t {
     SF_DISTINCT = 0x01,
     SF_ALL = 0x02,
     SF_CALC_FOUND_ROWS = 0x04,
@@ -181,9 +181,9 @@ enum select_flag_t{
 
 struct sql_select_t {
     uint8_t op;                 /* One of: TK_UNION TK_ALL TK_INTERSECT TK_EXCEPT */
-    uint32_t flags;          /* Various SF_* values */
-    sql_expr_list_t *columns;      /* The fields of the result */
-    sql_src_list_t *from_src;         /* The FROM clause */
+    uint32_t flags;             /* Various SF_* values */
+    sql_expr_list_t *columns;   /* The fields of the result */
+    sql_src_list_t *from_src;   /* The FROM clause */
     sql_expr_t *where_clause;
     sql_expr_list_t *groupby_clause;
     sql_expr_t *having_clause;
@@ -196,7 +196,7 @@ struct sql_select_t {
 };
 
 struct sql_delete_t {
-    sql_src_list_t *from_src;         /* The FROM clause */
+    sql_src_list_t *from_src;   /* The FROM clause */
     sql_expr_t *where_clause;
     sql_column_list_t *orderby_clause;
     sql_expr_t *limit;          /* LIMIT expression. NULL means not used. */
@@ -216,7 +216,7 @@ struct sql_update_t {
 struct sql_insert_t {
     int is_replace;
     sql_src_list_t *table;
-    sql_select_t *sel_val; /* [1] select...  [2] values(...)*/
+    sql_select_t *sel_val;      /* [1] select...  [2] values(...) */
     sql_id_list_t *columns;
 };
 
@@ -228,24 +228,23 @@ struct sql_column_t {
 };
 
 struct sql_src_item_t {
-    char *dbname;  /* Name of database holding this table */
-    char *table_name;      /* Name of the table */
-    char *table_alias;     /* The "B" part of a "A AS B" phrase.  zName is the "A" */
-    sql_select_t *select;  /* A SELECT statement used in place of a table name */
-    uint8_t jointype;      /* Type of join between this table and the previous */
+    char *dbname;               /* Name of database holding this table */
+    char *table_name;           /* Name of the table */
+    char *table_alias;          /* The "B" part of a "A AS B" phrase.  zName is the "A" */
+    sql_select_t *select;       /* A SELECT statement used in place of a table name */
+    uint8_t jointype;           /* Type of join between this table and the previous */
 
-    sql_expr_t *on_clause;        /* The ON clause of a join */
-    sql_id_list_t *pUsing;   /* The USING clause of a join */
+    sql_expr_t *on_clause;      /* The ON clause of a join */
+    sql_id_list_t *pUsing;      /* The USING clause of a join */
 
     sql_expr_list_t *func_arg;  /* Arguments to table-valued-function */
-};             /* One entry for each identifier on the list */
+};                              /* One entry for each identifier on the list */
 
 typedef struct sql_set_transaction_t {
     enum sql_var_scope_t scope;
     enum sql_trx_feature_t rw_feature;
     enum sql_trx_feature_t level;
 } sql_set_transaction_t;
-    
 
 char *sql_token_dup(sql_token_t);
 
@@ -272,8 +271,7 @@ gboolean sql_expr_is_id(const sql_expr_t *p, const char *name);
 
 gboolean sql_expr_is_function(const sql_expr_t *p, const char *func_name);
 
-gboolean sql_expr_is_dotted_name(const sql_expr_t *p,
-                                 const char *prefix, const char *suffix);
+gboolean sql_expr_is_dotted_name(const sql_expr_t *p, const char *prefix, const char *suffix);
 
 gboolean sql_expr_is_field_name(const sql_expr_t *p);
 
@@ -283,14 +281,14 @@ sql_expr_t *sql_expr_list_find(sql_expr_list_t *list, const char *name);
 
 sql_expr_t *sql_expr_list_find_fullname(sql_expr_list_t *list, const sql_expr_t *expr);
 
-int sql_expr_list_find_aggregates(sql_expr_list_t *list, GROUP_AGGR *aggr_array);
+int sql_expr_list_find_aggregates(sql_expr_list_t *list, group_aggr_t * aggr_array);
 int sql_expr_list_find_aggregate(sql_expr_list_t *list);
 
 void sql_expr_list_free(sql_expr_list_t *list);
 
 sql_src_list_t *sql_src_list_append(sql_src_list_t *, sql_token_t *tname,
- sql_token_t *dbname, sql_token_t *alias, sql_select_t *subquery,
- sql_expr_t *on_clause, sql_id_list_t *using_clause);
+                                    sql_token_t *dbname, sql_token_t *alias, sql_select_t *subquery,
+                                    sql_expr_t *on_clause, sql_id_list_t *using_clause);
 
 void sql_src_list_free(sql_src_list_t *p);
 

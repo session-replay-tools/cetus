@@ -21,20 +21,20 @@
 #ifndef _CHASSIS_MAINLOOP_H_
 #define _CHASSIS_MAINLOOP_H_
 
-#include <glib.h>    /* GPtrArray */
+#include <glib.h>               /* GPtrArray */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 
 #ifdef HAVE_SYS_TIME_H
-#include <sys/time.h>  /* event.h needs struct tm */
+#include <sys/time.h>           /* event.h needs struct tm */
 #endif
 #ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
 #endif
 #include <stdio.h>
-#include <event.h>     /* struct event_base */
+#include <event.h>              /* struct event_base */
 
 #include "chassis-exports.h"
 #include "chassis-log.h"
@@ -61,11 +61,11 @@ typedef struct chassis chassis;
 #define MAX_ALLOWED_PACKET_FLOOR   (1 * KB)
 
 typedef struct cached_sql_info_t {
-    time_t     last_visit_time;
-    int        visited_cnt;
-    int        parsed_txLevel;
-    int        parsed_rv;
-    int        parsed_join_op_unsupported;
+    time_t last_visit_time;
+    int visited_cnt;
+    int parsed_txLevel;
+    int parsed_rv;
+    int parsed_join_op_unsupported;
     GPtrArray *groups;
 } cached_sql_info_t;
 
@@ -79,7 +79,7 @@ typedef struct query_stats_t {
     rw_op_t proxyed_query;
     uint64_t query_time_table[MAX_QUERY_TIME];
     uint64_t query_wait_table[MAX_WAIT_TIME];
-    rw_op_t  server_query_details[MAX_SERVER_NUM];
+    rw_op_t server_query_details[MAX_SERVER_NUM];
     uint64_t com_select;
     uint64_t com_insert;
     uint64_t com_update;
@@ -96,10 +96,10 @@ typedef struct query_stats_t {
 /* For generating unique global ids for MySQL */
 struct incremental_guid_state_t {
     unsigned int last_sec;
-    int   worker_id;
-    int   rand_id;
-    int   init_rand_id;
-    int   seq_id;
+    int worker_id;
+    int rand_id;
+    int init_rand_id;
+    int seq_id;
 };
 
 void incremental_guid_init(struct incremental_guid_state_t *s);
@@ -139,7 +139,6 @@ struct chassis {
     unsigned int master_preferred;
     unsigned int is_reduce_conns;
     unsigned int xa_log_detailed;
-    unsigned int is_reset_conn_enabled;
     unsigned int sharding_reload;
     unsigned int check_slave_delay;
     int complement_conn_cnt;
@@ -165,9 +164,9 @@ struct chassis {
     char dist_tran_prefix[MAX_DIST_TRAN_PREFIX];
 
     chassis_private *priv;
-    void (*priv_shutdown)(chassis *chas, chassis_private *priv);
-    void (*priv_finally_free_shared)(chassis *chas, chassis_private *priv);
-    void (*priv_free)(chassis *chas, chassis_private *priv);
+    void (*priv_shutdown) (chassis *chas, chassis_private *priv);
+    void (*priv_finally_free_shared) (chassis *chas, chassis_private *priv);
+    void (*priv_free) (chassis *chas, chassis_private *priv);
 
     chassis_log *log;
 

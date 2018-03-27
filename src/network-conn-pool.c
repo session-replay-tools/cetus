@@ -40,7 +40,9 @@
  *
  * @return a connection pool entry
  */
-network_connection_pool_entry *network_connection_pool_entry_new(void) {
+network_connection_pool_entry *
+network_connection_pool_entry_new(void)
+{
     network_connection_pool_entry *e;
 
     e = g_new0(network_connection_pool_entry, 1);
@@ -54,15 +56,16 @@ network_connection_pool_entry *network_connection_pool_entry_new(void) {
  * @param e the pool entry to free
  * @param free_sock if true, the attached server-socket will be freed too
  */
-void network_connection_pool_entry_free(network_connection_pool_entry *e,
-        gboolean free_sock) 
+void
+network_connection_pool_entry_free(network_connection_pool_entry *e, gboolean free_sock)
 {
-    if (!e) return;
+    if (!e)
+        return;
 
     if (e->sock && free_sock) {
         network_socket *sock = e->sock;
 
-        g_debug("%s:event del, ev:%p",G_STRLOC, &(sock->event));
+        g_debug("%s:event del, ev:%p", G_STRLOC, &(sock->event));
         event_del(&(sock->event));
         network_socket_free(sock);
     }
@@ -80,7 +83,9 @@ void network_connection_pool_entry_free(network_connection_pool_entry *e,
  * @see network_connection_pool_new
  * @see GDestroyFunc
  */
-static void g_queue_free_all(gpointer q) {
+static void
+g_queue_free_all(gpointer q)
+{
     GQueue *queue = q;
     network_connection_pool_entry *entry;
 
@@ -94,7 +99,9 @@ static void g_queue_free_all(gpointer q) {
 /**
  * init a connection pool
  */
-network_connection_pool *network_connection_pool_new(void) {
+network_connection_pool *
+network_connection_pool_new(void)
+{
     network_connection_pool *pool;
 
     pool = g_new0(network_connection_pool, 1);
@@ -103,9 +110,8 @@ network_connection_pool *network_connection_pool_new(void) {
     pool->mid_idle_connections = 10;
     pool->min_idle_connections = 2;
     pool->cur_idle_connections = 0;
-    pool->users = g_hash_table_new_full(g_hash_table_string_hash, 
-            g_hash_table_string_equal, g_hash_table_string_free, 
-            g_queue_free_all);
+    pool->users = g_hash_table_new_full(g_hash_table_string_hash,
+                                        g_hash_table_string_equal, g_hash_table_string_free, g_queue_free_all);
 
     return pool;
 }
@@ -114,8 +120,11 @@ network_connection_pool *network_connection_pool_new(void) {
  * free all entries of the pool
  *
  */
-void network_connection_pool_free(network_connection_pool *pool) {
-    if (!pool) return;
+void
+network_connection_pool_free(network_connection_pool *pool)
+{
+    if (!pool)
+        return;
 
     g_hash_table_foreach_remove(pool->users, g_hash_table_true, NULL);
 
@@ -130,18 +139,18 @@ void network_connection_pool_free(network_connection_pool *pool) {
  * @return TRUE for the first entry having more than _user_data idling connections
  * @see network_connection_pool_get_conns 
  */
-static gboolean 
+static gboolean
 find_idle_conns(gpointer UNUSED_PARAM(_key), gpointer _val, gpointer _user_data)
 {
     guint idle_conns_threshold = *(gint *)_user_data;
     GQueue *conns = _val;
 
-    g_debug("%s: conns length:%d, idle_conns_threshold:%d", G_STRLOC, 
-            conns->length, idle_conns_threshold);
+    g_debug("%s: conns length:%d, idle_conns_threshold:%d", G_STRLOC, conns->length, idle_conns_threshold);
     return (conns->length > idle_conns_threshold);
 }
 
-GQueue *network_connection_pool_get_conns(network_connection_pool *pool, GString *username, int *is_robbed) 
+GQueue *
+network_connection_pool_get_conns(network_connection_pool *pool, GString *username, int *is_robbed)
 {
     GQueue *conns = NULL;
 
@@ -150,8 +159,7 @@ GQueue *network_connection_pool_get_conns(network_connection_pool *pool, GString
         /**
          * if we know this use, return a authed connection 
          */
-        g_debug("%s: get user-specific idling connection for '%s' -> %p", 
-                G_STRLOC, username->str, conns);
+        g_debug("%s: get user-specific idling connection for '%s' -> %p", G_STRLOC, username->str, conns);
         if (conns && conns->length > 0) {
             return conns;
         }
@@ -184,8 +192,8 @@ GQueue *network_connection_pool_get_conns(network_connection_pool *pool, GString
  * @param username (optional) name of the auth connection
  * @param default_db (unused) unused name of the default-db
  */
-network_socket *network_connection_pool_get(network_connection_pool *pool,
-        GString *username, int *is_robbed)
+network_socket *
+network_connection_pool_get(network_connection_pool *pool, GString *username, int *is_robbed)
 {
     network_connection_pool_entry *entry = NULL;
     GQueue *conns = network_connection_pool_get_conns(pool, username, is_robbed);
@@ -196,16 +204,14 @@ network_socket *network_connection_pool_get(network_connection_pool *pool,
             g_debug("%s: (get) entry for user '%s' -> %p, now:%ld",
                     G_STRLOC, username ? username->str : "", entry, time(0));
         } else {
-            g_debug("%s: conns length is zero for user '%s'",
-                    G_STRLOC, username ? username->str : "");
+            g_debug("%s: conns length is zero for user '%s'", G_STRLOC, username ? username->str : "");
         }
     } else {
-        g_message("%s: conns is null for user '%s'", G_STRLOC, username ? username->str : "" );
+        g_message("%s: conns is null for user '%s'", G_STRLOC, username ? username->str : "");
     }
 
     if (!entry) {
-        g_debug("%s: (get) no entry for user '%s' -> %p", G_STRLOC, 
-                username ? username->str : "", conns);
+        g_debug("%s: (get) no entry for user '%s' -> %p", G_STRLOC, username ? username->str : "", conns);
         return NULL;
     }
     network_socket *sock = entry->sock;
@@ -214,20 +220,19 @@ network_socket *network_connection_pool_get(network_connection_pool *pool,
         g_warning("%s: server recv queue not empty", G_STRLOC);
     }
 
-    g_debug("%s: recv queue length:%d, sock:%p", 
-            G_STRLOC, sock->recv_queue->chunks->length, sock);
+    g_debug("%s: recv queue length:%d, sock:%p", G_STRLOC, sock->recv_queue->chunks->length, sock);
 
     network_connection_pool_entry_free(entry, FALSE);
 
-    g_debug("%s:event del, ev:%p",G_STRLOC, &(sock->event));
-    /* remove the idle handler from the socket */	
+    g_debug("%s:event del, ev:%p", G_STRLOC, &(sock->event));
+    /* remove the idle handler from the socket */
     event_del(&(sock->event));
 
-    g_debug("%s: (get) got socket for user '%s' -> %p, charset:%s", G_STRLOC, 
+    g_debug("%s: (get) got socket for user '%s' -> %p, charset:%s", G_STRLOC,
             username ? username->str : "", sock, sock->charset->str);
 
     if (sock->is_in_sess_context) {
-        g_message("%s: conn is in sess context for user:'%s'", G_STRLOC, username ? username->str : "" );
+        g_message("%s: conn is in sess context for user:'%s'", G_STRLOC, username ? username->str : "");
     }
 
     pool->cur_idle_connections--;
@@ -238,8 +243,8 @@ network_socket *network_connection_pool_get(network_connection_pool *pool,
 /**
  * add a connection to the connection pool
  */
-network_connection_pool_entry *network_connection_pool_add(network_connection_pool *pool, 
-        network_socket *sock)
+network_connection_pool_entry *
+network_connection_pool_add(network_connection_pool *pool, network_socket *sock)
 {
     if (!g_queue_is_empty(sock->recv_queue->chunks)) {
         g_warning("%s: server recv queue not empty", G_STRLOC);
@@ -252,13 +257,10 @@ network_connection_pool_entry *network_connection_pool_add(network_connection_po
 
     sock->is_authed = 1;
 
-    g_debug("%s: (add) adding socket to pool for user '%s' -> %p", 
-            G_STRLOC, sock->response->username->str, sock);
+    g_debug("%s: (add) adding socket to pool for user '%s' -> %p", G_STRLOC, sock->response->username->str, sock);
 
     GQueue *conns = NULL;
-    if (NULL == (conns = g_hash_table_lookup(pool->users, 
-                    sock->response->username))) 
-    {
+    if (NULL == (conns = g_hash_table_lookup(pool->users, sock->response->username))) {
         conns = g_queue_new();
         g_hash_table_insert(pool->users, g_string_dup(sock->response->username), conns);
     }
@@ -273,8 +275,8 @@ network_connection_pool_entry *network_connection_pool_add(network_connection_po
 /**
  * remove the connection referenced by entry from the pool 
  */
-void network_connection_pool_remove(network_connection_pool *pool, 
-        network_connection_pool_entry *entry) 
+void
+network_connection_pool_remove(network_connection_pool *pool, network_connection_pool_entry *entry)
 {
     network_socket *sock = entry->sock;
     GQueue *conns;
@@ -290,9 +292,8 @@ void network_connection_pool_remove(network_connection_pool *pool,
     pool->cur_idle_connections--;
 }
 
-gboolean 
-network_conn_pool_do_reduce_conns_verdict(network_connection_pool *pool, 
-        int connected_clients)
+gboolean
+network_conn_pool_do_reduce_conns_verdict(network_connection_pool *pool, int connected_clients)
 {
     if (pool->cur_idle_connections > pool->mid_idle_connections) {
         if (connected_clients < pool->cur_idle_connections) {
@@ -303,7 +304,8 @@ network_conn_pool_do_reduce_conns_verdict(network_connection_pool *pool,
     return FALSE;
 }
 
-int network_connection_pool_total_conns_count(network_connection_pool *pool)
+int
+network_connection_pool_total_conns_count(network_connection_pool *pool)
 {
     GHashTable *users = pool->users;
     int total = 0;
@@ -319,9 +321,8 @@ int network_connection_pool_total_conns_count(network_connection_pool *pool)
     }
 
     if (pool->cur_idle_connections != total) {
-        g_warning("%s: pool cur idle connections stat error:%d, total:%d", 
-                G_STRLOC, pool->cur_idle_connections, total);
-        pool->cur_idle_connections  = total;
+        g_warning("%s: pool cur idle connections stat error:%d, total:%d", G_STRLOC, pool->cur_idle_connections, total);
+        pool->cur_idle_connections = total;
     }
 
     return total;

@@ -21,7 +21,7 @@
 #ifndef _CHASSIS_LIMITS_H_
 #define _CHASSIS_LIMITS_H_
 
-#include <glib.h>    /* GPtrArray */
+#include <glib.h>               /* GPtrArray */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"

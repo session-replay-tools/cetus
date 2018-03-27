@@ -17,7 +17,7 @@
  02110-1301  USA
 
  $%ENDLICENSE%$ */
- 
+
 /** @file
  * the user-interface for the cetus @see main()
  *
@@ -43,7 +43,7 @@
 
 #include <unistd.h>
 #include <sys/wait.h>
-#include <sys/resource.h> /* for rusage in wait() */
+#include <sys/resource.h>       /* for rusage in wait() */
 
 #include <glib.h>
 #include <gmodule.h>
@@ -82,7 +82,7 @@
 /**
  * options of the cetus frontend
  */
-typedef struct {
+struct chassis_frontend_t {
     int print_version;
     int verbose_shutdown;
 
@@ -102,7 +102,6 @@ typedef struct {
     int is_client_compress_support;
     int check_slave_delay;
     int is_reduce_conns;
-    int is_reset_conn_enabled;
     int long_query_time;
     int xa_log_detailed;
     int cetus_max_allowed_packet;
@@ -141,15 +140,17 @@ typedef struct {
     char *default_db;
 
     char *remote_config_url;
-} chassis_frontend_t;
+};
 
 /**
  * create a new the frontend for the chassis
  */
-chassis_frontend_t *chassis_frontend_new(void) {
-    chassis_frontend_t *frontend;
+struct chassis_frontend_t *
+chassis_frontend_new(void)
+{
+    struct chassis_frontend_t *frontend;
 
-    frontend = g_slice_new0(chassis_frontend_t);
+    frontend = g_slice_new0(struct chassis_frontend_t);
     frontend->max_files_number = 0;
     frontend->disable_threads = 0;
     frontend->is_back_compressed = 0;
@@ -157,7 +158,7 @@ chassis_frontend_t *chassis_frontend_new(void) {
     frontend->xa_log_detailed = 0;
 
     frontend->default_pool_size = 100;
-    frontend->max_resp_len = 10 * 1024 * 1024; /* 10M */
+    frontend->max_resp_len = 10 * 1024 * 1024;  /* 10M */
     frontend->merged_output_size = 8192;
     frontend->max_header_size = 65536;
     frontend->config_port = 3306;
@@ -173,10 +174,14 @@ chassis_frontend_t *chassis_frontend_new(void) {
 /**
  * free the frontend of the chassis
  */
-void chassis_frontend_free(chassis_frontend_t *frontend) {
-    if (!frontend) return;
+void
+chassis_frontend_free(struct chassis_frontend_t *frontend)
+{
+    if (!frontend)
+        return;
 
-    if (frontend->keyfile) g_key_file_free(frontend->keyfile);
+    if (frontend->keyfile)
+        g_key_file_free(frontend->keyfile);
     g_free(frontend->default_file);
     g_free(frontend->log_xa_filename);
     g_free(frontend->log_filename);
@@ -197,231 +202,201 @@ void chassis_frontend_free(chassis_frontend_t *frontend) {
 
     g_free(frontend->remote_config_url);
 
-    g_slice_free(chassis_frontend_t, frontend);
+    g_slice_free(struct chassis_frontend_t, frontend);
 }
-
 
 /**
  * setup the options of the chassis
  */
-int chassis_frontend_set_chassis_options(chassis_frontend_t *frontend, chassis_options_t *opts) {
+int
+chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassis_options_t *opts)
+{
     chassis_options_add(opts,
-            "verbose-shutdown",
-            0, 0, OPTION_ARG_NONE, &(frontend->verbose_shutdown),
-            "Always log the exit code when shutting down", NULL);
+                        "verbose-shutdown",
+                        0, 0, OPTION_ARG_NONE, &(frontend->verbose_shutdown),
+                        "Always log the exit code when shutting down", NULL);
+
+    chassis_options_add(opts, "daemon", 0, 0, OPTION_ARG_NONE, &(frontend->daemon_mode), "Start in daemon-mode", NULL);
+
+    chassis_options_add(opts, "user", 0, 0, OPTION_ARG_STRING, &(frontend->user), "Run cetus as user", "<user>");
 
     chassis_options_add(opts,
-            "daemon",
-            0, 0, OPTION_ARG_NONE, &(frontend->daemon_mode),
-            "Start in daemon-mode", NULL);
+                        "basedir",
+                        0, 0, OPTION_ARG_STRING, &(frontend->base_dir),
+                        "Base directory to prepend to relative paths in the config", "<absolute path>");
 
     chassis_options_add(opts,
-            "user",
-            0, 0, OPTION_ARG_STRING, &(frontend->user),
-            "Run cetus as user", "<user>");
+                        "conf-dir",
+                        0, 0, OPTION_ARG_STRING, &(frontend->conf_dir), "Configuration directory", "<absolute path>");
 
     chassis_options_add(opts,
-            "basedir",
-            0, 0, OPTION_ARG_STRING, &(frontend->base_dir),
-            "Base directory to prepend to relative paths in the config",
-            "<absolute path>");
+                        "pid-file",
+                        0, 0, OPTION_ARG_STRING, &(frontend->pid_file),
+                        "PID file in case we are started as daemon", "<file>");
 
     chassis_options_add(opts,
-            "conf-dir",
-            0, 0, OPTION_ARG_STRING, &(frontend->conf_dir),
-            "Configuration directory",
-            "<absolute path>");
+                        "plugin-dir",
+                        0, 0, OPTION_ARG_STRING, &(frontend->plugin_dir), "Path to the plugins", "<path>");
 
     chassis_options_add(opts,
-            "pid-file",
-            0, 0, OPTION_ARG_STRING, &(frontend->pid_file),
-            "PID file in case we are started as daemon", "<file>");
+                        "plugins",
+                        0, 0, OPTION_ARG_STRING_ARRAY, &(frontend->plugin_names), "Plugins to load", "<name>");
 
     chassis_options_add(opts,
-            "plugin-dir",
-            0, 0, OPTION_ARG_STRING, &(frontend->plugin_dir),
-            "Path to the plugins", "<path>");
+                        "log-level",
+                        0, 0, OPTION_ARG_STRING, &(frontend->log_level),
+                        "Log all messages of level ... or higher", "(error|warning|info|message|debug)");
 
     chassis_options_add(opts,
-            "plugins",
-            0, 0, OPTION_ARG_STRING_ARRAY, &(frontend->plugin_names),
-            "Plugins to load", "<name>");
+                        "log-file",
+                        0, 0, OPTION_ARG_STRING, &(frontend->log_filename), "Log all messages in a file", "<file>");
 
     chassis_options_add(opts,
-            "log-level",
-            0, 0, OPTION_ARG_STRING, &(frontend->log_level),
-            "Log all messages of level ... or higher",
-            "(error|warning|info|message|debug)");
+                        "log-xa-file",
+                        0, 0, OPTION_ARG_STRING, &(frontend->log_xa_filename),
+                        "Log all xa messages in a file", "<file>");
 
     chassis_options_add(opts,
-            "log-file",
-            0, 0, OPTION_ARG_STRING, &(frontend->log_filename),
-            "Log all messages in a file", "<file>");
+                        "log-backtrace-on-crash",
+                        0, 0, OPTION_ARG_NONE, &(frontend->invoke_dbg_on_crash),
+                        "Try to invoke debugger on crash", NULL);
 
     chassis_options_add(opts,
-            "log-xa-file",
-            0, 0, OPTION_ARG_STRING, &(frontend->log_xa_filename),
-            "Log all xa messages in a file", "<file>");
+                        "keepalive",
+                        0, 0, OPTION_ARG_NONE, &(frontend->auto_restart),
+                        "Try to restart the proxy if it crashed", NULL);
 
     chassis_options_add(opts,
-            "log-backtrace-on-crash",
-            0, 0, OPTION_ARG_NONE, &(frontend->invoke_dbg_on_crash),
-            "Try to invoke debugger on crash", NULL);
+                        "max-open-files",
+                        0, 0, OPTION_ARG_INT, &(frontend->max_files_number),
+                        "Maximum number of open files (ulimit -n)", NULL);
 
     chassis_options_add(opts,
-            "keepalive",
-            0, 0, OPTION_ARG_NONE, &(frontend->auto_restart),
-            "Try to restart the proxy if it crashed", NULL);
+                        "default-charset",
+                        0, 0, OPTION_ARG_STRING, &(frontend->default_charset),
+                        "Set the default character set for backends", "<string>");
 
     chassis_options_add(opts,
-            "max-open-files",
-            0, 0, OPTION_ARG_INT, &(frontend->max_files_number),
-            "Maximum number of open files (ulimit -n)", NULL);
+                        "default-username",
+                        0, 0, OPTION_ARG_STRING, &(frontend->default_username),
+                        "Set the default username for visiting backends", "<string>");
 
     chassis_options_add(opts,
-            "default-charset",
-            0, 0, OPTION_ARG_STRING, &(frontend->default_charset),
-            "Set the default character set for backends", "<string>");
+                        "default-db",
+                        0, 0, OPTION_ARG_STRING, &(frontend->default_db),
+                        "Set the default db for visiting backends", "<string>");
 
     chassis_options_add(opts,
-            "default-username",
-            0, 0, OPTION_ARG_STRING, &(frontend->default_username),
-            "Set the default username for visiting backends", "<string>");
+                        "default-pool-size",
+                        0, 0, OPTION_ARG_INT, &(frontend->default_pool_size),
+                        "Set the default pool szie for visiting backends", "<integer>");
 
     chassis_options_add(opts,
-            "default-db",
-            0, 0, OPTION_ARG_STRING, &(frontend->default_db),
-            "Set the default db for visiting backends", "<string>");
+                        "max-pool-size",
+                        0, 0, OPTION_ARG_INT, &(frontend->max_pool_size),
+                        "Set the max pool szie for visiting backends", "<integer>");
 
     chassis_options_add(opts,
-            "default-pool-size",
-            0, 0, OPTION_ARG_INT, &(frontend->default_pool_size),
-            "Set the default pool szie for visiting backends", "<integer>");
+                        "max-resp-size",
+                        0, 0, OPTION_ARG_INT, &(frontend->max_resp_len),
+                        "Set the max response size for one backend", "<integer>");
 
     chassis_options_add(opts,
-            "max-pool-size",
-            0, 0, OPTION_ARG_INT, &(frontend->max_pool_size),
-            "Set the max pool szie for visiting backends", "<integer>");
+                        "merged-output-size",
+                        0, 0, OPTION_ARG_INT, &(frontend->merged_output_size),
+                        "set the merged output size for tcp streaming", "<integer>");
 
     chassis_options_add(opts,
-            "max-resp-size",
-            0, 0, OPTION_ARG_INT, &(frontend->max_resp_len),
-            "Set the max response size for one backend", "<integer>");
+                        "max-header-size",
+                        0, 0, OPTION_ARG_INT, &(frontend->max_header_size),
+                        "set the max header size for tcp streaming", "<integer>");
 
     chassis_options_add(opts,
-            "merged-output-size",
-            0, 0, OPTION_ARG_INT, &(frontend->merged_output_size),
-            "set the merged output size for tcp streaming", "<integer>");
+                        "worker_id",
+                        0, 0, OPTION_ARG_INT, &(frontend->worker_id),
+                        "Set the worker id and the maximum value allowed is 63 and the min value is 1", "<integer>");
 
     chassis_options_add(opts,
-            "max-header-size",
-            0, 0, OPTION_ARG_INT, &(frontend->max_header_size),
-            "set the max header size for tcp streaming", "<integer>");
+                        "disable-threads",
+                        0, 0, OPTION_ARG_NONE, &(frontend->disable_threads), "Disable all threads creation", NULL);
 
     chassis_options_add(opts,
-            "worker_id",
-            0, 0, OPTION_ARG_INT, &(frontend->worker_id),
-            "Set the worker id and the maximum value allowed is 63 and the min value is 1",
-            "<integer>");
+                        "enable-back-compress",
+                        0, 0, OPTION_ARG_NONE, &(frontend->is_back_compressed),
+                        "enable compression for backend interactions", NULL);
 
     chassis_options_add(opts,
-            "disable-threads",
-            0, 0, OPTION_ARG_NONE, &(frontend->disable_threads),
-            "Disable all threads creation", NULL);
+                        "enable-client-compress",
+                        0, 0, OPTION_ARG_NONE, &(frontend->is_client_compress_support),
+                        "enable compression for client interactions", NULL);
 
     chassis_options_add(opts,
-            "enable-back-compress",
-            0, 0, OPTION_ARG_NONE, &(frontend->is_back_compressed),
-            "enable compression for backend interactions", NULL);
+                        "check-slave-delay",
+                        0, 0, OPTION_ARG_NONE, &(frontend->check_slave_delay),
+                        "Check ro backends with heartbeat", NULL);
 
     chassis_options_add(opts,
-            "enable-client-compress",
-            0, 0, OPTION_ARG_NONE, &(frontend->is_client_compress_support),
-            "enable compression for client interactions", NULL);
+                        "slave-delay-down",
+                        0, 0, OPTION_ARG_DOUBLE, &(frontend->slave_delay_down_threshold_sec),
+                        "Slave will be set down after reach this delay secondes", "<double>");
 
     chassis_options_add(opts,
-            "check-slave-delay",
-            0, 0, OPTION_ARG_NONE, &(frontend->check_slave_delay),
-            "Check ro backends with heartbeat", NULL);
+                        "slave-delay-recover",
+                        0, 0, OPTION_ARG_DOUBLE, &(frontend->slave_delay_recover_threshold_sec),
+                        "Slave will recover after below this delay secondes", "<double>");
 
     chassis_options_add(opts,
-            "slave-delay-down",
-            0, 0, OPTION_ARG_DOUBLE, &(frontend->slave_delay_down_threshold_sec),
-            "Slave will be set down after reach this delay secondes", "<double>");
+                        "default-query-cache-timeout",
+                        0, 0, OPTION_ARG_INT, &(frontend->default_query_cache_timeout),
+                        "default query cache timeout in ms", "<integer>");
 
     chassis_options_add(opts,
-            "slave-delay-recover",
-            0, 0, OPTION_ARG_DOUBLE, &(frontend->slave_delay_recover_threshold_sec),
-            "Slave will recover after below this delay secondes", "<double>");
+                        "long-query-time",
+                        0, 0, OPTION_ARG_INT, &(frontend->long_query_time), "Long query time in ms", "<integer>");
 
     chassis_options_add(opts,
-            "default-query-cache-timeout",
-            0, 0, OPTION_ARG_INT, &(frontend->default_query_cache_timeout),
-            "timeout when proxy connect to backends", "<integer>");
+                        "enable-client-found-rows",
+                        0, 0, OPTION_ARG_NONE, &(frontend->set_client_found_rows), "Set client found rows flag", NULL);
 
     chassis_options_add(opts,
-            "long-query-time",
-            0, 0, OPTION_ARG_INT, &(frontend->long_query_time),
-            "Long query time in ms", "<integer>");
+                        "reduce-connections",
+                        0, 0, OPTION_ARG_NONE, &(frontend->is_reduce_conns),
+                        "Reduce connections when idle connection num is too high", NULL);
+
+    chassis_options_add(opts, "enable-query-cache", 0, 0, OPTION_ARG_NONE, &(frontend->query_cache_enabled), "", NULL);
+
+    chassis_options_add(opts, "enable-tcp-stream", 0, 0, OPTION_ARG_NONE, &(frontend->is_tcp_stream_enabled), "", NULL);
 
     chassis_options_add(opts,
-            "enable-client-found-rows",
-            0, 0, OPTION_ARG_NONE, &(frontend->set_client_found_rows),
-            "Set client found rows flag", NULL);
+                        "log-xa-in-detail",
+                        0, 0, OPTION_ARG_NONE, &(frontend->xa_log_detailed), "log xa in detail", NULL);
 
     chassis_options_add(opts,
-            "reduce-connections",
-            0, 0, OPTION_ARG_NONE, &(frontend->is_reduce_conns),
-            "Reduce connections when idle connection num is too high", NULL);
+                        "disable-dns-cache",
+                        0, 0, OPTION_ARG_NONE, &(frontend->disable_dns_cache),
+                        "Every new connection to backends will resolve domain name", NULL);
 
     chassis_options_add(opts,
-            "enable-reset-connection",
-            0, 0, OPTION_ARG_NONE, &(frontend->is_reset_conn_enabled),
-            "Restart connections when feature changed", NULL);
-
+                        "master-preferred",
+                        0, 0, OPTION_ARG_NONE, &(frontend->master_preferred), "Access to master preferentially", NULL);
     chassis_options_add(opts,
-            "enable-query-cache",
-            0, 0, OPTION_ARG_NONE, &(frontend->query_cache_enabled),
-            "", NULL);
-
+                        "max-allowed-packet",
+                        0, 0, OPTION_ARG_INT, &(frontend->cetus_max_allowed_packet),
+                        "Max allowed packet as in mysql", "<int>");
     chassis_options_add(opts,
-            "enable-tcp-stream",
-            0, 0, OPTION_ARG_NONE, &(frontend->is_tcp_stream_enabled),
-            "", NULL);
-
-    chassis_options_add(opts,
-            "log-xa-in-detail",
-            0, 0, OPTION_ARG_NONE, &(frontend->xa_log_detailed),
-            "log xa in detail", NULL);
-
-    chassis_options_add(opts,
-            "disable-dns-cache",
-            0, 0, OPTION_ARG_NONE, &(frontend->disable_dns_cache),
-            "Every new connection to backends will resolve domain name", NULL);
-
-    chassis_options_add(opts,
-            "master-preferred",
-            0, 0, OPTION_ARG_NONE, &(frontend->master_preferred),
-            "Access to master preferentially", NULL);
-    chassis_options_add(opts,
-            "max-allowed-packet",
-            0, 0, OPTION_ARG_INT, &(frontend->cetus_max_allowed_packet),
-            "Max allowed packet as in mysql", "<int>");
-    chassis_options_add(opts,
-            "remote-conf-url",
-            0, 0, OPTION_ARG_STRING, &(frontend->remote_config_url),
-            "Remote config url, mysql://xx", "<string>");
+                        "remote-conf-url",
+                        0, 0, OPTION_ARG_STRING, &(frontend->remote_config_url),
+                        "Remote config url, mysql://xx", "<string>");
 
     return 0;
 }
-
 
 #ifdef HAVE_SIGACTION
 static void
 log_backtrace(void)
 {
     void *array[16];
-    int  size, i;
+    int size, i;
     char **strings;
 
     size = backtrace(array, 16);
@@ -432,17 +407,20 @@ log_backtrace(void)
         g_warning("%s", strings[i]);
     }
 
-    free (strings);
+    free(strings);
 }
 
-static void sigsegv_handler(int G_GNUC_UNUSED signum) {
+static void
+sigsegv_handler(int G_GNUC_UNUSED signum)
+{
     log_backtrace();
 
-    abort(); /* trigger a SIGABRT instead of just exiting */
+    abort();                    /* trigger a SIGABRT instead of just exiting */
 }
 #endif
 
-static gboolean check_plugin_mode_valid(chassis_frontend_t *frontend, chassis *srv)
+static gboolean
+check_plugin_mode_valid(struct chassis_frontend_t *frontend, chassis *srv)
 {
     int i, proxy_mode = 0, sharding_mode = 0;
 
@@ -456,7 +434,7 @@ static gboolean check_plugin_mode_valid(chassis_frontend_t *frontend, chassis *s
             proxy_mode = 1;
         }
     }
-    
+
     if (sharding_mode && proxy_mode) {
         g_critical("shard & proxy is mutual exclusive");
         return FALSE;
@@ -465,7 +443,9 @@ static gboolean check_plugin_mode_valid(chassis_frontend_t *frontend, chassis *s
     return TRUE;
 }
 
-static void g_query_cache_item_free(gpointer q) {
+static void
+g_query_cache_item_free(gpointer q)
+{
     query_cache_item *item = q;
     network_queue_free(item->queue);
     g_free(item);
@@ -475,7 +455,8 @@ static void g_query_cache_item_free(gpointer q) {
 #define DUP_STRING(STR, DEFAULT) \
         (STR) ? g_strdup(STR) : ((DEFAULT) ? g_strdup(DEFAULT) : NULL)
 
-static void init_parameters(chassis_frontend_t *frontend, chassis *srv)
+static void
+init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
 {
     srv->default_username = DUP_STRING(frontend->default_username, NULL);
     srv->default_charset = DUP_STRING(frontend->default_charset, NULL);
@@ -504,11 +485,10 @@ static void init_parameters(chassis_frontend_t *frontend, chassis *srv)
     if (frontend->worker_id > 0) {
         srv->guid_state.worker_id = frontend->worker_id & 0x3f;
     }
-
 #undef DUP_STRING
 
     srv->client_found_rows = frontend->set_client_found_rows;
-    g_message("set client_found_rows %s", srv->client_found_rows?"true":"false");
+    g_message("set client_found_rows %s", srv->client_found_rows ? "true" : "false");
 
     srv->xa_log_detailed = frontend->xa_log_detailed;
     if (srv->xa_log_detailed) {
@@ -516,14 +496,13 @@ static void init_parameters(chassis_frontend_t *frontend, chassis *srv)
     } else {
         g_message("%s:xa_log_detailed false", G_STRLOC);
     }
-    srv->is_reset_conn_enabled = frontend->is_reset_conn_enabled;
     srv->query_cache_enabled = frontend->query_cache_enabled;
     if (srv->query_cache_enabled) {
-        srv->query_cache_table = g_hash_table_new_full(g_str_hash,
-                g_str_equal, g_free, g_query_cache_item_free);
+        srv->query_cache_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_query_cache_item_free);
         srv->cache_index = g_queue_new();
     }
     srv->is_tcp_stream_enabled = frontend->is_tcp_stream_enabled;
+    srv->is_tcp_stream_enabled = 1;
     if (srv->is_tcp_stream_enabled) {
         g_message("%s:tcp stream enabled", G_STRLOC);
     }
@@ -548,18 +527,20 @@ static void init_parameters(chassis_frontend_t *frontend, chassis *srv)
     srv->default_query_cache_timeout = MAX(frontend->default_query_cache_timeout, 1);
     srv->long_query_time = MIN(frontend->long_query_time, MAX_QUERY_TIME);
     srv->cetus_max_allowed_packet = CLAMP(frontend->cetus_max_allowed_packet,
-            MAX_ALLOWED_PACKET_FLOOR, MAX_ALLOWED_PACKET_CEIL);
+                                          MAX_ALLOWED_PACKET_FLOOR, MAX_ALLOWED_PACKET_CEIL);
 }
 
-
-static void 
-release_resouces_when_exit(chassis_frontend_t *frontend, chassis *srv, GError *gerr,
-        chassis_options_t *opts, chassis_log *log)
+static void
+release_resouces_when_exit(struct chassis_frontend_t *frontend, chassis *srv, GError *gerr,
+                           chassis_options_t *opts, chassis_log *log)
 {
-    if (gerr) g_error_free(gerr);
-    if (srv) chassis_free(srv);
+    if (gerr)
+        g_error_free(gerr);
+    if (srv)
+        chassis_free(srv);
     g_debug("%s: call chassis_options_free", G_STRLOC);
-    if (opts) chassis_options_free(opts);
+    if (opts)
+        chassis_options_free(opts);
     g_debug("%s: call g_hash_table_destroy", G_STRLOC);
     g_debug("%s: call chassis_log_free", G_STRLOC);
     chassis_log_free(log);
@@ -569,7 +550,7 @@ release_resouces_when_exit(chassis_frontend_t *frontend, chassis *srv, GError *g
 }
 
 static void
-resolve_path(chassis *srv, chassis_frontend_t *frontend)
+resolve_path(chassis *srv, struct chassis_frontend_t *frontend)
 {
     /*
      * these are used before we gathered all the options
@@ -602,13 +583,13 @@ resolve_path(chassis *srv, chassis_frontend_t *frontend)
     }
 }
 
-static void slow_query_log_handler(const gchar *log_domain, GLogLevelFlags log_level,
-        const gchar *message, gpointer user_data)
+static void
+slow_query_log_handler(const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
 {
-    FILE* fp = user_data;
+    FILE *fp = user_data;
     time_t t = time(0);
     struct tm *tm = localtime(&t);
-    char timestr[32] = {0};
+    char timestr[32] = { 0 };
     const int len = 20;
     strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S ", tm);
     fwrite(timestr, 1, len, fp);
@@ -616,18 +597,19 @@ static void slow_query_log_handler(const gchar *log_domain, GLogLevelFlags log_l
     fwrite("\n", 1, 1, fp);
 }
 
-static FILE* init_slow_query_log(const char* main_log)
+static FILE *
+init_slow_query_log(const char *main_log)
 {
     if (!main_log) {
         return NULL;
     }
-    GString* log_name = g_string_new(main_log);
+    GString *log_name = g_string_new(main_log);
     g_string_append(log_name, ".slowquery.log");
 
-    FILE* fp = fopen(log_name->str, "a");
+    FILE *fp = fopen(log_name->str, "a");
     if (fp) {
         g_log_set_handler("slowquery", G_LOG_LEVEL_MASK | G_LOG_FLAG_FATAL
-                   | G_LOG_FLAG_RECURSION, slow_query_log_handler, fp);
+                          | G_LOG_FLAG_RECURSION, slow_query_log_handler, fp);
     }
     g_string_free(log_name, TRUE);
     return fp;
@@ -636,17 +618,20 @@ static FILE* init_slow_query_log(const char* main_log)
 /**
  * This is the "real" main which is called on UNIX platforms.
  */
-int main_cmdline(int argc, char **argv) {
+int
+main_cmdline(int argc, char **argv)
+{
     chassis *srv = NULL;
 #ifdef HAVE_SIGACTION
     static struct sigaction sigsegv_sa;
 #endif
     /* read the command-line options */
-    chassis_frontend_t *frontend = NULL;
+    struct chassis_frontend_t *frontend = NULL;
     chassis_options_t *opts = NULL;
 
     GError *gerr = NULL;
     chassis_log *log = NULL;
+    FILE *slow_query_log_fp = NULL;
 
     /*
      * a little helper macro to set the src-location that
@@ -690,11 +675,7 @@ int main_cmdline(int argc, char **argv) {
      *
      * leave the unknown options in the list
      */
-    if (chassis_frontend_init_base_options(&argc, &argv,
-                &(frontend->print_version),
-                &(frontend->default_file),
-                &gerr))
-    {
+    if (chassis_frontend_init_base_options(&argc, &argv, &(frontend->print_version), &(frontend->default_file), &gerr)) {
         g_critical("%s: %s", G_STRLOC, gerr->message);
         g_clear_error(&gerr);
 
@@ -702,13 +683,8 @@ int main_cmdline(int argc, char **argv) {
     }
 
     if (frontend->default_file) {
-        if (!(frontend->keyfile =
-              chassis_frontend_open_config_file(frontend->default_file, &gerr)))
-        {
-            g_critical("%s: loading config from '%s' failed: %s",
-                    G_STRLOC,
-                    frontend->default_file,
-                    gerr->message);
+        if (!(frontend->keyfile = chassis_frontend_open_config_file(frontend->default_file, &gerr))) {
+            g_critical("%s: loading config from '%s' failed: %s", G_STRLOC, frontend->default_file, gerr->message);
             g_clear_error(&gerr);
             GOTO_EXIT(EXIT_FAILURE);
         }
@@ -735,9 +711,7 @@ int main_cmdline(int argc, char **argv) {
     }
 
     if (frontend->keyfile) {
-        if (FALSE == chassis_keyfile_to_options_with_error(frontend->keyfile,
-                    "cetus", opts->options, &gerr))
-        {
+        if (FALSE == chassis_keyfile_to_options_with_error(frontend->keyfile, "cetus", opts->options, &gerr)) {
             g_critical("%s", gerr->message);
             GOTO_EXIT(EXIT_FAILURE);
         }
@@ -758,7 +732,6 @@ int main_cmdline(int argc, char **argv) {
     if (chassis_frontend_init_basedir(argv[0], &(frontend->base_dir))) {
         GOTO_EXIT(EXIT_FAILURE);
     }
-
 #ifdef HAVE_SIGACTION
     /* register the sigsegv interceptor */
 
@@ -788,8 +761,7 @@ int main_cmdline(int argc, char **argv) {
     srv->conf_dir = g_strdup(frontend->conf_dir);
 
     if (!srv->config_manager) { /* if no remote-config-url, we use local config */
-        srv->config_manager =
-            chassis_config_from_local_dir(srv->conf_dir, frontend->default_file);
+        srv->config_manager = chassis_config_from_local_dir(srv->conf_dir, frontend->default_file);
     }
 
     /*
@@ -804,10 +776,6 @@ int main_cmdline(int argc, char **argv) {
 
         GOTO_EXIT(EXIT_FAILURE);
     }
-    FILE* slow_query_log_fp = init_slow_query_log(log->log_filename);
-    if (!slow_query_log_fp) {
-        g_warning("cannot open slow-query log");
-    }
 
     /*
      * handle log-level after the config-file is read,
@@ -815,8 +783,7 @@ int main_cmdline(int argc, char **argv) {
      */
     if (frontend->log_level) {
         if (0 != chassis_log_set_level(log, frontend->log_level)) {
-            g_critical("--log-level=... failed, level '%s' is unknown ",
-                    frontend->log_level);
+            g_critical("--log-level=... failed, level '%s' is unknown ", frontend->log_level);
 
             GOTO_EXIT(EXIT_FAILURE);
         }
@@ -829,8 +796,7 @@ int main_cmdline(int argc, char **argv) {
     g_message("build revision: " CHASSIS_BUILD_TAG);
 #endif
 
-    g_message("glib version: %d.%d.%d",
-            GLIB_MAJOR_VERSION, GLIB_MINOR_VERSION, GLIB_MICRO_VERSION);
+    g_message("glib version: %d.%d.%d", GLIB_MAJOR_VERSION, GLIB_MINOR_VERSION, GLIB_MICRO_VERSION);
     g_message("libevent version: %s", event_get_version());
     g_message("config dir: %s", frontend->conf_dir);
 
@@ -849,27 +815,17 @@ int main_cmdline(int argc, char **argv) {
         frontend->plugin_names[1] = NULL;
     }
 
-    if (chassis_frontend_load_plugins(srv->modules,
-                frontend->plugin_dir,
-                frontend->plugin_names)) {
+    if (chassis_frontend_load_plugins(srv->modules, frontend->plugin_dir, frontend->plugin_names)) {
         GOTO_EXIT(EXIT_FAILURE);
     }
 
     if (chassis_frontend_init_plugins(srv->modules,
-                opts,
-                srv->config_manager,
-                &argc, &argv,
-                frontend->keyfile,
-                "cetus",
-                &gerr)) {
-        g_critical("%s: %s",
-                G_STRLOC,
-                gerr->message);
+                                      opts, srv->config_manager, &argc, &argv, frontend->keyfile, "cetus", &gerr)) {
+        g_critical("%s: %s", G_STRLOC, gerr->message);
         g_clear_error(&gerr);
 
         GOTO_EXIT(EXIT_FAILURE);
     }
-
 
     /* if we only print the version numbers, exit and don't do any more work */
     if (frontend->print_version) {
@@ -883,18 +839,12 @@ int main_cmdline(int argc, char **argv) {
 
     /* handle unknown options */
     if (FALSE == chassis_options_parse_cmdline(opts, &argc, &argv, &gerr)) {
-        if (gerr->domain == G_OPTION_ERROR &&
-                gerr->code == G_OPTION_ERROR_UNKNOWN_OPTION) {
-            g_critical("%s: %s (use --help to show all options)",
-                    G_STRLOC,
-                    gerr->message);
+        if (gerr->domain == G_OPTION_ERROR && gerr->code == G_OPTION_ERROR_UNKNOWN_OPTION) {
+            g_critical("%s: %s (use --help to show all options)", G_STRLOC, gerr->message);
         } else {
             g_critical("%s: %s (code = %d, domain = %s)",
-                    G_STRLOC,
-                    gerr->message,
-                    gerr->code,
-                    g_quark_to_string(gerr->domain)
-                    );
+                       G_STRLOC, gerr->message, gerr->code, g_quark_to_string(gerr->domain)
+                );
         }
 
         GOTO_EXIT(EXIT_FAILURE);
@@ -914,7 +864,7 @@ int main_cmdline(int argc, char **argv) {
     }
 
     if (frontend->auto_restart) {
-        int child_exit_status = EXIT_SUCCESS; /* forward the exit-status of the child */
+        int child_exit_status = EXIT_SUCCESS;   /* forward the exit-status of the child */
         int ret = chassis_unix_proc_keepalive(&child_exit_status);
 
         if (ret > 0) {
@@ -976,19 +926,20 @@ int main_cmdline(int argc, char **argv) {
     }
 #endif
 
+    slow_query_log_fp = init_slow_query_log(log->log_filename);
+    if (!slow_query_log_fp) {
+        g_warning("cannot open slow-query log");
+        GOTO_EXIT(EXIT_FAILURE);
+    }
+
     if (frontend->max_files_number) {
         if (0 != chassis_fdlimit_set(frontend->max_files_number)) {
             g_critical("%s: setting fdlimit = %d failed: %s (%d)",
-                    G_STRLOC,
-                    frontend->max_files_number,
-                    g_strerror(errno),
-                    errno);
+                       G_STRLOC, frontend->max_files_number, g_strerror(errno), errno);
             GOTO_EXIT(EXIT_FAILURE);
         }
     }
-    g_debug("max open file-descriptors = %"G_GINT64_FORMAT,
-            chassis_fdlimit_get());
-
+    g_debug("max open file-descriptors = %" G_GINT64_FORMAT, chassis_fdlimit_get());
 
     cetus_monitor_start_thread(srv->priv->monitor, srv);
 
@@ -1000,7 +951,7 @@ int main_cmdline(int argc, char **argv) {
 
     cetus_monitor_stop_thread(srv->priv->monitor);
 
-exit_nicely:
+  exit_nicely:
     /* necessary to set the shutdown flag, because the monitor will continue
      * to schedule timers otherwise, causing an infinite loop in cleanup
      */
@@ -1013,16 +964,15 @@ exit_nicely:
     g_message("Total allocated space (bytes): %d", m.uordblks);
     g_message("Total free space (bytes): %d", m.fordblks);
     g_message("Top-most, releasable space (bytes): %d", m.keepcost);
-   
+
     chassis_set_shutdown_location(exit_location);
 
     if (frontend && !frontend->print_version) {
         /* add a tag to the logfile */
         g_log(G_LOG_DOMAIN,
-                (frontend->verbose_shutdown ? G_LOG_LEVEL_CRITICAL : G_LOG_LEVEL_MESSAGE),
-                "shutting down normally, exit code is: %d", exit_code);
+              (frontend->verbose_shutdown ? G_LOG_LEVEL_CRITICAL : G_LOG_LEVEL_MESSAGE),
+              "shutting down normally, exit code is: %d", exit_code);
     }
-
 #ifdef HAVE_SIGACTION
     /* reset the handler */
     sigsegv_sa.sa_handler = SIG_DFL;
@@ -1032,13 +982,14 @@ exit_nicely:
 #endif
 
     release_resouces_when_exit(frontend, srv, gerr, opts, log);
-    if (slow_query_log_fp) fclose(slow_query_log_fp);
+    if (slow_query_log_fp)
+        fclose(slow_query_log_fp);
 
     return exit_code;
 }
 
-int main(int argc, char **argv) {
+int
+main(int argc, char **argv)
+{
     return main_cmdline(argc, argv);
 }
-
-

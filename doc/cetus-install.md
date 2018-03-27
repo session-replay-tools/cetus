@@ -27,7 +27,12 @@ cd build/
 - 编译：利用cmake进行编译，指令如下
 
 ```
-cmake ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/home/user/cetus_install [-DSIMPLE_PARSER=ON]
+读写分离版本：
+cmake ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/home/user/cetus_install -DSIMPLE_PARSER=ON
+
+分库版本：
+cmake ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/home/user/cetus_install
+
 ```
 
 其中CMAKE_BUILD_TYPE变量可以选择生成 debug 版和或release 版的程序，CMAKE_INSTALL_PREFIX变量确定软件的实际安装目录的绝对路径；SIMPLE_PARSER变量是可选项，添加则编译读写分离版本，否则编译分库版本。

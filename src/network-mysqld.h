@@ -57,7 +57,7 @@
 
 typedef enum {
     PROXY_NO_DECISION,
-    PROXY_NO_CONNECTION, /* TODO: this one shouldn't be here, it's not a dicsion */
+    PROXY_NO_CONNECTION,        /* TODO: this one shouldn't be here, it's not a dicsion */
     PROXY_SEND_QUERY,
     PROXY_SEND_RESULT,
     PROXY_SEND_INJECTION,
@@ -65,7 +65,7 @@ typedef enum {
     PROXY_IGNORE_RESULT       /** for read_query_result */
 } network_mysqld_stmt_ret;
 
-typedef struct network_mysqld_con network_mysqld_con; /* forward declaration */
+typedef struct network_mysqld_con network_mysqld_con;   /* forward declaration */
 
 /**
  * A macro that produces a plugin callback function pointer declaration.
@@ -90,74 +90,74 @@ typedef struct network_mysqld_con network_mysqld_con; /* forward declaration */
  * #NETWORK_MYSQLD_PLUGIN_FUNC can be used to create a function pointer declaration.
  */
 typedef struct {
-	/**
-	 * Called when a new client connection to cetus was created.
-	 */
-	NETWORK_MYSQLD_PLUGIN_FUNC(con_init);
-	/**
-	 * Called when cetus needs to establish a connection to a backend server
-	 *
-	 * Returning a handshake response packet from this callback will 
+    /**
+     * Called when a new client connection to cetus was created.
+     */
+    NETWORK_MYSQLD_PLUGIN_FUNC(con_init);
+    /**
+     * Called when cetus needs to establish a connection to a backend server
+     *
+     * Returning a handshake response packet from this callback will 
      * cause the con_read_handshake step to be skipped.
      *
-	 * The next state then is con_send_handshake.
-	 */
-	NETWORK_MYSQLD_PLUGIN_FUNC(con_connect_server);
-	/**
-	 * Called when cetus has read the handshake packet from the server.
-	 */
-	NETWORK_MYSQLD_PLUGIN_FUNC(con_read_handshake);
-	/**
-	 * Called when cetus wants to send the handshake packet to the client.
-	 * 
-	 * @note No known plugins actually implement this step right now, 
+     * The next state then is con_send_handshake.
+     */
+    NETWORK_MYSQLD_PLUGIN_FUNC(con_connect_server);
+    /**
+     * Called when cetus has read the handshake packet from the server.
+     */
+    NETWORK_MYSQLD_PLUGIN_FUNC(con_read_handshake);
+    /**
+     * Called when cetus wants to send the handshake packet to the client.
+     * 
+     * @note No known plugins actually implement this step right now, 
      * but rather return a handshake challenge from con_init instead.
-	 */
-	NETWORK_MYSQLD_PLUGIN_FUNC(con_send_handshake);
-	/**
-	 * Called when cetus has read the authentication packet from the client.
-	 */
-	NETWORK_MYSQLD_PLUGIN_FUNC(con_read_auth);
-	/**
-	 * Called when cetus wants to send the authentication packet to the server.
-	 * 
-	 * @note No known plugins actually implement this step.
-	 */
-	NETWORK_MYSQLD_PLUGIN_FUNC(con_send_auth);
-	/**
-	 * Called when cetus has read the authentication result 
+     */
+    NETWORK_MYSQLD_PLUGIN_FUNC(con_send_handshake);
+    /**
+     * Called when cetus has read the authentication packet from the client.
+     */
+    NETWORK_MYSQLD_PLUGIN_FUNC(con_read_auth);
+    /**
+     * Called when cetus wants to send the authentication packet to the server.
+     * 
+     * @note No known plugins actually implement this step.
+     */
+    NETWORK_MYSQLD_PLUGIN_FUNC(con_send_auth);
+    /**
+     * Called when cetus has read the authentication result 
      * from the backend server, in response to con_send_auth.
-	 */
-	NETWORK_MYSQLD_PLUGIN_FUNC(con_read_auth_result);
-	/**
-	 * Called when cetus wants to send the authentication response packet to the client.
-	 * 
-	 * @note No known plugins implement this callback, but the default 
+     */
+    NETWORK_MYSQLD_PLUGIN_FUNC(con_read_auth_result);
+    /**
+     * Called when cetus wants to send the authentication response packet to the client.
+     * 
+     * @note No known plugins implement this callback, but the default 
      * implementation deals with the important case that
      *
-	 * the authentication response used the pre-4.1 password hash method, but the client didn't.
-	 * @see network_mysqld_con::auth_result_state
-	 */
-	NETWORK_MYSQLD_PLUGIN_FUNC(con_send_auth_result);
-	/**
-	 * Called when cetus receives a COM_QUERY packet from a client.
-	 */
-	NETWORK_MYSQLD_PLUGIN_FUNC(con_read_query);
-	NETWORK_MYSQLD_PLUGIN_FUNC(con_get_server_conn_list);
-	/**
-	 * Called when cetus receives a result set from the server.
-	 */
-	NETWORK_MYSQLD_PLUGIN_FUNC(con_read_query_result);
-	/**
-	 * Called when cetus sends a result set to the client.
-	 * 
-	 * The proxy plugin, for example, uses this state to inject more queries 
+     * the authentication response used the pre-4.1 password hash method, but the client didn't.
+     * @see network_mysqld_con::auth_result_state
+     */
+    NETWORK_MYSQLD_PLUGIN_FUNC(con_send_auth_result);
+    /**
+     * Called when cetus receives a COM_QUERY packet from a client.
+     */
+    NETWORK_MYSQLD_PLUGIN_FUNC(con_read_query);
+    NETWORK_MYSQLD_PLUGIN_FUNC(con_get_server_conn_list);
+    /**
+     * Called when cetus receives a result set from the server.
+     */
+    NETWORK_MYSQLD_PLUGIN_FUNC(con_read_query_result);
+    /**
+     * Called when cetus sends a result set to the client.
+     * 
+     * The proxy plugin, for example, uses this state to inject more queries 
      * into the connection, possibly in response to a result set received from a server.
-	 * 
-	 * This callback should not cause multiple result sets to be sent to the client.
-	 * @see network_mysqld_con_injection::sent_resultset
-	 */
-	NETWORK_MYSQLD_PLUGIN_FUNC(con_send_query_result);
+     * 
+     * This callback should not cause multiple result sets to be sent to the client.
+     * @see network_mysqld_con_injection::sent_resultset
+     */
+    NETWORK_MYSQLD_PLUGIN_FUNC(con_send_query_result);
     /**
      * Called when either side of a connection was either 
      * closed or some network error occurred.
@@ -174,12 +174,9 @@ typedef struct {
      * @note There are no two separate callback functions for the two possibilities, 
      * which probably is a deficiency.
      */
-	NETWORK_MYSQLD_PLUGIN_FUNC(con_cleanup);
+    NETWORK_MYSQLD_PLUGIN_FUNC(con_cleanup);
 
-	NETWORK_MYSQLD_PLUGIN_FUNC(con_read_auth_old_password);
-	NETWORK_MYSQLD_PLUGIN_FUNC(con_send_auth_old_password);
-
-	NETWORK_MYSQLD_PLUGIN_FUNC(con_timeout);
+    NETWORK_MYSQLD_PLUGIN_FUNC(con_timeout);
 } network_mysqld_hooks;
 
 /**
@@ -195,13 +192,13 @@ typedef struct {
  */
 struct network_mysqld_con_parse {
     /**< The command indicator from the MySQL Protocol */
-	enum enum_server_command command;	
+    enum enum_server_command command;
 
     /**< An opaque pointer to a parsed command structure, parsed resultset */
-	gpointer data;						
+    gpointer data;
 
     /**< A function pointer to the appropriate "free" function of data */
-	void (*data_free)(gpointer);		
+    void (*data_free) (gpointer);
 };
 
 /**
@@ -212,40 +209,40 @@ struct network_mysqld_con_parse {
  *
  * <em>internal state</em>.
  */
-typedef enum { 
+typedef enum {
     /**< A new client connection was established */
-    ST_INIT = 0,                  
+    ST_INIT = 0,
 
     /**< A connection to a backend is about to be made */
-    ST_CONNECT_SERVER = 1,        
+    ST_CONNECT_SERVER = 1,
 
     /**< A handshake packet is to be sent to a client */
-    ST_SEND_HANDSHAKE = 2,        
+    ST_SEND_HANDSHAKE = 2,
 
     /**< An authentication packet is to be read from a client */
-    ST_READ_AUTH = 3,             
+    ST_READ_AUTH = 3,
 
     /**< The result of an authentication attempt is to be sent to a client */
-    ST_SEND_AUTH_RESULT = 4,      
+    ST_SEND_AUTH_RESULT = 4,
 
     /**< COM_QUERY packets are to be read from a client */
-    ST_READ_QUERY = 5,           
+    ST_READ_QUERY = 5,
 
     ST_GET_SERVER_CONNECTION_LIST = 6,
 
     /**< COM_QUERY packets are to be sent to a server */
-    ST_SEND_QUERY = 7,           
+    ST_SEND_QUERY = 7,
 
     /**< Result set packets are to be read from a server */
-    ST_READ_QUERY_RESULT = 8,    
+    ST_READ_QUERY_RESULT = 8,
 
-    ST_READ_M_QUERY_RESULT = 9, 
+    ST_READ_M_QUERY_RESULT = 9,
 
     /**< Result set packets are to be sent to a client */
-    ST_SEND_QUERY_RESULT = 10,   
+    ST_SEND_QUERY_RESULT = 10,
 
     /**< The client connection should be closed */
-    ST_CLOSE_CLIENT = 11,        
+    ST_CLOSE_CLIENT = 11,
 
     ST_CLIENT_QUIT = 12,
 
@@ -253,20 +250,20 @@ typedef enum {
      * < An unrecoverable error occurred, leads to sending a MySQL ERR packet 
      * to the client and closing the client connection
      */
-    ST_SEND_ERROR = 13,           
+    ST_SEND_ERROR = 13,
 
     /**
      * < An error occurred (malformed/unexpected packet, 
      * unrecoverable network error), internal state 
      */
-    ST_ERROR = 14, 
+    ST_ERROR = 14,
 
     /**< The server connection should be closed */
-    ST_CLOSE_SERVER = 15,         
+    ST_CLOSE_SERVER = 15,
 
 } network_mysqld_con_state_t;
 
-typedef enum { 
+typedef enum {
     /* XA state */
     NEXT_ST_XA_START = 1,
     NEXT_ST_XA_QUERY = 2,
@@ -275,7 +272,7 @@ typedef enum {
     NEXT_ST_XA_COMMIT = 5,
     NEXT_ST_XA_ROLLBACK = 6,
     NEXT_ST_XA_CANDIDATE_OVER = 7,
-    NEXT_ST_XA_OVER = 8 
+    NEXT_ST_XA_OVER = 8
 } network_mysqld_con_dist_tran_state_t;
 
 typedef enum {
@@ -283,10 +280,9 @@ typedef enum {
     RET_ERROR
 } retval_t;
 
-
 typedef struct server_connection_state_t server_connection_state_t;
 
-typedef enum { 
+typedef enum {
     ST_ASYNC_CONN,
     ST_ASYNC_READ_HANDSHAKE,
     ST_ASYNC_SEND_AUTH,
@@ -296,19 +292,19 @@ typedef enum {
 
 typedef enum {
     /* connection attribute adjuestment */
-	ATTR_START = 0,
-	ATTR_DIF_CHANGE_USER = 1,
-	ATTR_DIF_DEFAULT_DB = 2,
-	ATTR_DIF_SQL_MODE = 4,
-	ATTR_DIF_CHARSET = 8,
-	ATTR_DIF_SET_OPTION = 16,
-	ATTR_DIF_SET_AUTOCOMMIT = 32, /* TODO: START TRANSACTION */
+    ATTR_START = 0,
+    ATTR_DIF_CHANGE_USER = 1,
+    ATTR_DIF_DEFAULT_DB = 2,
+    ATTR_DIF_SQL_MODE = 4,
+    ATTR_DIF_CHARSET = 8,
+    ATTR_DIF_SET_OPTION = 16,
+    ATTR_DIF_SET_AUTOCOMMIT = 32,   /* TODO: START TRANSACTION */
 } session_attr_flags_t;
 
 typedef struct {
     gint64 offset;
     gint64 row_count;
-} LIMIT;
+} limit_t;
 
 typedef struct merge_parameters_s {
     void *heap;
@@ -317,7 +313,7 @@ typedef struct merge_parameters_s {
     GPtrArray *recv_queues;
     GList **candidates;
     GString *err_pack;
-    LIMIT limit;
+    limit_t limit;
     guint pkt_count;
     int pack_err_met;
     int is_distinct;
@@ -325,7 +321,7 @@ typedef struct merge_parameters_s {
     int off_pos;
     int is_pack_err;
     int aggr_output_len;
-      
+
 } merge_parameters_t;
 
 struct server_connection_state_t {
@@ -336,18 +332,18 @@ struct server_connection_state_t {
     struct timeval read_timeout;
     struct timeval write_timeout;
 
-    GString                 *hashed_pwd;
-    network_backend_t       *backend;
-    network_socket          *server;
-    chassis                 *srv;
+    GString *hashed_pwd;
+    network_backend_t *backend;
+    network_socket *server;
+    chassis *srv;
     network_connection_pool *pool;
-    unsigned int             is_multi_stmt_set:1;
-    guint8                   charset_code;
+    unsigned int is_multi_stmt_set:1;
+    guint8 charset_code;
 };
 
-typedef enum { 
-	ST_PROXY_OK = 0,      
-	ST_PROXY_QUIT = 1   
+typedef enum {
+    ST_PROXY_OK = 0,
+    ST_PROXY_QUIT = 1
 } proxy_session_state_t;
 
 typedef enum {
@@ -362,8 +358,8 @@ typedef struct result_merge_t {
 } result_merge_t;
 
 typedef struct having_condition_t {
-    int   rel_type;
-    int   data_type;
+    int rel_type;
+    int data_type;
     char *condition_value;
 } having_condition_t;
 
@@ -430,7 +426,7 @@ struct network_mysqld_con {
      * @see network_mysqld_con_handle
      */
     network_mysqld_con_state_t state;
-    
+
     /* 
      * Save the state before client closed, Then check the state, 
      * If the state is valid, reuse it.
@@ -450,9 +446,9 @@ struct network_mysqld_con {
      * the low-level network implementation.
      * The current working server
      */
-    network_socket *server; /* default = NULL */
-    GString   *orig_sql;
-    GString   *modified_sql;
+    network_socket *server;     /* default = NULL */
+    GString *orig_sql;
+    GString *modified_sql;
 
     GPtrArray *servers;
 
@@ -488,7 +484,7 @@ struct network_mysqld_con {
     /**
      * A pointer back to the global, singleton chassis structure.
      */
-    chassis *srv; /* our srv object */
+    chassis *srv;               /* our srv object */
 
     session_attr_flags_t unmatched_attribute;
     /**
@@ -511,7 +507,7 @@ struct network_mysqld_con {
 
     mysqld_query_attr_t query_attr;
 
-    unsigned int is_wait_server:1; /* first connect to backend failed, retrying */
+    unsigned int is_wait_server:1;  /* first connect to backend failed, retrying */
     unsigned int is_calc_found_rows:1;
     unsigned int login_failed:1;
     unsigned int is_auto_commit:1;
@@ -557,6 +553,7 @@ struct network_mysqld_con {
     unsigned int xa_query_status_error_and_abort:1;
     unsigned int use_all_prev_servers:1;
     unsigned int partially_merged:1;
+    unsigned int last_record_updated:1;
     unsigned int query_cache_judged:1;
     unsigned int is_client_compressed:1;
     unsigned int last_backend_type:2;
@@ -566,7 +563,7 @@ struct network_mysqld_con {
 
     time_t last_check_conn_supplement_time;
 
-    struct timeval req_recv_time; 
+    struct timeval req_recv_time;
     struct timeval resp_recv_time;
     struct timeval resp_send_time;
 
@@ -585,7 +582,7 @@ struct network_mysqld_con {
     /* track the auth-method-switch state */
     GString *auth_switch_to_method;
     GString *auth_switch_to_data;
-    guint32  auth_switch_to_round;
+    guint32 auth_switch_to_round;
 
     /** Flag indicating if we the plugin doesn't need the resultset itself.
      * 
@@ -618,7 +615,7 @@ struct network_mysqld_con {
      */
     struct network_mysqld_con_parse parse;
 
-	enum enum_server_command cur_command;	
+    enum enum_server_command cur_command;
 
     /**
      * An opaque pointer to a structure describing extra 
@@ -633,26 +630,25 @@ struct network_mysqld_con {
      */
     void *plugin_con_state;
     /* connection specific timeouts */
-    struct timeval connect_timeout;/* default = 2 s */
-    struct timeval read_timeout;  /* default = 10 min */
-    struct timeval write_timeout; /* default = 10 min */
+    struct timeval connect_timeout; /* default = 2 s */
+    struct timeval read_timeout;    /* default = 10 min */
+    struct timeval write_timeout;   /* default = 10 min */
     struct timeval wait_clt_next_sql;
     char xid_str[XID_LEN];
     char last_backends_type[MAX_SERVER_NUM];
 
     struct sharding_plan_t *sharding_plan;
     struct query_queue_t *recent_queries;
-    void   *data;
+    void *data;
 };
 
-
 struct network_mysqld_con_injection {
-    network_injection_queue *queries;   
-    int sent_resultset;                     
+    network_injection_queue *queries;
+    int sent_resultset;
 };
 
 typedef enum {
-    NET_RW_STATE_NONE,  
+    NET_RW_STATE_NONE,
     NET_RW_STATE_WRITE,
     NET_RW_STATE_READ,
     NET_RW_STATE_ERROR,
@@ -660,50 +656,47 @@ typedef enum {
     NET_RW_STATE_FINISHED
 } read_write_state;
 
-
 /**
  * A server side session, wraps server side socket
  * For sharding plugin:
  *   proxy-session = 1 * client-socket + n *server-session
  */
-typedef struct server_session_t
-{
-    unsigned int    fresh:1;
-    unsigned int    participated:1;
-    unsigned int    xa_start_already_sent:1;
-    unsigned int    dist_tran_participated:1;
-    unsigned int    xa_query_status_error_and_abort:1;
-    unsigned int    is_in_xa:1;
-    unsigned int    is_xa_over:1;
-    unsigned int    attr_consistent:1;
-    unsigned int    attr_consistent_checked:1;
-    unsigned int    attr_adjusted_now:1;
-    unsigned int    read_cal_flag:1;
-    unsigned int    index:6;
+typedef struct server_session_t {
+    unsigned int fresh:1;
+    unsigned int participated:1;
+    unsigned int xa_start_already_sent:1;
+    unsigned int dist_tran_participated:1;
+    unsigned int xa_query_status_error_and_abort:1;
+    unsigned int is_in_xa:1;
+    unsigned int is_xa_over:1;
+    unsigned int attr_consistent:1;
+    unsigned int attr_consistent_checked:1;
+    unsigned int attr_adjusted_now:1;
+    unsigned int read_cal_flag:1;
+    unsigned int index:6;
 
-    network_socket      *server;        
-    const GString       *sql;
-    network_mysqld_con  *con;        
-    network_backend_t   *backend;
+    network_socket *server;
+    const GString *sql;
+    network_mysqld_con *con;
+    network_backend_t *backend;
     network_mysqld_con_dist_tran_state_t dist_tran_state;
     read_write_state state;
     session_attr_flags_t attr_diff;
 } server_session_t;
 
-
 typedef struct {
     /**< A list of queries to send to the backend.*/
-    struct network_mysqld_con_injection injected;   
+    struct network_mysqld_con_injection injected;
 
     network_backend_t *backend;
     /**< index into the backend-array, start from 0 */
     int backend_ndx;
 
-    short *backend_ndx_array; /* rw-only: map backend index to connections in con->servers */
+    short *backend_ndx_array;   /* rw-only: map backend index to connections in con->servers */
 
     struct sql_context_t *sql_context;
-    int trx_read_write; /* default TF_READ_WRITE */
-    int trx_isolation_level; /* default TF_REPEATABLE_READ */
+    int trx_read_write;         /* default TF_READ_WRITE */
+    int trx_isolation_level;    /* default TF_REPEATABLE_READ */
 
 } proxy_plugin_con_t;
 
@@ -713,15 +706,11 @@ NETWORK_API void network_mysqld_con_free(network_mysqld_con *con);
 NETWORK_API void network_mysqld_con_accept(int event_fd, short events, void *user_data);
 
 NETWORK_API int network_mysqld_con_send_ok(network_socket *con);
-NETWORK_API int network_mysqld_con_send_ok_full(network_socket *con, guint64 affected_rows, 
-        guint64 insert_id, guint16 server_status, guint16 warnings);
+NETWORK_API int network_mysqld_con_send_ok_full(network_socket *con, guint64 affected_rows,
+                                                guint64 insert_id, guint16 server_status, guint16 warnings);
 NETWORK_API int network_mysqld_con_send_error(network_socket *con, const gchar *errmsg, gsize errmsg_len);
-NETWORK_API int network_mysqld_con_send_error_full(network_socket *con, const char *errmsg, 
-        gsize errmsg_len, guint errorcode, const gchar *sqlstate);
-NETWORK_API int network_mysqld_con_send_error_pre41(network_socket *con, const gchar *errmsg, 
-        gsize errmsg_len);
-NETWORK_API int network_mysqld_con_send_error_full_pre41(network_socket *con, const char *errmsg, 
-        gsize errmsg_len, guint errorcode);
+NETWORK_API int network_mysqld_con_send_error_full(network_socket *con, const char *errmsg,
+                                                   gsize errmsg_len, guint errorcode, const gchar *sqlstate);
 NETWORK_API int network_mysqld_con_send_resultset(network_socket *con, GPtrArray *fields, GPtrArray *rows);
 int network_mysqld_con_send_current_date(network_socket *, const char *);
 int network_mysqld_con_send_cetus_version(network_socket *);
@@ -740,8 +729,7 @@ void network_mysqld_con_set_sharding_plan(network_mysqld_con *con, struct shardi
  */
 NETWORK_API network_socket_retval_t network_mysqld_read(chassis *srv, network_socket *con);
 NETWORK_API network_socket_retval_t network_mysqld_write(chassis *srv, network_socket *con);
-NETWORK_API network_socket_retval_t network_mysqld_con_get_packet(chassis G_GNUC_UNUSED *chas, 
-        network_socket *con);
+NETWORK_API network_socket_retval_t network_mysqld_con_get_packet(chassis G_GNUC_UNUSED *chas, network_socket *con);
 
 struct chassis_private {
     GPtrArray *cons;                          /**< array(network_mysqld_con) */
@@ -752,17 +740,16 @@ struct chassis_private {
     struct cetus_monitor_t *monitor;
 };
 
-NETWORK_API network_socket_retval_t 
+NETWORK_API network_socket_retval_t
 network_mysqld_read_mul_packets(chassis G_GNUC_UNUSED *chas, network_mysqld_con *con,
-        network_socket *server, int *is_finished);
+                                network_socket *server, int *is_finished);
 
 NETWORK_API void send_part_content_to_client(network_mysqld_con *con);
 NETWORK_API void set_conn_attr(network_mysqld_con *con, network_socket *server);
 NETWORK_API int network_mysqld_init(chassis *srv);
 NETWORK_API void network_mysqld_add_connection(chassis *srv, network_mysqld_con *con, gboolean listen);
 NETWORK_API void network_mysqld_con_handle(int event_fd, short events, void *user_data);
-NETWORK_API int network_mysqld_queue_append(network_socket *sock, network_queue *queue, 
-        const char *data, size_t len);
+NETWORK_API int network_mysqld_queue_append(network_socket *sock, network_queue *queue, const char *data, size_t len);
 NETWORK_API int network_mysqld_queue_append_raw(network_socket *sock, network_queue *queue, GString *data);
 NETWORK_API int network_mysqld_queue_reset(network_socket *sock);
 
@@ -774,6 +761,6 @@ NETWORK_API gboolean shard_set_autocommit(network_mysqld_con *con);
 NETWORK_API gboolean shard_set_charset_consistant(network_mysqld_con *con);
 NETWORK_API gboolean shard_set_default_db_consistant(network_mysqld_con *con);
 NETWORK_API gboolean shard_set_multi_stmt_consistant(network_mysqld_con *con);
-NETWORK_API void shard_build_xa_query(network_mysqld_con *con, server_session_t *pmd);
+NETWORK_API void shard_build_xa_query(network_mysqld_con *con, server_session_t *ss);
 
 #endif

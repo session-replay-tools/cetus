@@ -64,7 +64,7 @@ PID文件路径
 
 ### log-xa-file
 
-xa日志路径
+xa日志路径（分库中有效）
 
 > log-xa-file = logs/cetus.log
 
@@ -72,7 +72,7 @@ xa日志路径
 
 Default: false
 
-记录xa日志详情
+记录xa日志详情（分库中有效）
 
 > log-xa-in-detail = true
 
@@ -202,9 +202,9 @@ Default: 10485760 (10MB)
 
 Proxy在读写分离时可以指定访问的库
 
-参数未设置时，没有限制；设置为ture时仅访问读写后端(主库)
+参数未设置时，没有限制；设置为true时仅访问读写后端(主库)，除非利用注释强制走从库
 
-> master-preferred = ture
+> master-preferred = true
 
 ### read-master-percentage
 
@@ -212,39 +212,11 @@ Proxy在读写分离时可以指定访问的库
 
 > read-master-percentage = 50
 
-### disable-auto-connect
-
-Default: false
-
-禁用自动创建连接，连接将在新请求到来时创建
-
-> disable-auto-connect = false
-
 ### reduce-connections
 
-允许减少无效连接
+自动减少空闲连接
 
-> reduce-connections = ture
-
-### enable-reset-connection
-
-允许重启连接
-
-> enable-reset-connection = ture
-
-### all-write-mode
-
-Default: ture
-
-发送更新/删除/插入到所有的默认组
-
-> enable-reset-connection = ture
-
-### disable-dist-tran-mode
-
-禁用分布式事务
-
-> disable-dist-tran-mode ＝ ture
+> reduce-connections = true
 
 ### default-charset
 
@@ -340,7 +312,7 @@ Default: 60 (seconds)
 
 从库延迟超过该秒，状态将被设置为DOWN
 
-> slave-delay-down = 120
+> slave-delay-down = 10
 
 ### slave-delay-recover
 
@@ -348,7 +320,7 @@ Default: slave-delay-down / 2  (seconds)
 
 从库延迟少于该秒数，状态将恢复为UP
 
-> slave-delay-recover = 30
+> slave-delay-recover = 5
 
 ## 其它
 
@@ -380,7 +352,7 @@ Default: 根据操作系统
 
 Default: 33554432 (32MB)
 
-最大允许的包大小
+最大允许报文大小
 
 > max-allowed-packet = 1024
 
@@ -396,7 +368,7 @@ Default: false
 
 Default: 65536 (millisecond)
 
-最长查询时间(毫秒)
+慢查询记录阈值(毫秒)
 
 > long-query-time = 500
 
@@ -414,13 +386,13 @@ Default: false
 
 启用后端传给Cetus的结果集压缩，一般不启用
 
-> enable-back-compress ＝ ture
+> enable-back-compress ＝ true
 
 ### merged-output-size
 
 Default: 8192
 
-tcp流式结果集合并输出大小
+tcp流式结果集合并输出阈值，超过此大小，则输出
 
 > merged-output-size = 2048
 
@@ -428,20 +400,30 @@ tcp流式结果集合并输出大小
 
 Default: 100
 
-Proxy连接后端的超时时间
+设置query cache的默认超时时间，单位为ms
 
 > default-query-cache-timeout = 60
 
 ### enable-query-cache
 
+Default: false
+
 开启Proxy请求缓存
 
-> enable-query-cache = ture
+> enable-query-cache = true
 
 ### max-header-size
 
 Default:  65536
 
-tcp-stream最大报头大小
+设置响应中header最大大小，供tcp stream使用，如果响应头部特别大，需要设置更大的大小
 
-> max-header-size = 1024
+> max-header-size = 131072
+
+### enable-tcp-stream
+
+Default: false
+
+采用tcp stream来输出响应，规避内存炸裂等问题
+
+> enable-tcp-stream = true

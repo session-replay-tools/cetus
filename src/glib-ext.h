@@ -38,9 +38,9 @@
 CHASSIS_API void g_string_true_free(gpointer data);
 
 CHASSIS_API gboolean g_hash_table_true(gpointer key, gpointer value, gpointer user_data);
-CHASSIS_API guint    g_hash_table_string_hash(gconstpointer _key);
+CHASSIS_API guint g_hash_table_string_hash(gconstpointer _key);
 CHASSIS_API gboolean g_hash_table_string_equal(gconstpointer _a, gconstpointer _b);
-CHASSIS_API void     g_hash_table_string_free(gpointer data);
+CHASSIS_API void g_hash_table_string_free(gpointer data);
 
 CHASSIS_API GString *g_string_dup(GString *);
 

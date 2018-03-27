@@ -28,28 +28,34 @@
 #include "glib-ext.h"
 #include "cetus-util.h"
 
-void cetus_string_dequote(char *z)
+void
+cetus_string_dequote(char *z)
 {
     int quote;
     int i, j;
-    if (z == 0) return;
+    if (z == 0)
+        return;
     quote = z[0];
     switch (quote) {
-    case '\'':  break;
-    case '"':   break;
-    case '`':   break;                /* For MySQL compatibility */
-    default:    return;
+    case '\'':
+        break;
+    case '"':
+        break;
+    case '`':
+        break;                  /* For MySQL compatibility */
+    default:
+        return;
     }
     for (i = 1, j = 0; z[i]; i++) {
         if (z[i] == quote) {
-            if (z[i+1] == quote) { /* quote escape */
+            if (z[i + 1] == quote) {    /* quote escape */
                 z[j++] = quote;
                 i++;
             } else {
                 z[j++] = 0;
                 break;
             }
-        } else if (z[i] == '\\') { /* slash escape */
+        } else if (z[i] == '\\') {  /* slash escape */
             i++;
             z[j++] = z[i];
         } else {
@@ -58,15 +64,15 @@ void cetus_string_dequote(char *z)
     }
 }
 
-
-gboolean read_file_to_buffer(const char *filename, char **buffer)
+gboolean
+read_file_to_buffer(const char *filename, char **buffer)
 {
     FILE *fp = fopen(filename, "r");
     if (!fp) {
         g_critical(G_STRLOC ":cannot open user conf: %s", filename);
         return FALSE;
     }
-    const int  MAX_FILE_SIZE = 1024 * 1024; /* 1M */
+    const int MAX_FILE_SIZE = 1024 * 1024;  /* 1M */
     fseek(fp, 0, SEEK_END);
     int len = ftell(fp);
     if (len < 0) {
@@ -96,4 +102,3 @@ gboolean read_file_to_buffer(const char *filename, char **buffer)
 
     return TRUE;
 }
-

@@ -46,7 +46,7 @@ typedef struct sql_property_t {
 void sql_property_free(sql_property_t *);
 gboolean sql_property_is_valid(sql_property_t *);
 
-typedef int(*value_parse_func)(const char *);
+typedef int (*value_parse_func) (const char *);
 
 typedef struct sql_property_parser_t {
     int key_offset;
@@ -60,7 +60,6 @@ typedef struct sql_property_parser_t {
 
 void sql_property_parser_reset(sql_property_parser_t *parser);
 
-gboolean sql_property_parser_parse(sql_property_parser_t *parser,
-                            const char *token, int len, sql_property_t *property);
+gboolean sql_property_parser_parse(sql_property_parser_t *parser, const char *token, int len, sql_property_t *property);
 
 #endif /* SQL_PROPERTY_H */

@@ -21,7 +21,7 @@
 #ifndef __CHASSIS_TIMINGS_H__
 #define __CHASSIS_TIMINGS_H__
 
-#include <sys/time.h> /* struct timeval */
+#include <sys/time.h>           /* struct timeval */
 #include <glib.h>
 #include "chassis-exports.h"
 

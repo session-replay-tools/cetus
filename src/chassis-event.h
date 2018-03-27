@@ -21,7 +21,7 @@
 #ifndef _CHASSIS_EVENT_H_
 #define _CHASSIS_EVENT_H_
 
-#include <glib.h>    /* GPtrArray */
+#include <glib.h>               /* GPtrArray */
 
 #include "chassis-exports.h"
 #include "chassis-mainloop.h"
@@ -33,8 +33,7 @@
     }
 
 CHASSIS_API void chassis_event_add(chassis *chas, struct event *ev);
-CHASSIS_API void chassis_event_add_with_timeout(chassis *chas,
-        struct event *ev, struct timeval *tv);
+CHASSIS_API void chassis_event_add_with_timeout(chassis *chas, struct event *ev, struct timeval *tv);
 
 typedef struct event_base chassis_event_loop_t;
 

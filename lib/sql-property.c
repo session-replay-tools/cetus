@@ -22,7 +22,7 @@
 
 #include <string.h>
 
-enum property_parse_state_t{
+enum property_parse_state_t {
     // PARSE_STATE_INIT,
     PARSE_STATE_KEY = 0,
     PARSE_STATE_VALUE,
@@ -37,14 +37,16 @@ enum {
 
 #define MAX_VALUE_LEN 50
 
-gboolean sql_property_is_valid(sql_property_t *p)
+gboolean
+sql_property_is_valid(sql_property_t *p)
 {
-    if (p->table && p->group)/* mutual exclusive */
+    if (p->table && p->group)   /* mutual exclusive */
         return FALSE;
     return TRUE;
 }
 
-void sql_property_free(sql_property_t *p)
+void
+sql_property_free(sql_property_t *p)
 {
     if (p->group)
         g_free(p->group);
@@ -55,23 +57,25 @@ void sql_property_free(sql_property_t *p)
     g_free(p);
 }
 
-void sql_property_parser_reset(sql_property_parser_t *parser)
+void
+sql_property_parser_reset(sql_property_parser_t *parser)
 {
     memset(parser, 0, sizeof(*parser));
 }
 
-static int string_to_code(const char *str)
+static int
+string_to_code(const char *str)
 {
     struct code_map_t {
         char *name;
         int code;
     } map[] = {
-        {"READWRITE", MODE_READWRITE},
-        {"READONLY",  MODE_READONLY},
-        {"SCOPE_LOCAL", P_SCOPE_LOCAL},
-        {"SCOPE_GLOBAL", P_SCOPE_GLOBAL},
-        {"SINGLE_NODE", TRX_SINGLE_NODE},
-    };
+        {
+        "READWRITE", MODE_READWRITE}, {
+        "READONLY", MODE_READONLY}, {
+        "SCOPE_LOCAL", P_SCOPE_LOCAL}, {
+        "SCOPE_GLOBAL", P_SCOPE_GLOBAL}, {
+    "SINGLE_NODE", TRX_SINGLE_NODE},};
     int i;
     for (i = 0; i < sizeof(map) / sizeof(*map); ++i) {
         if (strcasecmp(map[i].name, str) == 0)
@@ -80,8 +84,8 @@ static int string_to_code(const char *str)
     return ERROR_VALUE;
 }
 
-static gboolean parser_find_key(sql_property_parser_t *parser,
-                                const char *token, int len)
+static gboolean
+parser_find_key(sql_property_parser_t *parser, const char *token, int len)
 {
     static const struct property_desc_t {
         const char *name;
@@ -89,15 +93,15 @@ static gboolean parser_find_key(sql_property_parser_t *parser,
         int type;
         value_parse_func get_value;
     } desc[] = {
-        {"mode", offsetof(struct sql_property_t, mode), TYPE_INT, string_to_code },
-        {"scope", offsetof(struct sql_property_t, scope), TYPE_INT, string_to_code },
-        {"transaction", offsetof(struct sql_property_t, transaction), TYPE_INT, string_to_code },
-        {"group", offsetof(struct sql_property_t, group), TYPE_STRING, NULL },
-        {"table", offsetof(struct sql_property_t, table), TYPE_STRING, NULL },
-        {"key", offsetof(struct sql_property_t, key), TYPE_STRING, NULL },
-    };
+        {
+        "mode", offsetof(struct sql_property_t, mode), TYPE_INT, string_to_code}, {
+        "scope", offsetof(struct sql_property_t, scope), TYPE_INT, string_to_code}, {
+        "transaction", offsetof(struct sql_property_t, transaction), TYPE_INT, string_to_code}, {
+        "group", offsetof(struct sql_property_t, group), TYPE_STRING, NULL}, {
+        "table", offsetof(struct sql_property_t, table), TYPE_STRING, NULL}, {
+    "key", offsetof(struct sql_property_t, key), TYPE_STRING, NULL},};
     int i = 0;
-    for (i = 0; i < sizeof(desc)/sizeof(*desc); ++i) {
+    for (i = 0; i < sizeof(desc) / sizeof(*desc); ++i) {
         if (strcasecmp(token, desc[i].name) == 0) {
             parser->key_offset = desc[i].offset;
             parser->key_type = desc[i].type;
@@ -110,14 +114,14 @@ static gboolean parser_find_key(sql_property_parser_t *parser,
     return FALSE;
 }
 
-static gboolean parser_set_value(sql_property_parser_t *parser,
-                                              void *object, const char *token, int len)
+static gboolean
+parser_set_value(sql_property_parser_t *parser, void *object, const char *token, int len)
 {
     if (parser->key_type == TYPE_INT) {
-        int *p = (int *)((unsigned char *) object + parser->key_offset);
-        if (token[0] == '"' && token[len-1] == '"') {/* might be quoted */
-            char buf[MAX_VALUE_LEN] = {0};
-            memcpy(buf, token+1, len-2);
+        int *p = (int *)((unsigned char *)object + parser->key_offset);
+        if (token[0] == '"' && token[len - 1] == '"') { /* might be quoted */
+            char buf[MAX_VALUE_LEN] = { 0 };
+            memcpy(buf, token + 1, len - 2);
             *p = parser->get_value(buf);
         } else {
             *p = parser->get_value(token);
@@ -125,10 +129,10 @@ static gboolean parser_set_value(sql_property_parser_t *parser,
         parser->state = PARSE_STATE_KEY;
         return TRUE;
     } else if (parser->key_type == TYPE_STRING) {
-        char **p = (char **)((unsigned char *) object + parser->key_offset);
-        if (token[0] == '"' && token[len-1] == '"') {/* might be quoted */
-            *p = g_malloc0(len-1);
-            memcpy(*p, token+1, len-2);
+        char **p = (char **)((unsigned char *)object + parser->key_offset);
+        if (token[0] == '"' && token[len - 1] == '"') { /* might be quoted */
+            *p = g_malloc0(len - 1);
+            memcpy(*p, token + 1, len - 2);
         } else {
             *p = strndup(token, len);
         }
@@ -139,8 +143,8 @@ static gboolean parser_set_value(sql_property_parser_t *parser,
     return FALSE;
 }
 
-gboolean sql_property_parser_parse(sql_property_parser_t *parser,
-                            const char *token, int len, sql_property_t *property)
+gboolean
+sql_property_parser_parse(sql_property_parser_t *parser, const char *token, int len, sql_property_t *property)
 {
     switch (parser->state) {
 

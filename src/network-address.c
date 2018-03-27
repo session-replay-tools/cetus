@@ -46,38 +46,39 @@
 #include "glib-ext.h"
 #include "cetus-util.h"
 
-network_address *network_address_new() {
+network_address *
+network_address_new()
+{
     network_address *addr;
 
     addr = g_new0(network_address, 1);
     addr->len = sizeof(addr->addr);
     addr->name = g_string_new(NULL);
-    g_debug("%s: create socket name %p successful for add:%p", 
-            G_STRLOC, addr->name, addr);
+    g_debug("%s: create socket name %p successful for add:%p", G_STRLOC, addr->name, addr);
 
     return addr;
 }
 
-void network_address_free(network_address *addr) {
+void
+network_address_free(network_address *addr)
+{
 
-    if (!addr) return;
+    if (!addr)
+        return;
 
     /*
      * if the name we're freeing starts with a '/', we're
      * looking at a unix socket which needs to be removed
      */
-    if (addr->can_unlink_socket == TRUE && addr->name != NULL &&
-            addr->name->str != NULL) {
+    if (addr->can_unlink_socket == TRUE && addr->name != NULL && addr->name->str != NULL) {
         gchar *name = addr->name->str;
         if (name[0] == '/') {
             int ret = g_remove(name);
             if (ret == 0) {
-                g_debug("%s: removing socket %s successful", 
-                        G_STRLOC, name);
+                g_debug("%s: removing socket %s successful", G_STRLOC, name);
             } else {
                 if (errno != EPERM && errno != EACCES) {
-                    g_critical("%s: removing socket %s failed: %s (%d)", 
-                            G_STRLOC, name, strerror(errno), errno);
+                    g_critical("%s: removing socket %s failed: %s (%d)", G_STRLOC, name, strerror(errno), errno);
                 }
             }
         }
@@ -87,24 +88,23 @@ void network_address_free(network_address *addr) {
     g_free(addr);
 }
 
-void network_address_reset(network_address *addr) {
+void
+network_address_reset(network_address *addr)
+{
     addr->len = sizeof(addr->addr.common);
 }
 
 static gint
-network_address_set_address_ip(network_address *addr, 
-        const gchar *address, guint port) 
+network_address_set_address_ip(network_address *addr, const gchar *address, guint port)
 {
     g_return_val_if_fail(addr, -1);
 
     if (port > 65535) {
-        g_critical("%s: illegal value %u for port, only 1 ... 65535 allowed",
-                G_STRLOC, port);
+        g_critical("%s: illegal value %u for port, only 1 ... 65535 allowed", G_STRLOC, port);
         return -1;
     }
 
-    if (NULL == address ||
-            address[0] == '\0') {
+    if (NULL == address || address[0] == '\0') {
         /* no ip */
 #if 0
         /* disabled as it breaks the default behaviour on FreeBSD and windows
@@ -126,7 +126,7 @@ network_address_set_address_ip(network_address *addr,
         memset(&addr->addr.ipv4, 0, sizeof(struct sockaddr_in));
 
         addr->addr.ipv4.sin_addr.s_addr = htonl(INADDR_ANY);
-        addr->addr.ipv4.sin_family = AF_INET; /* "default" family */
+        addr->addr.ipv4.sin_family = AF_INET;   /* "default" family */
         addr->addr.ipv4.sin_port = htons(port);
         addr->len = sizeof(struct sockaddr_in);
 #endif
@@ -135,7 +135,7 @@ network_address_set_address_ip(network_address *addr,
         memset(&addr->addr.ipv4, 0, sizeof(struct sockaddr_in));
 
         addr->addr.ipv4.sin_addr.s_addr = htonl(INADDR_ANY);
-        addr->addr.ipv4.sin_family = AF_INET; /* "default" family */
+        addr->addr.ipv4.sin_family = AF_INET;   /* "default" family */
         addr->addr.ipv4.sin_port = htons(port);
         addr->len = sizeof(struct sockaddr_in);
     } else {
@@ -164,12 +164,13 @@ network_address_set_address_ip(network_address *addr,
         hint.ai_flags = AI_ADDRCONFIG;
         if ((ret = getaddrinfo(address, NULL, &hint, &first_ai)) != 0) {
             if (
-                    /* FreeBSD doesn't provide EAI_ADDRFAMILY (since 2003) */
+                   /* FreeBSD doesn't provide EAI_ADDRFAMILY (since 2003) */
 #ifdef EAI_ADDRFAMILY
-                    EAI_ADDRFAMILY == ret || /* AI_ADDRCONFIG with a non-global address */
+                   EAI_ADDRFAMILY == ret || /* AI_ADDRCONFIG with a non-global address */
 #endif
-                    EAI_BADFLAGS == ret) {   /* AI_ADDRCONFIG isn't supported */
-                if (first_ai) freeaddrinfo(first_ai);
+                   EAI_BADFLAGS == ret) {   /* AI_ADDRCONFIG isn't supported */
+                if (first_ai)
+                    freeaddrinfo(first_ai);
                 first_ai = NULL;
 
                 hint.ai_flags &= ~AI_ADDRCONFIG;
@@ -178,30 +179,24 @@ network_address_set_address_ip(network_address *addr,
             }
 
             if (ret != 0) {
-                g_critical("getaddrinfo(\"%s\") failed: %s (%d)", address, 
-                        gai_strerror(ret),
-                        ret);
+                g_critical("getaddrinfo(\"%s\") failed: %s (%d)", address, gai_strerror(ret), ret);
                 return -1;
             }
         }
 
-        ret = 0; /* bogus, just to make it explicit */
+        ret = 0;                /* bogus, just to make it explicit */
 
         for (ai = first_ai; ai; ai = ai->ai_next) {
             int family = ai->ai_family;
 
             if (family == PF_INET6) {
-                memcpy(&addr->addr.ipv6,
-                        (struct sockaddr_in6 *) ai->ai_addr,
-                        sizeof (addr->addr.ipv6));
+                memcpy(&addr->addr.ipv6, (struct sockaddr_in6 *)ai->ai_addr, sizeof(addr->addr.ipv6));
                 addr->addr.ipv6.sin6_port = htons(port);
                 addr->len = sizeof(struct sockaddr_in6);
 
                 break;
-            } else  if (family == PF_INET) {
-                memcpy(&addr->addr.ipv4,
-                        (struct sockaddr_in *) ai->ai_addr, 
-                        sizeof (addr->addr.ipv4));
+            } else if (family == PF_INET) {
+                memcpy(&addr->addr.ipv4, (struct sockaddr_in *)ai->ai_addr, sizeof(addr->addr.ipv4));
                 addr->addr.ipv4.sin_port = htons(port);
                 addr->len = sizeof(struct sockaddr_in);
                 break;
@@ -216,9 +211,10 @@ network_address_set_address_ip(network_address *addr,
 
         freeaddrinfo(first_ai);
 
-        if (ret != 0) return ret;
-#else 
-        struct hostent	*he;
+        if (ret != 0)
+            return ret;
+#else
+        struct hostent *he;
 
         he = gethostbyname(address);
         if (NULL == he) {
@@ -235,12 +231,14 @@ network_address_set_address_ip(network_address *addr,
 #endif /* HAVE_GETADDRINFO */
     }
 
-    (void) network_address_refresh_name(addr);
+    (void)network_address_refresh_name(addr);
 
     return 0;
 }
 
-static gint network_address_set_address_un(network_address *addr, const gchar *address) {
+static gint
+network_address_set_address_un(network_address *addr, const gchar *address)
+{
     g_return_val_if_fail(addr, -1);
     g_return_val_if_fail(address, -1);
 
@@ -270,7 +268,9 @@ static gint network_address_set_address_un(network_address *addr, const gchar *a
  * @param address  the address string
  * @return 0 on success, -1 otherwise
  */
-gint network_address_set_address(network_address *addr, const gchar *address) {
+gint
+network_address_set_address(network_address *addr, const gchar *address)
+{
     const gchar *port_part = NULL;
     gchar *ip_part = NULL;
     gint ret;
@@ -286,9 +286,9 @@ gint network_address_set_address(network_address *addr, const gchar *address) {
             return -1;
         }
         /* may be NULL for strdup(..., 0) */
-        ip_part   = g_strndup(address + 1, s - (address + 1));
+        ip_part = g_strndup(address + 1, s - (address + 1));
 
-        if (*(s+1) == ':') {
+        if (*(s + 1) == ':') {
             port_part = s + 2;
         }
     } else if (NULL != (port_part = strchr(address, ':'))) {
@@ -307,12 +307,10 @@ gint network_address_set_address(network_address *addr, const gchar *address) {
         port = strtoul(port_part, &port_err, 10);
 
         if (*port_part == '\0') {
-            g_critical("%s: IP-addr in the form [<ip>][:<port>], is '%s'. No port",
-                    G_STRLOC, address);
+            g_critical("%s: IP-addr in the form [<ip>][:<port>], is '%s'. No port", G_STRLOC, address);
             ret = -1;
         } else if (*port_err != '\0') {
-            g_critical("%s: IP-addr in the form [<ip>][:<port>], is '%s'. port at '%s'", 
-                    G_STRLOC, address, port_err);
+            g_critical("%s: IP-addr in the form [<ip>][:<port>], is '%s'. port at '%s'", G_STRLOC, address, port_err);
             ret = -1;
         } else {
             ret = network_address_set_address_ip(addr, ip_part, port);
@@ -322,96 +320,81 @@ gint network_address_set_address(network_address *addr, const gchar *address) {
         ret = network_address_set_address_ip(addr, ip_part, 3306);
     }
 
-    if (ip_part) g_free(ip_part);
+    if (ip_part)
+        g_free(ip_part);
 
     return ret;
 }
 
 GQuark
-network_address_error(void) {
+network_address_error(void)
+{
     return g_quark_from_static_string("network-address-error");
 }
 
 #ifdef HAVE_INET_NTOP
 static const gchar *
-network_address_tostring_inet_ntop(network_address *addr,
-        gchar *dst, gsize *dst_len,
-        GError **gerr) {
+network_address_tostring_inet_ntop(network_address *addr, gchar *dst, gsize *dst_len, GError **gerr)
+{
     const char *addr_str;
     gsize initial_dst_len = *dst_len;
 
     /* resolve the peer-addr if we haven't done so yet */
     switch (addr->addr.common.sa_family) {
-        case AF_INET:
-            addr_str = inet_ntop(AF_INET, &addr->addr.ipv4.sin_addr, 
-                    dst, *dst_len);
-            if (NULL == addr_str) {
-                if (ENOSPC == errno) {
-                    g_set_error(gerr,
-                            NETWORK_ADDRESS_ERROR,
-                            NETWORK_ADDRESS_ERROR_DST_TOO_SMALL,
-                            "inet_ntop() failed: %s (%d)",
-                            g_strerror(errno),
-                            errno);
-                } else {
-                    g_set_error(gerr,
-                            NETWORK_ADDRESS_ERROR,
-                            NETWORK_ADDRESS_ERROR_UNKNOWN,
-                            "inet_ntop() failed: %s (%d)",
-                            g_strerror(errno),
-                            errno);
-                }
-                return NULL;
-            }
-            *dst_len = strlen(addr_str) + 1;
-            return addr_str;
-        case AF_INET6:
-            addr_str = inet_ntop(AF_INET6, &addr->addr.ipv6.sin6_addr, 
-                    dst, *dst_len);
-
-            if (NULL == addr_str) {
-                if (ENOSPC == errno) {
-                    g_set_error(gerr,
-                            NETWORK_ADDRESS_ERROR,
-                            NETWORK_ADDRESS_ERROR_DST_TOO_SMALL,
-                            "inet_ntop() failed: %s (%d)",
-                            g_strerror(errno),
-                            errno);
-                } else {
-                    g_set_error(gerr,
-                            NETWORK_ADDRESS_ERROR,
-                            NETWORK_ADDRESS_ERROR_UNKNOWN,
-                            "inet_ntop() failed: %s (%d)",
-                            g_strerror(errno),
-                            errno);
-                }
-                return NULL;
-            }
-            *dst_len = strlen(addr_str) + 1;
-
-            return addr_str;
-        case AF_UNIX:
-            *dst_len = g_strlcpy(dst, addr->addr.un.sun_path, *dst_len);
-
-            if (*dst_len >= initial_dst_len) {
-                /* g_strlcpy() got overrun */
+    case AF_INET:
+        addr_str = inet_ntop(AF_INET, &addr->addr.ipv4.sin_addr, dst, *dst_len);
+        if (NULL == addr_str) {
+            if (ENOSPC == errno) {
                 g_set_error(gerr,
-                        NETWORK_ADDRESS_ERROR,
-                        NETWORK_ADDRESS_ERROR_DST_TOO_SMALL,
-                        "dst too small");
-                return NULL;
+                            NETWORK_ADDRESS_ERROR,
+                            NETWORK_ADDRESS_ERROR_DST_TOO_SMALL,
+                            "inet_ntop() failed: %s (%d)", g_strerror(errno), errno);
+            } else {
+                g_set_error(gerr,
+                            NETWORK_ADDRESS_ERROR,
+                            NETWORK_ADDRESS_ERROR_UNKNOWN, "inet_ntop() failed: %s (%d)", g_strerror(errno), errno);
             }
-            /* g_strlcpy() returns the size without \0, we return the size with \0 */
-            *dst_len += 1; 
+            return NULL;
+        }
+        *dst_len = strlen(addr_str) + 1;
+        return addr_str;
+    case AF_INET6:
+        addr_str = inet_ntop(AF_INET6, &addr->addr.ipv6.sin6_addr, dst, *dst_len);
 
-            return dst;
-        default:
-            g_set_error(gerr,
+        if (NULL == addr_str) {
+            if (ENOSPC == errno) {
+                g_set_error(gerr,
+                            NETWORK_ADDRESS_ERROR,
+                            NETWORK_ADDRESS_ERROR_DST_TOO_SMALL,
+                            "inet_ntop() failed: %s (%d)", g_strerror(errno), errno);
+            } else {
+                g_set_error(gerr,
+                            NETWORK_ADDRESS_ERROR,
+                            NETWORK_ADDRESS_ERROR_UNKNOWN, "inet_ntop() failed: %s (%d)", g_strerror(errno), errno);
+            }
+            return NULL;
+        }
+        *dst_len = strlen(addr_str) + 1;
+
+        return addr_str;
+    case AF_UNIX:
+        *dst_len = g_strlcpy(dst, addr->addr.un.sun_path, *dst_len);
+
+        if (*dst_len >= initial_dst_len) {
+            /* g_strlcpy() got overrun */
+            g_set_error(gerr, NETWORK_ADDRESS_ERROR, NETWORK_ADDRESS_ERROR_DST_TOO_SMALL, "dst too small");
+            return NULL;
+        }
+        /* g_strlcpy() returns the size without \0, we return the size with \0 */
+        *dst_len += 1;
+
+        return dst;
+    default:
+        g_set_error(gerr,
                     NETWORK_ADDRESS_ERROR,
                     NETWORK_ADDRESS_ERROR_INVALID_ADDRESS_FAMILY,
-                    "can't convert a address of family '%d' into a string",
-                    addr->addr.common.sa_family);
-            return NULL;
+                    "can't convert a address of family '%d' into a string", addr->addr.common.sa_family);
+        return NULL;
     }
 }
 
@@ -421,75 +404,58 @@ network_address_tostring_inet_ntop(network_address *addr,
  * resolve a struct sockaddr into a string 
  */
 static const gchar *
-network_address_tostring_inet_ntoa(network_address *addr, gchar *dst, 
-        gsize *dst_len, GError **gerr) 
+network_address_tostring_inet_ntoa(network_address *addr, gchar *dst, gsize *dst_len, GError **gerr)
 {
     const char *addr_str;
     gsize initial_dst_len = *dst_len;
 
     /* resolve the peer-addr if we haven't done so yet */
     switch (addr->addr.common.sa_family) {
-        case AF_INET:
-            addr_str = inet_ntoa(addr->addr.ipv4.sin_addr);
+    case AF_INET:
+        addr_str = inet_ntoa(addr->addr.ipv4.sin_addr);
 
-            if (NULL == addr_str) {
-                g_set_error(gerr,
-                        NETWORK_ADDRESS_ERROR,
-                        NETWORK_ADDRESS_ERROR_UNKNOWN,
-                        "inet_ntoa() failed: %d",
-                        errno);
-                return NULL;
-            }
-            *dst_len = g_strlcpy(dst, addr_str, *dst_len);
+        if (NULL == addr_str) {
+            g_set_error(gerr, NETWORK_ADDRESS_ERROR, NETWORK_ADDRESS_ERROR_UNKNOWN, "inet_ntoa() failed: %d", errno);
+            return NULL;
+        }
+        *dst_len = g_strlcpy(dst, addr_str, *dst_len);
 
-            return dst;
-        case AF_UNIX:
-            *dst_len = g_strlcpy(dst, addr->addr.un.sun_path, *dst_len);
-            if (*dst_len >= initial_dst_len) {
-                /* g_strlcpy() got overrun */
-                g_set_error(gerr,
-                        NETWORK_ADDRESS_ERROR,
-                        NETWORK_ADDRESS_ERROR_DST_TOO_SMALL,
-                        "dst too small");
-                return NULL;
-            }
-            /* g_strlcpy() returns the size without \0, we return the size with \0 */
-            *dst_len += 1; 
+        return dst;
+    case AF_UNIX:
+        *dst_len = g_strlcpy(dst, addr->addr.un.sun_path, *dst_len);
+        if (*dst_len >= initial_dst_len) {
+            /* g_strlcpy() got overrun */
+            g_set_error(gerr, NETWORK_ADDRESS_ERROR, NETWORK_ADDRESS_ERROR_DST_TOO_SMALL, "dst too small");
+            return NULL;
+        }
+        /* g_strlcpy() returns the size without \0, we return the size with \0 */
+        *dst_len += 1;
 
-            return dst;
-        default:
-            g_set_error(gerr,
+        return dst;
+    default:
+        g_set_error(gerr,
                     NETWORK_ADDRESS_ERROR,
                     NETWORK_ADDRESS_ERROR_INVALID_ADDRESS_FAMILY,
-                    "can't convert a address of family '%d' into a string",
-                    addr->addr.common.sa_family);
-            return NULL;
+                    "can't convert a address of family '%d' into a string", addr->addr.common.sa_family);
+        return NULL;
     }
 }
-
-
 
 #endif
 
 char *
-network_address_tostring(network_address *addr, char *dst, gsize *dst_len, GError **gerr) {
+network_address_tostring(network_address *addr, char *dst, gsize *dst_len, GError **gerr)
+{
     const char *addr_str;
 
     if (NULL == dst) {
-        g_set_error(gerr,
-                NETWORK_ADDRESS_ERROR,
-                NETWORK_ADDRESS_ERROR_INVALID,
-                "dst is NULL");
+        g_set_error(gerr, NETWORK_ADDRESS_ERROR, NETWORK_ADDRESS_ERROR_INVALID, "dst is NULL");
         return NULL;
     }
     if (NULL == dst_len) {
-        g_set_error(gerr,
-                NETWORK_ADDRESS_ERROR,
-                NETWORK_ADDRESS_ERROR_INVALID,
-                "dst_len is NULL");
+        g_set_error(gerr, NETWORK_ADDRESS_ERROR, NETWORK_ADDRESS_ERROR_INVALID, "dst_len is NULL");
         return NULL;
     }
-
 #if defined(HAVE_INET_NTOP)
     addr_str = network_address_tostring_inet_ntop(addr, dst, dst_len, gerr);
 #else
@@ -504,27 +470,23 @@ network_address_tostring(network_address *addr, char *dst, gsize *dst_len, GErro
     return dst;
 }
 
-gint network_address_refresh_name(network_address *addr) {
+gint
+network_address_refresh_name(network_address *addr)
+{
     GError *gerr = NULL;
     char buf[255];
     gsize buf_len = sizeof(buf);
 
     if (NULL == network_address_tostring(addr, buf, &buf_len, &gerr)) {
-        g_critical("%s: %s",
-                G_STRLOC,
-                gerr->message);
+        g_critical("%s: %s", G_STRLOC, gerr->message);
         g_clear_error(&gerr);
         return -1;
     }
 
     if (addr->addr.common.sa_family == AF_INET) {
-        g_string_printf(addr->name, "%s:%d",
-                buf, 
-                ntohs(addr->addr.ipv4.sin_port));
+        g_string_printf(addr->name, "%s:%d", buf, ntohs(addr->addr.ipv4.sin_port));
     } else if (addr->addr.common.sa_family == AF_INET6) {
-        g_string_printf(addr->name, "[%s]:%d",
-                buf, 
-                ntohs(addr->addr.ipv6.sin6_port));
+        g_string_printf(addr->name, "[%s]:%d", buf, ntohs(addr->addr.ipv6.sin6_port));
     } else {
         g_string_assign(addr->name, buf);
     }
@@ -532,8 +494,11 @@ gint network_address_refresh_name(network_address *addr) {
     return 0;
 }
 
-network_address *network_address_copy(network_address *dst, network_address *src) {
-    if (!dst) dst = network_address_new();
+network_address *
+network_address_copy(network_address *dst, network_address *src)
+{
+    if (!dst)
+        dst = network_address_new();
 
     dst->len = src->len;
     dst->addr = src->addr;
@@ -541,4 +506,3 @@ network_address *network_address_copy(network_address *dst, network_address *src
 
     return dst;
 }
-

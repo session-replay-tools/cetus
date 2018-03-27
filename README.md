@@ -62,39 +62,43 @@ Cetus分为读写分离和分库两个版本。
 
 ### Cetus安装与使用
 
-1. [Cetus 安装说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-install.md)
+1. [Cetus 快速入门](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-quick-try.md)
 
-2. [Cetus 快速入门](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-quick-try.md)
+2. [Cetus 安装说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-install.md)
 
-3. [Cetus 读写分离版使用指南](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw.md)
+3. [Cetus 配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-profile.md)
 
-4. [Cetus 读写分离版管理手册](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw-admin.md)
+4. [Cetus 启动配置选项说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-configuration.md)
 
-5. [Cetus 分库(sharding)版使用指南](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-sharding.md)
+5. [Cetus 使用约束说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-constraint.md)
 
-6. [Cetus 分库(sharding)版管理手册](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-shard-admin.md)
+6. [Cetus 读写分离版使用指南](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw.md)
 
-7. [Cetus rpm说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rpm.md)
+7. [Cetus 读写分离版管理手册](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw-admin.md)
 
-8. [Cetus + mha高可用方案](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-mha.md)
+8. [Cetus 分库(sharding)版使用指南](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-sharding.md)
+
+9. [Cetus 分库(sharding)版管理手册](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-shard-admin.md)
 
 ### Cetus架构与设计
 
-1. [Cetus 架构和实现](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-architecture.md)
-
-2. [Cetus 测试报告](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-test.md)
-
-### Cetus使用约束
-
-[Cetus 使用约束说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-constraint.md)
+[Cetus 架构和实现](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-architecture.md)
 
 ### Cetus发现的MySQL xa事务问题
 
 [MySQL xa事务问题说明](https://github.com/Lede-Inc/cetus/blob/master/doc/mysql-xa-bug.md)
 
-### Cetus辅助工具
+### Cetus辅助
 
-[Cetus xa悬挂处理工具](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-xa.md)
+1. [Cetus xa悬挂处理工具](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-xa.md)
+
+2. [Cetus + mha高可用方案](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-mha.md)
+
+3. [Cetus rpm说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rpm.md)
+
+### Cetus测试
+
+[Cetus 测试报告](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-test.md)
 
 ## 反馈
 

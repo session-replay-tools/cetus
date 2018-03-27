@@ -1429,6 +1429,10 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
     if (con->server != NULL) {
         if (con->last_backend_type != st->backend->type) {
             server_attr_changed = 1;
+        } else {
+            if (st->backend->state != BACKEND_STATE_UP && st->backend->state != BACKEND_STATE_UNKNOWN) {
+                server_attr_changed = 1;
+            }
         }
     }
 

@@ -4307,8 +4307,8 @@ process_self_event(server_connection_state_t *con, int events, int event_fd)
             con->state = ST_ASYNC_ERROR;
             if (con->backend->type != BACKEND_TYPE_RW) {
                 con->backend->state = BACKEND_STATE_DOWN;
+                g_message("%s: set backend:%p down", G_STRLOC, con->backend);
             }
-            g_message("%s: set backend:%p down", G_STRLOC, con->backend);
         }
     }
 
@@ -4440,8 +4440,8 @@ network_mysqld_self_con_handle(int event_fd, short events, void *user_data)
                 con->state = ST_ASYNC_ERROR;
                 if (con->backend->type != BACKEND_TYPE_RW) {
                     con->backend->state = BACKEND_STATE_DOWN;
+                    g_message(G_STRLOC ": set backend: %s (%p) down", con->backend->addr->name->str, con->backend);
                 }
-                g_message(G_STRLOC ": set backend: %s (%p) down", con->backend->addr->name->str, con->backend);
                 break;
             }
             break;
@@ -4631,10 +4631,10 @@ network_connection_pool_create_conn(network_mysqld_con *con)
                 scs->backend->connected_clients--;
                 if (scs->backend->type != BACKEND_TYPE_RW) {
                     backend->state = BACKEND_STATE_DOWN;
+                    g_message("%s: set backend ndx:%d down", G_STRLOC, i);
                 }
                 g_get_current_time(&(backend->state_since));
                 network_mysqld_self_con_free(scs);
-                g_message("%s: set backend ndx:%d down", G_STRLOC, i);
                 break;
             }
         }
@@ -4698,9 +4698,9 @@ network_connection_pool_create_conns(chassis *srv)
                     network_mysqld_self_con_free(scs);
                     if (scs->backend->type != BACKEND_TYPE_RW) {
                         backend->state = BACKEND_STATE_DOWN;
+                        g_message("%s: set backend ndx:%d down, connected_clients sub", G_STRLOC, i);
                     }
                     g_get_current_time(&(backend->state_since));
-                    g_message("%s: set backend ndx:%d down, connected_clients sub", G_STRLOC, i);
                     break;
                 }
             }

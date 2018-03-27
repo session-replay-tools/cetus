@@ -153,8 +153,10 @@ check_backend_alive(int fd, short what, void *arg)
 
         if (conn == NULL) {
             if (backend->state != BACKEND_STATE_DOWN) {
-                network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN);
-                g_critical("Backend %s is set to DOWN.", backend_addr);
+                if (backend->type != BACKEND_TYPE_RW) {
+                    network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN);
+                    g_critical("Backend %s is set to DOWN.", backend_addr);
+                }
             }
             g_debug("Backend %s is not ALIVE!", backend_addr);
         } else {
@@ -203,10 +205,7 @@ update_master_timestamp(int fd, short what, void *arg)
             char *backend_addr = backend->addr->name->str;
             MYSQL *conn = get_mysql_connection(monitor, backend_addr);
             if (conn == NULL) {
-                if (backend->state != BACKEND_STATE_DOWN) {
-                    network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN);
-                    g_critical("Backend %s is set to DOWN.", backend_addr);
-                }
+                g_critical("Could not connect to Backend %s.", backend_addr);
             } else {
                 if (backend->state != BACKEND_STATE_UP) {
                     network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP);

@@ -348,7 +348,7 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
     chassis_options_add(opts,
                         "default-query-cache-timeout",
                         0, 0, OPTION_ARG_INT, &(frontend->default_query_cache_timeout),
-                        "timeout when proxy connect to backends", "<integer>");
+                        "default query cache timeout in ms", "<integer>");
 
     chassis_options_add(opts,
                         "long-query-time",

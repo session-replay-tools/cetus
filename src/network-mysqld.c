@@ -4305,8 +4305,10 @@ process_self_event(server_connection_state_t *con, int events, int event_fd)
         if (con->state == ST_ASYNC_CONN) {
             g_message("%s: self conn timeout, state:%d, con:%p, server:%p", G_STRLOC, con->state, con, con->server);
             con->state = ST_ASYNC_ERROR;
-            con->backend->state = BACKEND_STATE_DOWN;
-            g_message("%s: set backend:%p down", G_STRLOC, con->backend);
+            if (con->backend->type != BACKEND_TYPE_RW) {
+                con->backend->state = BACKEND_STATE_DOWN;
+                g_message("%s: set backend:%p down", G_STRLOC, con->backend);
+            }
         }
     }
 
@@ -4436,8 +4438,10 @@ network_mysqld_self_con_handle(int event_fd, short events, void *user_data)
                 break;
             default:
                 con->state = ST_ASYNC_ERROR;
-                con->backend->state = BACKEND_STATE_DOWN;
-                g_message(G_STRLOC ": set backend: %s (%p) down", con->backend->addr->name->str, con->backend);
+                if (con->backend->type != BACKEND_TYPE_RW) {
+                    con->backend->state = BACKEND_STATE_DOWN;
+                    g_message(G_STRLOC ": set backend: %s (%p) down", con->backend->addr->name->str, con->backend);
+                }
                 break;
             }
             break;
@@ -4625,10 +4629,12 @@ network_connection_pool_create_conn(network_mysqld_con *con)
                 break;
             default:
                 scs->backend->connected_clients--;
-                backend->state = BACKEND_STATE_DOWN;
+                if (scs->backend->type != BACKEND_TYPE_RW) {
+                    backend->state = BACKEND_STATE_DOWN;
+                    g_message("%s: set backend ndx:%d down", G_STRLOC, i);
+                }
                 g_get_current_time(&(backend->state_since));
                 network_mysqld_self_con_free(scs);
-                g_message("%s: set backend ndx:%d down", G_STRLOC, i);
                 break;
             }
         }
@@ -4690,9 +4696,11 @@ network_connection_pool_create_conns(chassis *srv)
                 default:
                     scs->backend->connected_clients--;
                     network_mysqld_self_con_free(scs);
-                    backend->state = BACKEND_STATE_DOWN;
+                    if (scs->backend->type != BACKEND_TYPE_RW) {
+                        backend->state = BACKEND_STATE_DOWN;
+                        g_message("%s: set backend ndx:%d down, connected_clients sub", G_STRLOC, i);
+                    }
                     g_get_current_time(&(backend->state_since));
-                    g_message("%s: set backend ndx:%d down, connected_clients sub", G_STRLOC, i);
                     break;
                 }
             }

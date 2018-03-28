@@ -515,7 +515,6 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
         srv->cache_index = g_queue_new();
     }
     srv->is_tcp_stream_enabled = frontend->is_tcp_stream_enabled;
-    srv->is_tcp_stream_enabled = 1;
     if (srv->is_tcp_stream_enabled) {
         g_message("%s:tcp stream enabled", G_STRLOC);
     }

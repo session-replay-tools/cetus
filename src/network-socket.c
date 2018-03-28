@@ -106,7 +106,7 @@ network_socket_new()
 
     s->src = network_address_new();
     s->dst = network_address_new();
-    s->last_visit_time = time(0);
+    s->create_or_update_time = time(0);
 
     return s;
 }

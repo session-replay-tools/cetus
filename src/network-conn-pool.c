@@ -201,8 +201,8 @@ network_connection_pool_get(network_connection_pool *pool, GString *username, in
     if (conns) {
         if (conns->length > 0) {
             entry = g_queue_pop_head(conns);
-            g_debug("%s: (get) entry for user '%s' -> %p, now:%ld",
-                    G_STRLOC, username ? username->str : "", entry, time(0));
+            g_debug("%s: (get) entry for user '%s' -> %p",
+                    G_STRLOC, username ? username->str : "", entry);
         } else {
             g_debug("%s: conns length is zero for user '%s'", G_STRLOC, username ? username->str : "");
         }

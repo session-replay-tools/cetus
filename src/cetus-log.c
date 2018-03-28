@@ -22,7 +22,7 @@ static int last_hour = -1;
 static const char *file_name_prefix = NULL;
 static char tc_error_log_time[TC_ERR_LOG_TIME_STR_LEN];
 
-static int update_time();
+static int tc_update_time();
 
 struct tc_log_level_t {
     char *level;
@@ -141,7 +141,7 @@ int
 tc_log_init(const char *file)
 {
     file_name_prefix = file;
-    update_time();
+    tc_update_time();
     tc_create_new_file(file, last_hour);
     return log_fd;
 }
@@ -150,7 +150,7 @@ int
 tc_get_log_hour()
 {
     if (last_hour == -1) {
-        update_time();
+        tc_update_time();
     }
 
     return last_hour;
@@ -167,7 +167,7 @@ tc_log_end(void)
 }
 
 static int
-update_time()
+tc_update_time()
 {
     int status;
     time_t sec;
@@ -209,7 +209,7 @@ tc_log_info(int level, int err, const char *fmt, ...)
         return;
     }
 
-    if (update_time()) {
+    if (tc_update_time()) {
         tc_log_end();
         tc_create_new_file(file_name_prefix, last_hour);
     }

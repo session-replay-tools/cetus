@@ -322,9 +322,6 @@ process_read_server(network_mysqld_con *con, server_session_t *ss)
             if (con->candidate_tcp_streamed && sock->max_header_size_reached && con->num_servers_visited > 1) {
                 g_debug("%s: set NET_RW_STATE_PART_FINISHED here", G_STRLOC);
                 ss->state = NET_RW_STATE_PART_FINISHED;
-                if (con->partially_merged) {
-                    do_tcp_stream_after_recv_resp(con, ss);
-                }
                 break;
             } else {
                 if (con->num_servers_visited == 1 && sock->max_header_size_reached && con->candidate_tcp_streamed) {

@@ -101,7 +101,7 @@ network_pool_add_idle_conn(network_connection_pool *pool, chassis *srv, network_
     int surplus_time = srv->current_time - server->create_or_update_time;
     surplus_time = srv->max_alive_time - surplus_time;
     if (surplus_time < 60) {
-        g_critical("%s: negtive surplus_time:%d", G_STRLOC, surplus_time);
+        g_debug("%s: negtive surplus_time:%d", G_STRLOC, surplus_time);
         surplus_time = 60 + g_random_int_range(0, 240);
     }
 

@@ -20,7 +20,7 @@ Cetus sharding版支持对后端的数据库进行分库，可以根据hash/rang
 
 **2.Cetus**
 
-- 根据MySQL后端信息配置users.json、sharding.json和shard.conf（variables.json可选配），具体配置说明详见[Cetus 配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-profile.md)
+- 根据MySQL后端信息配置users.json、sharding.json和shard.conf（variables.json可选配），具体配置说明详见[Cetus 分库(sharding)配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-shard-profile.md)
 
 **3.LVS & keepalived**
 

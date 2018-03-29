@@ -6,7 +6,7 @@ MySQL建议使用5.7.16以上版本，若使用读写分离功能则需要搭建
 
 ## 安装
 
-Cetus只支持linux系统，安装步骤参考[Cetus 安装说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-install.md)，配置说明详见[Cetus 配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-profile.md)。
+Cetus只支持linux系统，安装步骤参考[Cetus 安装说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-install.md)，配置根据安装的不同版本详见[Cetus 读写分离版配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw-profile.md)、[Cetus 分库(sharding)版配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-shard-profile.md)。
 
 ## 部署
 

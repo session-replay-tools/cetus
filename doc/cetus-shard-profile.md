@@ -1,6 +1,6 @@
-# 配置文件说明
+# 分库(sharding)版配置文件说明
 
-配置文件包括用户配置文件（users.json）、变量处理配置文件（variables.json）、分库版本的分片规则配置文件（sharding.json）、读写分离版本的启动配置文件（proxy.conf）和分库版本的启动配置文件（shard.conf），具体说明如下：
+分库(sharding)版配置文件包括用户配置文件（users.json）、变量处理配置文件（variables.json）、分库版本的分片规则配置文件（sharding.json）和分库版本的启动配置文件（shard.conf），具体说明如下：
 
 ##  1.users.json
 
@@ -160,71 +160,7 @@ sharding.json是分库版本的分库规则配置文件，同样采用键值对�
 
 分片表table涉及两个物理db，为employees_hash和employees_range，其中employees_hash采用第一种分片规则，表dept_emp的分片键为emp_no，表employees的分片键为emp_no，employees_range采用第二种分片规则，表dept_emp的分片键为emp_no，表employees的分片键为emp_no。
 
-##  4.proxy.conf
-
-```
-[cetus]
-# Loaded Plugins
-plugins=XXX,XXX
-
-# Proxy Configuration
-proxy-address=XXX.XXX.XXX.XXX:XXXX
-proxy-backend-addresses=XXX.XXX.XXX.XXX:XXXX
-proxy-read-only-backend-addresses=XXX.XXX.XXX.XXX:XXXX
-
-# Admin Configuration
-admin-address=XXX.XXX.XXX.XXX:XXXX
-admin-username=XXXX
-admin-password=XXXXXX
-
-# Backend Configuration
-default-db=XXXX
-default-username=XXXXX
-
-# File and Log Configuration
-log-file=XXXX
-log-level=XXXX
-```
-
-proxy.conf是读写分离版本的启动配置文件，在启动Cetus时需要加载，配置文件采用key＝value的形式，其中key是固定的，可参考[Cetus 启动配置选项说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-configuration.md)，value是用户自定义的。
-
-例如：
-
-```
-[cetus]
-# Loaded Plugins
-plugins=proxy,admin
-
-# Proxy Configuration
-proxy-address=127.0.0.1:1234
-proxy-backend-addresses=127.0.0.1:3306
-proxy-read-only-backend-addresses=127.0.0.1:3307
-
-# Admin Configuration
-admin-address=127.0.0.1:5678
-admin-username=admin
-admin-password=admin
-
-# Backend Configuration
-default-db=test
-default-username=dbtest
-
-# File and Log Configuration
-log-file=cetus.log
-log-level=debug
-```
-
-我们配置了读写分离版本的启动选项，其中plugins的值是加载插件的名称，读写分离版本需加载的插件为proxy和admin；
-
-proxy-address的值是Proxy监听的IP和端口，我们设置为127.0.0.1:1234；proxy-backend-addresses的值是读写后端(主库)的IP和端口，我们设置为127.0.0.1:3306，可多项；proxy-read-only-backend-addresses的值是只读后端(从库)的IP和端口，我们设置为127.0.0.1:3307，可多项；
-
-admin-address的值是管理模块的IP和端口，我们设置为127.0.0.1:5678；admin-username的值是管理模块的用户名，我们设置为admin；admin-password的值是管理模块的密码明文，我们设置为admin；
-
-default-db的值是默认数据库，当连接未指定db时，使用的默认数据库名称，我们设置为test；default-username的值是默认登陆用户名，在Proxy启动时自动创建连接使用的用户名，我们设置为dbtest；
-
-log-file的值是日志文件路径，我们设置为当前安装路径下的cetus.log；log-level的值是日志记录级别，可选 info | message | warning | error | critical(default)，我们设置为debug；这些是必备启动选项，其他可选的性能配置详见[Cetus 启动配置选项说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-configuration.md)。
-
-##  5.shard.conf
+##  4.shard.conf
 
 ```
 [cetus]
@@ -280,13 +216,17 @@ log-level=debug
 
 proxy-address的值是Proxy监听的IP和端口，我们设置为127.0.0.1:1234；proxy-backend-addresses的值是后端的IP和端口，需要同时指定group（@group），本例分为4个group，分别data1的127.0.0.1:3361、data2的127.0.0.1:3362、data3的127.0.0.1:3363、data4的127.0.0.1:3364；
 
-其他选项与proxy.conf含义相同；这些是必备启动选项，其他可选性能配置详见[Cetus 启动配置选项说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-configuration.md)。
+admin-address的值是管理模块的IP和端口，我们设置为127.0.0.1:5678；admin-username的值是管理模块的用户名，我们设置为admin；admin-password的值是管理模块的密码明文，我们设置为admin；
+
+default-db的值是默认数据库，当连接未指定db时，使用的默认数据库名称，我们设置为test；default-username的值是默认登陆用户名，在Proxy启动时自动创建连接使用的用户名，我们设置为dbtest；
+
+log-file的值是日志文件路径，我们设置为当前安装路径下的cetus.log；log-level的值是日志记录级别，可选 info | message | warning | error | critical(default)，我们设置为debug；这些是必备启动选项，其他可选性能配置详见[Cetus 启动配置选项说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-configuration.md)。
 
 **注：**
 
 **以上配置文件中.json文件名称不可变，.conf文件可自定义名称，并利用命令行加载**
 
-**proxy.conf\/shard.conf 常用参数：**
+**启动配置文件shard.conf 常用参数：**
 
 **1）default-pool-size=\<num\>，设置刚启动的连接数量**
 

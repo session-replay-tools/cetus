@@ -156,6 +156,8 @@ check_backend_alive(int fd, short what, void *arg)
                 if (backend->type != BACKEND_TYPE_RW) {
                     network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN);
                     g_critical("Backend %s is set to DOWN.", backend_addr);
+                } else {
+                    g_critical("get null conn from Backend %s.", backend_addr);
                 }
             }
             g_debug("Backend %s is not ALIVE!", backend_addr);

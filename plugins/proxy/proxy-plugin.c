@@ -136,7 +136,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
     if (st == NULL)
         return NETWORK_SOCKET_ERROR;
 
-    guint32 diff = time(0) - con->client->last_visit_time;
+    guint32 diff = time(0) - con->client->create_or_update_time;
     g_debug("%s, con:%p:call proxy_timeout", G_STRLOC, con);
     switch (con->state) {
     case ST_READ_QUERY:
@@ -1425,18 +1425,39 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
     st->injected.sent_resultset = 0;
 
     int server_attr_changed = 0;
+    con->is_client_to_be_closed = 0;
 
     if (con->server != NULL) {
         if (con->last_backend_type != st->backend->type) {
             server_attr_changed = 1;
         } else {
             if (st->backend->state != BACKEND_STATE_UP && st->backend->state != BACKEND_STATE_UNKNOWN) {
-                server_attr_changed = 1;
+                if (con->is_prepared) {
+                    if (con->srv->is_manual_down) {
+                        g_message("%s Could not continue to process prepare stmt", G_STRLOC);
+                        server_attr_changed = 1;
+                        con->is_client_to_be_closed = 1;
+                    }
+                } else {
+                    server_attr_changed = 1;
+                }
             }
         }
     }
 
-    if (!server_attr_changed) {
+    if (server_attr_changed && con->client->is_server_conn_reserved) {
+        g_message("%s server attr changed and conn_reserved true, stop process", G_STRLOC);
+        network_mysqld_con_send_error(con->client, C("(proxy) unable to continue processing command"));
+        ret = PROXY_SEND_RESULT;
+        con->server_to_be_closed = 1;
+    } else {
+        if (server_attr_changed) {
+            g_debug("%s server_attr_changed and add to pool", G_STRLOC);
+            if (network_pool_add_conn(con, 0) != 0) {
+                g_message("%s, con:%p:conn to pool failed", G_STRLOC, con);
+            }
+        }
+
         ret = network_read_query(con, st);
 
         if (con->server != NULL) {
@@ -1444,11 +1465,6 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
         } else {
             con->last_backend_type = BACKEND_TYPE_UNKNOWN;
         }
-    } else {
-        g_message("%s server attr changed", G_STRLOC);
-        network_mysqld_con_send_error(con->client, C("(proxy) unable to continue processing command"));
-        ret = PROXY_SEND_RESULT;
-        con->server_to_be_closed = 1;
     }
 
     /**
@@ -1645,7 +1661,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
 
     if (con->server_to_be_closed) {
         if (con->servers != NULL) {
-            if (con->srv->maintain_close_mode) {
+            if (con->srv->maintain_close_mode || con->is_client_to_be_closed) {
                 con->state = ST_CLOSE_CLIENT;
                 g_debug("%s:client needs to closed for con:%p", G_STRLOC, con);
             } else {
@@ -1666,6 +1682,11 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
             st->backend = NULL;
             con->server_to_be_closed = 0;
             con->server_closed = 0;
+
+            if (con->is_client_to_be_closed) {
+                con->state = ST_CLOSE_CLIENT;
+                return NETWORK_SOCKET_SUCCESS;
+            }
         }
     }
 

@@ -59,7 +59,7 @@ vi XXX.conf
 
 根据具体编译安装的版本编辑相关配置文件，若使用读写分离功能则需配置users.json和proxy.conf，若使用sharding功能则需配置users.json、sharding.json和shard.conf，其中两个版本的variables.json均可选配。
 
-配置文件的具体说明见[Cetus 配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-profile.md)。
+配置文件的具体说明见[Cetus 读写分离版配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw-profile.md)和[Cetus 分库(sharding)版配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-shard-profile.md)。
 
 - 启动：Cetus可以利用bin/cetus启动
 

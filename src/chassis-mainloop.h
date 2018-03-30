@@ -60,15 +60,6 @@ typedef struct chassis chassis;
 #define MAX_ALLOWED_PACKET_DEFAULT (32 * MB)
 #define MAX_ALLOWED_PACKET_FLOOR   (1 * KB)
 
-typedef struct cached_sql_info_t {
-    time_t last_visit_time;
-    int visited_cnt;
-    int parsed_txLevel;
-    int parsed_rv;
-    int parsed_join_op_unsupported;
-    GPtrArray *groups;
-} cached_sql_info_t;
-
 typedef struct rw_op_t {
     uint64_t ro;
     uint64_t rw;
@@ -137,6 +128,7 @@ struct chassis {
     unsigned int compress_support;
     unsigned int client_found_rows;
     unsigned int master_preferred;
+    unsigned int is_manual_down;
     unsigned int is_reduce_conns;
     unsigned int xa_log_detailed;
     unsigned int sharding_reload;
@@ -150,6 +142,7 @@ struct chassis {
     int cetus_max_allowed_packet;
     int disable_dns_cache;
 
+    int max_alive_time;
     int max_resp_len;
     int merged_output_size;
     int max_header_size;
@@ -176,6 +169,7 @@ struct chassis {
 
     struct incremental_guid_state_t guid_state;
     time_t startup_time;
+    time_t current_time;
     struct chassis_options_t *options;
     chassis_config_t *config_manager;
     GHashTable *query_cache_table;

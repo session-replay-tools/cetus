@@ -1586,9 +1586,16 @@ admin_insert_backend(network_mysqld_con *con, const char *sql)
         return PROXY_NO_DECISION;
 
     chassis_private *g = con->srv->priv;
+    backend_state_t state = backend_state(state_str);
+    if (state == BACKEND_STATE_DOWN) {
+        con->srv->is_manual_down = 1;
+    } else {
+        con->srv->is_manual_down = 0;
+    }
+
     int affected = network_backends_add(g->backends, address,
                                         backend_type(type_str),
-                                        backend_state(state_str),
+                                        state,
                                         con->srv);
     network_mysqld_con_send_ok_full(con->client, affected == 0 ? 1 : 0, 0, SERVER_STATUS_AUTOCOMMIT, 0);
     return PROXY_SEND_RESULT;
@@ -1879,6 +1886,11 @@ admin_set_config(network_mysqld_con *con, const char *sql)
         chas->max_idle_connections = val;
     } else if (strcasecmp(key, "pool.max_resp_len") == 0) {
         chas->max_resp_len = val;
+    } else if (strcasecmp(key, "pool.max_alive_time") == 0) {
+        if (val < 600) {
+            val = 600;
+        }
+        chas->max_alive_time = val;
     } else if (strcasecmp(key, "pool.master_preferred") == 0) {
         chas->master_preferred = val;
     } else {

@@ -93,6 +93,7 @@ struct chassis_frontend_t {
     int merged_output_size;
     int max_header_size;
     int max_resp_len;
+    int max_alive_time;
     int master_preferred;
     int worker_id;
     int config_port;
@@ -159,6 +160,7 @@ chassis_frontend_new(void)
 
     frontend->default_pool_size = 100;
     frontend->max_resp_len = 10 * 1024 * 1024;  /* 10M */
+    frontend->max_alive_time = 7200;
     frontend->merged_output_size = 8192;
     frontend->max_header_size = 65536;
     frontend->config_port = 3306;
@@ -300,6 +302,11 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                         "max-resp-size",
                         0, 0, OPTION_ARG_INT, &(frontend->max_resp_len),
                         "Set the max response size for one backend", "<integer>");
+
+    chassis_options_add(opts,
+                        "max-alive-time",
+                        0, 0, OPTION_ARG_INT, &(frontend->max_alive_time),
+                        "Set the max alive time for server connection", "<integer>");
 
     chassis_options_add(opts,
                         "merged-output-size",
@@ -475,6 +482,12 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->max_resp_len = frontend->max_resp_len;
     g_message("set max resp len:%d", srv->max_resp_len);
 
+    srv->max_alive_time = frontend->max_alive_time;
+    if (srv->max_alive_time < 600) {
+        srv->max_alive_time = 600;
+    }
+    g_message("set max alive time:%d", srv->max_alive_time);
+
     srv->merged_output_size = frontend->merged_output_size;
     srv->compressed_merged_output_size = srv->merged_output_size << 3;
     g_message("%s:set merged output size:%d", G_STRLOC, srv->merged_output_size);
@@ -502,7 +515,6 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
         srv->cache_index = g_queue_new();
     }
     srv->is_tcp_stream_enabled = frontend->is_tcp_stream_enabled;
-    srv->is_tcp_stream_enabled = 1;
     if (srv->is_tcp_stream_enabled) {
         g_message("%s:tcp stream enabled", G_STRLOC);
     }

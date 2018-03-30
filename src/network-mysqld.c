@@ -2245,7 +2245,7 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
         g_critical("%s: wait failed and no server backend for user:%s", G_STRLOC, con->client->response->username->str);
 
         handle_query_wait_stats(con);
-        con->state = ST_SEND_ERROR;
+        con->state = ST_SEND_QUERY_RESULT;
         network_mysqld_con_send_error_full(con->client, C("service unavailable"), ER_SERVER_SHUTDOWN, "08S01");
         con->is_wait_server = 0;
         network_queue_clear(con->client->recv_queue);
@@ -3296,8 +3296,10 @@ send_result_to_client(network_mysqld_con *con, network_mysqld_con_state_t ostate
         }
     }
 
+    srv->current_time = time(0);
+
     if (con->resultset_is_finished) {
-        con->client->last_visit_time = time(0);
+        con->client->create_or_update_time = srv->current_time;
         if (!con->client->is_server_conn_reserved) {
             con->client->is_need_q_peek_exec = 1;
             g_debug("%s: set is_need_q_peek_exec true, state:%d", G_STRLOC, con->state);
@@ -3308,11 +3310,10 @@ send_result_to_client(network_mysqld_con *con, network_mysqld_con_state_t ostate
     }
 
     if (con->slave_conn_shortaged) {
-        time_t cur = time(0);
-        if (con->last_check_conn_supplement_time != cur) {
+        if (con->last_check_conn_supplement_time != srv->current_time) {
             g_debug("%s: slave conn shortaged, try to add more conns ", G_STRLOC);
             network_connection_pool_create_conn(con);
-            con->last_check_conn_supplement_time = cur;
+            con->last_check_conn_supplement_time = srv->current_time;
         } else {
             g_debug("%s: slave conn shortaged, but time is the same", G_STRLOC);
         }
@@ -4307,7 +4308,9 @@ process_self_event(server_connection_state_t *con, int events, int event_fd)
             con->state = ST_ASYNC_ERROR;
             if (con->backend->type != BACKEND_TYPE_RW) {
                 con->backend->state = BACKEND_STATE_DOWN;
-                g_message("%s: set backend:%p down", G_STRLOC, con->backend);
+                g_critical("%s: set backend:%p down", G_STRLOC, con->backend);
+            } else {
+                g_critical("%s: get conn timeout from master", G_STRLOC);
             }
         }
     }
@@ -4440,7 +4443,10 @@ network_mysqld_self_con_handle(int event_fd, short events, void *user_data)
                 con->state = ST_ASYNC_ERROR;
                 if (con->backend->type != BACKEND_TYPE_RW) {
                     con->backend->state = BACKEND_STATE_DOWN;
-                    g_message(G_STRLOC ": set backend: %s (%p) down", con->backend->addr->name->str, con->backend);
+                    g_critical(G_STRLOC ": set backend: %s (%p) down", con->backend->addr->name->str, con->backend);
+                } else {
+                    g_critical(G_STRLOC ": error when creating conn for backend: %s (%p)",
+                            con->backend->addr->name->str, con->backend);
                 }
                 break;
             }
@@ -4632,6 +4638,8 @@ network_connection_pool_create_conn(network_mysqld_con *con)
                 if (scs->backend->type != BACKEND_TYPE_RW) {
                     backend->state = BACKEND_STATE_DOWN;
                     g_message("%s: set backend ndx:%d down", G_STRLOC, i);
+                } else {
+                    g_message("%s: error when creating conn for backend ndx:%d", G_STRLOC, i);
                 }
                 g_get_current_time(&(backend->state_since));
                 network_mysqld_self_con_free(scs);
@@ -4699,6 +4707,8 @@ network_connection_pool_create_conns(chassis *srv)
                     if (scs->backend->type != BACKEND_TYPE_RW) {
                         backend->state = BACKEND_STATE_DOWN;
                         g_message("%s: set backend ndx:%d down, connected_clients sub", G_STRLOC, i);
+                    } else {
+                        g_message("%s: error when creating conn for backend ndx:%d", G_STRLOC, i);
                     }
                     g_get_current_time(&(backend->state_since));
                     break;

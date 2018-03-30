@@ -119,7 +119,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
         }
         break;
     default:
-        diff = time(0) - con->client->last_visit_time;
+        diff = time(0) - con->client->create_or_update_time;
         if (diff < 8 * HOURS) {
             if (!con->client->is_server_conn_reserved) {
                 g_debug("%s, is_server_conn_reserved is false", G_STRLOC);

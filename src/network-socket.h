@@ -99,7 +99,7 @@ typedef struct {
 
 typedef struct {
     int fd;             /**< socket-fd */
-    guint32 last_visit_time;
+    guint32 create_or_update_time;
     struct event event; /**< events for this fd */
 
     network_address *src; /**< getsockname() */

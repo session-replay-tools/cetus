@@ -30,7 +30,7 @@ Cetus 读写分离版将前端发来的读请求和写请求分别发送到不�
 
 **2.Cetus**
 
-- 根据MySQL后端信息配置users.json和proxy.conf（variables.json可选配），具体配置说明详见[Cetus 配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-profile.md)
+- 根据MySQL后端信息配置users.json和proxy.conf（variables.json可选配），具体配置说明详见[Cetus 读写分离版配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw-profile.md)
 
 **3.LVS & keepalived**
 

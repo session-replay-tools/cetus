@@ -55,6 +55,19 @@ server_sess_wait_for_event(server_session_t *ss, short ev_type, struct timeval *
 }
 
 static void
+remove_server_wait_event(network_mysqld_con *con)
+{
+    int i;
+    for (i = 0; i < con->servers->len; i++) {
+        server_session_t *ss = (server_session_t *)g_ptr_array_index(con->servers, i);
+        network_socket *server = ss->server;
+        if (server->is_waiting) {
+            CHECK_PENDING_EVENT(&(server->event));
+        }
+    }
+}
+
+static void
 do_tcp_stream_after_recv_resp(network_mysqld_con *con, server_session_t *ss)
 {
     merge_parameters_t *data = con->data;
@@ -97,6 +110,7 @@ do_tcp_stream_after_recv_resp(network_mysqld_con *con, server_session_t *ss)
             }
         }
     } else {
+        remove_server_wait_event(con);
         g_message("%s: resp too long:%p, src port:%s, sql:%s",
                   G_STRLOC, con, con->client->src->name->str, con->orig_sql->str);
         network_mysqld_con_send_error_full(con->client, C("response too long for proxy"), ER_CETUS_LONG_RESP, "HY000");
@@ -322,9 +336,6 @@ process_read_server(network_mysqld_con *con, server_session_t *ss)
             if (con->candidate_tcp_streamed && sock->max_header_size_reached && con->num_servers_visited > 1) {
                 g_debug("%s: set NET_RW_STATE_PART_FINISHED here", G_STRLOC);
                 ss->state = NET_RW_STATE_PART_FINISHED;
-                if (con->partially_merged) {
-                    do_tcp_stream_after_recv_resp(con, ss);
-                }
                 break;
             } else {
                 if (con->num_servers_visited == 1 && sock->max_header_size_reached && con->candidate_tcp_streamed) {

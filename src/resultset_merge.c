@@ -2134,6 +2134,7 @@ do_sort_merge(network_mysqld_con *con, merge_parameters_t *data, int is_finished
         if (heap->element[0]->record == NULL) {
             if (candidates[cand_index] == NULL) {
                 g_debug("%s: cand_index:%d is nil", G_STRLOC, cand_index);
+                check_server_sess_wait_for_event(con, cand_index, EV_READ, &con->read_timeout);
                 return 0;
             } else {
                 heap->element[0]->record = candidates[cand_index];

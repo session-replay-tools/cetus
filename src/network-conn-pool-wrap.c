@@ -81,6 +81,12 @@ network_mysqld_con_idle_handle(int event_fd, short events, void *user_data)
 
             g_message("%s:the server decided the close the connection", G_STRLOC);
         }
+    } else if (events == EV_TIMEOUT) {
+        if (pool->srv) {
+            chassis *srv = pool->srv;
+            srv->complement_conn_cnt++;
+        }
+        network_connection_pool_remove(pool, pool_entry);
     }
 }
 
@@ -92,7 +98,19 @@ network_pool_add_idle_conn(network_connection_pool *pool, chassis *srv, network_
     event_set(&(server->event), server->fd, EV_READ, network_mysqld_con_idle_handle, pool_entry);
     g_debug("%s: ev:%p add network_mysqld_con_idle_handle for server:%p, fd:%d",
             G_STRLOC, &(server->event), server, server->fd);
-    chassis_event_add(srv, &(server->event));
+    int surplus_time = srv->current_time - server->create_or_update_time;
+    surplus_time = srv->max_alive_time - surplus_time;
+    if (surplus_time < 60) {
+        g_debug("%s: negtive surplus_time:%d", G_STRLOC, surplus_time);
+        surplus_time = 60 + g_random_int_range(0, 240);
+    }
+
+    struct timeval timeout;
+    timeout.tv_sec = surplus_time;
+    timeout.tv_usec = 0;
+
+    chassis_event_add_with_timeout(srv, &(server->event), &timeout);
+
     return 0;
 }
 
@@ -173,7 +191,6 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
     }
 
     con->server->is_authed = 1;
-    network_connection_pool_entry *pool_entry = NULL;
 
     if (con->servers != NULL) {
         int i, checked = 0;
@@ -196,13 +213,7 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
 
                 g_debug("%s: add conn fd:%d to pool:%p ", G_STRLOC, server->fd, backend->pool);
                 server->is_multi_stmt_set = con->client->is_multi_stmt_set;
-                pool_entry = network_connection_pool_add(backend->pool, server);
-                event_set(&(server->event), server->fd, EV_READ, network_mysqld_con_idle_handle, pool_entry);
-                g_debug("%s: ev:%p add network_mysqld_con_idle_handle for server:%p, fd:%d",
-                        G_STRLOC, &(server->event), server, server->fd);
-
-                chassis_event_add(con->srv, &(server->event));
-
+                network_pool_add_idle_conn(backend->pool, con->srv, server);
                 backend->connected_clients--;
                 g_debug("%s, con:%p, backend ndx:%d:connected_clients sub, clients:%d",
                         G_STRLOC, con, st->backend_ndx_array[i], backend->connected_clients);
@@ -230,15 +241,7 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
         g_debug("%s: add conn fd:%d to pool:%p", G_STRLOC, con->server->fd, st->backend->pool);
         con->server->is_multi_stmt_set = con->client->is_multi_stmt_set;
         /* insert the server socket into the connection pool */
-        pool_entry = network_connection_pool_add(st->backend->pool, con->server);
-
-        event_set(&(con->server->event), con->server->fd, EV_READ, network_mysqld_con_idle_handle, pool_entry);
-
-        g_debug("%s: ev:%p add network_mysqld_con_idle_handle for server:%p, fd:%d",
-                G_STRLOC, &(con->server->event), con->server, con->server->fd);
-
-        chassis_event_add(con->srv, &(con->server->event));
-
+        network_pool_add_idle_conn(st->backend->pool, con->srv, con->server);
         st->backend->connected_clients--;
         g_debug("%s, con:%p, backend ndx:%d:connected_clients sub, clients:%d",
                 G_STRLOC, con, st->backend_ndx, st->backend->connected_clients);

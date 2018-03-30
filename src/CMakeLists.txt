@@ -128,6 +128,7 @@ TARGET_LINK_LIBRARIES(mysql-chassis
 	${MYSQL_LIBRARIES}
 	mysql-chassis-timing
 	mysql-chassis-glibext
+	stdc++
 )
 
 TARGET_LINK_LIBRARIES(mysql-chassis-proxy

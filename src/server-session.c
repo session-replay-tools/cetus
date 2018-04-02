@@ -54,17 +54,21 @@ server_sess_wait_for_event(server_session_t *ss, short ev_type, struct timeval *
     ss->server->is_waiting = 1;
 }
 
-static void
+static int
 remove_server_wait_event(network_mysqld_con *con)
 {
-    int i;
+    int i, result = 0;
     for (i = 0; i < con->servers->len; i++) {
         server_session_t *ss = (server_session_t *)g_ptr_array_index(con->servers, i);
         network_socket *server = ss->server;
         if (server->is_waiting) {
+            g_message("%s: still wait server resp here", G_STRLOC);
             CHECK_PENDING_EVENT(&(server->event));
+            result = 1;
         }
     }
+
+    return result;
 }
 
 static void
@@ -103,6 +107,9 @@ do_tcp_stream_after_recv_resp(network_mysqld_con *con, server_session_t *ss)
             network_mysqld_con_handle(-1, 0, con);
         } else {
             if (callback_merge(con, con->data, 0) == RM_FAIL) {
+                if (remove_server_wait_event(con)) {
+                    g_critical("%s: remove read pending event:%p", G_STRLOC, con);
+                }
                 network_queue_clear(con->client->send_queue);
                 network_mysqld_con_send_error_full(con->client, C("merge failed"), ER_CETUS_RESULT_MERGE, "HY000");
                 con->state = ST_SEND_QUERY_RESULT;

@@ -95,9 +95,7 @@ network_mysqld_proto_get_com_query_result(network_packet *packet,
             err = network_mysqld_proto_get_ok_packet(packet, ok_packet);
 
             if (!err) {
-                if (ok_packet->server_status & SERVER_MORE_RESULTS_EXISTS) {
-
-                } else {
+                if (!(ok_packet->server_status & SERVER_MORE_RESULTS_EXISTS)) {
                     is_finished = 1;
                 }
 

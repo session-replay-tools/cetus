@@ -708,7 +708,7 @@ admin_show_connectionlist(network_mysqld_con *admin_con, const char *sql)
             int diff = now.tv_sec - con->req_recv_time.tv_sec;
             if (diff > 7200) {
                 g_critical("%s:too slow connection(%s) processing for con:%p",
-                           G_STRLOC, con->client->src->name->str, con);
+                        G_STRLOC, con->client->src->name->str, con);
             }
             diff = diff * 1000;
             diff += (now.tv_usec - con->req_recv_time.tv_usec) / 1000;

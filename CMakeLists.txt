@@ -78,17 +78,17 @@ MESSAGE(STATUS "gmodule  at libs:${GMODULE_LIBRARY_DIRS} incl:${GMODULE_INCLUDE_
 
 ## if the paths are not set, use pkg-config to fetch them
 IF(NOT GLIB_DEV_BASE_DIR)
-	SET(GMODULE_INCLUDE_DIRS  CACHE PATH "gmodule-2.0 include dir [see pkg-config gmodule-2.0 --cflags]")
-	SET(GMODULE_LIBRARY_DIRS  CACHE PATH "gmodule-2.0 library dir [see pkg-config gmodule-2.0 --libs]")
-	SET(GTHREAD_INCLUDE_DIRS  CACHE PATH "gthread-2.0 include dir [see pkg-config gthread-2.0 --cflags]")
-	SET(GTHREAD_LIBRARY_DIRS  CACHE PATH "gthread-2.0 library dir [see pkg-config gthread-2.0 --libs]")
+    SET(GMODULE_INCLUDE_DIRS  CACHE PATH "gmodule-2.0 include dir [see pkg-config gmodule-2.0 --cflags]")
+    SET(GMODULE_LIBRARY_DIRS  CACHE PATH "gmodule-2.0 library dir [see pkg-config gmodule-2.0 --libs]")
+    SET(GTHREAD_INCLUDE_DIRS  CACHE PATH "gthread-2.0 include dir [see pkg-config gthread-2.0 --cflags]")
+    SET(GTHREAD_LIBRARY_DIRS  CACHE PATH "gthread-2.0 library dir [see pkg-config gthread-2.0 --libs]")
 ENDIF(NOT GLIB_DEV_BASE_DIR)
 SET(MYSQL_INCLUDE_DIRS CACHE PATH "MySQL include dir")
 SET(MYSQL_LIBRARY_DIRS CACHE PATH "MySQL library dir")
 
 IF (NOT EVENT_BASE_DIR)
-	SET(EVENT_INCLUDE_DIRS CACHE PATH "libevent include dir")
-	SET(EVENT_LIBRARY_DIRS CACHE PATH "libevent library dir")
+    SET(EVENT_INCLUDE_DIRS CACHE PATH "libevent include dir")
+    SET(EVENT_LIBRARY_DIRS CACHE PATH "libevent library dir")
 ENDIF(NOT EVENT_BASE_DIR)
 
 MESSAGE(STATUS "libevent at libs:${EVENT_LIBRARY_DIRS} incl:${EVENT_INCLUDE_DIRS}")
@@ -97,52 +97,52 @@ MESSAGE(STATUS "gthread  at libs:${GTHREAD_LIBRARY_DIRS} incl:${GTHREAD_INCLUDE_
 MESSAGE(STATUS "gmodule  at libs:${GMODULE_LIBRARY_DIRS} incl:${GMODULE_INCLUDE_DIRS}")
 
 IF(NOT GLIB_INCLUDE_DIRS) 
-	SET(__pkg_config_checked_GLIB 0)
-	PKG_CHECK_MODULES(GLIB REQUIRED glib-2.0>=2.28)
-	ADD_DEFINITIONS(-DHAVE_GLIB)
+    SET(__pkg_config_checked_GLIB 0)
+    PKG_CHECK_MODULES(GLIB REQUIRED glib-2.0>=2.28)
+    ADD_DEFINITIONS(-DHAVE_GLIB)
 ENDIF(NOT GLIB_INCLUDE_DIRS) 
 
 IF(NOT GMODULE_INCLUDE_DIRS) 
-	PKG_CHECK_MODULES(GMODULE REQUIRED gmodule-2.0>=2.28)
-	ADD_DEFINITIONS(-DHAVE_GMODULE)
+    PKG_CHECK_MODULES(GMODULE REQUIRED gmodule-2.0>=2.28)
+    ADD_DEFINITIONS(-DHAVE_GMODULE)
 ENDIF(NOT GMODULE_INCLUDE_DIRS) 
 
 IF(NOT GTHREAD_INCLUDE_DIRS) 
-	PKG_CHECK_MODULES(GTHREAD REQUIRED gthread-2.0>=2.28)
+    PKG_CHECK_MODULES(GTHREAD REQUIRED gthread-2.0>=2.28)
 ENDIF(NOT GTHREAD_INCLUDE_DIRS) 
 
 MACRO(_mysql_config VAR _regex _opt)
-	EXECUTE_PROCESS(COMMAND ${MYSQL_CONFIG_EXECUTABLE} ${_opt}
-		OUTPUT_VARIABLE _mysql_config_output
-		)
+    EXECUTE_PROCESS(COMMAND ${MYSQL_CONFIG_EXECUTABLE} ${_opt}
+        OUTPUT_VARIABLE _mysql_config_output
+        )
 
-	SET(_var   ${_mysql_config_output})
-	STRING(REGEX MATCHALL "${_regex}([^ ]+)" _mysql_config_output "${_mysql_config_output}")
-	STRING(REGEX REPLACE "^[ \t]+" "" _mysql_config_output "${_mysql_config_output}")
-	STRING(REGEX REPLACE "[\r\n]$" "" _mysql_config_output "${_mysql_config_output}")
-	STRING(REGEX REPLACE "${_regex}" "" _mysql_config_output "${_mysql_config_output}")
-	SEPARATE_ARGUMENTS(_mysql_config_output)
-	SET(${VAR} ${_mysql_config_output})
+    SET(_var   ${_mysql_config_output})
+    STRING(REGEX MATCHALL "${_regex}([^ ]+)" _mysql_config_output "${_mysql_config_output}")
+    STRING(REGEX REPLACE "^[ \t]+" "" _mysql_config_output "${_mysql_config_output}")
+    STRING(REGEX REPLACE "[\r\n]$" "" _mysql_config_output "${_mysql_config_output}")
+    STRING(REGEX REPLACE "${_regex}" "" _mysql_config_output "${_mysql_config_output}")
+    SEPARATE_ARGUMENTS(_mysql_config_output)
+    SET(${VAR} ${_mysql_config_output})
 ENDMACRO(_mysql_config _regex _opt)
 
 IF(NOT MYSQL_INCLUDE_DIRS)
-	FIND_PROGRAM(MYSQL_CONFIG_EXECUTABLE NAMES mysql_config DOC "full path of mysql_config")
-	IF(NOT MYSQL_CONFIG_EXECUTABLE)
-		MESSAGE(SEND_ERROR "mysql_config wasn't found, -DMYSQL_CONFIG_EXECUTABLE=...")
-	ENDIF(NOT MYSQL_CONFIG_EXECUTABLE)
+    FIND_PROGRAM(MYSQL_CONFIG_EXECUTABLE NAMES mysql_config DOC "full path of mysql_config")
+    IF(NOT MYSQL_CONFIG_EXECUTABLE)
+        MESSAGE(SEND_ERROR "mysql_config wasn't found, -DMYSQL_CONFIG_EXECUTABLE=...")
+    ENDIF(NOT MYSQL_CONFIG_EXECUTABLE)
 
-	_MYSQL_CONFIG(MYSQL_INCLUDE_DIRS "(^| )-I" "--include")
-	_MYSQL_CONFIG(MYSQL_LIBRARIES    "(^| )-l" "--libs")
-	_MYSQL_CONFIG(MYSQL_LIBRARY_DIRS "(^| )-L" "--libs")
+    _MYSQL_CONFIG(MYSQL_INCLUDE_DIRS "(^| )-I" "--include")
+    _MYSQL_CONFIG(MYSQL_LIBRARIES    "(^| )-l" "--libs")
+    _MYSQL_CONFIG(MYSQL_LIBRARY_DIRS "(^| )-L" "--libs")
 ELSE(NOT MYSQL_INCLUDE_DIRS)
-	SET(MYSQL_LIBRARIES libmysql)
+    SET(MYSQL_LIBRARIES libmysql)
 ENDIF(NOT MYSQL_INCLUDE_DIRS) 
 
 SET(CMAKE_REQUIRED_INCLUDES 
-	${EVENT_INCLUDE_DIRS}
-	${MYSQL_INCLUDE_DIRS}
-	${GLIB_INCLUDE_DIRS}
-	${GTHREAD_INCLUDE_DIRS}
+    ${EVENT_INCLUDE_DIRS}
+    ${MYSQL_INCLUDE_DIRS}
+    ${GLIB_INCLUDE_DIRS}
+    ${GTHREAD_INCLUDE_DIRS}
 )
 
 MESSAGE(STATUS "checking in dirs: ${CMAKE_REQUIRED_INCLUDES}")
@@ -185,6 +185,9 @@ CHECK_FUNCTION_EXISTS(sigaction  HAVE_SIGACTION)
 CHECK_FUNCTION_EXISTS(getaddrinfo     HAVE_GETADDRINFO)
 # check for gthread actually being present
 CHECK_LIBRARY_EXISTS(gthread-2.0 g_thread_init "${GTHREAD_LIBRARY_DIRS}" HAVE_GTHREAD)
+
+CHECK_LIBRARY_EXISTS(tcmalloc malloc "" HAVE_TCMALLOC)
+
 #SET(OLD_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
 #SET(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${GTHREAD_LIBRARIES})
 # fails for some reason use check_library_exists instead and hope it's better
@@ -207,32 +210,32 @@ else(ZLIB_FOUND)
 endif(ZLIB_FOUND)
 
 IF(${HAVE_SYS_TYPES_H})
-	SET(CMAKE_EXTRA_INCLUDE_FILES sys/types.h)
-	CHECK_TYPE_SIZE(ulong HAVE_ULONG)
-	SET(CMAKE_EXTRA_INCLUDE_FILES )
+    SET(CMAKE_EXTRA_INCLUDE_FILES sys/types.h)
+    CHECK_TYPE_SIZE(ulong HAVE_ULONG)
+    SET(CMAKE_EXTRA_INCLUDE_FILES )
 ENDIF(${HAVE_SYS_TYPES_H})
 
 IF(${HAVE_SYS_SOCKET_H})
-	SET(CMAKE_EXTRA_INCLUDE_FILES sys/socket.h)
-	CHECK_TYPE_SIZE(socklen_t        HAVE_SOCKLEN_T)
-	SET(CMAKE_EXTRA_INCLUDE_FILES )
+    SET(CMAKE_EXTRA_INCLUDE_FILES sys/socket.h)
+    CHECK_TYPE_SIZE(socklen_t        HAVE_SOCKLEN_T)
+    SET(CMAKE_EXTRA_INCLUDE_FILES )
 ENDIF(${HAVE_SYS_SOCKET_H})
 
 
 IF(${HAVE_SYS_RESOURCE_H})
-	SET(CMAKE_EXTRA_INCLUDE_FILES sys/resource.h)
-	CHECK_TYPE_SIZE(rlim_t        SIZEOF_RLIM_T)
-	SET(CMAKE_EXTRA_INCLUDE_FILES )
+    SET(CMAKE_EXTRA_INCLUDE_FILES sys/resource.h)
+    CHECK_TYPE_SIZE(rlim_t        SIZEOF_RLIM_T)
+    SET(CMAKE_EXTRA_INCLUDE_FILES )
 ENDIF(${HAVE_SYS_RESOURCE_H})
 
 IF(EVENT_LIBRARY_DIRS)
-	FIND_LIBRARY(EVENT_LIBRARIES 
-		NAMES event 
-		PATHS ${EVENT_LIBRARY_DIRS} 
-		NO_DEFAULT_PATH
-		)
+    FIND_LIBRARY(EVENT_LIBRARIES 
+        NAMES event 
+        PATHS ${EVENT_LIBRARY_DIRS} 
+        NO_DEFAULT_PATH
+        )
 ELSE(EVENT_LIBRARY_DIRS)
-	FIND_LIBRARY(EVENT_LIBRARIES event)
+    FIND_LIBRARY(EVENT_LIBRARIES event)
 ENDIF(EVENT_LIBRARY_DIRS)
 
 SET(OLD_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
@@ -254,16 +257,16 @@ SET(PACKAGE_VERSION_STRING "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSI
 SET(PACKAGE_VERSION "${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}")
 SET(PACKAGE_STRING "${CMAKE_PROJECT_NAME} ${CPACK_PACKAGE_VERSION}")
 ADD_DEFINITIONS(
-	-DPACKAGE_VERSION_ID=${PACKAGE_VERSION_ID}
-	-DPACKAGE_VERSION="${PACKAGE_VERSION}"
-	-DPACKAGE_STRING="${PACKAGE_STRING}"
-	-DPACKAGE="${CMAKE_PROJECT_NAME}"
+    -DPACKAGE_VERSION_ID=${PACKAGE_VERSION_ID}
+    -DPACKAGE_VERSION="${PACKAGE_VERSION}"
+    -DPACKAGE_STRING="${PACKAGE_STRING}"
+    -DPACKAGE="${CMAKE_PROJECT_NAME}"
 )
 
 ADD_SUBDIRECTORY(src)
 ADD_SUBDIRECTORY(plugins)
 IF(EXISTS examples)
-	ADD_SUBDIRECTORY(examples)
+    ADD_SUBDIRECTORY(examples)
 ENDIF(EXISTS examples)
 ADD_SUBDIRECTORY(lib)
 

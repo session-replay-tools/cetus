@@ -32,5 +32,9 @@ LINK_DIRECTORIES(${MYSQL_LIBRARY_DIRS})
 SET(_plugin_name admin)
 ADD_LIBRARY(${_plugin_name} SHARED "${_plugin_name}-plugin.c")
 TARGET_LINK_LIBRARIES(${_plugin_name} mysql-chassis-proxy) 
+if(HAVE_TCMALLOC)
+    TARGET_LINK_LIBRARIES(${_plugin_name} tcmalloc)
+endif(HAVE_TCMALLOC)
+
 CHASSIS_PLUGIN_INSTALL(${_plugin_name})
 

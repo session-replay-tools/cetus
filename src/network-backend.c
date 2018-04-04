@@ -215,7 +215,17 @@ network_backends_into_group(network_backends_t *bs, network_backend_t *backend)
 static void network_backends_add_group(network_backends_t *bs, const char *name);
 
 static void set_backend_config(network_backend_t *backend, chassis *srv) {
-    backend->config = g_new0(backend_config, 1);
+    if (!backend->config) {
+        backend->config = g_new0(backend_config, 1);
+    } else {
+        if (backend->config->default_username) {
+            g_string_free(backend->config->default_username, TRUE);
+        }
+
+        if (backend->config->default_db) {
+            g_string_free(backend->config->default_db, TRUE);
+        }
+    }
 
     backend->config->default_username = g_string_new(NULL);
     g_string_append(backend->config->default_username, srv->default_username);

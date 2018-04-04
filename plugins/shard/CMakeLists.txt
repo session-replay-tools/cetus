@@ -40,6 +40,9 @@ set(SHARD_SOURCES
   )
 ADD_LIBRARY(${_plugin_name} SHARED ${SHARD_SOURCES})
 TARGET_LINK_LIBRARIES(${_plugin_name} mysql-chassis-proxy)
+if(HAVE_TCMALLOC)
+TARGET_LINK_LIBRARIES(${_plugin_name} tcmalloc)
+endif(HAVE_TCMALLOC)
 
 if(SIMPLE_PARSER)
   target_compile_definitions(${_plugin_name} PRIVATE SIMPLE_PARSER=1)

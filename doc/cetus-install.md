@@ -10,6 +10,7 @@
 - flex
 - libevent-devel
 - mysqldb-devel／mariadb-devel
+- tcmalloc
 
 请确保在编译安装Cetus前已安装好相应的依赖。
 

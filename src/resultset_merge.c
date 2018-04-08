@@ -2641,8 +2641,9 @@ retrieve_orderby_info_from_groupby_info(sql_column_list_t *sel_groupby, cetus_re
     return TRUE;
 }
 
+
 static int
-check_network_packet_err(GList **candidates, GPtrArray *recv_queues,
+check_network_packet_err(network_mysqld_con *con, GList **candidates, GPtrArray *recv_queues,
                          network_queue *send_queue, cetus_result_t *res_merge, result_merge_t *merged_result)
 {
     int i;
@@ -2656,7 +2657,11 @@ check_network_packet_err(GList **candidates, GPtrArray *recv_queues,
                 network_queue *recv_queue = g_ptr_array_index(recv_queues, i);
                 g_queue_remove(recv_queue->chunks, pkt);
                 cetus_result_destroy(res_merge);
-                merged_result->status = RM_SUCCESS;
+                if (con->num_pending_servers) {
+                    merged_result->status = RM_FAIL;
+                } else {
+                    merged_result->status = RM_SUCCESS;
+                }
                 return 0;
             }
         } else {
@@ -2764,7 +2769,7 @@ merge_for_show_warnings(network_queue *send_queue, GPtrArray *recv_queues,
         return 0;
     }
 
-    if (!check_network_packet_err(candidates, recv_queues, send_queue, res_merge, merged_result)) {
+    if (!check_network_packet_err(con, candidates, recv_queues, send_queue, res_merge, merged_result)) {
         g_warning("%s:packet err is met", G_STRLOC);
         g_free(candidates);
         return 0;
@@ -2887,7 +2892,7 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
         return 0;
     }
 
-    if (!check_network_packet_err(candidates, recv_queues, send_queue, res_merge, merged_result)) {
+    if (!check_network_packet_err(con, candidates, recv_queues, send_queue, res_merge, merged_result)) {
         g_warning("%s:packet err is met", G_STRLOC);
         g_free(candidates);
         return 0;

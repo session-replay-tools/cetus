@@ -41,44 +41,44 @@ STRING(REPLACE "." "" SHARED_LIBRARY_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX})
 ADD_DEFINITIONS(-DSHARED_LIBRARY_SUFFIX="${SHARED_LIBRARY_SUFFIX}")
 
 SET(chassis_sources 
-	chassis-plugin.c
-	chassis-event.c
-	chassis-log.c
-	chassis-mainloop.c
-	chassis-shutdown-hooks.c
-	chassis-keyfile.c
-	chassis-path.c
-	chassis-filemode.c
-	chassis-limits.c
-	chassis-frontend.c
-	chassis-options.c
-	chassis-unix-daemon.c
+    chassis-plugin.c
+    chassis-event.c
+    chassis-log.c
+    chassis-mainloop.c
+    chassis-shutdown-hooks.c
+    chassis-keyfile.c
+    chassis-path.c
+    chassis-filemode.c
+    chassis-limits.c
+    chassis-frontend.c
+    chassis-options.c
+    chassis-unix-daemon.c
     chassis-config.c
     cJSON.c
 )
 
 SET(timing_sources
-	chassis-timings.c
+    chassis-timings.c
 )
 
 SET(glibext_sources
-	glib-ext.c
+    glib-ext.c
 )
 
 SET(proxy_sources 
-	network-mysqld.c 
-	network-mysqld-proto.c 
-	network-mysqld-packet.c 
-	network-conn-pool.c  
-	network-conn-pool-wrap.c  
-	network-queue.c
-	network-socket.c
-	network-address.c
-	network-injection.c
+    network-mysqld.c 
+    network-mysqld-proto.c 
+    network-mysqld-packet.c 
+    network-conn-pool.c  
+    network-conn-pool-wrap.c  
+    network-queue.c
+    network-socket.c
+    network-address.c
+    network-injection.c
     resultset_merge.c
     cetus-log.c
     plugin-common.c
-	network-backend.c
+    network-backend.c
     sharding-config.c
     sharding-query-plan.c
     shard-plugin-con.c
@@ -107,50 +107,104 @@ else(SIMPLE_PARSER)
   target_compile_definitions(cetus PRIVATE DEFAULT_PLUGIN="shard")
 endif(SIMPLE_PARSER)
 
-TARGET_LINK_LIBRARIES(mysql-chassis-glibext
-	${GLIB_LIBRARIES} 
-	${GMODULE_LIBRARIES} 
-	${GTHREAD_LIBRARIES} 
-)
+if(HAVE_TCMALLOC)
+    TARGET_LINK_LIBRARIES(mysql-chassis-glibext
+        ${GLIB_LIBRARIES} 
+        ${GMODULE_LIBRARIES} 
+        ${GTHREAD_LIBRARIES} 
+        tcmalloc
+        )
 
-TARGET_LINK_LIBRARIES(mysql-chassis-timing
-	${GLIB_LIBRARIES} 
-	${GMODULE_LIBRARIES} 
-	${GTHREAD_LIBRARIES} 
-	mysql-chassis-glibext
-)
+    TARGET_LINK_LIBRARIES(mysql-chassis-timing
+        ${GLIB_LIBRARIES} 
+        ${GMODULE_LIBRARIES} 
+        ${GTHREAD_LIBRARIES} 
+        mysql-chassis-glibext
+        tcmalloc
+        )
 
-TARGET_LINK_LIBRARIES(mysql-chassis 
-	${GLIB_LIBRARIES} 
-	${GMODULE_LIBRARIES} 
-	${GTHREAD_LIBRARIES} 
-	${EVENT_LIBRARIES}
-	${MYSQL_LIBRARIES}
-	mysql-chassis-timing
-	mysql-chassis-glibext
-)
+    TARGET_LINK_LIBRARIES(mysql-chassis 
+        ${GLIB_LIBRARIES} 
+        ${GMODULE_LIBRARIES} 
+        ${GTHREAD_LIBRARIES} 
+        ${EVENT_LIBRARIES}
+        ${MYSQL_LIBRARIES}
+        tcmalloc
+        mysql-chassis-timing
+        mysql-chassis-glibext
+        )
 
-TARGET_LINK_LIBRARIES(mysql-chassis-proxy
-  mysql-chassis
-  sqlparser
-  mysql-chassis-glibext
-  mysql-chassis-timing
-  ${OPENSSL_LIBRARIES}
-  ${ZLIB_LIBRARIES}
-  )
+    TARGET_LINK_LIBRARIES(mysql-chassis-proxy
+        tcmalloc
+        mysql-chassis
+        sqlparser
+        mysql-chassis-glibext
+        mysql-chassis-timing
+        ${OPENSSL_LIBRARIES}
+        ${ZLIB_LIBRARIES}
+        )
 
-TARGET_LINK_LIBRARIES(cetus
-	mysql-chassis
-	mysql-chassis-proxy
-	mysql-chassis-glibext
-	mysql-chassis-timing
-    ${GLIB_LIBRARIES}
-    ${GMODULE_LIBRARIES}
-	${GTHREAD_LIBRARIES}
-	${EVENT_LIBRARIES}
-	${MYSQL_LIBRARIES}
-    ${ZLIB_LIBRARIES}
-)
+    TARGET_LINK_LIBRARIES(cetus
+        tcmalloc
+        mysql-chassis
+        mysql-chassis-proxy
+        mysql-chassis-glibext
+        mysql-chassis-timing
+        ${GLIB_LIBRARIES}
+        ${GMODULE_LIBRARIES}
+        ${GTHREAD_LIBRARIES}
+        ${EVENT_LIBRARIES}
+        ${MYSQL_LIBRARIES}
+        ${ZLIB_LIBRARIES}
+        )
+
+else(HAVE_TCMALLOC)
+
+    TARGET_LINK_LIBRARIES(mysql-chassis-glibext
+        ${GLIB_LIBRARIES} 
+        ${GMODULE_LIBRARIES} 
+        ${GTHREAD_LIBRARIES} 
+        )
+
+    TARGET_LINK_LIBRARIES(mysql-chassis-timing
+        ${GLIB_LIBRARIES} 
+        ${GMODULE_LIBRARIES} 
+        ${GTHREAD_LIBRARIES} 
+        mysql-chassis-glibext
+        )
+
+    TARGET_LINK_LIBRARIES(mysql-chassis 
+        ${GLIB_LIBRARIES} 
+        ${GMODULE_LIBRARIES} 
+        ${GTHREAD_LIBRARIES} 
+        ${EVENT_LIBRARIES}
+        ${MYSQL_LIBRARIES}
+        mysql-chassis-timing
+        mysql-chassis-glibext
+        )
+
+    TARGET_LINK_LIBRARIES(mysql-chassis-proxy
+        mysql-chassis
+        sqlparser
+        mysql-chassis-glibext
+        mysql-chassis-timing
+        ${OPENSSL_LIBRARIES}
+        ${ZLIB_LIBRARIES}
+        )
+
+    TARGET_LINK_LIBRARIES(cetus
+        mysql-chassis
+        mysql-chassis-proxy
+        mysql-chassis-glibext
+        mysql-chassis-timing
+        ${GLIB_LIBRARIES}
+        ${GMODULE_LIBRARIES}
+        ${GTHREAD_LIBRARIES}
+        ${EVENT_LIBRARIES}
+        ${MYSQL_LIBRARIES}
+        ${ZLIB_LIBRARIES}
+        )
+endif(HAVE_TCMALLOC)
 
 # Unix platforms provide a wrapper script to avoid relinking at install time
 # figure out the correct name of the shared linker lookup path for this system, default to LD_LIBRARY_PATH

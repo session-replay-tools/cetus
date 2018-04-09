@@ -214,6 +214,33 @@ network_backends_into_group(network_backends_t *bs, network_backend_t *backend)
 
 static void network_backends_add_group(network_backends_t *bs, const char *name);
 
+static void set_backend_config(network_backend_t *backend, chassis *srv) {
+    if (!backend->config) {
+        backend->config = g_new0(backend_config, 1);
+    } else {
+        if (backend->config->default_username) {
+            g_string_free(backend->config->default_username, TRUE);
+        }
+
+        if (backend->config->default_db) {
+            g_string_free(backend->config->default_db, TRUE);
+        }
+    }
+
+    backend->config->default_username = g_string_new(NULL);
+    g_string_append(backend->config->default_username, srv->default_username);
+
+    if (srv->default_db != NULL && strlen(srv->default_db) > 0) {
+        backend->config->default_db = g_string_new(NULL);
+        g_string_append(backend->config->default_db, srv->default_db);
+    }
+
+    backend->config->charset = charset_get_number(srv->default_charset);
+
+    backend->config->mid_conn_pool = srv->mid_idle_connections;
+    backend->config->max_conn_pool = srv->max_idle_connections;
+}
+
 /*
  * FIXME: 1) remove _set_address, make this function callable with result of same
  *        2) differentiate between reasons for "we didn't add" (now -1 in all cases)
@@ -258,6 +285,8 @@ network_backends_add(network_backends_t *bs, const gchar *address,
     if (type == BACKEND_TYPE_RO) {
         bs->ro_server_num += 1;
     }
+
+    set_backend_config(new_backend, srv);
     network_backends_into_group(bs, new_backend);
     g_message("added %s backend: %s, state: %s", backend_type_t_str[type], address, backend_state_t_str[state]);
 
@@ -394,6 +423,7 @@ network_backends_count(network_backends_t *bs)
 
 #define DEFAULT_CHARSET   '\x21'
 
+
 gboolean
 network_backends_load_config(network_backends_t *bs, chassis *srv)
 {
@@ -405,20 +435,7 @@ network_backends_load_config(network_backends_t *bs, chassis *srv)
     for (i = 0; i < network_backends_count(bs); i++) {
         network_backend_t *backend = network_backends_get(bs, i);
         if (backend) {
-            backend->config = g_new0(backend_config, 1);
-
-            backend->config->default_username = g_string_new(NULL);
-            g_string_append(backend->config->default_username, srv->default_username);
-
-            if (srv->default_db != NULL && strlen(srv->default_db) > 0) {
-                backend->config->default_db = g_string_new(NULL);
-                g_string_append(backend->config->default_db, srv->default_db);
-            }
-
-            backend->config->charset = charset_get_number(srv->default_charset);
-
-            backend->config->mid_conn_pool = srv->mid_idle_connections;
-            backend->config->max_conn_pool = srv->max_idle_connections;
+            set_backend_config(backend, srv);
         }
     }
     return 0;

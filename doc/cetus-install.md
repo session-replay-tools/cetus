@@ -10,6 +10,7 @@
 - flex
 - libevent-devel
 - mysqldb-devel／mariadb-devel
+- tcmalloc
 
 请确保在编译安装Cetus前已安装好相应的依赖。
 
@@ -31,7 +32,7 @@ cd build/
 cmake ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/home/user/cetus_install -DSIMPLE_PARSER=ON
 
 分库版本：
-cmake ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/home/user/cetus_install
+cmake ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/home/user/cetus_install -DSIMPLE_PARSER=OFF
 
 ```
 

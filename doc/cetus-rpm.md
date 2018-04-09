@@ -17,8 +17,8 @@ mkdir -pv {BUILD,BUILDROOT,RPMS,SOURCES,SPECS,SRPMS}
 ### 2. 下载源码，压缩成tar.gz格式，放入SOURCES中
 
 ```
-git clone http://github
-tar zcvf cetus-version.tar.gz cetus-version/
+git clone https://github.com/Lede-Inc/cetus.git
+tar zcvf cetus-version.tar.gz cetus/
 ```
 
 ### 3. 将cetus的原spec文件放入SPECS中,编辑sepc文件，修改版本号和释出号等信息

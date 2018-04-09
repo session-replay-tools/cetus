@@ -280,7 +280,9 @@ chassis_config_free(chassis_config_t *p)
     if (p->mysql_conn) {
         mysql_close(p->mysql_conn);
     }
-    mysql_thread_end();
+    if (p->type == CHASSIS_CONF_MYSQL) {
+        mysql_thread_end();
+    }
     g_free(p);
 }
 

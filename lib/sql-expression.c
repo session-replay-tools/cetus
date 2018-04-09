@@ -322,6 +322,28 @@ sql_expr_is_dotted_name(const sql_expr_t *p, const char *prefix, const char *suf
     return FALSE;
 }
 
+void sql_expr_get_dotted_names(const sql_expr_t *p, char *db, int db_len,
+                               char *table, int tb_len,
+                               char *col, int col_len)
+{
+    if (p && p->op == TK_DOT) {
+        const sql_expr_t *dot = p;
+        if (p->right->op == TK_DOT) { /* db.table.col */
+            if (db) {
+                strncpy(db, p->left->token_text, db_len);
+            }
+            dot = p->right;
+        }
+
+        if (table && dot->left->token_text) {
+            strncpy(table, dot->left->token_text, tb_len);
+        }
+        if (col && dot->right->token_text) {
+            strncpy(col, dot->right->token_text, col_len);
+        }
+    }
+}
+
 gboolean
 sql_expr_is_field_name(const sql_expr_t *p)
 {

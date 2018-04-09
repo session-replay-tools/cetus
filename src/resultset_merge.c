@@ -2586,8 +2586,9 @@ disp_groupby_info(sql_column_list_t *sel_groupby, cetus_result_t *res_merge,
         if (expr->op == TK_ID) {    /* TODO: wrap sql_expr_t in list */
             strncpy(group_col->name, expr->token_text, MAX_NAME_LEN - 1);
         } else if (expr->op == TK_DOT) {
-            strncpy(group_col->table_name, expr->left->token_text, MAX_NAME_LEN - 1);
-            strncpy(group_col->name, expr->right->token_text, MAX_NAME_LEN - 1);
+            sql_expr_get_dotted_names(expr, 0, 0,
+                                      group_col->table_name, MAX_NAME_LEN-1,
+                                      group_col->name, MAX_NAME_LEN-1);
         } else if (expr->op == TK_INTEGER) {
             gint64 v;
             sql_expr_get_int(expr, &v);
@@ -2626,8 +2627,9 @@ retrieve_orderby_info_from_groupby_info(sql_column_list_t *sel_groupby, cetus_re
         } else if (expr->op == TK_FUNCTION) {
             strncpy(ord_col->name, expr->start, expr->end - expr->start);
         } else if (expr->op == TK_DOT) {
-            strncpy(ord_col->table_name, expr->left->token_text, MAX_NAME_LEN - 1);
-            strncpy(ord_col->name, expr->right->token_text, MAX_NAME_LEN - 1);
+            sql_expr_get_dotted_names(expr, 0, 0,
+                                      ord_col->table_name, MAX_NAME_LEN-1,
+                                      ord_col->name, MAX_NAME_LEN-1);
         } else {
             g_warning("order by name error");
         }

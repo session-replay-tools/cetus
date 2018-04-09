@@ -273,6 +273,10 @@ gboolean sql_expr_is_function(const sql_expr_t *p, const char *func_name);
 
 gboolean sql_expr_is_dotted_name(const sql_expr_t *p, const char *prefix, const char *suffix);
 
+void sql_expr_get_dotted_names(const sql_expr_t *p, char *db, int db_len,
+                               char *table, int tb_len,
+                               char *col, int col_len);
+
 gboolean sql_expr_is_field_name(const sql_expr_t *p);
 
 sql_expr_list_t *sql_expr_list_append(sql_expr_list_t *list, sql_expr_t *expr);

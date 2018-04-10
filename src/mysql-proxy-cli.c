@@ -482,10 +482,10 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->max_resp_len = frontend->max_resp_len;
     g_message("set max resp len:%d", srv->max_resp_len);
 
-    srv->max_alive_time = frontend->max_alive_time;
-    if (srv->max_alive_time < 600) {
-        srv->max_alive_time = 600;
+    if (frontend->max_alive_time < 600) {
+        frontend->max_alive_time = 600;
     }
+    srv->max_alive_time = frontend->max_alive_time;
     g_message("set max alive time:%d", srv->max_alive_time);
 
     srv->merged_output_size = frontend->merged_output_size;

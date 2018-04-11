@@ -1036,7 +1036,7 @@ routing_update(sql_context_t *context, sql_update_t *update,
             return USE_NON_SHARDING_TABLE;
         }
 
-        shard_conf_get_all_groups(groups, db);
+        shard_conf_get_all_groups(groups);
         plan->table_type = GLOBAL_TABLE;
         if (groups->len > 1) {
             return USE_DIS_TRAN;
@@ -1208,7 +1208,7 @@ routing_insert(sql_context_t *context, sql_insert_t *insert, char *default_db, s
             return USE_NON_SHARDING_TABLE;
         }
 
-        shard_conf_get_all_groups(groups, db);
+        shard_conf_get_all_groups(groups);
         plan->table_type = GLOBAL_TABLE;
         if (groups->len > 1) {
             sharding_plan_add_groups(plan, groups);
@@ -1299,13 +1299,6 @@ routing_delete(sql_context_t *context, sql_delete_t *delete,
     }
     char *db = default_db;
     sql_src_list_t *from = delete->from_src;
-    if (from->len < 1) {
-        shard_conf_get_all_groups(groups, db);
-        if (groups->len > 1) {
-            return USE_DIS_TRAN;
-        }
-        return USE_NON_SHARDING_TABLE;
-    }
     sql_src_item_t *table = g_ptr_array_index(from, 0);
     if (table->dbname)
         db = table->dbname;
@@ -1317,7 +1310,7 @@ routing_delete(sql_context_t *context, sql_delete_t *delete,
             return USE_NON_SHARDING_TABLE;
         }
 
-        shard_conf_get_all_groups(groups, db);
+        shard_conf_get_all_groups(groups);
         plan->table_type = GLOBAL_TABLE;
         if (groups->len > 1) {
             return USE_DIS_TRAN;
@@ -1406,7 +1399,7 @@ routing_by_property(sql_context_t *context, sql_property_t *property, char *defa
         return USE_SHARDING;
 
     } else if (property->group) {
-        shard_conf_find_groups(groups, property->group, default_db);
+        shard_conf_find_groups(groups, property->group);
         if (groups->len > 0) {
             enum sql_clause_flag_t f = context->rw_flag;
             if ((f & CF_WRITE) && !(f & CF_DDL) && groups->len > 1) {
@@ -1521,7 +1514,7 @@ sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t
             g_ptr_array_free(groups, TRUE);
             return USE_NONE;
         } else {
-            shard_conf_get_all_groups(groups, default_db->str);
+            shard_conf_get_all_groups(groups);
             sharding_plan_add_groups(plan, groups);
             g_ptr_array_free(groups, TRUE);
             return USE_ALL;
@@ -1535,7 +1528,7 @@ sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t
         return USE_PREVIOUS_TRAN_CONNS;
     case STMT_COMMON_DDL:      /* ddl without comments sent to all */
     case STMT_CALL:
-        shard_conf_get_all_groups(groups, default_db->str);
+        shard_conf_get_all_groups(groups);
         sharding_plan_add_groups(plan, groups);
         g_ptr_array_free(groups, TRUE);
         return USE_ALL;

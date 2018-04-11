@@ -65,30 +65,26 @@ struct sharding_vdb_t {
     int key_type;
     int logic_shard_num;
     GPtrArray *partitions;      /* GPtrArray<sharding_partition_t *> */
-    GPtrArray *databases;       /* GPtrArray<sharding_database_t *> */
 };
 
 struct sharding_table_t {
-    GString *db;
+    GString *schema;
     GString *name;
     GString *pkey;
     int shard_key_type;
-    int logic_shard_num;
-    enum sharding_method_t method;
-    GPtrArray *partitions;      /* GPtrArray<sharding_partition_t *>  ref from VDB */
-
     int vdb_id;
-    struct sharding_vdb_t *vdb;
+    struct sharding_vdb_t *vdb_ref;
 };
 
-GPtrArray *shard_conf_get_table_groups(GPtrArray *groups, char *db, char *table);
+GPtrArray *shard_conf_get_any_group(GPtrArray *groups, const char *db, const char *table);
 
-GPtrArray *shard_conf_get_any_group(GPtrArray *groups, char *db, char *table);
-
-GPtrArray *shard_conf_get_all_groups(GPtrArray *groups, const char *db);
+GPtrArray *shard_conf_get_all_groups(GPtrArray *groups);
 
 /* same fixture will get same group */
 GPtrArray *shard_conf_get_fixed_group(GPtrArray *groups, const char *db, guint32 fixture);
+
+GPtrArray *shard_conf_get_table_groups(GPtrArray *visited_groups,
+                                       const char *db, const char *table);
 
 gboolean shard_conf_is_shard_table(const char *db, const char *table);
 
@@ -108,7 +104,7 @@ GPtrArray *shard_conf_table_partitions(GPtrArray *partitions, const char *db, co
  * find partition by group name
  * special name "all" will get all groups
  */
-void shard_conf_find_groups(GPtrArray *groups, const char *match, const char *db);
+void shard_conf_find_groups(GPtrArray *groups, const char *match);
 
 gboolean shard_conf_load(char *, int);
 

@@ -775,7 +775,7 @@ process_init_db_when_get_server_list(network_mysqld_con *con, sharding_plan_t *p
     } else {
         name_len = name_len - 1;
         network_mysqld_proto_get_str_len(&packet, &db_name, name_len);
-        shard_conf_get_fixed_group(groups, db_name, con->key);
+        shard_conf_get_fixed_group(groups, con->key);
     }
 
     if (groups->len > 0) {      /* has database */

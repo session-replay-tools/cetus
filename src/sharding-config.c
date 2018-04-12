@@ -29,25 +29,65 @@
 
 static GList *shard_conf_vdbs = NULL;
 
-static GList *shard_conf_tables = NULL;
+static GHashTable *shard_conf_tables = NULL; /* mapping< schema_table_t*, sharding_table_t* > */
 
 static GList *shard_conf_single_tables = NULL;
 
 static GList *shard_conf_all_groups = NULL;
 
+struct schema_table_t {
+    const char *schema;
+    const char *table;
+};
+
+struct schema_table_t*
+schema_table_new(const char* s, const char* t)
+{
+    struct schema_table_t *st = g_new0(struct schema_table_t, 1);
+    st->schema = g_strdup(s);
+    st->table = g_strdup(t);
+    return st;
+}
+
+void schema_table_free(struct schema_table_t *st)
+{
+    g_free((char*)st->schema);
+    g_free((char*)st->table);
+    g_free(st);
+}
+
+/* djb hash, same as g_str_hash */
+static guint
+schema_table_hash(gconstpointer v)
+{
+    const struct schema_table_t *st = v;
+    const signed char *p;
+    guint32 h = 5381;
+
+    for (p = st->schema; *p != '\0'; p++)
+        h = (h << 5) + h + *p;
+    h = (h << 5) + h + '.';
+    for (p = st->table; *p != '\0'; p++)
+        h = (h << 5) + h + *p;
+    return h;
+}
+
+gboolean
+schema_table_equal(gconstpointer v1,
+             gconstpointer v2)
+{
+  const struct schema_table_t *st1 = v1;
+  const struct schema_table_t *st2 = v2;
+  return strcmp(st1->schema, st2->schema) == 0
+      && strcmp(st1->table, st2->table) == 0;
+}
+
 static sharding_table_t *
 sharding_tables_get(const char *schema, const char *table)
 {
-    //TODO: use 2-key hash table
-    GList *l = shard_conf_tables;
-    for (; l != NULL; l = l->next) {
-        sharding_table_t *tinfo = l->data;
-        if (g_strcmp0(tinfo->schema->str, schema) == 0
-            && g_strcmp0(tinfo->name->str, table) == 0) {
-            return tinfo;
-        }
-    }
-    return NULL;
+    struct schema_table_t st = {schema, table};
+    gpointer tinfo = g_hash_table_lookup(shard_conf_tables, &st);
+    return tinfo;
 }
 
 static sharding_vdb_t *
@@ -71,18 +111,6 @@ sharding_vdbs_get_by_table(const char *schema, const char *table)
         return tinfo->vdb_ref;
     else
         return NULL;
-}
-
-static sharding_vdb_t *
-sharding_vdbs_get_first_by_schema(const char *schema)
-{
-    GList *l = shard_conf_tables;
-    for (; l != NULL; l = l->next) {
-        sharding_table_t *tinfo = l->data;
-        if (g_strcmp0(tinfo->schema->str, schema)==0)
-            return tinfo->vdb_ref;
-    }
-    return NULL;
 }
 
 void
@@ -297,23 +325,15 @@ shard_conf_is_shard_table(const char *db, const char *table)
 }
 
 GPtrArray *
-shard_conf_get_fixed_group(GPtrArray *groups, const char *db, guint32 fixture)
+shard_conf_get_fixed_group(GPtrArray *groups, guint32 fixture)
 {
-    if (!db) {
-        g_warning(G_STRLOC " db name is NULL");
+    int len = g_list_length(shard_conf_all_groups);
+    if (len == 0) {
         return groups;
     }
-    /* we assume all tables in one schema occupy same groups */
-    sharding_vdb_t *vdb = sharding_vdbs_get_first_by_schema(db);
-    if (vdb) {
-        int base = vdb->partitions->len;
-        if (base == 0) {
-            return groups;
-        }
-        int index = fixture % base;
-        sharding_partition_t *part = g_ptr_array_index(vdb->partitions, index);
-        g_ptr_array_add(groups, part->group_name);
-    }
+    int index = fixture % len;
+    GString *grp = g_list_nth_data(shard_conf_all_groups, index);
+    g_ptr_array_add(groups, grp);
     return groups;
 }
 
@@ -342,9 +362,9 @@ shard_conf_set_vdb_list(GList *vdbs)
 }
 
 static void
-shard_conf_set_table_list(GList *tables)
+shard_conf_set_tables(GHashTable *tables)
 {
-    g_list_free_full(shard_conf_tables, (GDestroyNotify) sharding_table_free);
+    g_hash_table_destroy(shard_conf_tables);
     shard_conf_tables = tables;
 }
 
@@ -392,6 +412,9 @@ shard_conf_try_setup(GList *vdbs, GList *tables, GList *single_tables, int num_g
         }
     }
     GList *all_groups = NULL;
+    GHashTable *table_dict = g_hash_table_new_full(schema_table_hash, schema_table_equal,
+                                                   (GDestroyNotify)schema_table_free,
+                                                   sharding_table_free);
     l = tables;
     for (; l != NULL; l = l->next) {
         sharding_table_t *table = l->data;
@@ -404,6 +427,7 @@ shard_conf_try_setup(GList *vdbs, GList *tables, GList *single_tables, int num_g
         } else {
             g_critical(G_STRLOC " table:%s VDB ID cannot be found: %d",
                        table->name->str, table->vdb_id);
+            g_hash_table_destroy(table_dict);
             return FALSE;
         }
         int i = 0;
@@ -411,9 +435,14 @@ shard_conf_try_setup(GList *vdbs, GList *tables, GList *single_tables, int num_g
             sharding_partition_t *part = g_ptr_array_index(vdb->partitions, i);
             all_groups = string_list_distinct_append(all_groups, part->group_name);
         }
+        struct schema_table_t *st = schema_table_new(table->schema->str, table->name->str);
+        g_hash_table_insert(table_dict, st, table);
     }
+    /* `tables` has been transferred to `table_dict`, free it */
+    g_list_free(tables);
+
     shard_conf_set_vdb_list(vdbs);
-    shard_conf_set_table_list(tables);
+    shard_conf_set_tables(table_dict);
     shard_conf_set_single_tables(single_tables);
     shard_conf_set_all_groups(all_groups);
     return TRUE;
@@ -425,7 +454,7 @@ shard_conf_destroy(void)
     if (shard_conf_vdbs) {
         g_list_free_full(shard_conf_vdbs, (GDestroyNotify) sharding_vdb_free);
     }
-    g_list_free_full(shard_conf_tables, (GDestroyNotify) sharding_table_free);
+    g_hash_table_destroy(shard_conf_tables);
     g_list_free_full(shard_conf_single_tables, (GDestroyNotify) single_table_free);
     g_list_free_full(shard_conf_all_groups, g_string_true_free);
 }

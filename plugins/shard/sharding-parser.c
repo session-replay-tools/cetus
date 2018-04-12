@@ -858,7 +858,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
 {
     sql_src_list_t *sources = select->from_src;
     if (!sources) {
-        shard_conf_get_fixed_group(groups, default_db, fixture);
+        shard_conf_get_fixed_group(groups, fixture);
         stats->com_select_global += 1;
         return USE_NON_SHARDING_TABLE;
     }
@@ -920,7 +920,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
     }
 
     if (sharding_tables->len == 0) {
-        shard_conf_get_fixed_group(groups, db, fixture);
+        shard_conf_get_fixed_group(groups, fixture);
         g_ptr_array_free(sharding_tables, TRUE);
         stats->com_select_global += 1;
         return USE_NON_SHARDING_TABLE;
@@ -1425,7 +1425,7 @@ sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t
     GPtrArray *groups = g_ptr_array_new();
     if (context == NULL) {
         g_warning("%s:sql is not parsed", G_STRLOC);
-        shard_conf_get_fixed_group(groups, default_db->str, fixture);
+        shard_conf_get_fixed_group(groups, fixture);
         sharding_plan_add_groups(plan, groups);
         g_ptr_array_free(groups, TRUE);
         return USE_NON_SHARDING_TABLE;
@@ -1501,7 +1501,7 @@ sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t
             g_ptr_array_free(groups, TRUE);
             return USE_NON_SHARDING_TABLE;
         }
-        shard_conf_get_fixed_group(groups, db, fixture);
+        shard_conf_get_fixed_group(groups, fixture);
         sharding_plan_add_groups(plan, groups);
         g_ptr_array_free(groups, TRUE);
         return USE_NON_SHARDING_TABLE;
@@ -1533,13 +1533,13 @@ sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t
         g_ptr_array_free(groups, TRUE);
         return USE_ALL;
     case STMT_SHOW:
-        shard_conf_get_fixed_group(groups, default_db->str, fixture);
+        shard_conf_get_fixed_group(groups, fixture);
         sharding_plan_add_groups(plan, groups);
         g_ptr_array_free(groups, TRUE);
         return USE_NON_SHARDING_TABLE;
     default:
         g_debug("unrecognized query, using default master db, sql:%s", plan->orig_sql->str);
-        shard_conf_get_fixed_group(groups, default_db->str, fixture);
+        shard_conf_get_fixed_group(groups, fixture);
         sharding_plan_add_groups(plan, groups);
         g_ptr_array_free(groups, TRUE);
         return USE_NON_SHARDING_TABLE;

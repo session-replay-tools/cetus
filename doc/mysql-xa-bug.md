@@ -23,4 +23,8 @@ https://bugs.mysql.com/bug.php?id=76233
 
 ## 详细的验证
 
-[MySQL 5.7.21 XA bug 详细验证](https://github.com/Lede-Inc/cetus/blob/master/doc/mysql-xa-bug-verify.pdf)
+我们对MySQL 5.7.21 XA bug的详细验证主要包括从外部看到的现象和代码层分析两部分：
+
+[MySQL 5.7.21 XA bug 外部现象](https://github.com/Lede-Inc/cetus/blob/master/doc/MySQL-5.7.21-XA-bug-phenomena.pdf)
+
+[MySQL 5.7.21 XA bug 代码层分析](https://github.com/Lede-Inc/cetus/blob/master/doc/MySQL-5.7.21-XA-bug-code-analysis.pdf)

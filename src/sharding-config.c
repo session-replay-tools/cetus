@@ -364,7 +364,8 @@ shard_conf_set_vdb_list(GList *vdbs)
 static void
 shard_conf_set_tables(GHashTable *tables)
 {
-    g_hash_table_destroy(shard_conf_tables);
+    if (shard_conf_tables)
+        g_hash_table_destroy(shard_conf_tables);
     shard_conf_tables = tables;
 }
 

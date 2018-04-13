@@ -8,7 +8,7 @@ cetus测试过程中，发现MySQL的xa 事务有bug，MySQL版本为5.7.21。�
 
 MySQL主库已接受到xa commit通知，xa commit未完成前，kill -9 杀掉MySQL主库,再启动MySQL主库，主库出现悬挂事务，而从库该分布式事务已提交。主库此时需要执行xa commit语句，提交分布式事务，这个操作同步到从库后，会导致从库sql应用进程报错，提示找不到该分布式事务。
 
-### 2、只有从库出现悬挂事务。
+### 2、只有从库出现悬挂事务
 
 cetus向后端分片发送xa prepare，分片MySQL主库接收到xa prepare，xa prepare未完成前，kill -9 杀掉MySQL主库，再启动MySQL主库，用xa事务已回滚，主库未出现悬挂事务；从库出现悬挂事务。这种情况下，从库需要回滚xa事务，才能保证数据的一致性。
 

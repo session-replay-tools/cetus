@@ -102,3 +102,26 @@ read_file_to_buffer(const char *filename, char **buffer)
 
     return TRUE;
 }
+
+gboolean
+try_get_int_value(const gchar *option_value, gint *return_value)
+{
+    gint ret = sscanf(option_value, "%ld", return_value);
+    if(1 == ret) {
+        return TRUE;
+    } else {
+        return FALSE;
+    }
+}
+
+
+gboolean
+try_get_double_value(const gchar *option_value, gdouble *return_value)
+{
+    gint ret = sscanf(option_value, "%lf", return_value);
+    if(1 == ret) {
+        return TRUE;
+    } else {
+        return FALSE;
+    }
+}

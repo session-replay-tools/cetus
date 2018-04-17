@@ -65,9 +65,14 @@ chassis_option_free(chassis_option_t *opt)
  */
 int
 chassis_option_set(chassis_option_t *opt,
-                   const char *long_name,
-                   gchar short_name,
-                   gint flags, enum option_type arg, gpointer arg_data, const char *description, const char *arg_desc)
+                       const char *long_name,
+                       gchar short_name,
+                       gint flags,
+                       enum option_type arg,
+					   gpointer arg_data,
+					   const char *description,
+					   const char *arg_desc,
+					   chas_opt_assign_hook assign_hook, chas_opt_show_hook show_hook, gint opt_property)
 {
     opt->long_name = long_name;
     opt->short_name = short_name;
@@ -76,6 +81,9 @@ chassis_option_set(chassis_option_t *opt,
     opt->arg_data = arg_data;
     opt->description = description;
     opt->arg_description = arg_desc;
+    opt->assign_hook = assign_hook;
+    opt->show_hook = show_hook;
+    opt->opt_property = opt_property;
     return 0;
 }
 
@@ -181,14 +189,22 @@ int
 chassis_options_add(chassis_options_t *opts,
                     const char *long_name,
                     gchar short_name,
-                    int flags, enum option_type arg, gpointer arg_data, const char *description, const char *arg_desc)
+                    int flags,
+					enum option_type arg,
+					gpointer arg_data,
+					const char *description,
+					const char *arg_desc,
+					chas_opt_assign_hook assign_hook, chas_opt_show_hook show_hook, gint opt_property)
 {
     chassis_option_t *opt = chassis_option_new();
     if (0 != chassis_option_set(opt,
                                 long_name,
                                 short_name,
                                 flags,
-                                arg, arg_data, description, arg_desc) || 0 != chassis_options_add_option(opts, opt)) {
+                                arg,
+								arg_data,
+								description,
+								arg_desc, assign_hook, show_hook, opt_property) || 0 != chassis_options_add_option(opts, opt)) {
         chassis_option_free(opt);
         return -1;
     } else {

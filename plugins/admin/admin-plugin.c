@@ -42,6 +42,7 @@
 #include "network-mysqld.h"
 #include "server-session.h"
 #include "sys-pedantic.h"
+#include "chassis-options-utils.h"
 
 #ifndef PLUGIN_VERSION
 #ifdef CHASSIS_BUILD_TAG
@@ -1104,6 +1105,22 @@ admin_delete_deny_ip(network_mysqld_con *con, const char *sql)
     g_ptr_array_add(fields, field);         \
     }while(0)
 
+#define MAKE_FIELD_DEF_3_COL(fields, col1_name, col2_name, col3_name) \
+    do {\
+    MYSQL_FIELD *field = network_mysqld_proto_fielddef_new();\
+    field->name = g_strdup((col1_name));                      \
+    field->type = FIELD_TYPE_VAR_STRING;\
+    g_ptr_array_add(fields, field);         \
+    field = network_mysqld_proto_fielddef_new();     \
+    field->name = g_strdup((col2_name));                      \
+    field->type = FIELD_TYPE_VAR_STRING;\
+    g_ptr_array_add(fields, field);         \
+    field = network_mysqld_proto_fielddef_new();     \
+    field->name = g_strdup((col3_name));                      \
+    field->type = FIELD_TYPE_VAR_STRING;\
+    g_ptr_array_add(fields, field);  \
+    }while(0)
+
 #define APPEND_ROW_1_COL(rows, row_data) \
     do {\
     GPtrArray *row = g_ptr_array_new();\
@@ -1116,6 +1133,15 @@ admin_delete_deny_ip(network_mysqld_con *con, const char *sql)
     GPtrArray *row = g_ptr_array_new();\
     g_ptr_array_add(row, (col1));  \
     g_ptr_array_add(row, (col2));  \
+    g_ptr_array_add(rows, row);\
+    }while(0)
+
+#define APPEND_ROW_3_COL(rows, col1, col2, col3)           \
+    do {\
+    GPtrArray *row = g_ptr_array_new();\
+    g_ptr_array_add(row, (col1));  \
+    g_ptr_array_add(row, (col2));  \
+    g_ptr_array_add(row, (col3));  \
     g_ptr_array_add(rows, row);\
     }while(0)
 
@@ -1216,7 +1242,7 @@ admin_show_variables(network_mysqld_con *con, const char *sql)
     GList *options = admin_get_all_options(con->srv);
 
     GPtrArray *fields = network_mysqld_proto_fielddefs_new();
-    MAKE_FIELD_DEF_2_COL(fields, "Variable_name", "Value");
+    MAKE_FIELD_DEF_3_COL(fields, "Variable_name", "Value", "Property");
 
     GPtrArray *rows = g_ptr_array_new_with_free_func((void *)network_mysqld_mysql_field_row_free);
 
@@ -1225,13 +1251,16 @@ admin_show_variables(network_mysqld_con *con, const char *sql)
     for (l = options; l; l = l->next) {
         chassis_option_t *opt = l->data;
         /* just support these for now */
-        if (opt->arg != OPTION_ARG_INT && opt->arg != OPTION_ARG_INT64
-            && opt->arg != OPTION_ARG_DOUBLE && opt->arg != OPTION_ARG_STRING && opt->arg != OPTION_ARG_NONE)
-            continue;
         if (sql_pattern_like(pattern, opt->long_name)) {
-            char *value = chassis_option_get_value_str(opt);
+            struct external_param param = {0};
+            param.chas = con->srv;
+            param.opt_type = opt->opt_property;
+            char *value = opt->show_hook != NULL? opt->show_hook(&param) : NULL;
+            if(NULL == value) {
+                continue;
+            }
             freelist = g_list_append(freelist, value);
-            APPEND_ROW_2_COL(rows, (char *)opt->long_name, value);
+            APPEND_ROW_3_COL(rows, (char *)opt->long_name, value, (CAN_ASSIGN_OPTS_PROPERTY(opt->opt_property)? "Dynamic" : "Static"));
         }
     }
     network_mysqld_con_send_resultset(con->client, fields, rows);
@@ -1834,8 +1863,8 @@ admin_get_config(network_mysqld_con *con, const char *sql)
     0};
     if (strcasecmp(p, "common") == 0) {
         snprintf(buf1, 32, "%d", chas->check_slave_delay);
-        snprintf(buf2, 32, "%f", chas->slave_delay_down_threshold_sec);
-        snprintf(buf3, 32, "%f", chas->slave_delay_recover_threshold_sec);
+        snprintf(buf2, 32, "%lf", chas->slave_delay_down_threshold_sec);
+        snprintf(buf3, 32, "%lf", chas->slave_delay_recover_threshold_sec);
         snprintf(buf4, 32, "%d", chas->long_query_time);
         APPEND_ROW_2_COL(rows, "common.check_slave_delay", buf1);
         APPEND_ROW_2_COL(rows, "common.slave_delay_down_threshold_sec", buf2);
@@ -1864,39 +1893,41 @@ static int
 admin_set_config(network_mysqld_con *con, const char *sql)
 {
     char key[128] = { 0 };
-    int val = -1;
-    sscanf(sql, "config set %64[a-zA-Z0-9_.]=%d", key, &val);
-    if (key[0] == '\0' || val == -1) {
+    char val[128] = { 0 };
+    sscanf(sql, "config set %64[a-zA-Z0-9_.-]=%64[a-zA-Z0-9_.-]", key, val);
+    if (key[0] == '\0') {
         network_mysqld_con_send_ok_full(con->client, 0, 0, SERVER_STATUS_AUTOCOMMIT, 0);
         return PROXY_SEND_RESULT;
     }
-    chassis *chas = con->srv;
-    int affected_rows = 1;
-    if (strcasecmp(key, "common.check_slave_delay") == 0) {
-        chas->check_slave_delay = val;
-    } else if (strcasecmp(key, "common.slave_delay_down_threshold_sec") == 0) {
-        chas->slave_delay_down_threshold_sec = val;
-    } else if (strcasecmp(key, "common.slave_delay_recover_threshold_sec") == 0) {
-        chas->slave_delay_recover_threshold_sec = val;
-    } else if (strcasecmp(key, "common.long_query_time") == 0) {
-        chas->long_query_time = val;
-    } else if (strcasecmp(key, "pool.default_pool_size") == 0) {
-        chas->mid_idle_connections = val;
-    } else if (strcasecmp(key, "pool.max_pool_size") == 0) {
-        chas->max_idle_connections = val;
-    } else if (strcasecmp(key, "pool.max_resp_len") == 0) {
-        chas->max_resp_len = val;
-    } else if (strcasecmp(key, "pool.max_alive_time") == 0) {
-        if (val < 600) {
-            val = 600;
+
+    int affected_rows = 0;
+    int ret = 0;
+
+    GList *options = admin_get_all_options(con->srv);
+
+    GList *l = NULL;
+    for (l = options; l; l = l->next) {
+        chassis_option_t *opt = l->data;
+        if (strcasecmp(key, opt->long_name) == 0) {
+            struct external_param param = {0};
+            param.chas = con->srv;
+            param.opt_type = opt->opt_property;
+            ret = opt->assign_hook != NULL? opt->assign_hook(val, &param) : ASSIGN_NOT_SUPPORT;
+            affected_rows++;
+            break;
         }
-        chas->max_alive_time = val;
-    } else if (strcasecmp(key, "pool.master_preferred") == 0) {
-        chas->master_preferred = val;
-    } else {
-        affected_rows = 0;
     }
-    network_mysqld_con_send_ok_full(con->client, affected_rows, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+    g_list_free(options);
+
+    if(0 == ret) {
+        network_mysqld_con_send_ok_full(con->client, affected_rows, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+    } else if(ASSIGN_NOT_SUPPORT == ret){
+        network_mysqld_con_send_error_full(con->client, C("Variable cannot be set dynamically"), 1065, "28000");
+    } else if(ASSIGN_VALUE_INVALID == ret){
+        network_mysqld_con_send_error_full(con->client, C("Value is illegal"), 1065, "28000");
+    } else {
+        network_mysqld_con_send_error_full(con->client, C("You have an error in your SQL syntax"), 1065, "28000");
+    }
     return PROXY_SEND_RESULT;
 }
 
@@ -1912,8 +1943,75 @@ admin_reset_stats(network_mysqld_con *con, const char *sql)
 static int
 admin_save_settings(network_mysqld_con *con, const char *sql)
 {
-    /* TODO: */
-    network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+	chassis *srv = con->srv;
+	GKeyFile *keyfile = g_key_file_new();
+	g_key_file_set_list_separator(keyfile, ',');
+	GError *gerr = NULL;
+	gint ret = 0;
+    GString *free_path = g_string_new(NULL);
+    if(srv->default_file == NULL) {
+        free_path = g_string_append(free_path, get_current_dir_name());
+        free_path = g_string_append(free_path, "/default.conf");
+        srv->default_file = g_strdup(free_path->str);
+    }
+
+    if(!g_path_is_absolute(srv->default_file)) {
+        free_path = g_string_append(free_path, get_current_dir_name());
+        free_path = g_string_append(free_path, "/");
+        free_path = g_string_append(free_path, srv->default_file);
+        if(srv->default_file) {
+            g_free(srv->default_file);
+        }
+        srv->default_file = g_strdup(free_path->str);
+    }
+    if(free_path) {
+        g_string_free(free_path, TRUE);
+    }
+	//1 rename config file
+	if(srv->default_file) {
+		GString *new_file = g_string_new(NULL);
+		new_file = g_string_append(new_file, srv->default_file);
+		new_file = g_string_append(new_file, ".old");
+		if(remove(new_file->str)) {
+			ret = REMOVE_ERROR;
+		}
+		if(rename(srv->default_file, new_file->str)) {
+			ret = RENAME_ERROR;
+		}
+		g_string_free(new_file, TRUE);
+	}
+
+	if(0 == ret) {
+		//2 save new config
+		chassis_options_save(keyfile, srv->options, srv);
+		gsize file_size = 0;
+		gchar *file_buf = g_key_file_to_data(keyfile, &file_size, NULL);
+		if (FALSE == g_file_set_contents(srv->default_file, file_buf, file_size, &gerr)) {
+			ret = SAVE_ERROR;
+		} else {
+			if((ret = chmod(srv->default_file, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP))) {
+				ret = CHMOD_ERROR;
+			}
+
+		}
+	} else {
+		ret = RENAME_ERROR;
+	}
+
+	if(0 == ret) {
+		network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+	} else if(RENAME_ERROR == ret) {
+		network_mysqld_con_send_error_full(con->client, C("rename file failed"), 1066, "28000");
+	} else if(SAVE_ERROR == ret) {
+		network_mysqld_con_send_error_full(con->client, C("save file failed"), 1066, "28000");
+	} else if(REMOVE_ERROR == ret) {
+		network_mysqld_con_send_error_full(con->client, C("remove old file failed"), 1066, "28000");
+	} else if(CHMOD_ERROR == ret) {
+		network_mysqld_con_send_error_full(con->client, C("chmod file failed"), 1066, "28000");
+	} else {
+		network_mysqld_con_send_error_full(con->client, C("unknown error happened"), 1066, "28000");
+	}
+
     return PROXY_SEND_RESULT;
 }
 
@@ -2108,7 +2206,7 @@ static struct sql_handler_entry_t sql_handler_shard_map[] = {
     {"config get", admin_get_config, "config get [<item>]", "show config"},
     {"config set ", admin_set_config, "config set <key>=<value>","set config"},
     {"stats reset", admin_reset_stats, "stats reset", "reset query statistics"},
-    {"save settings ", admin_save_settings, "save settings", "not implemented"},
+    {"save settings", admin_save_settings, "save settings", "not implemented"},
     {"select * from help", admin_help, "select * from help", "show this help"},
     {"select help", admin_help, "select help", "show this help"},
     {"cetus", admin_send_status, "cetus", "show overall status of Cetus"},
@@ -2179,7 +2277,7 @@ static struct sql_handler_entry_t sql_handler_rw_map[] = {
     {"config get", admin_get_config, "config get [<item>]", "show config"},
     {"config set ", admin_set_config, "config set <key>=<value>","set config"},
     {"stats reset", admin_reset_stats, "stats reset", "reset query statistics"},
-    {"save settings ", admin_save_settings, "save settings", "not implemented"},
+    {"save settings", admin_save_settings, "save settings", "not implemented"},
     {"select * from help", admin_help, "select * from help", "show this help"},
     {"select help", admin_help, "select help", "show this help"},
     {"cetus", admin_send_status, "cetus", "show overall status of Cetus"},
@@ -2324,11 +2422,11 @@ network_mysqld_server_connection_init(network_mysqld_con *con)
     return 0;
 }
 
+chassis_plugin_config *config;
+
 static chassis_plugin_config *
 network_mysqld_admin_plugin_new(void)
 {
-    chassis_plugin_config *config;
-
     config = g_new0(chassis_plugin_config, 1);
 
     return config;
@@ -2366,6 +2464,111 @@ network_mysqld_admin_plugin_free(chassis *chas, chassis_plugin_config *config)
     g_free(config);
 }
 
+gchar*
+show_admin_address(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%s", config->address != NULL ? config->address: "NULL");
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if(config->address != NULL) {
+            return g_strdup_printf("%s", config->address);
+        }
+    }
+    return NULL;
+}
+
+gchar*
+show_admin_username(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%s", config->admin_username != NULL ? config->admin_username: "NULL");
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if(config->admin_username != NULL) {
+            return g_strdup_printf("%s", config->admin_username);
+        }
+    }
+    return NULL;
+}
+
+gchar*
+show_admin_password(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%s", config->admin_password != NULL ? config->admin_password: "NULL");
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if(config->admin_password != NULL) {
+            return g_strdup_printf("%s", config->admin_password);
+        }
+    }
+    return NULL;
+}
+
+gchar*
+show_admin_allow_ip(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gchar *ret = NULL;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        GString *free_str = g_string_new(NULL);
+        GList *free_list = NULL;
+        if(g_hash_table_size(config->allow_ip_table)) {
+            free_list = g_hash_table_get_keys(config->allow_ip_table);
+            GList *it = NULL;
+            for(it = free_list; it; it=it->next) {
+                free_str = g_string_append(free_str, it->data);
+                free_str = g_string_append(free_str, ",");
+            }
+            if(free_str->len) {
+                free_str->str[free_str->len - 1] = '\0';
+                ret = g_strdup(free_str->str);
+            }
+        }
+        if(free_str) {
+            g_string_free(free_str, TRUE);
+        }
+        if(free_list) {
+            g_list_free(free_list);
+        }
+    }
+    return ret;
+}
+
+gchar*
+show_admin_deny_ip(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gchar *ret = NULL;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        GString *free_str = g_string_new(NULL);
+        GList *free_list = NULL;
+        if(g_hash_table_size(config->deny_ip_table)) {
+            free_list = g_hash_table_get_keys(config->deny_ip_table);
+            GList *it = NULL;
+            for(it = free_list; it; it=it->next) {
+                free_str = g_string_append(free_str, it->data);
+                free_str = g_string_append(free_str, ",");
+            }
+            if(free_str->len) {
+                free_str->str[free_str->len - 1] = '\0';
+                ret = g_strdup(free_str->str);
+            }
+        }
+        if(free_str) {
+            g_string_free(free_str, TRUE);
+        }
+        if(free_list) {
+            g_list_free(free_list);
+        }
+    }
+    return ret;
+}
+
 /**
  * add the proxy specific options to the cmdline interface
  */
@@ -2376,20 +2579,25 @@ network_mysqld_admin_plugin_get_options(chassis_plugin_config *config)
 
     chassis_options_add(&opts, "admin-address",
                         0, 0, OPTION_ARG_STRING, &(config->address),
-                        "listening address:port of the admin-server (default: :4041)", "<host:port>");
+                        "listening address:port of the admin-server (default: :4041)", "<host:port>",
+						NULL, show_admin_address, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "admin-username",
-                        0, 0, OPTION_ARG_STRING, &(config->admin_username), "username to allow to log in", "<string>");
+                        0, 0, OPTION_ARG_STRING, &(config->admin_username), "username to allow to log in", "<string>",
+						NULL, show_admin_username, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "admin-password",
-                        0, 0, OPTION_ARG_STRING, &(config->admin_password), "password to allow to log in", "<string>");
+                        0, 0, OPTION_ARG_STRING, &(config->admin_password), "password to allow to log in", "<string>",
+						NULL, show_admin_password, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "admin-allow-ip",
                         0, 0, OPTION_ARG_STRING, &(config->allow_ip),
-                        "ip address allowed to connect to admin", "<string>");
+                        "ip address allowed to connect to admin", "<string>",
+						NULL, show_admin_allow_ip, SAVE_OPTS_PROPERTY);
     chassis_options_add(&opts, "admin-deny-ip",
                         0, 0, OPTION_ARG_STRING, &(config->deny_ip),
-                        "ip address denyed to connect to admin", "<string>");
+                        "ip address denyed to connect to admin", "<string>",
+						NULL, show_admin_deny_ip, SAVE_OPTS_PROPERTY);
 
     return opts.options;
 }

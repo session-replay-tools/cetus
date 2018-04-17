@@ -1191,7 +1191,7 @@ proxy_get_server_list(network_mysqld_con *con)
         if (!con->is_in_transaction) {
             if (con->client->is_server_conn_reserved) {
                 con->client->is_server_conn_reserved = 0;
-                g_message("%s: is_server_conn_reserved is set false", G_STRLOC);
+                g_debug("%s: is_server_conn_reserved is set false", G_STRLOC);
             }
         }
     }

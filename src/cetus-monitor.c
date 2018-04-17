@@ -216,7 +216,7 @@ update_master_timestamp(int fd, short what, void *arg)
                 static int previous_result[256] = { 0 };    /* for each backend group */
                 int result = mysql_real_query(conn, L(sql));
                 if (result != previous_result[i] && result != 0) {
-                    g_critical("Update heartbeat error: %d, text: %s, backend: %s",
+                    g_message("Update heartbeat error: %d, text: %s, backend: %s",
                                mysql_errno(conn), mysql_error(conn), backend_addr);
                 } else if (result != previous_result[i] && result == 0) {
                     g_message("Update heartbeat success. backend: %s", backend_addr);

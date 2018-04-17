@@ -905,7 +905,7 @@ network_mysqld_read_mul_packets(chassis G_GNUC_UNUSED *chas,
                 }
 
                 if (query->warning_count > 0) {
-                    g_message("%s warning flag from server:%s is met:%s",
+                    g_debug("%s warning flag from server:%s is met:%s",
                               G_STRLOC, server->dst->name->str, con->orig_sql->str);
                     con->last_warning_met = 1;
                 }

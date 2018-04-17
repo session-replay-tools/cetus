@@ -39,6 +39,7 @@ int tc_log_init(const char *);
 int tc_get_log_hour();
 void tc_log_end(void);
 
+
 void tc_log_info(int level, int err, const char *fmt, ...);
 
 #if (TC_DEBUG)
@@ -51,6 +52,7 @@ void tc_log_info(int level, int err, const char *fmt, ...);
 
 #define tc_log_debug2(level, err, fmt, a1, a2)                               \
     tc_log_info(level, err, (const char *) fmt, a1, a2)
+
 
 #define tc_log_debug3(level, err, fmt, a1, a2, a3)                           \
     tc_log_info(level, err, (const char *) fmt, a1, a2, a3)

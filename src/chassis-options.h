@@ -23,6 +23,14 @@
 
 #include <glib.h>
 
+struct external_param {
+	struct chassis *chas;
+	gint opt_type;
+};
+
+typedef gint (*chas_opt_assign_hook)(const gchar *newval, gpointer param);
+typedef gchar* (*chas_opt_show_hook)(gpointer param);
+
 enum option_type {              // arg_data type
     OPTION_ARG_NONE,            // bool *
     OPTION_ARG_INT,             // int *
@@ -56,6 +64,10 @@ typedef struct {
     enum option_type arg;
     enum option_flags flags;
     gchar short_name;
+
+    chas_opt_assign_hook assign_hook;
+    chas_opt_show_hook show_hook;
+    gint opt_property;
 } chassis_option_t;
 
 /**
@@ -67,7 +79,11 @@ int chassis_option_set(chassis_option_t *opt,
                        const char *long_name,
                        gchar short_name,
                        gint flags,
-                       enum option_type arg, gpointer arg_data, const char *description, const char *arg_desc);
+                       enum option_type arg,
+					   gpointer arg_data,
+					   const char *description,
+					   const char *arg_desc,
+					   chas_opt_assign_hook assign_hook, chas_opt_show_hook show_hook, gint opt_property);
 /**
  * @return newly allocated string, need to be freed
  */
@@ -98,7 +114,11 @@ int chassis_options_add(chassis_options_t *opts,
                         const char *long_name,
                         gchar short_name,
                         int flags,
-                        enum option_type arg, gpointer arg_data, const char *description, const char *arg_desc);
+                        enum option_type arg,
+						gpointer arg_data,
+						const char *description,
+						const char *arg_desc,
+						chas_opt_assign_hook assign_hook, chas_opt_show_hook show_hook, gint opt_property);
 
 chassis_option_t *chassis_options_get(GList *opts, const char *long_name);
 

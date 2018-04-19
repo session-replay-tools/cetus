@@ -1,11 +1,11 @@
 {
 	"users":	[{
-			"user":	"test1",
-			"client_pwd":	"123",
-			"server_pwd":	"123456"
+			"user":	"cetus_app",
+			"client_pwd":	"cetus_app",
+			"server_pwd":	"cetus_app"
 		}, {
-			"user":	"test2",
-			"client_pwd":	"123456",
-			"server_pwd":	"123456"
+			"user":	"cetus_app1",
+			"client_pwd":	"cetus_app1",
+			"server_pwd":	"cetus_app1"
 		}]
 }

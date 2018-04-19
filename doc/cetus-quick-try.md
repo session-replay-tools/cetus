@@ -2,11 +2,11 @@
 
 ## 环境说明
 
-MySQL建议使用5.7.16以上版本，若使用读写分离功能则需要搭建MySQL主从关系，若使用sharding功能则需要根据业务进行分库设计；创建用户和密码并确认Cetus可以远程登录MySQL。
+MySQL建议使用5.7.16以上版本，若使用读写分离功能则需要搭建MySQL主从关系，若使用sharding功能则需要根据业务进行分库设计；创建用户和密码并确认Cetus可以远程登录MySQL，具体说明详见[Cetus MySQL准备说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-mysql-prepare.md)。
 
 ## 安装
 
-Cetus只支持linux系统，安装步骤参考[Cetus 安装说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-install.md)，配置根据安装的不同版本详见[Cetus 读写分离版配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw-profile.md)、[Cetus 分库(sharding)版配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-shard-profile.md)。
+Cetus只支持linux系统，安装步骤参考[Cetus 安装说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-install.md)，安装成功后Cetus提供了示例配置文件，在/home/user/cetus_install/conf/目录下，以.example结尾，用户可根据需求进行修改，配置修改根据安装的不同版本详见[Cetus 读写分离版配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw-profile.md)、[Cetus 分库(sharding)版配置文件说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-shard-profile.md)。
 
 ## 部署
 

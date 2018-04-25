@@ -684,9 +684,15 @@ cmp_shard_range_groups_int(gconstpointer a, gconstpointer b)
 {
     sharding_partition_t *item1 = *(sharding_partition_t **)a;
     sharding_partition_t *item2 = *(sharding_partition_t **)b;
-    int n1 = (int)(int64_t) item1->value;
-    int n2 = (int)(int64_t) item2->value;
-    return n1 - n2;
+    int64_t n1 = (int64_t) item1->value;
+    int64_t n2 = (int64_t) item2->value;
+    if (n1 > n2) {
+        return 1;
+    } else if (n1 == n2) {
+        return 0;
+    } else {
+        return -1;
+    }
 }
 
 static gint

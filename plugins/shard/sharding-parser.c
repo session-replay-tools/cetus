@@ -339,9 +339,9 @@ partition_satisfies(sharding_partition_t *partition, struct condition_t cond)
             g_warning(G_STRLOC ":error condition");
         }
     } else {                    /* int and datetime */
-        int low = (int)(int64_t) partition->low_value;
-        int high = (int)(int64_t) partition->value; /* high range OR hash value */
-        int val = cond.v.num;
+        int64_t low = (int64_t) partition->low_value;
+        int64_t high = (int64_t) partition->value; /* high range OR hash value */
+        int64_t val = cond.v.num;
         switch (cond.op) {
         case TK_EQ:
             return val > low && val <= high;
@@ -366,7 +366,7 @@ partition_satisfies(sharding_partition_t *partition, struct condition_t cond)
     }
 
     g_warning(G_STRLOC ":error reach here");
-    return false;
+    return FALSE;
 }
 
 /* filter out those which not satisfy cond */

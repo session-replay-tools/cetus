@@ -43,6 +43,7 @@
 #include "chassis-filemode.h"
 #include "chassis-options.h"
 #include "cetus-util.h"
+#include "chassis-options-utils.h"
 
 /**
  * initialize the basic components of the chassis
@@ -249,9 +250,9 @@ int
 chassis_options_set_cmdline_only_options(chassis_options_t *opts, int *print_version, char **config_file)
 {
 
-    chassis_options_add(opts, "version", 'V', 0, OPTION_ARG_NONE, print_version, "Show version", NULL);
+    chassis_options_add(opts, "version", 'V', 0, OPTION_ARG_NONE, print_version, "Show version", NULL, NULL, NULL, 0);
 
-    chassis_options_add(opts, "defaults-file", 0, 0, OPTION_ARG_STRING, config_file, "configuration file", "<file>");
+    chassis_options_add(opts, "defaults-file", 0, 0, OPTION_ARG_STRING, config_file, "configuration file", "<file>", NULL, NULL, 0);
 
     return 0;
 }

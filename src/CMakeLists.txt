@@ -52,6 +52,7 @@ SET(chassis_sources
     chassis-limits.c
     chassis-frontend.c
     chassis-options.c
+    chassis-options-utils.c
     chassis-unix-daemon.c
     chassis-config.c
     cJSON.c

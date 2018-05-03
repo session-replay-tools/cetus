@@ -55,6 +55,7 @@
 typedef enum {
     NETWORK_SOCKET_SUCCESS,
     NETWORK_SOCKET_WAIT_FOR_EVENT,
+    NETWORK_SOCKET_WAIT_FOR_WRITABLE,
     NETWORK_SOCKET_ERROR,
     NETWORK_SOCKET_ERROR_RETRY
 } network_socket_retval_t;
@@ -97,6 +98,8 @@ typedef struct {
     int query_status;
 } server_query_status;
 
+typedef struct network_ssl_connection_s network_ssl_connection_t;
+
 typedef struct {
     int fd;             /**< socket-fd */
     guint32 create_or_update_time;
@@ -117,6 +120,7 @@ typedef struct {
     network_queue *recv_queue;
     network_queue *recv_queue_raw;
     network_queue *recv_queue_uncompress_raw;
+    network_queue *recv_queue_decrypted_raw;
     network_queue *send_queue;
     network_queue *cache_queue;
     GString *last_compressed_packet;
@@ -174,6 +178,8 @@ typedef struct {
     GString *sql_mode;
     server_state_data parse;
     server_query_status qstat;
+
+    network_ssl_connection_t* ssl;
 
 } network_socket;
 

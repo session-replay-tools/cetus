@@ -77,6 +77,7 @@
 #endif
 
 #include "network-compress.h"
+#include "network-ssl.h"
 
 #ifdef HAVE_WRITEV
 #define USE_BUFFERED_NETIO
@@ -241,6 +242,9 @@ network_mysqld_init(chassis *srv)
     cetus_monitor_register_object(srv->priv->monitor, "users", cetus_users_reload_callback, srv->priv->users);
     cetus_variables_init_stats(&srv->priv->stats_variables, srv);
 
+#ifdef HAVE_OPENSSL
+    network_ssl_init(srv->conf_dir);
+#endif
     return 0;
 }
 
@@ -648,6 +652,8 @@ network_mysqld_con_get_packet(chassis *chas, network_socket *con)
     if (con->do_compress) {
         g_debug("%s:queue from recv_queue_uncompress_raw:%p", G_STRLOC, con);
         recv_queue_raw = con->recv_queue_uncompress_raw;
+    } else if (con->ssl) {
+        recv_queue_raw = con->recv_queue_decrypted_raw;
     } else {
         recv_queue_raw = con->recv_queue_raw;
     }
@@ -968,7 +974,13 @@ network_mysqld_read(chassis G_GNUC_UNUSED *chas, network_socket *sock)
         g_error("NETWORK_SOCKET_ERROR_RETRY wasn't expected");
         break;
     }
-
+#ifdef HAVE_OPENSSL
+    if (sock->ssl) {
+        if (!network_ssl_decrypt_packet(sock)) {
+            return NETWORK_SOCKET_ERROR;
+        }
+    }
+#endif
     if (sock->do_compress) {
         int ret = network_mysqld_con_get_uncompressed_packet(chas, sock);
         if (ret != NETWORK_SOCKET_SUCCESS) {
@@ -985,8 +997,12 @@ network_socket_retval_t
 network_mysqld_write(chassis G_GNUC_UNUSED *chas, network_socket *sock)
 {
     network_socket_retval_t ret;
-
-    ret = network_socket_write(sock, -1);
+#ifdef HAVE_OPENSSL
+    if (sock->ssl)
+        ret = network_ssl_write(sock);
+    else
+#endif
+        ret = network_socket_write(sock, -1);
 
     return ret;
 }
@@ -3709,16 +3725,51 @@ network_mysqld_con_handle(int event_fd, short events, void *user_data)
                 con->state = ST_ERROR;
                 break;
             }
-
             break;
         }
+#ifdef HAVE_OPENSSL
+        case ST_FRONT_SSL_HANDSHAKE:
+            g_message(G_STRLOC " %p con_handle -> ST_FRONT_SSL_HANDSHAKE", con);
+            if (events & EV_READ) {
+                switch (network_socket_read(con->client)) {
+                case NETWORK_SOCKET_SUCCESS:
+                    break;
+                case NETWORK_SOCKET_WAIT_FOR_EVENT:
+                    timeout = con->read_timeout;
+                    WAIT_FOR_EVENT(con->client, EV_READ, &timeout);
+                    return;
+                case NETWORK_SOCKET_ERROR_RETRY:
+                case NETWORK_SOCKET_ERROR:
+                    con->state = ST_ERROR;
+                    g_message("%s: ST_FRONT_SSL_HANDSHAKE: read error con:%p", G_STRLOC, con);
+                    break;
+                }
+            }
+            switch (network_ssl_handshake(con->client)) {
+            case NETWORK_SOCKET_SUCCESS:
+                con->state = ST_READ_AUTH;
+                break;
+            case NETWORK_SOCKET_WAIT_FOR_EVENT:
+                timeout = con->read_timeout;
+                WAIT_FOR_EVENT(con->client, EV_READ, &timeout);
+                g_message(G_STRLOC " %p WAIT_FOR_EVENT, return", con);
+                return;
+            case NETWORK_SOCKET_WAIT_FOR_WRITABLE:
+                timeout = con->write_timeout;
+                WAIT_FOR_EVENT(con->client, EV_WRITE, &timeout);
+                return;
+            case NETWORK_SOCKET_ERROR:
+                con->state = ST_ERROR;
+                break;
+            }
+            break;
+#endif
         case ST_SEND_AUTH_RESULT:
             switch (network_mysqld_write(srv, con->client)) {
             case NETWORK_SOCKET_SUCCESS:
                 break;
             case NETWORK_SOCKET_WAIT_FOR_EVENT:
                 timeout = con->write_timeout;
-
                 WAIT_FOR_EVENT(con->client, EV_WRITE, &timeout);
                 return;
             case NETWORK_SOCKET_ERROR_RETRY:
@@ -3782,7 +3833,7 @@ network_mysqld_con_handle(int event_fd, short events, void *user_data)
             }
             break;
         case ST_READ_QUERY:
-            g_debug("%s:call here.", G_STRLOC);
+            g_debug(G_STRLOC " %p con_handle -> ST_READ_QUERY", con);
             CHECK_PENDING_EVENT(&(con->client->event));
 
             /* TODO If config is reloaded, close all current cons */

@@ -1464,6 +1464,14 @@ network_mysqld_proto_get_auth_response(network_packet *packet, network_mysqld_au
 
         err = err || network_mysqld_proto_skip(packet, 23);
 
+        if (err == 0
+            && (auth->client_capabilities & CLIENT_SSL)
+            && packet->offset == packet->data->len) /* this is a SSLRequest */
+        {
+            auth->ssl_request = TRUE;
+            return 0;
+        }
+
         err = err || network_mysqld_proto_get_gstr(packet, auth->username);
 
         guint8 len;

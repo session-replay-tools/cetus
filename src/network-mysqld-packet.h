@@ -216,6 +216,7 @@ struct network_mysqld_auth_response {
     GString *auth_plugin_data;
     GString *database;
     GString *auth_plugin_name;
+    gboolean ssl_request;
 };
 
 NETWORK_API network_mysqld_auth_response *network_mysqld_auth_response_new(guint server_capabilities);

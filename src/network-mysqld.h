@@ -214,52 +214,54 @@ typedef enum {
     ST_INIT = 0,
 
     /**< A connection to a backend is about to be made */
-    ST_CONNECT_SERVER = 1,
+    ST_CONNECT_SERVER,
 
     /**< A handshake packet is to be sent to a client */
-    ST_SEND_HANDSHAKE = 2,
+    ST_SEND_HANDSHAKE,
 
     /**< An authentication packet is to be read from a client */
-    ST_READ_AUTH = 3,
+    ST_READ_AUTH,
+
+    ST_FRONT_SSL_HANDSHAKE,
 
     /**< The result of an authentication attempt is to be sent to a client */
-    ST_SEND_AUTH_RESULT = 4,
+    ST_SEND_AUTH_RESULT,
 
     /**< COM_QUERY packets are to be read from a client */
-    ST_READ_QUERY = 5,
+    ST_READ_QUERY,
 
-    ST_GET_SERVER_CONNECTION_LIST = 6,
+    ST_GET_SERVER_CONNECTION_LIST,
 
     /**< COM_QUERY packets are to be sent to a server */
-    ST_SEND_QUERY = 7,
+    ST_SEND_QUERY,
 
     /**< Result set packets are to be read from a server */
-    ST_READ_QUERY_RESULT = 8,
+    ST_READ_QUERY_RESULT,
 
-    ST_READ_M_QUERY_RESULT = 9,
+    ST_READ_M_QUERY_RESULT,
 
     /**< Result set packets are to be sent to a client */
-    ST_SEND_QUERY_RESULT = 10,
+    ST_SEND_QUERY_RESULT,
 
     /**< The client connection should be closed */
-    ST_CLOSE_CLIENT = 11,
+    ST_CLOSE_CLIENT,
 
-    ST_CLIENT_QUIT = 12,
+    ST_CLIENT_QUIT,
 
     /**
      * < An unrecoverable error occurred, leads to sending a MySQL ERR packet 
      * to the client and closing the client connection
      */
-    ST_SEND_ERROR = 13,
+    ST_SEND_ERROR,
 
     /**
      * < An error occurred (malformed/unexpected packet, 
      * unrecoverable network error), internal state 
      */
-    ST_ERROR = 14,
+    ST_ERROR,
 
     /**< The server connection should be closed */
-    ST_CLOSE_SERVER = 15,
+    ST_CLOSE_SERVER,
 
 } network_mysqld_con_state_t;
 

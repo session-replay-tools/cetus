@@ -65,6 +65,7 @@ typedef int socklen_t;
 #include "cetus-users.h"
 #include "chassis-options.h"
 #include "plugin-common.h"
+#include "network-ssl.h"
 
 #define MAX_CACHED_ITEMS 65536
 
@@ -98,8 +99,20 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
         guint32 capabilities = con->client->challenge->capabilities;
         auth = network_mysqld_auth_response_new(capabilities);
 
-        int err = network_mysqld_proto_get_and_change_auth_response(&packet, auth);
+        network_mysqld_proto_skip_network_header(&packet);
+        int err = network_mysqld_proto_get_auth_response(&packet, auth);
 
+#ifdef HAVE_OPENSSL
+        if (auth->ssl_request) {
+            network_ssl_create_connection(recv_sock, NETWORK_SSL_SERVER);
+            g_string_free(g_queue_pop_tail(recv_sock->recv_queue->chunks), TRUE);
+            if (recv_sock->recv_queue->chunks->length > 0) {
+                g_warning("%s: client-recv-queue-len = %d", G_STRLOC, recv_sock->recv_queue->chunks->length);
+            }
+            con->state = ST_FRONT_SSL_HANDSHAKE;
+            return NETWORK_SOCKET_SUCCESS;
+        }
+#endif
         if (err) {
             network_mysqld_auth_response_free(auth);
             return NETWORK_SOCKET_ERROR;

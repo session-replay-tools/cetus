@@ -79,6 +79,7 @@
 #include "cetus-util.h"
 #include "network-compress.h"
 #include "glib-ext.h"
+#include "network-ssl.h"
 
 network_socket *
 network_socket_new()
@@ -91,6 +92,7 @@ network_socket_new()
     s->recv_queue = network_queue_new();
     s->recv_queue_raw = network_queue_new();
     s->recv_queue_uncompress_raw = network_queue_new();
+    s->recv_queue_decrypted_raw = network_queue_new();
 
     s->default_db = g_string_new(NULL);
     s->username = g_string_new(NULL);
@@ -127,6 +129,7 @@ network_socket_free(network_socket *s)
     network_queue_free(s->recv_queue);
     network_queue_free(s->recv_queue_raw);
     network_queue_free(s->recv_queue_uncompress_raw);
+    network_queue_free(s->recv_queue_decrypted_raw);
 
     if (s->response)
         network_mysqld_auth_response_free(s->response);
@@ -140,7 +143,7 @@ network_socket_free(network_socket *s)
         g_debug("%s:event del, ev:%p", G_STRLOC, &(s->event));
         event_del(&(s->event));
     }
-
+    network_ssl_free_connection(s);
     if (s->fd != -1) {
         closesocket(s->fd);
     }

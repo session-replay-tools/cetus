@@ -42,6 +42,7 @@
 #include "network-mysqld.h"
 #include "server-session.h"
 #include "sys-pedantic.h"
+#include "network-ssl.h"
 
 #ifndef PLUGIN_VERSION
 #ifdef CHASSIS_BUILD_TAG
@@ -110,6 +111,9 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_con_init)
     challenge->server_version = 50099;
     challenge->charset = charset_get_number("latin1");
     challenge->capabilities = CETUS_DEFAULT_FLAGS;
+#ifdef HAVE_OPENSSL
+    challenge->capabilities |= CLIENT_SSL;
+#endif
     challenge->server_status = SERVER_STATUS_AUTOCOMMIT;
     challenge->thread_id = 1;
 
@@ -160,6 +164,15 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_auth)
         network_mysqld_auth_response_free(auth);
         return NETWORK_SOCKET_ERROR;
     }
+
+#ifdef HAVE_OPENSSL
+    if (auth->ssl_request) {
+        network_ssl_create_connection(con->client, NETWORK_SSL_SERVER);
+        g_string_free(g_queue_pop_tail(con->client->recv_queue->chunks), TRUE);
+        con->state = ST_FRONT_SSL_HANDSHAKE;
+        return NETWORK_SOCKET_SUCCESS;
+    }
+#endif
 
     con->client->response = auth;
 

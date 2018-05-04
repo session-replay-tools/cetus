@@ -121,8 +121,11 @@ typedef struct {
     network_queue *recv_queue_raw;
     network_queue *recv_queue_uncompress_raw;
     network_queue *recv_queue_decrypted_raw;
+
     network_queue *send_queue;
+    network_queue *send_queue_compressed;
     network_queue *cache_queue;
+
     GString *last_compressed_packet;
     int compressed_unsend_offset;
 

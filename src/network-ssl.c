@@ -8,8 +8,13 @@
 #include <openssl/conf.h>
 #include <errno.h>
 
+enum network_ssl_error_t {
+    SSL_OK = 1,
+    SSL_RBIO_BUFFER_FULL = -10,
+};
 struct network_ssl_connection_s {
     SSL* ssl;
+    enum network_ssl_error_t error;
 };
 
 static SSL_CTX *g_ssl_context = NULL;
@@ -50,12 +55,13 @@ static void network_ssl_info_callback(const SSL *s, int where, int ret)
     }
 }
 
-static void network_ssl_clear_error()
+static void network_ssl_clear_error(network_ssl_connection_t* ssl)
 {
     while (ERR_peek_error()) {
         g_critical("ignoring stale global SSL error");
     }
     ERR_clear_error();
+    ssl->error = 0;
 }
 
 static gboolean network_ssl_create_context(char* conf_dir)
@@ -97,14 +103,7 @@ static gboolean network_ssl_create_context(char* conf_dir)
     SSL_CTX_clear_options(g_ssl_context,
                           SSL_OP_NO_SSLv2|SSL_OP_NO_SSLv3|SSL_OP_NO_TLSv1);
 #endif
-/*
-    SSL_CTX_set_options(g_ssl_context, SSL_OP_NO_SSLv2);
-    SSL_CTX_set_options(g_ssl_context, SSL_OP_NO_SSLv3);
-    SSL_CTX_set_options(g_ssl_context, SSL_OP_NO_TLSv1);
-    SSL_CTX_clear_options(g_ssl_context, SSL_OP_NO_TLSv1_1);
-    SSL_CTX_set_options(g_ssl_context, SSL_OP_NO_TLSv1_1);
-    SSL_CTX_set_options(g_ssl_context, SSL_OP_NO_TLSv1_2);
-*/
+
 #ifdef SSL_OP_NO_COMPRESSION
     SSL_CTX_set_options(g_ssl_context, SSL_OP_NO_COMPRESSION);
 #endif
@@ -202,122 +201,178 @@ void network_ssl_free_connection(network_socket* sock)
 
 network_socket_retval_t network_ssl_write(network_socket* sock)
 {
-	GString *s;
-    network_ssl_clear_error();
-	for (s = g_queue_peek_head(sock->send_queue->chunks); s; ) {
-		g_assert(sock->send_queue->offset < s->len);
+    network_queue* queue = sock->do_compress ?
+        sock->send_queue_compressed : sock->send_queue;
 
-        gssize len = SSL_write(sock->ssl->ssl, s->str + sock->send_queue->offset,
-                        s->len - sock->send_queue->offset);
+    network_ssl_clear_error(sock->ssl);
+
+    network_socket_retval_t ret = NETWORK_SOCKET_SUCCESS;
+    int i = 0;
+    GList* chunk;
+    for (chunk = queue->chunks->head, i = 0; chunk; i++, chunk = chunk->next) {
+        GString* s = chunk->data;
+        char* buf;
+        int buf_len;
+        if (i == 0) {
+            buf = s->str + queue->offset;
+            buf_len = s->len - queue->offset;
+        } else {
+            buf = s->str;
+            buf_len = s->len;
+        }
+        gssize len = SSL_write(sock->ssl->ssl, buf, buf_len);
 
         if (len < 0) {
             int sslerr = SSL_get_error(sock->ssl->ssl, len);
-            g_debug(G_STRLOC " SSL_get_error: %d", sslerr);
-
             if (sslerr == SSL_ERROR_WANT_WRITE) {
                 g_debug(G_STRLOC " SSL_write() WANT_WRITE");
-				return NETWORK_SOCKET_WAIT_FOR_WRITABLE;
+                ret = NETWORK_SOCKET_WAIT_FOR_EVENT;
+                break;
             }
-
             if (sslerr == SSL_ERROR_WANT_READ) {
                 g_warning(G_STRLOC " peer started SSL renegotiation");
-                return NETWORK_SOCKET_WAIT_FOR_EVENT; /* TODO: read event */
+                ret = NETWORK_SOCKET_WAIT_FOR_EVENT; /* TODO: read event */
+                break;
             }
             g_critical(G_STRLOC " SSL_write() failed");
             return NETWORK_SOCKET_ERROR;
-		} else if (len == 0) {
+        } else if (len == 0) {
             int sslerr = SSL_get_error(sock->ssl->ssl, len);
             g_critical(G_STRLOC " SSL_write() failed: %d", sslerr);
-			return NETWORK_SOCKET_ERROR;
-		}
-
-		sock->send_queue->offset += len;
-
-		if (sock->send_queue->offset == s->len) {
-			g_queue_pop_head(sock->send_queue->chunks);
+            return NETWORK_SOCKET_ERROR;
+        } else if (len < buf_len) {
+            ret = NETWORK_SOCKET_WAIT_FOR_EVENT;
+            queue->offset += len;
+            queue->len -= len;
+            break;
+        }
+        /* len == buf_len */
+        queue->offset += len;
+        queue->len -= len;
+    }
+    /* delete used chunks, adjust offset */
+    for (chunk = queue->chunks->head; chunk; ) {
+        GString *s = chunk->data;
+        if (queue->offset >= s->len) {
+            queue->offset -= s->len;
             g_string_free(s, TRUE);
+            g_queue_delete_link(queue->chunks, chunk);
+            chunk = queue->chunks->head;
+        } else {
+            break; /* part of last chunk is left */
+        }
+    }
 
-			sock->send_queue->offset = 0;
-
-			s = g_queue_peek_head(sock->send_queue->chunks);
-		} else {
-			return NETWORK_SOCKET_WAIT_FOR_EVENT;
-		}
-	}
-	return NETWORK_SOCKET_SUCCESS;
+    return ret;
 }
 
-static int write_to_rbio(network_socket* sock)
+static int network_ssl_write_to_rbio(network_socket* sock)
 {
+    network_ssl_clear_error(sock->ssl);
+
     BIO* rbio = SSL_get_rbio(sock->ssl->ssl);
     network_queue* queue = sock->recv_queue_raw;
-    int bytes_written = 0;
+    int bytes_written = queue->len;
 
-    /* TODO: peek then pop, waste of memory */
-    while (g_queue_get_length(queue->chunks) > 0) {
-        GString* hint = g_queue_peek_head(queue->chunks);
-        GString* str = network_queue_peek_str(queue, hint->len, NULL);
-        int len = BIO_write(rbio, str->str, str->len);
-        if (len == str->len) {
-            bytes_written += len;
-            GString* p = network_queue_pop_str(queue, hint->len, NULL);
-            g_string_free(p, TRUE);
-            g_string_free(str, TRUE);
+    int i = 0;
+    GList* chunk;
+    for (chunk = queue->chunks->head, i = 0; chunk; i++, chunk = chunk->next) {
+        GString *s = chunk->data;
+        char* buf;
+        int buf_len;
+        if (i == 0) {
+            g_assert(queue->offset < s->len);
+            buf = s->str + queue->offset;
+            buf_len  = s->len - queue->offset;
+        } else {
+            buf = s->str;
+            buf_len  = s->len;
+        }
+        int len = BIO_write(rbio, buf, buf_len);
+        if (len == buf_len) {
+            queue->offset += len;
+            queue->len -= len;
         } else if (len >= 0) {
-            bytes_written += len;
-            GString* p = network_queue_pop_str(queue, hint->len, NULL);
-            g_string_free(p, TRUE);
-            g_string_free(str, TRUE);
-            return bytes_written;
+            queue->offset += len;
+            queue->len -= len;
+            sock->ssl->error = SSL_RBIO_BUFFER_FULL;
+            break;
         } else {
             return -1;
         }
     }
+
+    bytes_written = bytes_written - queue->len;
+
+    /* delete used chunks, adjust offset */
+    for (chunk = queue->chunks->head; chunk; ) {
+        GString *s = chunk->data;
+
+        if (queue->offset >= s->len) {
+            queue->offset -= s->len;
+            g_string_free(s, TRUE);
+            g_queue_delete_link(queue->chunks, chunk);
+            chunk = queue->chunks->head;
+        } else {
+            g_message("write_to_rbio have residual");
+            return bytes_written; /* have some residual */
+        }
+    }
+
     return bytes_written;
 }
 
+/**
+   [sock->recv_queue_raw] === SSL decrypt ===> [sock->recv_queue_decrypted_raw]
+*/
 gboolean network_ssl_decrypt_packet(network_socket* sock)
 {
-    char buf[1500];/*TODO: size? */
+/* TODO: the raw packet is very likely a complete SSL record
+   better solution: write one-packet to rbio and SSL_read one-packet */
+    network_ssl_clear_error(sock->ssl);
+
+    char buf[16*1024];/*TODO: size? */
     while (TRUE) {
-        int written = write_to_rbio(sock);
+        int written = network_ssl_write_to_rbio(sock);
         if (written == 0) {
             return TRUE;
         } else if (written < 0) {
             return FALSE;
         }
-        int len = SSL_read(sock->ssl->ssl, buf, sizeof(buf));
-        if (len < 0) {
-            int sslerr = SSL_get_error(sock->ssl->ssl, len);
-            g_debug(G_STRLOC " SSL_get_error: %d", sslerr);
-            if (sslerr == SSL_ERROR_WANT_WRITE) {
-                g_warning(G_STRLOC " peer started SSL renegotiation");
-                return TRUE; /*TODO: how to renegotiate? */
+
+        while (TRUE) {
+            int len = SSL_read(sock->ssl->ssl, buf, sizeof(buf));
+            if (len < 0) {
+                int sslerr = SSL_get_error(sock->ssl->ssl, len);
+                if (sslerr == SSL_ERROR_WANT_WRITE) {
+                    g_warning(G_STRLOC " peer started SSL renegotiation");
+                    return TRUE; /*TODO: how to renegotiate? */
+                }
+                if (sslerr == SSL_ERROR_WANT_READ) {
+                    g_debug(G_STRLOC " SSL_read() WANT_READ");
+                    return TRUE; /* TODO: read event */
+                }
+                g_critical(G_STRLOC " SSL_read() failed");
+                if (sslerr == SSL_ERROR_SYSCALL) {
+                    g_critical(G_STRLOC " %s", strerror(errno));
+                }
+                return FALSE;
+            } else if (len == 0) {
+                int sslerr = SSL_get_error(sock->ssl->ssl, len);
+                g_critical(G_STRLOC " SSL_read() failed: %d", sslerr);
+                return FALSE;
             }
-            if (sslerr == SSL_ERROR_WANT_READ) {
-                g_debug(G_STRLOC " SSL_read() WANT_READ");
-                return TRUE; /* TODO: read event */
-            }
-            g_critical(G_STRLOC " SSL_read() failed");
-            if (sslerr == SSL_ERROR_SYSCALL) {
-                g_critical(G_STRLOC " %s", strerror(errno));
-            }
-            return FALSE;
-        } else if (len == 0) {
-            int sslerr = SSL_get_error(sock->ssl->ssl, len);
-            g_critical(G_STRLOC " SSL_read() failed: %d", sslerr);
-            return FALSE;
+            network_queue_append(sock->recv_queue_decrypted_raw, g_string_new_len(buf, len));
         }
-        network_queue_append(sock->recv_queue_decrypted_raw, g_string_new_len(buf, len));
     }
 }
 
 network_socket_retval_t network_ssl_handshake(network_socket* sock)
 {
-    network_ssl_clear_error();
+    network_ssl_clear_error(sock->ssl);
 
     while (TRUE) {
-        int len = write_to_rbio(sock);
+        int len = network_ssl_write_to_rbio(sock);
         if (len < 0) {
             return NETWORK_SOCKET_ERROR;
         } else if (len == 0) {

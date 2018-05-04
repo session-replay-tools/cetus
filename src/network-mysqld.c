@@ -709,6 +709,92 @@ network_mysqld_con_get_packet(chassis *chas, network_socket *con)
     return NETWORK_SOCKET_SUCCESS;
 }
 
+static GString* network_mysqld_get_compressed_packet(network_socket* sock)
+{
+    network_queue* queue = sock->send_queue;
+    if (g_queue_get_length(queue->chunks) == 0)
+        return NULL;
+    GString *compressed_packet = g_string_sized_new(16384);
+    network_mysqld_proto_append_packet_len(compressed_packet, 0);
+    network_mysqld_proto_append_packet_id(compressed_packet, sock->compressed_packet_id);
+    sock->compressed_packet_id++;
+    network_mysqld_proto_append_packet_len(compressed_packet, 0);
+
+    z_stream strm;
+    cetus_compress_init(&strm);
+
+    int uncompressed_len = 0;
+    int flush = 0;
+
+    int chunk_id = 0;
+    GList* chunk;
+    for (chunk = queue->chunks->head, chunk_id = 0;
+         chunk; chunk_id++, chunk = chunk->next) {
+        GString *s = chunk->data;
+        char *buf;
+        int buf_len;
+        if (chunk_id == 0) {
+            buf = s->str + queue->offset;
+            buf_len = s->len - queue->offset;
+        } else {
+            buf = s->str;
+            buf_len = s->len;
+        }
+
+        uncompressed_len += buf_len;
+        if (uncompressed_len > PACKET_LEN_MAX) {
+            flush = 1;
+            uncompressed_len -= buf_len;
+            buf_len = PACKET_LEN_MAX - uncompressed_len;
+            if (buf_len == 0) {
+                buf = NULL;
+            }
+            uncompressed_len = PACKET_LEN_MAX;
+            cetus_compress(&strm, compressed_packet, buf, buf_len, 1);
+            cetus_compress_end(&strm);
+        } else {
+            flush = (chunk == queue->chunks->tail) ? 1 : 0;
+            cetus_compress(&strm, compressed_packet, buf, buf_len, flush);
+            if (flush) {
+                cetus_compress_end(&strm);
+            }
+        }
+        queue->offset += buf_len;
+        sock->total_output += buf_len;
+        if (flush == 1) {
+            break;
+        }
+    }
+    /* delete used chunks, adjust offset */
+    for (chunk = queue->chunks->head; chunk; ) {
+        GString *s = chunk->data;
+
+        if (queue->offset >= s->len) {
+            queue->offset -= s->len;
+            g_string_free(s, TRUE);
+            g_queue_delete_link(queue->chunks, chunk);
+
+            chunk = queue->chunks->head;
+        } else {
+            break; /* have some residual */
+        }
+    }
+
+    int compressed_len = compressed_packet->len - NET_HEADER_SIZE - COMP_HEADER_SIZE;
+    network_mysqld_proto_set_compressed_packet_len(compressed_packet,
+                                                   compressed_len, uncompressed_len);
+    return compressed_packet;
+}
+
+static int network_mysqld_con_compress_all_packets(network_socket* sock)
+{
+    GString* packet = NULL;
+    while (packet = network_mysqld_get_compressed_packet(sock)) {
+        network_queue_append(sock->send_queue_compressed, packet);
+    }
+    return 1;
+}
+
 network_socket_retval_t
 network_mysqld_con_get_uncompressed_packet(chassis *chas, network_socket *con)
 {
@@ -725,9 +811,14 @@ network_mysqld_con_get_uncompressed_packet(chassis *chas, network_socket *con)
     header.str = header_str;
     header.allocated_len = sizeof(header_str);
     header.len = 0;
-
+    network_queue *src_queue = con->recv_queue_raw;
+#ifdef HAVE_OPENSSL
+    if (con->ssl) {
+        src_queue = con->recv_queue_decrypted_raw;
+    }
+#endif
     /* read the packet len if the leading packet */
-    if (!network_queue_peek_str(con->recv_queue_raw, header_length, &header)) {
+    if (!network_queue_peek_str(src_queue, header_length, &header)) {
         /* too small */
         return NETWORK_SOCKET_WAIT_FOR_EVENT;
     }
@@ -739,7 +830,7 @@ network_mysqld_con_get_uncompressed_packet(chassis *chas, network_socket *con)
     }
 
     /* move the packet from the raw queue to the recv-queue */
-    if ((packet = network_queue_pop_str(con->recv_queue_raw, packet_len + NET_HEADER_SIZE + COMP_HEADER_SIZE, NULL))) {
+    if ((packet = network_queue_pop_str(src_queue, packet_len + NET_HEADER_SIZE + COMP_HEADER_SIZE, NULL))) {
 #if NETWORK_DEBUG_TRACE_IO
         g_debug("%s:output for sock:%p", G_STRLOC, con);
         /* to trace the data we received from the socket, enable this */
@@ -996,6 +1087,9 @@ network_mysqld_read(chassis G_GNUC_UNUSED *chas, network_socket *sock)
 network_socket_retval_t
 network_mysqld_write(chassis G_GNUC_UNUSED *chas, network_socket *sock)
 {
+    if (sock->do_compress) {
+        network_mysqld_con_compress_all_packets(sock);
+    }
     network_socket_retval_t ret;
 #ifdef HAVE_OPENSSL
     if (sock->ssl)

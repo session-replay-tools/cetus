@@ -57,12 +57,16 @@ charset_get_number(const char *name)
 const char *
 charset_get_name(int number)
 {
-    assert(number < 64);
     static const char *charset[64] = {
         0, "big5", 0, 0, 0, 0, 0, 0, "latin1", 0, 0, 0, 0, 0, 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, "gb2312", 0, 0, 0, "gbk", 0, 0, 0,
         0, "utf8", 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "utf8mb4", 0, 0,
         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "binary"
     };
+
+    if (number >= (sizeof(charset) / sizeof(charset[0]))) {
+        return NULL;
+    }
+
     return charset[number];
 }

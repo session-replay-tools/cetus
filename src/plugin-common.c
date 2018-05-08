@@ -159,7 +159,6 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
                    g_hash_table_lookup(deny_ip_table, client_ip_with_username)) {
             check_ip = TRUE;
             ip_err_msg = g_strdup_printf("Access denied for user '%s'@'%s'", client_username, client_ip);
-            //g_debug("Allow IP check failed: '%s'@'%s'", client_username, client_ip);
         } else {
             check_ip = FALSE;
         }
@@ -174,6 +173,11 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
     }
 
     const char *client_charset = charset_get_name(auth->charset);
+    if (client_charset == NULL) {
+        client_charset = con->srv->default_charset;
+        auth->charset = charset_get_number(client_charset);
+    }
+
     recv_sock->charset_code = auth->charset;
     g_string_assign(recv_sock->charset, client_charset);
     g_string_assign(recv_sock->charset_client, client_charset);

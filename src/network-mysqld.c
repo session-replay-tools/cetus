@@ -4220,6 +4220,8 @@ proxy_self_create_auth(chassis *srv, server_connection_state_t *con)
         auth->client_capabilities &= ~CLIENT_FOUND_ROWS;
     }
 
+    auth->client_capabilities &= ~CLIENT_PLUGIN_AUTH;
+
     auth->max_packet_size = 0x01000000;
     auth->charset = con->charset_code;
     con->is_multi_stmt_set = 1;

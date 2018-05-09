@@ -176,6 +176,19 @@ struct chassis {
     GQueue *cache_index;
     unsigned long long last_cache_purge_time;
     gboolean allow_new_conns;
+
+    gint verbose_shutdown;
+    gint daemon_mode;
+    gchar *pid_file;
+    gchar *log_level;
+    gchar **plugin_names;
+    gchar *log_xa_filename;
+    guint invoke_dbg_on_crash;
+    guint auto_restart;
+    gint max_files_number;
+    char *remote_config_url;
+    gchar *default_file;
+    gint print_version;
 };
 
 CHASSIS_API chassis *chassis_new(void);

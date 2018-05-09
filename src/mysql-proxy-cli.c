@@ -143,6 +143,8 @@ struct chassis_frontend_t {
     char *default_db;
 
     char *remote_config_url;
+
+    gint group_replication_mode;
 };
 
 /**
@@ -172,6 +174,8 @@ chassis_frontend_new(void)
     frontend->long_query_time = MAX_QUERY_TIME;
     frontend->cetus_max_allowed_packet = MAX_ALLOWED_PACKET_DEFAULT;
     frontend->disable_dns_cache = 0;
+
+    frontend->group_replication_mode = 0;
     return frontend;
 }
 
@@ -437,6 +441,11 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                         0, 0, OPTION_ARG_STRING, &(frontend->remote_config_url),
                         "Remote config url, mysql://xx", "<string>",
                         NULL, show_remote_conf_url, SHOW_OPTS_PROPERTY);
+    chassis_options_add(opts,
+                        "group-replication-mode",
+                        0, 0, OPTION_ARG_INT, &(frontend->group_replication_mode),
+                        "mysql group replication mode, 0:not support(defaults) 1:support single primary mode 2:support multi primary mode(not implement yet)", "<int>",
+                        assign_group_replication, show_group_replication_mode, ALL_OPTS_PROPERTY);
 
     return 0;
 }
@@ -792,6 +801,12 @@ main_cmdline(int argc, char **argv)
             GOTO_EXIT(EXIT_FAILURE);
         }
     }
+
+    if(frontend->group_replication_mode != 0 && frontend->group_replication_mode != 1) {
+        g_critical("group-replication-mode is invalid, current value is %d", frontend->group_replication_mode);
+        GOTO_EXIT(EXIT_FAILURE);
+    }
+    srv->group_replication_mode = frontend->group_replication_mode;
 
     if (chassis_frontend_init_basedir(argv[0], &(frontend->base_dir))) {
         GOTO_EXIT(EXIT_FAILURE);

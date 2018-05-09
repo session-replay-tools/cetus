@@ -4434,7 +4434,7 @@ network_mysqld_self_con_handle(int event_fd, short events, void *user_data)
         case ST_ASYNC_CONN:
             switch (network_socket_connect_finish(con->server)) {
             case NETWORK_SOCKET_SUCCESS:
-                if (con->backend->state != BACKEND_STATE_UP) {
+                if (con->backend->state != BACKEND_STATE_UP && srv->group_replication_mode == 0) {
                     con->backend->state = BACKEND_STATE_UP;
                     g_get_current_time(&(con->backend->state_since));
                     g_message(G_STRLOC ": set backend: %s (%p) up", con->backend->addr->name->str, con->backend);

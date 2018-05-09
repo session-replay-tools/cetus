@@ -110,6 +110,8 @@ chassis_new()
     chas->remote_config_url = NULL;
     chas->default_file = NULL;
 
+    chas->group_replication_mode = 0;
+
     return chas;
 }
 

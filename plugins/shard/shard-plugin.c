@@ -48,6 +48,7 @@
 #include "sharding-query-plan.h"
 #include "sql-filter-variables.h"
 #include "cetus-log.h"
+#include "chassis-options-utils.h"
 
 #ifdef NETWORK_DEBUG_TRACE_STATE_CHANGES
 #include "cetus-query-queue.h"
@@ -2034,6 +2035,8 @@ network_mysqld_shard_connection_init(network_mysqld_con *con)
     return 0;
 }
 
+chassis_plugin_config *config;
+
 static chassis_plugin_config *
 network_mysqld_shard_plugin_new(void)
 {
@@ -2041,7 +2044,6 @@ network_mysqld_shard_plugin_new(void)
     g_critical("try loading shard-plugin.so from rw-edition, exit");
     exit(1);
 #endif
-    chassis_plugin_config *config;
 
     config = g_new0(chassis_plugin_config, 1);
 
@@ -2078,6 +2080,263 @@ network_mysqld_shard_plugin_free(chassis *chas, chassis_plugin_config *config)
     g_free(config);
 }
 
+static gchar*
+show_proxy_address(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%s", config->address != NULL ? config->address: "NULL");
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if(config->address) {
+            return g_strdup_printf("%s", config->address);
+        }
+    }
+    return NULL;
+}
+
+static gchar*
+show_proxy_read_only_backend_address(gpointer param) {
+    gchar *ret = NULL;
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    network_backends_t *bs = opt_param->chas->priv->backends;
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        GString *free_str = g_string_new(NULL);
+        guint i;
+        for (i = 0; i < bs->backends->len; i++) {
+            network_backend_t *old_backend = g_ptr_array_index(bs->backends, i);
+            if(old_backend && old_backend->type == BACKEND_TYPE_RO) {
+            free_str = g_string_append(free_str, old_backend->address->str);
+            if(old_backend->server_group && old_backend->server_group->len) {
+                free_str = g_string_append(free_str, "@");
+                free_str = g_string_append(free_str, old_backend->server_group->str);
+            }
+            free_str = g_string_append(free_str, ",");
+        }
+	    }
+	    if(free_str->len) {
+                free_str->str[free_str->len -1] = '\0';
+                ret = g_strdup(free_str->str);
+            }
+            if(free_str) {
+		g_string_free(free_str, TRUE);
+            }
+    }
+    return ret;
+}
+
+static gchar*
+show_proxy_backend_addresses(gpointer param) {
+    gchar *ret = NULL;
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    network_backends_t *bs = opt_param->chas->priv->backends;
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        GString *free_str = g_string_new(NULL);
+        guint i;
+        for (i = 0; i < bs->backends->len; i++) {
+            network_backend_t *old_backend = g_ptr_array_index(bs->backends, i);
+            if(old_backend && old_backend->type == BACKEND_TYPE_RW) {
+                free_str = g_string_append(free_str, old_backend->address->str);
+                if(old_backend->server_group && old_backend->server_group->len) {
+                    free_str = g_string_append(free_str, "@");
+                    free_str = g_string_append(free_str, old_backend->server_group->str);
+                }
+                free_str = g_string_append(free_str, ",");
+            }
+        }
+        if(free_str->len) {
+            free_str->str[free_str->len -1] = '\0';
+        }
+        if(!strcasecmp("127.0.0.1:3306", free_str->str)) {
+            return NULL;
+        } else {
+            if(free_str->len) {
+                ret = g_strdup(free_str->str);
+            }
+        }
+        if(free_str) {
+            g_string_free(free_str, TRUE);
+        }
+    }
+    return ret;
+}
+
+static gchar*
+show_proxy_connect_timeout(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%lf (s)", config->connect_timeout_dbl);
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        //handle default
+        if(config->connect_timeout_dbl == -1) {
+            return NULL;
+        }
+        return g_strdup_printf("%lf", config->connect_timeout_dbl);
+    }
+    return NULL;
+}
+
+static gint
+assign_proxy_connect_timeout(const gchar *newval, gpointer param) {
+    gint ret = ASSIGN_ERROR;
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
+        if(NULL != newval) {
+            gdouble value = 0;
+            if(try_get_double_value(newval, &value)) {
+                config->connect_timeout_dbl = value;
+                ret = ASSIGN_OK;
+            } else {
+                ret = ASSIGN_VALUE_INVALID;
+            }
+        } else {
+            ret = ASSIGN_VALUE_INVALID;
+        }
+    }
+    return ret;
+}
+
+static gchar*
+show_proxy_read_timeout(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%lf (s)", config->read_timeout_dbl);
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if(config->read_timeout_dbl == -1) {
+            return NULL;
+        }
+        return g_strdup_printf("%lf", config->read_timeout_dbl);
+    }
+    return NULL;
+}
+
+static gint
+assign_proxy_read_timeout(const gchar *newval, gpointer param) {
+    gint ret = ASSIGN_ERROR;
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
+        if(NULL != newval) {
+            gdouble value = 0;
+            if(try_get_double_value(newval, &value)) {
+                config->read_timeout_dbl = value;
+                ret = ASSIGN_OK;
+            } else {
+                ret = ASSIGN_VALUE_INVALID;
+            }
+        } else {
+            ret = ASSIGN_VALUE_INVALID;
+        }
+    }
+    return ret;
+}
+
+static gchar*
+show_proxy_write_timeout(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%lf (s)", config->write_timeout_dbl);
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if(config->write_timeout_dbl == -1) {
+            return NULL;
+        }
+        return g_strdup_printf("%lf", config->write_timeout_dbl);
+    }
+    return NULL;
+}
+
+static gint
+assign_proxy_write_timeout(const gchar *newval, gpointer param) {
+    gint ret = ASSIGN_ERROR;
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
+        if(NULL != newval) {
+            gdouble value = 0;
+            if(try_get_double_value(newval, &value)) {
+                config->write_timeout_dbl = value;
+                ret = ASSIGN_OK;
+            } else {
+                ret = ASSIGN_VALUE_INVALID;
+            }
+        } else {
+            ret = ASSIGN_VALUE_INVALID;
+        }
+    }
+    return ret;
+}
+
+static gchar*
+show_proxy_allow_ip(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gchar *ret = NULL;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        GString *free_str = g_string_new(NULL);
+        GList *free_list = NULL;
+        if(config && config->allow_ip_table && g_hash_table_size(config->allow_ip_table)) {
+            free_list = g_hash_table_get_keys(config->allow_ip_table);
+            GList *it = NULL;
+            for(it = free_list; it; it=it->next) {
+                free_str = g_string_append(free_str, it->data);
+                free_str = g_string_append(free_str, ",");
+            }
+            if(free_str->len) {
+                free_str->str[free_str->len - 1] = '\0';
+                ret = g_strdup(free_str->str);
+            }
+        }
+        if(free_str) {
+            g_string_free(free_str, TRUE);
+        }
+        if(free_list) {
+            g_list_free(free_list);
+        }
+    }
+    return ret;
+}
+
+static gchar*
+show_proxy_deny_ip(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gchar *ret = NULL;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        GString *free_str = g_string_new(NULL);
+        GList *free_list = NULL;
+            if(config && config->deny_ip_table && g_hash_table_size(config->deny_ip_table)) {
+                free_list = g_hash_table_get_keys(config->deny_ip_table);
+                GList *it = NULL;
+                for(it = free_list; it; it=it->next) {
+                    free_str = g_string_append(free_str, it->data);
+                    free_str = g_string_append(free_str, ",");
+                }
+		if(free_str->len) {
+		    free_str->str[free_str->len - 1] = '\0';
+                    ret = g_strdup(free_str->str);
+                }
+        }
+        if(free_str) {
+            g_string_free(free_str, TRUE);
+        }
+        if(free_list) {
+            g_list_free(free_list);
+        }
+    }
+    return ret;
+}
+
 /**
  * plugin options
  */
@@ -2088,33 +2347,41 @@ network_mysqld_shard_plugin_get_options(chassis_plugin_config *config)
 
     chassis_options_add(&opts, "proxy-address",
                         'P', 0, OPTION_ARG_STRING, &(config->address),
-                        "listening address:port of the proxy-server (default: :4040)", "<host:port>");
+                        "listening address:port of the proxy-server (default: :4040)", "<host:port>",
+                        NULL, show_proxy_address, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-backend-addresses",
                         'b', 0, OPTION_ARG_STRING_ARRAY, &(config->backend_addresses),
-                        "address:port of the remote backend-servers (default: 127.0.0.1:3306)", "<host:port>");
+                        "address:port of the remote backend-servers (default: 127.0.0.1:3306)", "<host:port>",
+                        NULL, show_proxy_backend_addresses, SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-read-only-backend-addresses",
                         'r', 0, OPTION_ARG_STRING_ARRAY, &(config->read_only_backend_addresses),
-                        "address:port of the remote slave-server (default: not set)", "<host:port>");
+                        "address:port of the remote slave-server (default: not set)", "<host:port>",
+                        NULL, show_proxy_read_only_backend_address, SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-connect-timeout",
                         0, 0, OPTION_ARG_DOUBLE, &(config->connect_timeout_dbl),
-                        "connect timeout in seconds (default: 2.0 seconds)", NULL);
+                        "connect timeout in seconds (default: 2.0 seconds)", NULL,
+                        assign_proxy_connect_timeout, show_proxy_connect_timeout, ALL_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-read-timeout",
                         0, 0, OPTION_ARG_DOUBLE, &(config->read_timeout_dbl),
-                        "read timeout in seconds (default: 10 minuates)", NULL);
+                        "read timeout in seconds (default: 10 minuates)", NULL,
+                        assign_proxy_read_timeout, show_proxy_read_timeout, ALL_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-write-timeout",
                         0, 0, OPTION_ARG_DOUBLE, &(config->write_timeout_dbl),
-                        "write timeout in seconds (default: 10 minuates)", NULL);
+                        "write timeout in seconds (default: 10 minuates)", NULL,
+                        assign_proxy_write_timeout, show_proxy_write_timeout, ALL_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-allow-ip",
-                        0, 0, OPTION_ARG_STRING, &(config->allow_ip), "allow user@IP for proxy permission", NULL);
+                        0, 0, OPTION_ARG_STRING, &(config->allow_ip), "allow user@IP for proxy permission", NULL,
+                        NULL, show_proxy_allow_ip, SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-deny-ip",
-                        0, 0, OPTION_ARG_STRING, &(config->deny_ip), "deny user@IP for proxy permission", NULL);
+                        0, 0, OPTION_ARG_STRING, &(config->deny_ip), "deny user@IP for proxy permission", NULL,
+                        NULL, show_proxy_deny_ip, SAVE_OPTS_PROPERTY);
 
     return opts.options;
 }

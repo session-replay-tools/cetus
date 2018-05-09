@@ -104,6 +104,12 @@ chassis_new()
 
     chas->startup_time = time(0);
 
+    chas->pid_file = NULL;
+    chas->log_level = NULL;
+    chas->log_xa_filename = NULL;
+    chas->remote_config_url = NULL;
+    chas->default_file = NULL;
+
     return chas;
 }
 
@@ -208,6 +214,30 @@ chassis_free(chassis *chas)
 #endif
     if (chas->config_manager)
         chassis_config_free(chas->config_manager);
+
+    if(chas->pid_file) {
+        g_free(chas->pid_file);
+    }
+
+    if(chas->log_level) {
+        g_free(chas->log_level);
+    }
+
+    if (chas->plugin_names) {
+        g_strfreev(chas->plugin_names);
+    }
+
+    if(chas->log_xa_filename) {
+        g_free(chas->log_xa_filename);
+    }
+
+    if(chas->remote_config_url) {
+        g_free(chas->remote_config_url);
+    }
+
+    if(chas->default_file) {
+        g_free(chas->default_file);
+    }
 
     g_free(chas);
 }

@@ -236,6 +236,7 @@ cetus_users_authenticate_client(cetus_users_t *users,
 
     struct pwd_pair_t *pwd = g_hash_table_lookup(users->records, user_name);
     if (pwd == NULL) {
+        g_debug("pwd is null for user:%s", user_name);
         return FALSE;
     }
 

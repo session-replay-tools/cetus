@@ -199,71 +199,149 @@ void network_ssl_free_connection(network_socket* sock)
     }
 }
 
-network_socket_retval_t network_ssl_write(network_socket* sock)
+static ssize_t SSL_writev(SSL *ssl, const struct iovec *vector, int count)
 {
-    network_queue* queue = sock->do_compress ?
+    char *buffer;
+    register char *bp;
+    size_t bytes, to_copy;
+    int i;
+
+    /* Find the total number of bytes to be written.  */
+    bytes = 0;
+    for (i = 0; i < count; ++i)
+        bytes += vector[i].iov_len;
+
+    /* Allocate a temporary buffer to hold the data.  */
+    buffer = (char *) alloca (bytes);
+
+    /* Copy the data into BUFFER.  */
+    to_copy = bytes;
+    bp = buffer;
+    for (i = 0; i < count; ++i) {
+        size_t copy = MIN(vector[i].iov_len, to_copy);
+
+        memcpy ((void *) bp, (void *) vector[i].iov_base, copy);
+        bp += copy;
+
+        to_copy -= copy;
+        if (to_copy == 0)
+            break;
+    }
+
+    return SSL_write (ssl, buffer, bytes);
+}
+
+network_socket_retval_t
+network_ssl_write(network_socket *sock, int send_chunks)
+{
+    if (send_chunks == 0)
+        return NETWORK_SOCKET_SUCCESS;
+
+    network_queue* send_queue = sock->do_compress ?
         sock->send_queue_compressed : sock->send_queue;
 
-    network_ssl_clear_error(sock->ssl);
+    gint chunk_count = send_chunks > 0 ? send_chunks : (gint)send_queue->chunks->length;
 
-    network_socket_retval_t ret = NETWORK_SOCKET_SUCCESS;
-    int i = 0;
-    GList* chunk;
-    for (chunk = queue->chunks->head, i = 0; chunk; i++, chunk = chunk->next) {
-        GString* s = chunk->data;
-        char* buf;
-        int buf_len;
-        if (i == 0) {
-            buf = s->str + queue->offset;
-            buf_len = s->len - queue->offset;
-        } else {
-            buf = s->str;
-            buf_len = s->len;
-        }
-        gssize len = SSL_write(sock->ssl->ssl, buf, buf_len);
+    if (chunk_count == 0)
+        return NETWORK_SOCKET_SUCCESS;
 
-        if (len < 0) {
-            int sslerr = SSL_get_error(sock->ssl->ssl, len);
-            if (sslerr == SSL_ERROR_WANT_WRITE) {
-                g_debug(G_STRLOC " SSL_write() WANT_WRITE");
-                ret = NETWORK_SOCKET_WAIT_FOR_EVENT;
-                break;
-            }
-            if (sslerr == SSL_ERROR_WANT_READ) {
-                g_warning(G_STRLOC " peer started SSL renegotiation");
-                ret = NETWORK_SOCKET_WAIT_FOR_EVENT; /* TODO: read event */
-                break;
-            }
-            g_critical(G_STRLOC " SSL_write() failed");
-            return NETWORK_SOCKET_ERROR;
-        } else if (len == 0) {
-            int sslerr = SSL_get_error(sock->ssl->ssl, len);
-            g_critical(G_STRLOC " SSL_write() failed: %d", sslerr);
-            return NETWORK_SOCKET_ERROR;
-        } else if (len < buf_len) {
-            ret = NETWORK_SOCKET_WAIT_FOR_EVENT;
-            queue->offset += len;
-            queue->len -= len;
-            break;
-        }
-        /* len == buf_len */
-        queue->offset += len;
-        queue->len -= len;
-    }
-    /* delete used chunks, adjust offset */
-    for (chunk = queue->chunks->head; chunk; ) {
+    gint max_chunk_count = UIO_MAXIOV;
+
+    chunk_count = chunk_count > max_chunk_count ? max_chunk_count : chunk_count;
+
+    g_assert_cmpint(chunk_count, >, 0); /* make sure it is never negative */
+
+    struct iovec *iov = g_new0(struct iovec, chunk_count);
+
+    GList *chunk;
+    gint chunk_id;
+
+    for (chunk = send_queue->chunks->head, chunk_id = 0;
+         chunk && chunk_id < chunk_count; chunk_id++, chunk = chunk->next) {
         GString *s = chunk->data;
-        if (queue->offset >= s->len) {
-            queue->offset -= s->len;
-            g_string_free(s, TRUE);
-            g_queue_delete_link(queue->chunks, chunk);
-            chunk = queue->chunks->head;
+
+        if (chunk_id == 0) {
+            g_assert(send_queue->offset < s->len);
+
+            iov[chunk_id].iov_base = s->str + send_queue->offset;
+            iov[chunk_id].iov_len = s->len - send_queue->offset;
         } else {
-            break; /* part of last chunk is left */
+            iov[chunk_id].iov_base = s->str;
+            iov[chunk_id].iov_len = s->len;
+        }
+
+        if (s->len == 0) {
+            g_warning("%s: s->len is zero", G_STRLOC);
         }
     }
 
-    return ret;
+    gssize len = SSL_writev(sock->ssl->ssl, iov, chunk_count);
+
+    g_free(iov);
+
+    if (len < 0) {
+        int sslerr = SSL_get_error(sock->ssl->ssl, len);
+        if (sslerr == SSL_ERROR_WANT_WRITE) {
+            g_debug(G_STRLOC " SSL_write() WANT_WRITE");
+            return NETWORK_SOCKET_WAIT_FOR_EVENT;
+        }
+        if (sslerr == SSL_ERROR_WANT_READ) {
+            g_warning(G_STRLOC " peer started SSL renegotiation");
+            return NETWORK_SOCKET_WAIT_FOR_EVENT; /* TODO: read event */
+        }
+        g_critical(G_STRLOC " SSL_write() failed");
+        return NETWORK_SOCKET_ERROR;
+    } else if (len == 0) {
+        int sslerr = SSL_get_error(sock->ssl->ssl, len);
+        g_critical(G_STRLOC " SSL_write() failed: %d", sslerr);
+        return NETWORK_SOCKET_ERROR;
+    }
+
+    send_queue->offset += len;
+    send_queue->len -= len;
+
+    /* check all the chunks which we have sent out */
+    for (chunk = send_queue->chunks->head; chunk;) {
+        GString *s = chunk->data;
+
+        if (s->len == 0) {
+            g_warning("%s: s->len is zero", G_STRLOC);
+        }
+
+        if (send_queue->offset >= s->len) {
+            send_queue->offset -= s->len;
+#if NETWORK_DEBUG_TRACE_IO
+            g_debug("%s:output for sock:%p", G_STRLOC, sock);
+            /* to trace the data we sent to the socket, enable this */
+            g_debug_hexdump(G_STRLOC, S(s));
+#endif
+            if (!sock->do_query_cache) {
+                g_string_free(s, TRUE);
+            } else {
+                size_t len = sock->cache_queue->len + s->len;
+                if (len > MAX_QUERY_CACHE_SIZE) {
+                    if (!sock->query_cache_too_long) {
+                        g_message("%s:too long for cache queue:%p, len:%d", G_STRLOC, sock, (int)len);
+                        sock->query_cache_too_long = 1;
+                    }
+                    g_string_free(s, TRUE);
+                } else {
+                    g_debug("%s:append packet to cache queue:%p, len:%d, total:%d",
+                            G_STRLOC, sock, (int)s->len, (int)len);
+                    network_queue_append(sock->cache_queue, s);
+                }
+            }
+
+            g_queue_delete_link(send_queue->chunks, chunk);
+
+            chunk = send_queue->chunks->head;
+        } else {
+            g_debug("%s:wait for event", G_STRLOC);
+            return NETWORK_SOCKET_WAIT_FOR_EVENT;
+        }
+    }
+
+    return NETWORK_SOCKET_SUCCESS;
 }
 
 static int network_ssl_write_to_rbio(network_socket* sock)

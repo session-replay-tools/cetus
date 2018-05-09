@@ -16,7 +16,7 @@ gboolean network_ssl_create_connection(network_socket* sock, int flags);
 
 void network_ssl_free_connection(network_socket* sock);
 
-network_socket_retval_t network_ssl_write(network_socket* sock);
+network_socket_retval_t network_ssl_write(network_socket* sock, int send_chunks);
 
 gboolean network_ssl_decrypt_packet(network_socket* sock);
 

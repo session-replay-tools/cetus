@@ -1093,7 +1093,7 @@ network_mysqld_write(chassis G_GNUC_UNUSED *chas, network_socket *sock)
     network_socket_retval_t ret;
 #ifdef HAVE_OPENSSL
     if (sock->ssl)
-        ret = network_ssl_write(sock);
+        ret = network_ssl_write(sock, -1);
     else
 #endif
         ret = network_socket_write(sock, -1);

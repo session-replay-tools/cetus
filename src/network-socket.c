@@ -72,7 +72,6 @@
 #define E_NET_WOULDBLOCK EWOULDBLOCK
 #endif
 
-#define MAX_QUERY_CACHE_SIZE 65536
 #include "network-socket.h"
 #include "network-mysqld-proto.h"
 #include "network-mysqld-packet.h"

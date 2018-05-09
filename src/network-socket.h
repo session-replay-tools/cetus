@@ -60,6 +60,8 @@ typedef enum {
     NETWORK_SOCKET_ERROR_RETRY
 } network_socket_retval_t;
 
+#define MAX_QUERY_CACHE_SIZE 65536
+
 typedef struct network_mysqld_auth_challenge network_mysqld_auth_challenge;
 typedef struct network_mysqld_auth_response network_mysqld_auth_response;
 

@@ -507,6 +507,9 @@ process_trans_query(network_mysqld_con *con)
             con->is_auto_commit = 0;
             g_debug("%s: autocommit off", G_STRLOC);
         } else if (sql_context_is_autocommit_on(context)) {
+            if (con->is_in_transaction) {
+                con->server_in_tran_and_auto_commit_received = 1;
+            }
             con->is_auto_commit = 1;
             con->is_auto_commit_trans_buffered = 0;
             g_debug("%s: autocommit on", G_STRLOC);
@@ -523,6 +526,7 @@ static int
 process_non_trans_query(network_mysqld_con *con, sql_context_t *context, mysqld_query_attr_t *query_attr)
 {
     gboolean is_orig_ro_server = FALSE;
+    gboolean need_to_visit_master = FALSE;
     proxy_plugin_con_t *st = con->plugin_con_state;
 
     if (con->server != NULL) {
@@ -587,9 +591,14 @@ process_non_trans_query(network_mysqld_con *con, sql_context_t *context, mysqld_
                     con->is_changed_user_when_quit = 0;
                     con->is_auto_commit_trans_buffered = 1;
                     g_debug("%s: autocommit off, now in transaction", G_STRLOC);
+                    need_to_visit_master = TRUE;
                 } else if (sql_context_is_autocommit_on(context)) {
+                    if (con->is_in_transaction) {
+                        con->server_in_tran_and_auto_commit_received = 1;
+                    }
                     con->is_auto_commit = 1;
                     con->is_auto_commit_trans_buffered = 0;
+                    need_to_visit_master = TRUE;
                     g_debug("%s: autocommit on", G_STRLOC);
                 } else {
                     /* set charsetxxx = xxx */
@@ -615,7 +624,7 @@ process_non_trans_query(network_mysqld_con *con, sql_context_t *context, mysqld_
         }
     }                           /* end switch */
 
-    if (con->srv->master_preferred || context->rw_flag & CF_WRITE || !con->is_auto_commit) {
+    if (con->srv->master_preferred || context->rw_flag & CF_WRITE || need_to_visit_master) {
         /* rw operation */
         con->srv->query_stats.client_query.rw++;
         if (is_orig_ro_server) {
@@ -1426,9 +1435,12 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
 
     int server_attr_changed = 0;
     con->is_client_to_be_closed = 0;
+    con->server_in_tran_and_auto_commit_received = 0;
 
     if (con->server != NULL) {
         if (con->last_backend_type != st->backend->type) {
+            g_warning("%s server_attr_changed, last backend type:%d, now type:%d",
+                    G_STRLOC, con->last_backend_type, st->backend->type);
             server_attr_changed = 1;
         } else {
             if (st->backend->state != BACKEND_STATE_UP && st->backend->state != BACKEND_STATE_UNKNOWN) {
@@ -1440,6 +1452,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
                     }
                 } else {
                     server_attr_changed = 1;
+                    g_message("%s backend state:%d", G_STRLOC, st->backend->state);
                 }
             }
         }
@@ -1452,7 +1465,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
         con->server_to_be_closed = 1;
     } else {
         if (server_attr_changed) {
-            g_debug("%s server_attr_changed and add to pool", G_STRLOC);
+            g_message("%s server_attr_changed and add to pool", G_STRLOC);
             if (network_pool_add_conn(con, 0) != 0) {
                 g_message("%s, con:%p:conn to pool failed", G_STRLOC, con);
             }
@@ -1619,7 +1632,7 @@ proxy_get_backend_ndx(network_mysqld_con *con, int type, gboolean force_slave)
     if (idx == -1) {
         if (type == BACKEND_TYPE_RW) {
             if (con->server) {
-                g_debug("%s: free server conn to pool:%p", G_STRLOC, con);
+                g_message("%s: free server conn to pool:%p", G_STRLOC, con);
                 if (network_pool_add_conn(con, 0) != 0) {
                     g_message("%s, con:%p:conn to pool failed", G_STRLOC, con);
                 }
@@ -1658,6 +1671,8 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
     network_socket *send_sock;
     injection *inj;
     proxy_plugin_con_t *st = con->plugin_con_state;
+
+    con->server_in_tran_and_auto_commit_received = 0;
 
     if (con->server_to_be_closed) {
         if (con->servers != NULL) {

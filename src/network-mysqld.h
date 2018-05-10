@@ -541,6 +541,7 @@ struct network_mysqld_con {
     unsigned int conn_attr_check_omit:1;
     unsigned int buffer_and_send_fake_resp:1;
     unsigned int delay_send_auto_commit:1;
+    unsigned int server_in_tran_and_auto_commit_received;
     unsigned int resp_too_long:1;
     unsigned int rob_other_conn:1;
     unsigned int master_unavailable:1;

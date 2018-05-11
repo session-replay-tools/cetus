@@ -103,7 +103,7 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
         int err = network_mysqld_proto_get_auth_response(&packet, auth);
 
 #ifdef HAVE_OPENSSL
-        if (auth->ssl_request) {
+        if (con->srv->ssl && auth->ssl_request) {
             network_ssl_create_connection(recv_sock, NETWORK_SSL_SERVER);
             g_string_free(g_queue_pop_tail(recv_sock->recv_queue->chunks), TRUE);
             if (recv_sock->recv_queue->chunks->length > 0) {

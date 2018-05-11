@@ -91,7 +91,7 @@ NETWORK_API network_backend_t *network_backend_new();
 NETWORK_API void network_backend_free(network_backend_t *b);
 NETWORK_API int network_backend_conns_count(network_backend_t *b);
 NETWORK_API int network_backend_init_extra(network_backend_t *b, chassis *chas);
-void network_backend_save_challenge(network_backend_t *b, const network_mysqld_auth_challenge *);
+void network_backend_save_challenge(network_backend_t *b, const network_mysqld_auth_challenge *, gboolean);
 network_mysqld_auth_challenge *network_backend_get_challenge(network_backend_t *b);
 
 typedef struct {

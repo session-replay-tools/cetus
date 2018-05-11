@@ -66,6 +66,7 @@ static void network_ssl_clear_error(network_ssl_connection_t* ssl)
 
 static gboolean network_ssl_create_context(char* conf_dir)
 {
+    gboolean ret = TRUE;
     g_ssl_context = SSL_CTX_new(TLSv1_method());
     if (g_ssl_context == NULL) {
         g_critical(G_STRLOC " SSL_CTX_new failed");
@@ -118,15 +119,26 @@ static gboolean network_ssl_create_context(char* conf_dir)
 
     SSL_CTX_set_read_ahead(g_ssl_context, 1); /* SSL_read clear data on the wire */
     SSL_CTX_set_options(g_ssl_context, SSL_OP_SINGLE_DH_USE);
+#if 0
     SSL_CTX_set_info_callback(g_ssl_context, network_ssl_info_callback);
+#endif
     char* cert = g_build_filename(conf_dir, "server-cert.pem", NULL);
     char* key = g_build_filename(conf_dir, "server-key.pem", NULL);
-    SSL_CTX_use_certificate_file(g_ssl_context, cert , SSL_FILETYPE_PEM);
-    SSL_CTX_use_PrivateKey_file(g_ssl_context, key, SSL_FILETYPE_PEM);
+    if (1 != SSL_CTX_use_certificate_file(g_ssl_context, cert , SSL_FILETYPE_PEM)) {
+        g_warning("server-cert.pem open error");
+        ret = FALSE;
+    }
+    if (1 != SSL_CTX_use_PrivateKey_file(g_ssl_context, key, SSL_FILETYPE_PEM)) {
+        g_warning("server-key.pem open error");
+        ret = FALSE;
+    }
     g_free(cert);
     g_free(key);
-
-    return TRUE;
+    if (ret == FALSE) {
+        SSL_CTX_free(g_ssl_context);
+        g_ssl_context = NULL;
+    }
+    return ret;
 }
 
 gboolean network_ssl_init(char* conf_dir)

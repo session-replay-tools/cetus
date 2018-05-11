@@ -243,7 +243,13 @@ network_mysqld_init(chassis *srv)
     cetus_variables_init_stats(&srv->priv->stats_variables, srv);
 
 #ifdef HAVE_OPENSSL
-    network_ssl_init(srv->conf_dir);
+    if (srv->ssl) {
+        gboolean ok = network_ssl_init(srv->conf_dir);
+        if (!ok) {
+            g_critical("SSL init error, not using secure connection");
+            srv->ssl = 0;
+        }
+    }
 #endif
     return 0;
 }
@@ -3823,7 +3829,7 @@ network_mysqld_con_handle(int event_fd, short events, void *user_data)
         }
 #ifdef HAVE_OPENSSL
         case ST_FRONT_SSL_HANDSHAKE:
-            g_message(G_STRLOC " %p con_handle -> ST_FRONT_SSL_HANDSHAKE", con);
+            g_debug(G_STRLOC " %p con_handle -> ST_FRONT_SSL_HANDSHAKE", con);
             if (events & EV_READ) {
                 switch (network_socket_read(con->client)) {
                 case NETWORK_SOCKET_SUCCESS:
@@ -3835,7 +3841,7 @@ network_mysqld_con_handle(int event_fd, short events, void *user_data)
                 case NETWORK_SOCKET_ERROR_RETRY:
                 case NETWORK_SOCKET_ERROR:
                     con->state = ST_ERROR;
-                    g_message("%s: ST_FRONT_SSL_HANDSHAKE: read error con:%p", G_STRLOC, con);
+                    g_warning("%s: ST_FRONT_SSL_HANDSHAKE: read error con:%p", G_STRLOC, con);
                     break;
                 }
             }
@@ -3846,7 +3852,7 @@ network_mysqld_con_handle(int event_fd, short events, void *user_data)
             case NETWORK_SOCKET_WAIT_FOR_EVENT:
                 timeout = con->read_timeout;
                 WAIT_FOR_EVENT(con->client, EV_READ, &timeout);
-                g_message(G_STRLOC " %p WAIT_FOR_EVENT, return", con);
+                g_debug(G_STRLOC " %p WAIT_FOR_EVENT, return", con);
                 return;
             case NETWORK_SOCKET_WAIT_FOR_WRITABLE:
                 timeout = con->write_timeout;
@@ -4339,7 +4345,7 @@ proxy_self_read_handshake(chassis *srv, server_connection_state_t *con)
     }
 
     con->server->challenge = challenge;
-    network_backend_save_challenge(con->backend, challenge);
+    network_backend_save_challenge(con->backend, challenge, srv->ssl);
 
     return RET_SUCCESS;
 }

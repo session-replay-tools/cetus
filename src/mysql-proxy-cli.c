@@ -213,7 +213,7 @@ chassis_frontend_free(struct chassis_frontend_t *frontend)
  * setup the options of the chassis
  */
 int
-chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassis_options_t *opts)
+chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassis_options_t *opts, chassis* srv)
 {
     chassis_options_add(opts,
                         "verbose-shutdown",
@@ -353,6 +353,12 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                         "disable-threads",
                         0, 0, OPTION_ARG_NONE, &(frontend->disable_threads), "Disable all threads creation", NULL,
                         NULL, show_disable_threads, SHOW_OPTS_PROPERTY);
+
+    chassis_options_add(opts,
+                        "ssl",
+                        0, 0, OPTION_ARG_NONE, &(srv->ssl), "Specifies that the server permits but does not require"
+                        " encrypted connections. This option is disabled by default", NULL,
+                        NULL, NULL, SHOW_OPTS_PROPERTY);
 
     chassis_options_add(opts,
                         "enable-back-compress",
@@ -762,7 +768,7 @@ main_cmdline(int argc, char **argv)
     opts->ignore_unknown = TRUE;
     srv->options = opts;
 
-    chassis_frontend_set_chassis_options(frontend, opts);
+    chassis_frontend_set_chassis_options(frontend, opts, srv);
 
     if (FALSE == chassis_options_parse_cmdline(opts, &argc, &argv, &gerr)) {
         g_critical("%s", gerr->message);

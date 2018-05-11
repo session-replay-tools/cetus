@@ -113,7 +113,9 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_con_init)
     challenge->charset = charset_get_number("latin1");
     challenge->capabilities = CETUS_DEFAULT_FLAGS;
 #ifdef HAVE_OPENSSL
-    challenge->capabilities |= CLIENT_SSL;
+    if (chas->ssl) {
+        challenge->capabilities |= CLIENT_SSL;
+    }
 #endif
     challenge->server_status = SERVER_STATUS_AUTOCOMMIT;
     challenge->thread_id = 1;

@@ -122,7 +122,7 @@ network_backend_conns_count(network_backend_t *b)
  * save challenges from backend, will be used to authenticate front user
  */
 void
-network_backend_save_challenge(network_backend_t *b, const network_mysqld_auth_challenge *chal)
+network_backend_save_challenge(network_backend_t *b, const network_mysqld_auth_challenge *chal, gboolean have_ssl)
 {
     if (b->challenges->len >= 1024) {
         network_mysqld_auth_challenge *challenge;
@@ -136,9 +136,10 @@ network_backend_save_challenge(network_backend_t *b, const network_mysqld_auth_c
 
     challenge->capabilities &= ~not_supported;
 #ifdef HAVE_OPENSSL
-    challenge->capabilities |= CLIENT_SSL;
-#else
-    challenge->capabilities &= ~CLIENT_SSL;
+    if (have_ssl)
+        challenge->capabilities |= CLIENT_SSL;
+    else
+        challenge->capabilities &= ~CLIENT_SSL;
 #endif
     char *old_str = challenge->server_version_str;
     challenge->server_version_str = g_strdup_printf("%s (%s)", old_str, PACKAGE_STRING);

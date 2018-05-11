@@ -691,6 +691,23 @@ network_mysqld_proto_set_packet_id(GString *_header, guint8 id)
     return 0;
 }
 
+int network_mysqld_proto_set_compressed_packet_len(GString *_header, guint32 length,
+                                                   guint32 len_before)
+{
+    unsigned char *header = (unsigned char *)_header->str;
+
+    g_assert_cmpint(length, <=, PACKET_LEN_MAX);
+
+    header[0] = (length >> 0) & 0xFF;
+    header[1] = (length >> 8) & 0xFF;
+    header[2] = (length >> 16) & 0xFF;
+
+    header[4] = (len_before >> 0) & 0xFF;
+    header[5] = (len_before >> 8) & 0xFF;
+    header[6] = (len_before >> 16) & 0xFF;
+    return 0;
+}
+
 int
 network_mysqld_proto_append_packet_len(GString *_header, guint32 length)
 {

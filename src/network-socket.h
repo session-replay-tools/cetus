@@ -55,9 +55,12 @@
 typedef enum {
     NETWORK_SOCKET_SUCCESS,
     NETWORK_SOCKET_WAIT_FOR_EVENT,
+    NETWORK_SOCKET_WAIT_FOR_WRITABLE,
     NETWORK_SOCKET_ERROR,
     NETWORK_SOCKET_ERROR_RETRY
 } network_socket_retval_t;
+
+#define MAX_QUERY_CACHE_SIZE 65536
 
 typedef struct network_mysqld_auth_challenge network_mysqld_auth_challenge;
 typedef struct network_mysqld_auth_response network_mysqld_auth_response;
@@ -97,6 +100,8 @@ typedef struct {
     int query_status;
 } server_query_status;
 
+typedef struct network_ssl_connection_s network_ssl_connection_t;
+
 typedef struct {
     int fd;             /**< socket-fd */
     guint32 create_or_update_time;
@@ -117,8 +122,12 @@ typedef struct {
     network_queue *recv_queue;
     network_queue *recv_queue_raw;
     network_queue *recv_queue_uncompress_raw;
+    network_queue *recv_queue_decrypted_raw;
+
     network_queue *send_queue;
+    network_queue *send_queue_compressed;
     network_queue *cache_queue;
+
     GString *last_compressed_packet;
     int compressed_unsend_offset;
 
@@ -174,6 +183,8 @@ typedef struct {
     GString *sql_mode;
     server_state_data parse;
     server_query_status qstat;
+
+    network_ssl_connection_t* ssl;
 
 } network_socket;
 

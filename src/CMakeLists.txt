@@ -92,6 +92,10 @@ SET(proxy_sources
     cetus-monitor.c
 )
 
+if (HAVE_OPENSSL)
+  list(APPEND proxy_sources network-ssl.c)
+endif(HAVE_OPENSSL)
+
 if(NETWORK_DEBUG_TRACE_STATE_CHANGES)
   list(APPEND proxy_sources cetus-query-queue.c)
 endif(NETWORK_DEBUG_TRACE_STATE_CHANGES)

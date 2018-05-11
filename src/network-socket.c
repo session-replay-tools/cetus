@@ -72,13 +72,13 @@
 #define E_NET_WOULDBLOCK EWOULDBLOCK
 #endif
 
-#define MAX_QUERY_CACHE_SIZE 65536
 #include "network-socket.h"
 #include "network-mysqld-proto.h"
 #include "network-mysqld-packet.h"
 #include "cetus-util.h"
 #include "network-compress.h"
 #include "glib-ext.h"
+#include "network-ssl.h"
 
 network_socket *
 network_socket_new()
@@ -88,9 +88,12 @@ network_socket_new()
     s = g_new0(network_socket, 1);
 
     s->send_queue = network_queue_new();
+    s->send_queue_compressed = network_queue_new();
+
     s->recv_queue = network_queue_new();
     s->recv_queue_raw = network_queue_new();
     s->recv_queue_uncompress_raw = network_queue_new();
+    s->recv_queue_decrypted_raw = network_queue_new();
 
     s->default_db = g_string_new(NULL);
     s->username = g_string_new(NULL);
@@ -124,9 +127,11 @@ network_socket_free(network_socket *s)
         s->last_compressed_packet = NULL;
     }
     network_queue_free(s->send_queue);
+    network_queue_free(s->send_queue_compressed);
     network_queue_free(s->recv_queue);
     network_queue_free(s->recv_queue_raw);
     network_queue_free(s->recv_queue_uncompress_raw);
+    network_queue_free(s->recv_queue_decrypted_raw);
 
     if (s->response)
         network_mysqld_auth_response_free(s->response);
@@ -140,7 +145,7 @@ network_socket_free(network_socket *s)
         g_debug("%s:event del, ev:%p", G_STRLOC, &(s->event));
         event_del(&(s->event));
     }
-
+    network_ssl_free_connection(s);
     if (s->fd != -1) {
         closesocket(s->fd);
     }
@@ -824,7 +829,10 @@ network_socket_write_writev(network_socket *con, int send_chunks)
     if (send_chunks == 0)
         return NETWORK_SOCKET_SUCCESS;
 
-    chunk_count = send_chunks > 0 ? send_chunks : (gint)con->send_queue->chunks->length;
+    network_queue* send_queue = con->do_compress ?
+        con->send_queue_compressed : con->send_queue;
+
+    chunk_count = send_chunks > 0 ? send_chunks : (gint)send_queue->chunks->length;
 
     if (chunk_count == 0)
         return NETWORK_SOCKET_SUCCESS;
@@ -837,15 +845,15 @@ network_socket_write_writev(network_socket *con, int send_chunks)
 
     iov = g_new0(struct iovec, chunk_count);
 
-    for (chunk = con->send_queue->chunks->head, chunk_id = 0;
+    for (chunk = send_queue->chunks->head, chunk_id = 0;
          chunk && chunk_id < chunk_count; chunk_id++, chunk = chunk->next) {
         GString *s = chunk->data;
 
         if (chunk_id == 0) {
-            g_assert(con->send_queue->offset < s->len);
+            g_assert(send_queue->offset < s->len);
 
-            iov[chunk_id].iov_base = s->str + con->send_queue->offset;
-            iov[chunk_id].iov_len = s->len - con->send_queue->offset;
+            iov[chunk_id].iov_base = s->str + send_queue->offset;
+            iov[chunk_id].iov_len = s->len - send_queue->offset;
         } else {
             iov[chunk_id].iov_base = s->str;
             iov[chunk_id].iov_len = s->len;
@@ -883,19 +891,19 @@ network_socket_write_writev(network_socket *con, int send_chunks)
         return NETWORK_SOCKET_ERROR;
     }
 
-    con->send_queue->offset += len;
-    con->send_queue->len -= len;
+    send_queue->offset += len;
+    send_queue->len -= len;
 
     /* check all the chunks which we have sent out */
-    for (chunk = con->send_queue->chunks->head; chunk;) {
+    for (chunk = send_queue->chunks->head; chunk;) {
         GString *s = chunk->data;
 
         if (s->len == 0) {
             g_warning("%s: s->len is zero", G_STRLOC);
         }
 
-        if (con->send_queue->offset >= s->len) {
-            con->send_queue->offset -= s->len;
+        if (send_queue->offset >= s->len) {
+            send_queue->offset -= s->len;
 #if NETWORK_DEBUG_TRACE_IO
             g_debug("%s:output for sock:%p", G_STRLOC, con);
             /* to trace the data we sent to the socket, enable this */
@@ -918,9 +926,9 @@ network_socket_write_writev(network_socket *con, int send_chunks)
                 }
             }
 
-            g_queue_delete_link(con->send_queue->chunks, chunk);
+            g_queue_delete_link(send_queue->chunks, chunk);
 
-            chunk = con->send_queue->chunks->head;
+            chunk = send_queue->chunks->head;
         } else {
             g_debug("%s:wait for event", G_STRLOC);
             return NETWORK_SOCKET_WAIT_FOR_EVENT;
@@ -944,11 +952,7 @@ network_socket_retval_t
 network_socket_write(network_socket *sock, int send_chunks)
 {
     if (sock->socket_type == SOCK_STREAM) {
-        if (sock->do_compress) {
-            return network_socket_compressed_write(sock, send_chunks);
-        } else {
-            return network_socket_write_writev(sock, send_chunks);
-        }
+        return network_socket_write_writev(sock, send_chunks);
     } else {
         g_critical("%s: udp write is not supported", G_STRLOC);
         return NETWORK_SOCKET_ERROR;

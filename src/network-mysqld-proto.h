@@ -115,6 +115,9 @@ NETWORK_API int network_mysqld_proto_append_packet_id(GString *header, guint8 id
 NETWORK_API int network_mysqld_proto_set_packet_len(GString *header, guint32 len);
 NETWORK_API int network_mysqld_proto_set_packet_id(GString *header, guint8 id);
 
+int network_mysqld_proto_set_compressed_packet_len(GString *header, guint32 len,
+                                                   guint32 len_before);
+
 NETWORK_API int network_mysqld_proto_append_lenenc_int(GString *packet, guint64 len);
 NETWORK_API int network_mysqld_proto_append_lenenc_str_len(GString *packet, const char *s, guint64 len);
 NETWORK_API int network_mysqld_proto_append_lenenc_str(GString *packet, const char *s);

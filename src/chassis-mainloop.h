@@ -122,6 +122,7 @@ struct chassis {
     unsigned int maintain_close_mode;
     unsigned int config_remote;
     unsigned int disable_threads;
+    int ssl;
     unsigned int is_tcp_stream_enabled;
     unsigned int query_cache_enabled;
     unsigned int is_back_compressed;

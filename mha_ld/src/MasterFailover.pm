@@ -334,13 +334,13 @@ sub check_settings($$$$) {
     $log->info("deadaddr: $1");
 
     my $gt=gettime; 
-    send_alert("$gt MHA $1 failover. Proxy's state unkown -> maintaining, rw -> ro.");
+    send_alert("$gt MHA $1 failover. Proxy's state up -> down, rw -> ro.");
  
     if ( $g_interactive == 0 ) {
-      MHA::ProxyManager::setproxy("failover","maintaining","$1","ro","$logfile","$confile");
+      MHA::ProxyManager::setproxy("failover","down","$1","ro","$logfile","$confile");
     }
     else {
-      MHA::ProxyManager::setproxy_intera("failover","maintaining","$1","ro","$confile");
+      MHA::ProxyManager::setproxy_intera("failover","down","$1","ro","$confile");
     }
   }
 
@@ -1928,10 +1928,10 @@ sub recover_slaves_internal {
         #$target_addr =~ /\((.*)\)/; 
         #$log->info("after   target_addr: $target_addr");
         if ( $g_interactive == 0 ) {
-          MHA::ProxyManager::setproxy("setslave","unknown","$target_addr","ro","$logfile","$confile");
+          MHA::ProxyManager::setproxy("setslave","up","$target_addr","ro","$logfile","$confile");
         }
         else {
-          MHA::ProxyManager::setproxy_intera("setslave","unknown","$target_addr","ro","$confile");
+          MHA::ProxyManager::setproxy_intera("setslave","up","$target_addr","ro","$confile");
         }
 
         #### end ##########################################################
@@ -1981,10 +1981,10 @@ sub recover_slaves_internal {
         #$target_addr =~ /\((.*)\)/;
         #$log->info("after   target_addr: $target_addr");
         if ( $g_interactive == 0 ) {
-          MHA::ProxyManager::setproxy("setslave","unknown","$target_addr","ro","$logfile","$confile");
+          MHA::ProxyManager::setproxy("setslave","up","$target_addr","ro","$logfile","$confile");
         }
         else {
-          MHA::ProxyManager::setproxy_intera("setslave","unknown","$target_addr","ro","$confile");
+          MHA::ProxyManager::setproxy_intera("setslave","up","$target_addr","ro","$confile");
         }
         #### end ##########################################################
 
@@ -2326,13 +2326,13 @@ sub do_master_failover {
     ################## modify by cch 20160822 comment all these #######################################################################
 ###    #croak "test --- MasterFailover.pm ---- test ";
 ###    my $gt=gettime; 
-###    send_alert("$gt MHA Master($s_ip:$s_port) failover. Proxy's state unkown -> maintaining, rw -> ro.");
+###    send_alert("$gt MHA Master($s_ip:$s_port) failover. Proxy's state unkown -> down, rw -> ro.");
  
 ###    if ( $g_interactive == 0 ) {
-###      MHA::ProxyManager::setproxy("failover","maintaining","$s_ip:$s_port","ro","$g_logfile","$g_config_file");
+###      MHA::ProxyManager::setproxy("failover","down","$s_ip:$s_port","ro","$g_logfile","$g_config_file");
 ###    }
 ###    else {
-###      MHA::ProxyManager::setproxy_intera("failover","maintaining","$s_ip:$s_port","ro","$g_config_file");
+###      MHA::ProxyManager::setproxy_intera("failover","down","$s_ip:$s_port","ro","$g_config_file");
 ###    }
     #### end #########
     ###################### 20160822 end ###############################################################################################
@@ -2410,11 +2410,11 @@ sub do_master_failover {
      #$log->info("after   newmaster_addr: $newmaster_addr");
      
      if ( $g_interactive == 0 ) {
-       MHA::ProxyManager::setproxy("setmaster","unknown","$newmaster_addr","rw","$g_logfile","$g_config_file");
+       MHA::ProxyManager::setproxy("setmaster","up","$newmaster_addr","rw","$g_logfile","$g_config_file");
      }
      else {
 
-       MHA::ProxyManager::setproxy_intera("setmaster","unknown","$newmaster_addr","rw","$g_config_file");
+       MHA::ProxyManager::setproxy_intera("setmaster","up","$newmaster_addr","rw","$g_config_file");
      }
      #### end ####################################
 
@@ -2576,7 +2576,7 @@ sub main {
   print "dead_master_ip: $master_ip \n" ;
   print "dead_master_port : $master_port \n" ;
 
-#  eval { $error_code = MHA::ProxyManager::setproxy("failover","maintaining","$master_ip","$master_port","ro"); };
+#  eval { $error_code = MHA::ProxyManager::setproxy("failover","down","$master_ip","$master_port","ro"); };
 #  eval { $error_code = do_master_failover(); };
 
   eval { $error_code = do_master_failover("$master_ip","$master_port"); };

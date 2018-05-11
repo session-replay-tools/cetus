@@ -116,7 +116,7 @@ sub identify_orig_master() {
   $addr =~ /\((.*)\)/; 
   $log->info("orig_master: $1");
 
-  MHA::ProxyManager::setproxy_intera("failover","maintaining","$1","ro","$g_config_file");
+  MHA::ProxyManager::setproxy_intera("failover","down","$1","ro","$g_config_file");
   
   #### end ########################################################
 
@@ -514,7 +514,7 @@ sub switch_slaves_internal {
         #$target_addr =~ /\((.*)\)/;
         #$log->info("after   target_addr: $target_addr");
    
-        MHA::ProxyManager::setproxy_intera("setslave","unknown","$target_addr","ro","$g_config_file");
+        MHA::ProxyManager::setproxy_intera("setslave","up","$target_addr","ro","$g_config_file");
 
         #### end ###########################################################################
 
@@ -626,7 +626,7 @@ sub switch_slaves($$$$$$) {
       #$orig_master_addr =~ /\((.*)\)/;
       #$log->info("after   orig_master_addr: $orig_master_addr");
 
-      MHA::ProxyManager::setproxy_intera("setslave","unknown","$orig_master_addr","ro","$g_config_file"); 
+      MHA::ProxyManager::setproxy_intera("setslave","up","$orig_master_addr","ro","$g_config_file"); 
       
 
       #### end ###############################################################
@@ -692,7 +692,7 @@ sub do_master_online_switch {
     $log->info("g_config_file: $g_config_file ");
 
     my $newmaster_addr = $new_master->get_hostinfo();
-    MHA::ProxyManager::setproxy_intera("setmaster","unknown","$newmaster_addr","rw","$g_config_file");
+    MHA::ProxyManager::setproxy_intera("setmaster","up","$newmaster_addr","rw","$g_config_file");
 
     #### end ###################################################################
 

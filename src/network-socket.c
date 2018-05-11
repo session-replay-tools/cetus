@@ -145,7 +145,9 @@ network_socket_free(network_socket *s)
         g_debug("%s:event del, ev:%p", G_STRLOC, &(s->event));
         event_del(&(s->event));
     }
+#ifdef HAVE_OPENSSL
     network_ssl_free_connection(s);
+#endif
     if (s->fd != -1) {
         closesocket(s->fd);
     }

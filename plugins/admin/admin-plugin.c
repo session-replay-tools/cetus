@@ -1973,10 +1973,11 @@ admin_save_settings(network_mysqld_con *con, const char *sql)
         GString *new_file = g_string_new(NULL);
         new_file = g_string_append(new_file, srv->default_file);
         new_file = g_string_append(new_file, ".old");
-        if(remove(new_file->str)) {
-            ret = REMOVE_ERROR;
-        }
+        remove(new_file->str);
+        g_debug("remove operate, filename:%s, errno:%d", new_file->str == NULL? "":new_file->str, errno);
         if(rename(srv->default_file, new_file->str)) {
+            g_debug("rename operate failed, filename:%s, filename:%s, errno:%d", (srv->default_file == NULL ? "":srv->default_file),
+                    (new_file->str == NULL ? "":new_file->str), errno);
             ret = RENAME_ERROR;
         }
         g_string_free(new_file, TRUE);
@@ -1991,12 +1992,10 @@ admin_save_settings(network_mysqld_con *con, const char *sql)
             ret = SAVE_ERROR;
         } else {
             if((ret = chmod(srv->default_file, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP))) {
+                g_debug("remove operate failed, filename:%s, errno:%d", (srv->default_file == NULL? "":srv->default_file), errno);
                 ret = CHMOD_ERROR;
             }
-
         }
-    } else {
-        ret = RENAME_ERROR;
     }
 
     if(0 == ret) {
@@ -2207,7 +2206,7 @@ static struct sql_handler_entry_t sql_handler_shard_map[] = {
     {"config get", admin_get_config, "config get [<item>]", "show config"},
     {"config set ", admin_set_config, "config set <key>=<value>","set config"},
     {"stats reset", admin_reset_stats, "stats reset", "reset query statistics"},
-    {"save settings", admin_save_settings, "save settings", "not implemented"},
+    {"save settings", admin_save_settings, "save settings", "save config file"},
     {"select * from help", admin_help, "select * from help", "show this help"},
     {"select help", admin_help, "select help", "show this help"},
     {"cetus", admin_send_status, "cetus", "show overall status of Cetus"},
@@ -2278,7 +2277,7 @@ static struct sql_handler_entry_t sql_handler_rw_map[] = {
     {"config get", admin_get_config, "config get [<item>]", "show config"},
     {"config set ", admin_set_config, "config set <key>=<value>","set config"},
     {"stats reset", admin_reset_stats, "stats reset", "reset query statistics"},
-    {"save settings", admin_save_settings, "save settings", "not implemented"},
+    {"save settings", admin_save_settings, "save settings", "save config file"},
     {"select * from help", admin_help, "select * from help", "show this help"},
     {"select help", admin_help, "select help", "show this help"},
     {"cetus", admin_send_status, "cetus", "show overall status of Cetus"},

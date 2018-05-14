@@ -219,10 +219,10 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                         "verbose-shutdown",
                         0, 0, OPTION_ARG_NONE, &(frontend->verbose_shutdown),
                         "Always log the exit code when shutting down", NULL,
-                        NULL, show_verbose_shutdown, SHOW_OPTS_PROPERTY);
+                        NULL, show_verbose_shutdown, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts, "daemon", 0, 0, OPTION_ARG_NONE, &(frontend->daemon_mode), "Start in daemon-mode", NULL,
-                        NULL, show_daemon_mode, SHOW_OPTS_PROPERTY);
+                        NULL, show_daemon_mode, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts, "user", 0, 0, OPTION_ARG_STRING, &(frontend->user), "Run cetus as user", "<user>",
                         NULL, show_user, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
@@ -275,13 +275,13 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                         "log-backtrace-on-crash",
                         0, 0, OPTION_ARG_NONE, &(frontend->invoke_dbg_on_crash),
                         "Try to invoke debugger on crash", NULL,
-                        NULL, show_log_backtrace_on_crash, SHOW_OPTS_PROPERTY);
+                        NULL, show_log_backtrace_on_crash, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts,
                         "keepalive",
                         0, 0, OPTION_ARG_NONE, &(frontend->auto_restart),
                         "Try to restart the proxy if it crashed", NULL,
-                        NULL, show_keepalive, SHOW_OPTS_PROPERTY);
+                        NULL, show_keepalive, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts,
                         "max-open-files",
@@ -352,25 +352,25 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
     chassis_options_add(opts,
                         "disable-threads",
                         0, 0, OPTION_ARG_NONE, &(frontend->disable_threads), "Disable all threads creation", NULL,
-                        NULL, show_disable_threads, SHOW_OPTS_PROPERTY);
+                        NULL, show_disable_threads, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts,
                         "enable-back-compress",
                         0, 0, OPTION_ARG_NONE, &(frontend->is_back_compressed),
                         "enable compression for backend interactions", NULL,
-                        NULL, show_enable_back_compress, SHOW_OPTS_PROPERTY);
+                        NULL, show_enable_back_compress, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts,
                         "enable-client-compress",
                         0, 0, OPTION_ARG_NONE, &(frontend->is_client_compress_support),
                         "enable compression for client interactions", NULL,
-                        NULL, show_enable_client_compress, SHOW_OPTS_PROPERTY);
+                        NULL, show_enable_client_compress, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts,
                         "check-slave-delay",
                         0, 0, OPTION_ARG_NONE, &(frontend->check_slave_delay),
                         "Check ro backends with heartbeat", NULL,
-                        NULL, show_check_slave_delay, SHOW_OPTS_PROPERTY);
+                        NULL, show_check_slave_delay, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts,
                         "slave-delay-down",
@@ -398,35 +398,35 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
     chassis_options_add(opts,
                         "enable-client-found-rows",
                         0, 0, OPTION_ARG_NONE, &(frontend->set_client_found_rows), "Set client found rows flag", NULL,
-                        NULL, show_enable_client_found_rows, SHOW_OPTS_PROPERTY);
+                        NULL, show_enable_client_found_rows, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts,
                         "reduce-connections",
                         0, 0, OPTION_ARG_NONE, &(frontend->is_reduce_conns),
                         "Reduce connections when idle connection num is too high", NULL,
-                        NULL, show_reduce_connections, SHOW_OPTS_PROPERTY);
+                        NULL, show_reduce_connections, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts, "enable-query-cache", 0, 0, OPTION_ARG_NONE, &(frontend->query_cache_enabled), "", NULL,
-                        NULL, show_enable_query_cache, SHOW_OPTS_PROPERTY);
+                        NULL, show_enable_query_cache, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts, "enable-tcp-stream", 0, 0, OPTION_ARG_NONE, &(frontend->is_tcp_stream_enabled), "", NULL,
-                        NULL, show_enable_tcp_stream, SHOW_OPTS_PROPERTY);
+                        NULL, show_enable_tcp_stream, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts,
                         "log-xa-in-detail",
                         0, 0, OPTION_ARG_NONE, &(frontend->xa_log_detailed), "log xa in detail", NULL,
-                        NULL, show_log_xa_in_detail, SHOW_OPTS_PROPERTY);
+                        NULL, show_log_xa_in_detail, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts,
                         "disable-dns-cache",
                         0, 0, OPTION_ARG_NONE, &(frontend->disable_dns_cache),
                         "Every new connection to backends will resolve domain name", NULL,
-                        NULL, show_disable_dns_cache, SHOW_OPTS_PROPERTY);
+                        NULL, show_disable_dns_cache, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts,
                         "master-preferred",
                         0, 0, OPTION_ARG_NONE, &(frontend->master_preferred), "Access to master preferentially", NULL,
-                        NULL, show_master_preferred, SHOW_OPTS_PROPERTY);
+                        NULL, show_master_preferred, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
     chassis_options_add(opts,
                         "max-allowed-packet",
                         0, 0, OPTION_ARG_INT, &(frontend->cetus_max_allowed_packet),
@@ -769,10 +769,6 @@ main_cmdline(int argc, char **argv)
         GOTO_EXIT(EXIT_FAILURE);
     }
 
-    srv->verbose_shutdown = frontend->verbose_shutdown;
-
-    srv->is_reduce_conns = frontend->is_reduce_conns;
-
     if (frontend->keyfile) {
         if (FALSE == chassis_keyfile_to_options_with_error(frontend->keyfile, "cetus", opts->options, &gerr)) {
             g_critical("%s", gerr->message);
@@ -975,6 +971,10 @@ main_cmdline(int argc, char **argv)
      * log the versions of all loaded plugins
      */
     chassis_frontend_log_plugin_versions(srv->modules);
+
+    srv->verbose_shutdown = frontend->verbose_shutdown;
+
+    srv->is_reduce_conns = frontend->is_reduce_conns;
 
     /*
      * we have to drop root privileges in chassis_mainloop() after

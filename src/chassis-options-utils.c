@@ -32,6 +32,9 @@ show_verbose_shutdown(gpointer param) {
     if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         return g_strdup_printf("%s", srv->verbose_shutdown ? "true" : "false");
     }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return srv->verbose_shutdown ? g_strdup("true") : NULL;
+    }
     return NULL;
 }
 
@@ -41,6 +44,9 @@ gchar* show_daemon_mode(gpointer param) {
     gint opt_type = opt_param->opt_type;
     if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         return g_strdup_printf("%s", srv->daemon_mode ? "true" : "false");
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return srv->daemon_mode ? g_strdup("true") : NULL;
     }
     return NULL;
 }
@@ -239,6 +245,14 @@ show_log_backtrace_on_crash(gpointer param) {
     if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         return g_strdup_printf("%s", srv->invoke_dbg_on_crash ? "true":"false");
     }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+#ifdef HAVE_SIGACTION
+        return srv->invoke_dbg_on_crash ? NULL:g_strdup("false");
+#else
+        return srv->invoke_dbg_on_crash ? g_strdup("true"):NULL;
+#endif
+
+    }
     return NULL;
 }
 
@@ -249,6 +263,9 @@ show_keepalive(gpointer param) {
     gint opt_type = opt_param->opt_type;
     if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         return g_strdup_printf("%s", srv->auto_restart ? "true":"false");
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return srv->auto_restart ? g_strdup("true"):NULL;
     }
     return NULL;
 }
@@ -662,6 +679,9 @@ show_disable_threads(gpointer param) {
     if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         return g_strdup_printf("%s", srv->disable_threads ? "true" : "false");
     }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return srv->disable_threads ? g_strdup("true") : NULL;
+    }
     return NULL;
 }
 
@@ -672,6 +692,9 @@ show_enable_back_compress(gpointer param) {
     gint opt_type = opt_param->opt_type;
     if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         return g_strdup_printf("%s", srv->is_back_compressed ? "true" : "false");
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return srv->is_back_compressed ? g_strdup("true") : NULL;
     }
     return NULL;
 }
@@ -684,6 +707,9 @@ show_enable_client_compress(gpointer param) {
     if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         return g_strdup_printf("%s", srv->compress_support ? "true" : "false");
     }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return srv->compress_support ? g_strdup("true") : NULL;
+    }
     return NULL;
 }
 
@@ -694,6 +720,9 @@ show_check_slave_delay(gpointer param) {
     gint opt_type = opt_param->opt_type;
     if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         return g_strdup_printf("%s", srv->check_slave_delay ? "true" : "false");
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return srv->check_slave_delay ? g_strdup("true") : NULL;
     }
     return NULL;
 }
@@ -880,6 +909,9 @@ show_enable_client_found_rows(gpointer param) {
     if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         return g_strdup_printf("%s", srv->client_found_rows ? "true" : "false");
     }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return srv->client_found_rows ? g_strdup("true") : NULL;
+    }
     return NULL;
 }
 
@@ -890,6 +922,9 @@ show_reduce_connections(gpointer param) {
     gint opt_type = opt_param->opt_type;
     if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         return g_strdup_printf("%s", srv->is_reduce_conns ? "true" : "false");
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return srv->is_reduce_conns ? g_strdup("true") : NULL;
     }
     return NULL;
 }
@@ -902,6 +937,9 @@ show_enable_query_cache(gpointer param) {
     if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         return g_strdup_printf("%s", srv->query_cache_enabled ? "true" : "false");
     }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return srv->query_cache_enabled ? g_strdup("true") : NULL;
+    }
     return NULL;
 }
 
@@ -912,6 +950,9 @@ show_enable_tcp_stream(gpointer param) {
     gint opt_type = opt_param->opt_type;
     if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         return g_strdup_printf("%s", srv->is_tcp_stream_enabled ? "true" : "false");
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return srv->is_tcp_stream_enabled ? g_strdup("true") : NULL;
     }
     return NULL;
 }
@@ -924,6 +965,9 @@ show_log_xa_in_detail(gpointer param) {
     if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         return g_strdup_printf("%s", srv->xa_log_detailed ? "true" : "false");
     }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return srv->xa_log_detailed ? g_strdup("true") : NULL;
+    }
     return NULL;
 }
 
@@ -935,6 +979,9 @@ show_disable_dns_cache(gpointer param) {
     if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         return g_strdup_printf("%s", srv->disable_dns_cache ? "true" : "false");
     }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return srv->disable_dns_cache ? g_strdup("true") : NULL;
+    }
     return NULL;
 }
 
@@ -945,6 +992,9 @@ show_master_preferred(gpointer param) {
     gint opt_type = opt_param->opt_type;
     if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         return g_strdup_printf("%s", srv->master_preferred ? "true" : "false");
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return srv->master_preferred ? g_strdup("true") : NULL;
     }
     return NULL;
 }

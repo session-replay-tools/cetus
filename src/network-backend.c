@@ -26,7 +26,6 @@
 #include "chassis-plugin.h"
 #include "glib-ext.h"
 #include "network-mysqld-proto.h"
-#include "network-mysqld-packet.h"
 #include "character-set.h"
 #include "cetus-util.h"
 #include "cetus-users.h"
@@ -57,7 +56,7 @@ network_backend_new()
     b->addr = network_address_new();
     b->server_group = g_string_new(NULL);
     b->address = g_string_new(NULL);
-    b->challenges = g_ptr_array_new();
+    b->server_version = g_string_new(NULL);
 
     return b;
 }
@@ -70,14 +69,10 @@ network_backend_free(network_backend_t *b)
 
     network_connection_pool_free(b->pool);
 
-    if (b->addr)
-        network_address_free(b->addr);
-    if (b->uuid)
-        g_string_free(b->uuid, TRUE);
-    if (b->challenges)
-        g_ptr_array_free(b->challenges, TRUE);
-    if (b->server_group)
-        g_string_free(b->server_group, TRUE);
+    network_address_free(b->addr);
+    g_string_free(b->uuid, TRUE);
+    g_string_free(b->server_version, TRUE);
+    g_string_free(b->server_group, TRUE);
 
     if (b->config) {
         if (b->config->default_username) {
@@ -118,51 +113,6 @@ network_backend_conns_count(network_backend_t *b)
     return in_use + pooled;
 }
 
-/*
- * save challenges from backend, will be used to authenticate front user
- */
-void
-network_backend_save_challenge(network_backend_t *b, const network_mysqld_auth_challenge *chal, gboolean have_ssl)
-{
-    if (b->challenges->len >= 1024) {
-        network_mysqld_auth_challenge *challenge;
-        challenge = g_ptr_array_remove_index(b->challenges, 0);
-        network_mysqld_auth_challenge_free(challenge);
-    }
-
-    static const guint32 not_supported = CLIENT_LOCAL_FILES | CLIENT_DEPRECATE_EOF;
-
-    network_mysqld_auth_challenge *challenge = network_mysqld_auth_challenge_copy(chal);
-
-    challenge->capabilities &= ~not_supported;
-#ifdef HAVE_OPENSSL
-    if (have_ssl)
-        challenge->capabilities |= CLIENT_SSL;
-    else
-        challenge->capabilities &= ~CLIENT_SSL;
-#endif
-    char *old_str = challenge->server_version_str;
-    challenge->server_version_str = g_strdup_printf("%s (%s)", old_str, PACKAGE_STRING);
-    g_free(old_str);
-
-    g_ptr_array_add(b->challenges, challenge);
-}
-
-struct network_mysqld_auth_challenge *
-network_backend_get_challenge(network_backend_t *b)
-{
-    if (b->challenges->len == 0) {
-        g_message("challenges len 0 for backend:%s", b->addr->name->str);
-        return NULL;
-    }
-
-    int ndx = g_random_int_range(0, 1024);
-    ndx = ndx % b->challenges->len;
-
-    network_mysqld_auth_challenge *challenge = g_ptr_array_index(b->challenges, ndx);
-    return challenge;
-}
-
 static network_group_t *network_group_new();
 static void network_group_free(network_group_t *);
 static void network_group_add(network_group_t *, network_backend_t *);
@@ -192,12 +142,6 @@ network_backends_free(network_backends_t *bs)
 
     for (i = 0; i < bs->backends->len; i++) {
         network_backend_t *backend = bs->backends->pdata[i];
-
-        for (j = 0; j < backend->challenges->len; j++) {
-            network_mysqld_auth_challenge *challenge = backend->challenges->pdata[j];
-            network_mysqld_auth_challenge_free(challenge);
-        }
-
         network_backend_free(backend);
     }
     g_ptr_array_free(bs->backends, TRUE);
@@ -646,14 +590,11 @@ network_backends_find_address(network_backends_t *bs, const char *ipport)
     return -1;
 }
 
-network_mysqld_auth_challenge *
-network_backends_get_challenge(network_backends_t *bs, int back_ndx)
+void network_backends_server_version(network_backends_t *bs, GString* version)
 {
-    network_backend_t *b = network_backends_get(bs, back_ndx);
+    network_backend_t *b = network_backends_get(bs, 0);
     if (b)
-        return network_backend_get_challenge(b);
-    else
-        return NULL;
+        g_string_assign_len(version, b->server_version->str, b->server_version->len);
 }
 
 /* round robin pick */

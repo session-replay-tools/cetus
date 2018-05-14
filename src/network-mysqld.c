@@ -177,6 +177,7 @@ network_mysqld_priv_init(void)
     priv->backends = network_backends_new();
     priv->users = cetus_users_new();
     priv->monitor = cetus_monitor_new();
+    priv->thread_id = 1;
     return priv;
 }
 
@@ -4345,8 +4346,9 @@ proxy_self_read_handshake(chassis *srv, server_connection_state_t *con)
     }
 
     con->server->challenge = challenge;
-    network_backend_save_challenge(con->backend, challenge, srv->ssl);
-
+    if (con->backend->server_version->len == 0) {
+        g_string_append(con->backend->server_version, challenge->server_version_str);
+    }
     return RET_SUCCESS;
 }
 

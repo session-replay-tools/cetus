@@ -103,7 +103,8 @@ typedef struct {
     & ~CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA                            \
     & ~CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS                              \
     & ~CLIENT_SESSION_TRACK                                             \
-    & ~CLIENT_DEPRECATE_EOF
+    & ~CLIENT_DEPRECATE_EOF                                             \
+    & ~CLIENT_LOCAL_FILES
 
 NETWORK_API network_mysqld_com_query_result_t *network_mysqld_com_query_result_new(void);
 NETWORK_API void network_mysqld_com_query_result_free(network_mysqld_com_query_result_t *);

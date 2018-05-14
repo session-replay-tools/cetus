@@ -123,10 +123,12 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
                                         C("\xff\xd7\x07" "4.0 protocol is not supported"));
             network_mysqld_auth_response_free(auth);
             return NETWORK_SOCKET_ERROR;
-        } else if (auth->client_capabilities & CLIENT_COMPRESS) {
+        }
+        if (auth->client_capabilities & CLIENT_COMPRESS) {
             con->is_client_compressed = 1;
             g_message("%s: client compressed for con:%p", G_STRLOC, con);
-        } else if (auth->client_capabilities & CLIENT_MULTI_STATEMENTS) {
+        }
+        if (auth->client_capabilities & CLIENT_MULTI_STATEMENTS) {
             con->client->is_multi_stmt_set = 1;
         }
 
@@ -361,14 +363,21 @@ do_connect_cetus(network_mysqld_con *con, network_backend_t **backend, int *back
         return NETWORK_SOCKET_SUCCESS;
     }
 
-    network_mysqld_auth_challenge *challenge = network_backends_get_challenge(g->backends, *backend_ndx);
-
-    if (challenge == NULL) {
-        network_connection_pool_create_conn(con);
-        network_mysqld_con_send_error(con->client, C(" no server challenge for this client"));
-        con->state = ST_SEND_AUTH_RESULT;
-        return NETWORK_SOCKET_SUCCESS;
-    }
+    /* create a "mysql_native_password" handshake packet */
+    network_mysqld_auth_challenge *challenge = network_mysqld_auth_challenge_new();
+#ifdef HAVE_OPENSSL
+    if (con->srv->ssl)
+        challenge->capabilities |= CLIENT_SSL;
+    else
+        challenge->capabilities &= ~CLIENT_SSL;
+#endif
+    network_mysqld_auth_challenge_set_challenge(challenge);
+    GString *version = g_string_new("");
+    network_backends_server_version(g->backends, version);
+    g_string_append(version, " (cetus)");
+    challenge->server_version_str = version->str;
+    g_string_free(version, FALSE);
+    challenge->thread_id = g->thread_id++;
 
     GString *auth_packet = g_string_new(NULL);
     network_mysqld_proto_append_auth_challenge(auth_packet, challenge);
@@ -379,7 +388,7 @@ do_connect_cetus(network_mysqld_con *con, network_backend_t **backend, int *back
 
     g_assert(con->client->challenge == NULL);
 
-    con->client->challenge = network_mysqld_auth_challenge_copy(challenge);
+    con->client->challenge = challenge;
 
     con->state = ST_SEND_HANDSHAKE;
 

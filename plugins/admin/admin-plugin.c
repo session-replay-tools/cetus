@@ -1669,6 +1669,7 @@ admin_add_backend(network_mysqld_con *con, const char *sql)
 static int
 admin_update_backend(network_mysqld_con *con, const char *sql)
 {
+    gint ret = 0;
     char *set_start = strcasestr(sql, "set");
     char *where_start = strcasestr(sql, "where");
 
@@ -1715,7 +1716,7 @@ admin_update_backend(network_mysqld_con *con, const char *sql)
         }
         int type = type_str[0] != '\0' ? backend_type(type_str) : bk->type;
         int state = state_str[0] != '\0' ? backend_state(state_str) : bk->state;
-        network_backends_modify(g->backends, backend_ndx, type, state);
+        ret = network_backends_modify(g->backends, backend_ndx, type, state, NO_PREVIOUS_STATE);
         affected_rows = 1;
     } else {
         for (i = 0; i < network_backends_count(g->backends); ++i) {
@@ -1723,12 +1724,16 @@ admin_update_backend(network_mysqld_con *con, const char *sql)
             if (bk) {
                 int type = type_str[0] != '\0' ? backend_type(type_str) : bk->type;
                 int state = state_str[0] != '\0' ? backend_state(state_str) : bk->state;
-                network_backends_modify(g->backends, i, type, state);
+                ret = network_backends_modify(g->backends, i, type, state, NO_PREVIOUS_STATE);
                 affected_rows += 1;
             }
         }
     }
-    network_mysqld_con_send_ok_full(con->client, affected_rows, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+    if(ret == 0) {
+        network_mysqld_con_send_ok_full(con->client, affected_rows, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+    } else {
+        network_mysqld_con_send_error_full(con->client, C("update failed."), 1045, "28000");
+    }
     return PROXY_SEND_RESULT;
 }
 
@@ -1752,8 +1757,12 @@ admin_delete_backend(network_mysqld_con *con, const char *sql)
         backend_ndx -= 1;       /* index in sql start from 1, not 0 */
     }
     if (backend_ndx >= 0 && backend_ndx < network_backends_count(g->backends)) {
-        network_backends_remove(g->backends, backend_ndx);  /* TODO: just change state? */
-        network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+        gint ret = network_backends_remove(g->backends, backend_ndx);  /* TODO: just change state? */
+        if(ret == 0) {
+            network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+        } else {
+            network_mysqld_con_send_error_full(con->client, C("delete failed."), 1045, "28000");
+        }
         return PROXY_SEND_RESULT;
     } else {
         network_mysqld_con_send_ok_full(con->client, 0, 0, SERVER_STATUS_AUTOCOMMIT, 0);

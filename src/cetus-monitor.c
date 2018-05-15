@@ -139,6 +139,8 @@ check_backend_alive(int fd, short what, void *arg)
     network_backends_t *bs = chas->priv->backends;
     for (i = 0; i < network_backends_count(bs); i++) {
         network_backend_t *backend = network_backends_get(bs, i);
+        backend_state_t oldstate = backend->state;
+        gint ret = 0;
         if (backend->state == BACKEND_STATE_DELETED || backend->state == BACKEND_STATE_MAINTAINING)
             continue;
 
@@ -154,8 +156,12 @@ check_backend_alive(int fd, short what, void *arg)
         if (conn == NULL) {
             if (backend->state != BACKEND_STATE_DOWN) {
                 if (backend->type != BACKEND_TYPE_RW) {
-                    network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN);
-                    g_critical("Backend %s is set to DOWN.", backend_addr);
+                    ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN, oldstate);
+                    if(ret == 0) {
+                        g_critical("Backend %s is set to DOWN.", backend_addr);
+                    } else {
+                        g_critical("Backend %s is set to DOWN failed.", backend_addr);
+                    }
                 } else {
                     g_critical("get null conn from Backend %s.", backend_addr);
                 }
@@ -163,8 +169,12 @@ check_backend_alive(int fd, short what, void *arg)
             g_debug("Backend %s is not ALIVE!", backend_addr);
         } else {
             if (backend->state != BACKEND_STATE_UP) {
-                network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP);
-                g_message("Backend %s is set to UP.", backend_addr);
+                ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP, oldstate);
+                if(ret == 0) {
+                    g_message("Backend %s is set to UP.", backend_addr);
+                } else {
+                    g_message("Backend %s is set to UP failed.", backend_addr);
+                }
             }
             g_debug("Backend %s is ALIVE!", backend_addr);
         }
@@ -194,6 +204,8 @@ update_master_timestamp(int fd, short what, void *arg)
      */
     for (i = 0; i < network_backends_count(bs); i++) {
         network_backend_t *backend = network_backends_get(bs, i);
+        backend_state_t oldstate = backend->state;
+        gint ret = 0;
         if (backend->state == BACKEND_STATE_DELETED || backend->state == BACKEND_STATE_MAINTAINING)
             continue;
 
@@ -210,8 +222,12 @@ update_master_timestamp(int fd, short what, void *arg)
                 g_critical("Could not connect to Backend %s.", backend_addr);
             } else {
                 if (backend->state != BACKEND_STATE_UP) {
-                    network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP);
-                    g_message("Backend %s is set to UP.", backend_addr);
+                    ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP, oldstate);
+                    if(ret == 0) {
+                        g_message("Backend %s is set to UP.", backend_addr);
+                    } else {
+                        g_message("Backend %s is set to UP failed.", backend_addr);
+                    }
                 }
                 static int previous_result[256] = { 0 };    /* for each backend group */
                 int result = mysql_real_query(conn, L(sql));
@@ -244,6 +260,8 @@ check_slave_timestamp(int fd, short what, void *arg)
     /* Read delay sec and set slave UP/DOWN according to delay_secs */
     for (i = 0; i < network_backends_count(bs); i++) {
         network_backend_t *backend = network_backends_get(bs, i);
+        backend_state_t oldstate = backend->state;
+        gint ret = 0;
         if (backend->type == BACKEND_TYPE_RW || backend->state == BACKEND_STATE_DELETED ||
             backend->state == BACKEND_STATE_MAINTAINING)
             continue;
@@ -253,8 +271,12 @@ check_slave_timestamp(int fd, short what, void *arg)
         if (conn == NULL) {
             g_critical("Connection error when read delay from RO backend: %s", backend_addr);
             if (backend->state != BACKEND_STATE_DOWN) {
-                network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN);
-                g_critical("Backend %s is set to DOWN.", backend_addr);
+                ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN, oldstate);
+                if(ret == 0) {
+                    g_critical("Backend %s is set to DOWN.", backend_addr);
+                } else {
+                    g_critical("Backend %s is set to DOWN failed.", backend_addr);
+                }
             }
             continue;
         }
@@ -296,11 +318,19 @@ check_slave_timestamp(int fd, short what, void *arg)
                 double delay_secs = ts_now - ts_slave;
                 backend->slave_delay_msec = (int)delay_secs *1000;
                 if (delay_secs > chas->slave_delay_down_threshold_sec && backend->state != BACKEND_STATE_DOWN) {
-                    network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN);
-                    g_critical("Slave delay %.3f seconds. Set slave to DOWN.", delay_secs);
+                    ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN, oldstate);
+                    if(ret == 0) {
+                        g_critical("Slave delay %.3f seconds. Set slave to DOWN.", delay_secs);
+                    } else {
+                        g_critical("Slave delay %.3f seconds. Set slave to DOWN failed.", delay_secs);
+                    }
                 } else if (delay_secs <= chas->slave_delay_recover_threshold_sec && backend->state != BACKEND_STATE_UP) {
-                    network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP);
-                    g_message("Slave delay %.3f seconds. Recovered. Set slave to UP.", delay_secs);
+                    ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP, oldstate);
+                    if(ret == 0) {
+                        g_message("Slave delay %.3f seconds. Recovered. Set slave to UP.", delay_secs);
+                    } else {
+                        g_message("Slave delay %.3f seconds. Recovered. Set slave to UP failed.", delay_secs);
+                    }
                 }
             }
             mysql_free_result(rs_set);

@@ -2372,8 +2372,11 @@ admin_process_query(network_mysqld_con *con)
     struct sql_handler_entry_t *sql_handler_map = config->has_shard_plugin ? sql_handler_shard_map : sql_handler_rw_map;
     int i;
     for (i = 0; sql_handler_map[i].prefix; ++i) {
-        if (strcasestr(sql, sql_handler_map[i].prefix)) {
-            return sql_handler_map[i].func(con, sql);
+        gchar *pos = NULL;
+        if ((pos = strcasestr(sql, sql_handler_map[i].prefix))) {
+            if(pos == sql) {
+                return sql_handler_map[i].func(con, sql);
+            }
         }
     }
 

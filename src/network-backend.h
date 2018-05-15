@@ -40,6 +40,8 @@ typedef enum {
     BACKEND_STATE_DELETED,
 } backend_state_t;
 
+#define NO_PREVIOUS_STATE -1
+
 typedef enum {
     BACKEND_TYPE_UNKNOWN,
     BACKEND_TYPE_RW,
@@ -111,7 +113,7 @@ NETWORK_API void network_backends_free(network_backends_t *);
 NETWORK_API int network_backends_add(network_backends_t *, const gchar *, backend_type_t, backend_state_t, void *);
 NETWORK_API int network_backends_remove(network_backends_t *bs, guint index);
 NETWORK_API int network_backends_check(network_backends_t *bs);
-NETWORK_API int network_backends_modify(network_backends_t *, guint, backend_type_t, backend_state_t);
+NETWORK_API int network_backends_modify(network_backends_t *, guint, backend_type_t, backend_state_t, backend_state_t);
 NETWORK_API network_backend_t *network_backends_get(network_backends_t *bs, guint ndx);
 NETWORK_API guint network_backends_count(network_backends_t *bs);
 NETWORK_API gboolean network_backends_load_user_profile(network_backends_t *, chassis *);

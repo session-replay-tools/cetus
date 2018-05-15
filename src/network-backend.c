@@ -311,7 +311,7 @@ network_backends_remove(network_backends_t *bs, guint index)
             bs->ro_server_num -= 1;
         }
 
-        return network_backends_modify(bs, index, BACKEND_TYPE_UNKNOWN, BACKEND_STATE_DELETED);
+        return network_backends_modify(bs, index, BACKEND_TYPE_UNKNOWN, BACKEND_STATE_DELETED, NO_PREVIOUS_STATE);
     }
     return 0;
 }
@@ -374,7 +374,7 @@ network_backends_check(network_backends_t *bs)
  */
 
 int
-network_backends_modify(network_backends_t *bs, guint ndx, backend_type_t type, backend_state_t state)
+network_backends_modify(network_backends_t *bs, guint ndx, backend_type_t type, backend_state_t state, backend_state_t oldstate)
 {
     GTimeVal now;
     g_get_current_time(&now);
@@ -385,6 +385,17 @@ network_backends_modify(network_backends_t *bs, guint ndx, backend_type_t type, 
     g_message("change backend: %s from type: %s, state: %s to type: %s, state: %s",
               cur->addr->name->str, backend_type_t_str[cur->type],
               backend_state_t_str[cur->state], backend_type_t_str[type], backend_state_t_str[state]);
+    if(oldstate == NO_PREVIOUS_STATE) {
+        oldstate = cur->state;
+    }
+    if(cur->state != state) {
+        if(__sync_bool_compare_and_swap(&(cur->state), oldstate, state)) {
+            cur->state_since = now;
+        } else {
+            g_debug("there might be conflict, network_backends_modify failed.");
+            return -1;
+        }
+    }
 
     if (cur->type != type) {
         cur->type = type;
@@ -396,10 +407,6 @@ network_backends_modify(network_backends_t *bs, guint ndx, backend_type_t type, 
         network_group_t *gp = network_backends_get_group(bs, cur->server_group);
         if (gp)
             network_group_update(gp);
-    }
-    if (cur->state != state) {
-        cur->state = state;
-        cur->state_since = now;
     }
 
     g_debug("%s: backend state:%d for backend:%p", G_STRLOC, cur->state, cur);

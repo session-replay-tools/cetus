@@ -324,8 +324,6 @@ network_ssl_write(network_socket *sock, int send_chunks)
             send_queue->offset -= s->len;
 #if NETWORK_DEBUG_TRACE_IO
             g_debug("%s:output for sock:%p", G_STRLOC, sock);
-            /* to trace the data we sent to the socket, enable this */
-            g_debug_hexdump(G_STRLOC, S(s));
 #endif
             if (!sock->do_query_cache) {
                 g_string_free(s, TRUE);

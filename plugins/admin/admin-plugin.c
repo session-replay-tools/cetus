@@ -1392,6 +1392,23 @@ admin_set_maintain(network_mysqld_con *con, const char *sql)
 }
 
 static int
+admin_show_maintain(network_mysqld_con *con, const char *sql)
+{
+    GPtrArray *fields = network_mysqld_proto_fielddefs_new();
+    GPtrArray *rows = g_ptr_array_new_with_free_func((void *)network_mysqld_mysql_field_row_free);
+    MAKE_FIELD_DEF_1_COL(fields, "Cetus maintain status");
+    if(con->srv->maintain_close_mode == 1) {
+        APPEND_ROW_1_COL(rows, "true");
+    } else {
+        APPEND_ROW_1_COL(rows, "false");
+    }
+    network_mysqld_con_send_resultset(con->client, fields, rows);
+    network_mysqld_proto_fielddefs_free(fields);
+    g_ptr_array_free(rows, TRUE);
+    return PROXY_SEND_RESULT;
+}
+
+static int
 admin_reload_shard(network_mysqld_con *con, const char *sql)
 {
     network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
@@ -2192,6 +2209,8 @@ static struct sql_handler_entry_t sql_handler_shard_map[] = {
      "reduce memory", "reduce memory occupied by system"},
     {"set maintain ", admin_set_maintain,
      "set maintain (true|false)", "close all client connections if set to true"},
+    {"show maintain status", admin_show_maintain,
+          "show maintain status", "query whether cetus' status is maintain"},
     {"reload shard", admin_reload_shard,
      "reload shard", "reload sharding config from remote db"},
     {"show status", admin_show_status,
@@ -2265,6 +2284,8 @@ static struct sql_handler_entry_t sql_handler_rw_map[] = {
      "reduce memory", "reduce memory occupied by system"},
     {"set maintain ", admin_set_maintain,
      "set maintain (true|false)", "close all client connections if set to true"},
+    {"show maintain status", admin_show_maintain,
+           "show maintain status", "query whether cetus' status is maintain"},
     {"show status", admin_show_status,
      "show status [like '%<pattern>%']", "show select/update/insert/delete statistics"},
     {"show variables", admin_show_variables,

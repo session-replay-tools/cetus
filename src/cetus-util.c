@@ -106,7 +106,7 @@ read_file_to_buffer(const char *filename, char **buffer)
 gboolean
 try_get_int_value(const gchar *option_value, gint *return_value)
 {
-    gint ret = sscanf(option_value, "%ld", return_value);
+    gint ret = sscanf(option_value, "%d", return_value);
     if(1 == ret) {
         return TRUE;
     } else {

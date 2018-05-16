@@ -131,7 +131,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_con_init)
     challenge->server_version_str = g_strdup_printf("%s admin", PACKAGE_STRING);
     challenge->server_version = 50099;
     challenge->charset = charset_get_number("latin1");
-    challenge->capabilities = CETUS_DEFAULT_FLAGS;
+    challenge->capabilities = CETUS_DEFAULT_FLAGS & (~CLIENT_TRANSACTIONS);
 #ifdef HAVE_OPENSSL
     if (chas->ssl) {
         challenge->capabilities |= CLIENT_SSL;

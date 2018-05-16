@@ -4359,7 +4359,6 @@ proxy_self_create_auth(chassis *srv, server_connection_state_t *con)
 
     const network_mysqld_auth_challenge *challenge = send_sock->challenge;
     network_mysqld_auth_response *auth = network_mysqld_auth_response_new(challenge->capabilities);
-    g_string_assign(auth->auth_plugin_name, "mysql_native_password");
 
     auth->client_capabilities = CETUS_DEFAULT_FLAGS;
 
@@ -4373,6 +4372,7 @@ proxy_self_create_auth(chassis *srv, server_connection_state_t *con)
     if (!srv->client_found_rows) {
         auth->client_capabilities &= ~CLIENT_FOUND_ROWS;
     }
+    auth->client_capabilities &= ~CLIENT_PLUGIN_AUTH;
 
     auth->max_packet_size = 0x01000000;
     auth->charset = con->charset_code;

@@ -69,6 +69,26 @@ typedef int socklen_t;
 
 #define MAX_CACHED_ITEMS 65536
 
+/* judge if client_ip is in ip range of allow or deny ip_table*/
+static gboolean
+ip_range_lookup(GHashTable *ip_table, char *client_ip)
+{
+    char ip_range[128] = { 0 };
+    char wildcard[128] = { 0 };
+    GList *ip_range_table = g_hash_table_get_keys(ip_table);
+    GList *l;
+    for (l = ip_range_table; l; l = l->next) {
+        sscanf(l->data, "%64[0-9.].%s", ip_range, wildcard);
+        gchar *pos = NULL;
+        if ((pos = strcasestr(client_ip, ip_range))) {
+            if(pos == client_ip) {
+                return TRUE;
+            }
+        }
+    }
+    return FALSE;
+}
+
 network_socket_retval_t
 do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *deny_ip_table)
 {
@@ -164,11 +184,11 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
         char *client_ip_with_username = g_strdup_printf("%s@%s", client_username, client_ip);
         char *ip_err_msg = NULL;
         if ((g_hash_table_size(allow_ip_table) != 0 &&
-             (g_hash_table_lookup(allow_ip_table, client_ip) || g_hash_table_lookup(deny_ip_table, "*"))) ||
+            (g_hash_table_lookup(allow_ip_table, client_ip) || g_hash_table_lookup(allow_ip_table, "*") || ip_range_lookup(allow_ip_table, client_ip))) ||
             g_hash_table_lookup(allow_ip_table, client_ip_with_username)) {
             check_ip = FALSE;
         } else if ((g_hash_table_size(deny_ip_table) != 0 &&
-                    (g_hash_table_lookup(deny_ip_table, client_ip) || g_hash_table_lookup(deny_ip_table, "*"))) ||
+                   (g_hash_table_lookup(deny_ip_table, client_ip) || g_hash_table_lookup(deny_ip_table, "*") || ip_range_lookup(deny_ip_table, client_ip))) ||
                    g_hash_table_lookup(deny_ip_table, client_ip_with_username)) {
             check_ip = TRUE;
             ip_err_msg = g_strdup_printf("Access denied for user '%s'@'%s'", client_username, client_ip);

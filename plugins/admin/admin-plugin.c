@@ -102,6 +102,26 @@ has_shard_plugin(GPtrArray *modules)
     return FALSE;
 }
 
+/* judge if client_ip is in allowed or denied ip range*/
+static gboolean
+ip_range_lookup(GHashTable *ip_table, char *client_ip)
+{
+    char ip_range[128] = { 0 };
+    char wildcard[128] = { 0 };
+    GList *ip_range_table = g_hash_table_get_keys(ip_table);
+    GList *l;
+    for (l = ip_range_table; l; l = l->next) {
+        sscanf(l->data, "%64[0-9.].%s", ip_range, wildcard);
+        gchar *pos = NULL;
+        if ((pos = strcasestr(client_ip, ip_range))) {
+            if(pos == client_ip) {
+                return TRUE;
+            }
+        }
+    }
+    return FALSE;
+}
+
 NETWORK_MYSQLD_PLUGIN_PROTO(server_con_init)
 {
     network_mysqld_auth_challenge *challenge;
@@ -188,11 +208,13 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_auth)
         char *client_ip = client_addr_arr[0];
         if (g_hash_table_size(con->config->allow_ip_table) != 0 &&
             (g_hash_table_lookup(con->config->allow_ip_table, client_ip)
-             || g_hash_table_lookup(con->config->allow_ip_table, "*"))) {
+             || g_hash_table_lookup(con->config->allow_ip_table, "*")
+             || ip_range_lookup(con->config->allow_ip_table, client_ip))) {
             check_ip = FALSE;
         } else if (g_hash_table_size(con->config->deny_ip_table) != 0 &&
                    (g_hash_table_lookup(con->config->deny_ip_table, client_ip)
-                    || g_hash_table_lookup(con->config->deny_ip_table, "*"))) {
+                    || g_hash_table_lookup(con->config->deny_ip_table, "*")
+                    || ip_range_lookup(con->config->deny_ip_table, client_ip))) {
             check_ip = TRUE;
             ip_err_msg = g_strdup_printf("Access denied for user '%s'@'%s'", con->config->admin_username, client_ip);
         } else {

@@ -18,6 +18,7 @@
 
  $%ENDLICENSE%$ */
 
+#include "chassis-timings.h"
 #include "chassis-options-utils.h"
 #include "chassis-plugin.h"
 #include "cetus-util.h"
@@ -845,6 +846,49 @@ assign_default_query_cache_timeout(const gchar *newval, gpointer param) {
             if(try_get_int_value(newval, &value)) {
                 if(value >= 0) {
                     srv->default_query_cache_timeout = value;
+                    ret = ASSIGN_OK;
+                } else {
+                    ret = ASSIGN_VALUE_INVALID;
+                }
+            } else {
+                ret = ASSIGN_VALUE_INVALID;
+            }
+        } else {
+            ret = ASSIGN_VALUE_INVALID;
+        }
+    }
+    return ret;
+}
+
+gchar*
+show_default_client_idle_timeout(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%d (ms)", srv->client_idle_timeout);
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if(srv->client_idle_timeout == 8 * HOURS) {
+            return NULL;
+        }
+        return g_strdup_printf("%d", srv->client_idle_timeout);
+    }
+    return NULL;
+}
+
+gint
+assign_default_client_idle_timeout(const gchar *newval, gpointer param) {
+    gint ret = ASSIGN_ERROR;
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
+        if(NULL != newval) {
+            int value = 0;
+            if(try_get_int_value(newval, &value)) {
+                if(value >= 0) {
+                    srv->client_idle_timeout = value;
                     ret = ASSIGN_OK;
                 } else {
                     ret = ASSIGN_VALUE_INVALID;

@@ -136,6 +136,7 @@ struct chassis {
     unsigned int check_slave_delay;
     int complement_conn_cnt;
     int default_query_cache_timeout;
+    int client_idle_timeout;
     double slave_delay_down_threshold_sec;
     double slave_delay_recover_threshold_sec;
     unsigned int long_query_time;

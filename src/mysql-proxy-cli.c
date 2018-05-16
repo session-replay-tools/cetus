@@ -68,6 +68,7 @@
 #include "sys-pedantic.h"
 
 #include "cetus-log.h"
+#include "chassis-timings.h"
 #include "chassis-log.h"
 #include "chassis-keyfile.h"
 #include "chassis-mainloop.h"
@@ -109,6 +110,7 @@ struct chassis_frontend_t {
     int xa_log_detailed;
     int cetus_max_allowed_packet;
     int default_query_cache_timeout;
+    int client_idle_timeout;
     int query_cache_enabled;
     int disable_dns_cache;
     double slave_delay_down_threshold_sec;
@@ -169,6 +171,7 @@ chassis_frontend_new(void)
 
     frontend->slave_delay_down_threshold_sec = 60.0;
     frontend->default_query_cache_timeout = 100;
+    frontend->client_idle_timeout = 8 * HOURS;
     frontend->long_query_time = MAX_QUERY_TIME;
     frontend->cetus_max_allowed_packet = MAX_ALLOWED_PACKET_DEFAULT;
     frontend->disable_dns_cache = 0;
@@ -397,6 +400,12 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                         assign_default_query_cache_timeout, show_default_query_cache_timeout, ALL_OPTS_PROPERTY);
 
     chassis_options_add(opts,
+                        "default-client-idle-timeout",
+                        0, 0, OPTION_ARG_INT, &(frontend->client_idle_timeout),
+                        "default client idle timeout in seconds", "<integer>",
+                        assign_default_client_idle_timeout, show_default_client_idle_timeout, ALL_OPTS_PROPERTY);
+
+    chassis_options_add(opts,
                         "long-query-time",
                         0, 0, OPTION_ARG_INT, &(frontend->long_query_time), "Long query time in ms", "<integer>",
                         assign_long_query_time, show_long_query_time, ALL_OPTS_PROPERTY);
@@ -586,6 +595,7 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     }
 
     srv->default_query_cache_timeout = MAX(frontend->default_query_cache_timeout, 1);
+    srv->client_idle_timeout = MAX(frontend->client_idle_timeout, 1);
     srv->long_query_time = MIN(frontend->long_query_time, MAX_QUERY_TIME);
     srv->cetus_max_allowed_packet = CLAMP(frontend->cetus_max_allowed_packet,
                                           MAX_ALLOWED_PACKET_FLOOR, MAX_ALLOWED_PACKET_CEIL);

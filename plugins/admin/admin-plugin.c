@@ -1438,9 +1438,12 @@ admin_send_connection_stat(network_mysqld_con *con, const char *sql)
     if (backend_ndx >= 0 && backend_ndx < network_backends_count(g->backends)) {
         network_backend_t *backend = network_backends_get(g->backends, backend_ndx);
         GString *user_name = g_string_new(user);
+        GQueue *conns = NULL;
 
-        /* TODO: if robbed, conns is not for user_name */
-        GQueue *conns = network_connection_pool_get_conns(backend->pool, user_name, NULL);
+        if(backend && backend->pool && backend->pool->users && user_name) {
+            conns = g_hash_table_lookup(backend->pool->users, user_name);
+        }
+
         if (conns) {
             numstr = g_strdup_printf("%d", conns->length);
         }

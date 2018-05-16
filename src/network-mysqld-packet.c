@@ -1118,7 +1118,6 @@ network_mysqld_auth_challenge_new()
     shake = g_new0(network_mysqld_auth_challenge, 1);
 
     shake->auth_plugin_data = g_string_new("");
-    shake->scrambled_password = g_string_new("");
     shake->capabilities = CETUS_DEFAULT_FLAGS;
     shake->auth_plugin_name = g_string_new(NULL);
 
@@ -1135,8 +1134,6 @@ network_mysqld_auth_challenge_free(network_mysqld_auth_challenge *shake)
         g_free(shake->server_version_str);
     if (shake->auth_plugin_data)
         g_string_free(shake->auth_plugin_data, TRUE);
-    if (shake->scrambled_password)
-        g_string_free(shake->scrambled_password, TRUE);
     if (shake->auth_plugin_name)
         g_string_free(shake->auth_plugin_name, TRUE);
 
@@ -1179,8 +1176,19 @@ network_mysqld_auth_challenge_set_challenge(network_mysqld_auth_challenge *shake
         shake->auth_plugin_data->str[i] = (94.0 * (rand() / (RAND_MAX + 1.0))) + 33;
     }
 
-    shake->auth_plugin_data->len = 20;
+    shake->auth_plugin_data->len = 21;
     shake->auth_plugin_data->str[shake->auth_plugin_data->len] = '\0';
+    g_string_assign(shake->auth_plugin_name, "mysql_native_password");
+}
+
+int network_mysqld_proto_append_auth_switch(GString *packet, char *method_name, GString *salt)
+{
+    network_mysqld_proto_append_int8(packet, 0xfe);
+    /*TODO: different algorithm for methods */
+    g_string_append_len(packet, method_name, strlen(method_name));
+    g_string_append_c(packet, 0);
+    g_string_append_len(packet, salt->str, salt->len);
+    return 0;
 }
 
 int

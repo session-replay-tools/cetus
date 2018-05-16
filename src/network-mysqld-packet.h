@@ -95,16 +95,21 @@ typedef struct {
 #define CLIENT_PLUGIN_AUTH (1UL << 19)
 #endif
 
-#define CETUS_DEFAULT_FLAGS CLIENT_BASIC_FLAGS                          \
-    & ~CLIENT_PLUGIN_AUTH /* not support plugin auth */                 \
-    & ~CLIENT_NO_SCHEMA /* permit database.table.column */              \
-    & ~CLIENT_IGNORE_SPACE                                              \
-    & ~CLIENT_CONNECT_ATTRS                                             \
-    & ~CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA                            \
-    & ~CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS                              \
-    & ~CLIENT_SESSION_TRACK                                             \
-    & ~CLIENT_DEPRECATE_EOF                                             \
-    & ~CLIENT_LOCAL_FILES
+#if MYSQL_VERSION_ID < 50606
+#define COMPATIBLE_BASIC_FLAGS (CLIENT_BASIC_FLAGS                      \
+                                |CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA  \
+                                |CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS    \
+                                |CLIENT_SESSION_TRACK)
+#else
+#define COMPATIBLE_BASIC_FLAGS CLIENT_BASIC_FLAGS
+#endif
+
+#define CETUS_DEFAULT_FLAGS (COMPATIBLE_BASIC_FLAGS                     \
+                             & ~CLIENT_NO_SCHEMA /* permit database.table.column */ \
+                             & ~CLIENT_IGNORE_SPACE                     \
+                             & ~CLIENT_DEPRECATE_EOF                    \
+                             & ~CLIENT_LOCAL_FILES                      \
+                             & ~CLIENT_CONNECT_ATTRS)
 
 NETWORK_API network_mysqld_com_query_result_t *network_mysqld_com_query_result_new(void);
 NETWORK_API void network_mysqld_com_query_result_free(network_mysqld_com_query_result_t *);
@@ -194,7 +199,6 @@ struct network_mysqld_auth_challenge {
     guint32 server_version;
     guint32 thread_id;
     GString *auth_plugin_data;
-    GString *scrambled_password;
     guint32 capabilities;
     guint8 charset;
     guint16 server_status;
@@ -223,6 +227,7 @@ struct network_mysqld_auth_response {
 NETWORK_API network_mysqld_auth_response *network_mysqld_auth_response_new(guint server_capabilities);
 NETWORK_API void network_mysqld_auth_response_free(network_mysqld_auth_response *);
 NETWORK_API int network_mysqld_proto_append_auth_response(GString *, network_mysqld_auth_response *);
+int network_mysqld_proto_append_auth_switch(GString *, char *method_name, GString* salt);
 NETWORK_API int network_mysqld_proto_get_auth_response(network_packet *, network_mysqld_auth_response *);
 NETWORK_API int network_mysqld_proto_get_and_change_auth_response(network_packet *, network_mysqld_auth_response *);
 

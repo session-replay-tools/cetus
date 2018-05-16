@@ -1166,24 +1166,24 @@ plugin_call(chassis *srv, network_mysqld_con *con, int state)
              */
             switch (con->auth_result_state) {
             case MYSQLD_PACKET_OK:
-                if (con->login_failed) {
-                    g_message("%s: clt login failed:%p", G_STRLOC, con);
-                } else {
-                    /* 
-                     * OK, delivered to client, 
-                     * switch to command phase
-                     */
-                    con->state = ST_READ_QUERY;
-                    if (con->is_client_compressed) {
-                        con->client->do_compress = 1;
-                        network_socket_set_send_buffer_size(con->client, COMPRESS_BUF_SIZE);
-                    }
+                /*
+                 * OK, delivered to client,
+                 * switch to command phase
+                 */
+                con->state = ST_READ_QUERY;
+                if (con->is_client_compressed) {
+                    con->client->do_compress = 1;
+                    network_socket_set_send_buffer_size(con->client, COMPRESS_BUF_SIZE);
                 }
                 break;
             case MYSQLD_PACKET_ERR:
                 /* ERR delivered to client, close the conn now */
                 con->prev_state = con->state;
                 con->state = ST_ERROR;
+                break;
+            case AUTH_SWITCH:
+                con->auth_result_state = MYSQLD_PACKET_OK;
+                con->state = ST_READ_AUTH;
                 break;
             default:
                 g_debug("%s: unexpected st for SEND_AUTH_RESULT: %02x", G_STRLOC, con->auth_result_state);
@@ -4359,6 +4359,7 @@ proxy_self_create_auth(chassis *srv, server_connection_state_t *con)
 
     const network_mysqld_auth_challenge *challenge = send_sock->challenge;
     network_mysqld_auth_response *auth = network_mysqld_auth_response_new(challenge->capabilities);
+    g_string_assign(auth->auth_plugin_name, "mysql_native_password");
 
     auth->client_capabilities = CETUS_DEFAULT_FLAGS;
 
@@ -4373,8 +4374,6 @@ proxy_self_create_auth(chassis *srv, server_connection_state_t *con)
         auth->client_capabilities &= ~CLIENT_FOUND_ROWS;
     }
 
-    auth->client_capabilities &= ~CLIENT_PLUGIN_AUTH;
-
     auth->max_packet_size = 0x01000000;
     auth->charset = con->charset_code;
     con->is_multi_stmt_set = 1;
@@ -4382,8 +4381,6 @@ proxy_self_create_auth(chassis *srv, server_connection_state_t *con)
 
     g_string_truncate(auth->auth_plugin_data, 0);
     network_mysqld_proto_password_scramble(auth->auth_plugin_data, S(challenge->auth_plugin_data), S(con->hashed_pwd));
-
-    g_string_assign_len(challenge->scrambled_password, S(auth->auth_plugin_data));
 
     g_string_append_len(auth->database, S(send_sock->default_db));
     g_string_assign_len(auth->username, S(send_sock->username));

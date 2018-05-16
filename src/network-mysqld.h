@@ -385,6 +385,10 @@ typedef struct query_cache_item {
 } query_cache_item;
 
 struct query_queue_t;
+
+enum {
+    AUTH_SWITCH = 3, /* for now, value not equal to 0 or 0xff is fine */
+};
 /**
  * get the name of a connection state
  */
@@ -511,7 +515,6 @@ struct network_mysqld_con {
 
     unsigned int is_wait_server:1;  /* first connect to backend failed, retrying */
     unsigned int is_calc_found_rows:1;
-    unsigned int login_failed:1;
     unsigned int is_auto_commit:1;
     unsigned int is_start_tran_command:1;
     unsigned int is_prepared:1;
@@ -742,6 +745,7 @@ struct chassis_private {
     struct cetus_users_t *users;
     struct cetus_variable_t *stats_variables;
     struct cetus_monitor_t *monitor;
+    guint32 thread_id;
 };
 
 NETWORK_API network_socket_retval_t

@@ -176,30 +176,50 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_auth)
     /* decode the packet */
     network_mysqld_proto_skip_network_header(&packet);
 
-    auth = network_mysqld_auth_response_new(con->client->challenge->capabilities);
-    if (network_mysqld_proto_get_auth_response(&packet, auth)) {
-        network_mysqld_auth_response_free(auth);
-        return NETWORK_SOCKET_ERROR;
-    }
-    if (!(auth->client_capabilities & CLIENT_PROTOCOL_41)) {
-        /* should use packet-id 0 */
-        network_mysqld_queue_append(con->client, con->client->send_queue,
-                                    C("\xff\xd7\x07" "4.0 protocol is not supported"));
-        network_mysqld_auth_response_free(auth);
-        return NETWORK_SOCKET_ERROR;
-    }
+    if (con->client->response == NULL) {
+        auth = network_mysqld_auth_response_new(con->client->challenge->capabilities);
+        if (network_mysqld_proto_get_auth_response(&packet, auth)) {
+            network_mysqld_auth_response_free(auth);
+            return NETWORK_SOCKET_ERROR;
+        }
+        if (!(auth->client_capabilities & CLIENT_PROTOCOL_41)) {
+            /* should use packet-id 0 */
+            network_mysqld_queue_append(con->client, con->client->send_queue,
+                                        C("\xff\xd7\x07" "4.0 protocol is not supported"));
+            network_mysqld_auth_response_free(auth);
+            return NETWORK_SOCKET_ERROR;
+        }
 
 #ifdef HAVE_OPENSSL
-    if (auth->ssl_request) {
-        network_ssl_create_connection(con->client, NETWORK_SSL_SERVER);
-        g_string_free(g_queue_pop_tail(con->client->recv_queue->chunks), TRUE);
-        con->state = ST_FRONT_SSL_HANDSHAKE;
-        return NETWORK_SOCKET_SUCCESS;
-    }
+        if (auth->ssl_request) {
+            network_ssl_create_connection(con->client, NETWORK_SSL_SERVER);
+            g_string_free(g_queue_pop_tail(con->client->recv_queue->chunks), TRUE);
+            con->state = ST_FRONT_SSL_HANDSHAKE;
+            return NETWORK_SOCKET_SUCCESS;
+        }
 #endif
+        con->client->response = auth;
 
-    con->client->response = auth;
-
+        if (g_strcmp0(auth->auth_plugin_name->str, "mysql_native_password") != 0) {
+            GString *packet = g_string_new(0);
+            network_mysqld_proto_append_auth_switch(packet, "mysql_native_password",
+                con->client->challenge->auth_plugin_data);
+            network_mysqld_queue_append(con->client, con->client->send_queue, S(packet));
+            con->state = ST_SEND_AUTH_RESULT;
+            con->auth_result_state = AUTH_SWITCH;
+            g_string_free(packet, TRUE);
+            g_string_free(g_queue_pop_tail(recv_sock->recv_queue->chunks), TRUE);
+            return NETWORK_SOCKET_SUCCESS;
+        }
+    } else {
+        /* auth switch response */
+        gsize auth_data_len = packet.data->len - 4;
+        GString *auth_data = g_string_sized_new(auth_data_len);
+        network_mysqld_proto_get_gstr_len(&packet, auth_data_len, auth_data);
+        g_string_append_len(con->client->response->auth_plugin_data, S(auth_data));
+        g_string_free(auth_data, TRUE);
+        auth = con->client->response;
+    }
     /* Check client addr in admin-allow-ip and admin-deny-ip */
     gboolean check_ip;
     char *ip_err_msg = NULL;

@@ -84,17 +84,16 @@ typedef struct {
     GString *uuid;
 
     backend_config *config;
-    GPtrArray *challenges;
+
     time_t last_check_time;
     int slave_delay_msec;       /* valid if this is a ReadOnly slave */
+    GString *server_version;
 } network_backend_t;
 
 NETWORK_API network_backend_t *network_backend_new();
 NETWORK_API void network_backend_free(network_backend_t *b);
 NETWORK_API int network_backend_conns_count(network_backend_t *b);
 NETWORK_API int network_backend_init_extra(network_backend_t *b, chassis *chas);
-void network_backend_save_challenge(network_backend_t *b, const network_mysqld_auth_challenge *, gboolean);
-network_mysqld_auth_challenge *network_backend_get_challenge(network_backend_t *b);
 
 typedef struct {
     unsigned int ro_server_num;
@@ -123,7 +122,7 @@ NETWORK_API gboolean network_backends_load_config(network_backends_t *, chassis 
 /* get backend index by ip:port string */
 int network_backends_find_address(network_backends_t *bs, const char *);
 
-network_mysqld_auth_challenge *network_backends_get_challenge(network_backends_t *b, int back_ndx);
+void network_backends_server_version(network_backends_t *b, GString* version);
 
 #define MAX_GROUP_SLAVES 4
 

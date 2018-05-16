@@ -105,11 +105,12 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
 
     packet.data = g_queue_peek_tail(recv_sock->recv_queue->chunks);
     packet.offset = 0;
+    network_mysqld_proto_skip_network_header(&packet);
 
     /* assume that we may get called twice:
      *
      * 1. for the initial packet
-     * 2. for the win-auth extra data
+     * 2. in case auth switch happened, for the auth switch response
      *
      * this is detected by con->client->response being NULL
      */
@@ -123,8 +124,11 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
         guint32 capabilities = con->client->challenge->capabilities;
         auth = network_mysqld_auth_response_new(capabilities);
 
-        network_mysqld_proto_skip_network_header(&packet);
         int err = network_mysqld_proto_get_auth_response(&packet, auth);
+        if (err) {
+            network_mysqld_auth_response_free(auth);
+            return NETWORK_SOCKET_ERROR;
+        }
 
 #ifdef HAVE_OPENSSL
         if (con->srv->ssl && auth->ssl_request) {
@@ -137,38 +141,43 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
             return NETWORK_SOCKET_SUCCESS;
         }
 #endif
-        if (err) {
-            network_mysqld_auth_response_free(auth);
-            return NETWORK_SOCKET_ERROR;
-        }
         if (!(auth->client_capabilities & CLIENT_PROTOCOL_41)) {
             /* should use packet-id 0 */
             network_mysqld_queue_append(con->client, con->client->send_queue,
                                         C("\xff\xd7\x07" "4.0 protocol is not supported"));
             network_mysqld_auth_response_free(auth);
             return NETWORK_SOCKET_ERROR;
-        } else if (auth->client_capabilities & CLIENT_COMPRESS) {
+        }
+
+        if (auth->client_capabilities & CLIENT_COMPRESS) {
             con->is_client_compressed = 1;
             g_message("%s: client compressed for con:%p", G_STRLOC, con);
-        } else if (auth->client_capabilities & CLIENT_MULTI_STATEMENTS) {
+        }
+        if (auth->client_capabilities & CLIENT_MULTI_STATEMENTS) {
             con->client->is_multi_stmt_set = 1;
         }
 
         con->client->response = auth;
 
+        if (g_strcmp0(auth->auth_plugin_name->str, "mysql_native_password") != 0) {
+            GString *packet = g_string_new(0);
+            network_mysqld_proto_append_auth_switch(packet, "mysql_native_password",
+                con->client->challenge->auth_plugin_data);
+            network_mysqld_queue_append(con->client, con->client->send_queue, S(packet));
+            con->state = ST_SEND_AUTH_RESULT;
+            con->auth_result_state = AUTH_SWITCH;
+            g_string_free(packet, TRUE);
+            g_string_free(g_queue_pop_tail(recv_sock->recv_queue->chunks), TRUE);
+            return NETWORK_SOCKET_SUCCESS;
+        }
+
         g_string_assign_len(con->client->default_db, S(auth->database));
         g_debug("%s:1nd round auth and set default db:%s for con:%p", G_STRLOC, con->client->default_db->str, con);
 
     } else {
-        GString *auth_data;
-        gsize auth_data_len;
-
-        /*
-         * get all the data from the packet and append it
-         * to the auth_plugin_data
-         */
-        auth_data_len = packet.data->len - 4;
-        auth_data = g_string_sized_new(auth_data_len);
+        /* auth switch response */
+        gsize auth_data_len = packet.data->len - 4;
+        GString *auth_data = g_string_sized_new(auth_data_len);
         network_mysqld_proto_get_gstr_len(&packet, auth_data_len, auth_data);
 
         g_string_append_len(con->client->response->auth_plugin_data, S(auth_data));
@@ -234,7 +243,6 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
                  response->username->str, con->client->src->name->str);
         network_mysqld_con_send_error_full(con->client, L(msg), ER_ACCESS_DENIED_ERROR, "28000");
         g_message("%s", msg);
-        con->login_failed = 1;
         con->state = ST_SEND_ERROR;
     }
 
@@ -385,14 +393,23 @@ do_connect_cetus(network_mysqld_con *con, network_backend_t **backend, int *back
         return NETWORK_SOCKET_SUCCESS;
     }
 
-    network_mysqld_auth_challenge *challenge = network_backends_get_challenge(g->backends, *backend_ndx);
-
-    if (challenge == NULL) {
-        network_connection_pool_create_conn(con);
-        network_mysqld_con_send_error(con->client, C(" no server challenge for this client"));
-        con->state = ST_SEND_AUTH_RESULT;
-        return NETWORK_SOCKET_SUCCESS;
-    }
+    /* create a "mysql_native_password" handshake packet */
+    network_mysqld_auth_challenge *challenge = network_mysqld_auth_challenge_new();
+#ifdef HAVE_OPENSSL
+    if (con->srv->ssl)
+        challenge->capabilities |= CLIENT_SSL;
+    else
+        challenge->capabilities &= ~CLIENT_SSL;
+#endif
+    network_mysqld_auth_challenge_set_challenge(challenge);
+    challenge->server_status |= SERVER_STATUS_AUTOCOMMIT;
+    challenge->charset = 0xC0;
+    GString *version = g_string_new("");
+    network_backends_server_version(g->backends, version);
+    g_string_append(version, " (cetus)");
+    challenge->server_version_str = version->str;
+    g_string_free(version, FALSE);
+    challenge->thread_id = g->thread_id++;
 
     GString *auth_packet = g_string_new(NULL);
     network_mysqld_proto_append_auth_challenge(auth_packet, challenge);
@@ -403,7 +420,7 @@ do_connect_cetus(network_mysqld_con *con, network_backend_t **backend, int *back
 
     g_assert(con->client->challenge == NULL);
 
-    con->client->challenge = network_mysqld_auth_challenge_copy(challenge);
+    con->client->challenge = challenge;
 
     con->state = ST_SEND_HANDSHAKE;
 

@@ -141,7 +141,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
     g_debug("%s, con:%p:call proxy_timeout", G_STRLOC, con);
     switch (con->state) {
     case ST_READ_QUERY:
-        if (diff < 8 * HOURS) {
+        if (diff < con->srv->client_idle_timeout) {
             if (con->server && !con->client->is_server_conn_reserved) {
                 if (network_pool_add_conn(con, 0) != 0) {
                     g_debug("%s, con:%p:conn to pool failed", G_STRLOC, con);
@@ -155,7 +155,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
         }
         break;
     case ST_READ_QUERY_RESULT:
-        if (diff < 8 * HOURS) {
+        if (diff < con->srv->client_idle_timeout) {
             if (con->server && !con->client->is_server_conn_reserved) {
                 con->server_to_be_closed = 1;
                 g_critical("%s, con:%p read query result timeout, sql:%s", G_STRLOC, con, con->orig_sql->str);
@@ -171,7 +171,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
         }
         break;
     default:
-        if (diff >= 8 * HOURS) {
+        if (diff >= con->srv->client_idle_timeout) {
             con->prev_state = con->state;
             con->state = ST_SEND_ERROR;
         }

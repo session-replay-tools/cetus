@@ -26,21 +26,22 @@
 | set reduce_conns (true\|false)           | reduce idle connections if set to true   |
 | reduce memory                            | reduce memory occupied by system         |
 | set maintain (true\|false)               | close all client connections if set to true |
+| show maintain status                     | query whether cetus' status is maintain  |
 | reload shard                             | reload sharding config from remote db    |
 | show status [like '%\<pattern>%']        | show select/update/insert/delete statistics |
 | show variables [like '%\<pattern>%']     | show configuration variables             |
 | select version                           | cetus version                            |
 | select conn_num from backends where backend_ndx=\<index> and user='\<name>') | display selected backend and its connection number |
-| select * from user_pwd [where user='\<name>'] | display server username and password |
-| select * from app_user_pwd [where user='\<name>'] | display client username and password |
-| update user_pwd set password='xx' where user='\<name>' | update server username and password |
-| update app_user_pwd set password='xx' where user='\<name>' | update client username and password |
+| select * from user_pwd [where user='\<name>'] | display server username and password     |
+| select * from app_user_pwd [where user='\<name>'] | display client username and password     |
+| update user_pwd set password='xx' where user='\<name>' | update server username and password      |
+| update app_user_pwd set password='xx' where user='\<name>' | update client username and password      |
 | delete from user_pwd where user='\<name>' | delete server username and password      |
-| delete from app_user_pwd where user='\<name>' | delete client username and password  |
-| insert into backends values ('\<ip:port@group>', '(ro\|rw)', '\<state>') | add mysql instance to backends list |
-| update backends set (type\|state)='\<value>' where (backend_ndx=\<index>\|address='\<ip:port>') | update mysql instance type or state |
-| delete from backends where (backend_ndx=\<index>\|address='\<ip:port>') | set state of mysql instance to deleted |
-| remove backend where (backend_ndx=\<index>\|address='\<ip:port>') | set state of mysql instance to deleted |
+| delete from app_user_pwd where user='\<name>' | delete client username and password      |
+| insert into backends values ('\<ip:port@group>', '(ro\|rw)', '\<state>') | add mysql instance to backends list      |
+| update backends set (type\|state)='\<value>' where (backend_ndx=\<index>\|address='\<ip:port>') | update mysql instance type or state      |
+| delete from backends where (backend_ndx=\<index>\|address='\<ip:port>') | set state of mysql instance to deleted   |
+| remove backend where (backend_ndx=\<index>\|address='\<ip:port>') | set state of mysql instance to deleted   |
 | add master '\<ip:port@group>'            | add master                               |
 | add slave '\<ip:port@group>'             | add slave                                |
 | stats get [\<item>]                      | show query statistics                    |
@@ -54,7 +55,7 @@
 
 结果说明：
 
-sharding版本管理端口提供了38条语句对cetus进行管理，具体用法见以下说明。
+sharding版本管理端口提供了39条语句对cetus进行管理，具体用法见以下说明。
 
 ## 后端配置
 
@@ -305,6 +306,12 @@ XO:     处于XA OVER状态。
 
 关闭所有客户端连接。
 
+### 查询是否关闭所有客户端连接
+
+`show maintain status`
+
+查询是否关闭所有客户端连接。
+
 ## 用户/密码管理
 
 ### 密码查询
@@ -385,8 +392,9 @@ XO:     处于XA OVER状态。
 
 ```
 说明
-Admin: 仅能配置IP，不能限制用户(Admin有效用户只有一个)；
-Shard: 仅配置IP，代表允许该IP来源所有用户的访问；配置User@IP，代表允许该IP来源的特定用户访问。
+Admin: 仅配置IP，不能限制用户(Admin有效用户只有一个)；
+Shard: 仅配置IP或者IP段，代表允许该IP来源所有用户的访问；配置User@IP，代表允许该IP来源的特定用户访问。
+其中配置的IP可为特定IP（如192.0.0.1），或者IP段（如192.0.0.*），或者所有IP（用*表示）。
 ```
 
 例如
@@ -437,6 +445,7 @@ Shard: 仅配置IP，代表允许该IP来源所有用户的访问；配置User@I
 说明
 Admin: 仅能配置IP，不能限制用户(Admin有效用户只有一个)；
 Shard: 仅配置IP，代表限制该IP来源所有用户的访问；配置User@IP，代表限制该IP来源的特定用户访问。
+其中配置的IP可为特定IP（如192.0.0.1），或者IP段（如192.0.0.*），或者所有IP（用*表示）。
 ```
 
 例如
@@ -472,15 +481,16 @@ Shard: 仅配置IP，代表限制该IP来源所有用户的访问；配置User@I
 需要"remote-conf-url ＝ \<url>"和"disable-threads = false"启动选项。
 从远端配置库中重载Shard配置。
 
-### 保存配置到本地文件
+### 保存最新配置
 
-`save settings [FILE]`
+`save settings`
 
-保存当前配置到指定路径的本地文件中。
+保存当前最新配置到cetus的安装主路径中（如/home/user/cetus_install/）。
 
-例如
-
->save settings /tmp/shard.cnf
+```
+说明
+保存的当前最新配置为shard.conf，旧的配置依然存在，更名为shard.conf.old。
+```
 
 ## 查看整体信息
 

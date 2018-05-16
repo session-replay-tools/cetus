@@ -10,9 +10,9 @@
 - flex
 - libevent-devel
 - mysql-devel／mariadb-devel
-- tcmalloc (由于malloc存在着潜在的内存碎片问题，建议采用tcmalloc)
+- gperftools-libs (由于malloc存在着潜在的内存碎片问题，建议采用gperftools-libs中的tcmalloc)
 
-请确保在编译安装Cetus前已安装好相应的依赖。
+centos系统可使用：yum install cmake gcc glib2-devel flex libevent-devel mysql-devel gperftools-libs -y 安装依赖包，请确保在编译安装Cetus前已安装好相应的依赖。
 
 ## 安装步骤
 
@@ -65,9 +65,14 @@ vi XXX.conf
 - 启动：Cetus可以利用bin/cetus启动
 
 ```
-bin/cetus --defaults-file=conf/XXX.conf [--conf-dir＝/home/user/cetus_install/conf/]
+读写分离版本：
+bin/cetus --defaults-file=conf/proxy.conf [--conf-dir＝/home/user/cetus_install/conf/]
+
+分库版本：
+bin/cetus --defaults-file=conf/shard.conf [--conf-dir＝/home/user/cetus_install/conf/]
+
 ```
 
-其中Cetus启动时可以添加命令行选项，--defaults-file选项用来加载启动配置文件，且在启动前保证启动配置文件的权限为660；--conf-dir是可选项，用来加载其他配置文件(.json文件)，默认为当前目录下conf文件夹。
+其中Cetus启动时可以添加命令行选项，--defaults-file选项用来加载启动配置文件（proxy.conf或者shard.conf），且在启动前保证启动配置文件的权限为660；--conf-dir是可选项，用来加载其他配置文件(.json文件)，默认为当前目录下conf文件夹。
 
 Cetus可起动守护进程后台运行，也可在进程意外终止自动启动一个新进程，可通过启动配置选项进行设置。

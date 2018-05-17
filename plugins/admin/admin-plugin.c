@@ -2042,10 +2042,10 @@ admin_save_settings(network_mysqld_con *con, const char *sql)
     chassis *srv = con->srv;
     GKeyFile *keyfile = g_key_file_new();
     g_key_file_set_list_separator(keyfile, ',');
-    GError *gerr = NULL;
-    gint ret = 0;
+    gint ret = ASSIGN_OK;
     gint effected_rows = 0;
     GString *free_path = g_string_new(NULL);
+
     if(srv->default_file == NULL) {
         free_path = g_string_append(free_path, get_current_dir_name());
         free_path = g_string_append(free_path, "/default.conf");
@@ -2064,48 +2064,51 @@ admin_save_settings(network_mysqld_con *con, const char *sql)
     if(free_path) {
         g_string_free(free_path, TRUE);
     }
-    //1 rename config file
+    /* rename config file */
     if(srv->default_file) {
         GString *new_file = g_string_new(NULL);
         new_file = g_string_append(new_file, srv->default_file);
         new_file = g_string_append(new_file, ".old");
-        remove(new_file->str);
-        g_debug("remove operate, filename:%s, errno:%d", new_file->str == NULL? "":new_file->str, errno);
+
+        if (remove(new_file->str)) {
+            g_debug("remove operate, filename:%s, errno:%d", 
+                    new_file->str == NULL? "":new_file->str, errno);
+        }
+
         if(rename(srv->default_file, new_file->str)) {
-            g_debug("rename operate failed, filename:%s, filename:%s, errno:%d", (srv->default_file == NULL ? "":srv->default_file),
+            g_debug("rename operate failed, filename:%s, filename:%s, errno:%d",
+                    (srv->default_file == NULL ? "":srv->default_file),
                     (new_file->str == NULL ? "":new_file->str), errno);
             ret = RENAME_ERROR;
         }
         g_string_free(new_file, TRUE);
     }
 
-    if(0 == ret) {
-        //2 save new config
+    if(ret == ASSIGN_OK) {
+        /* save new config */
         effected_rows = chassis_options_save(keyfile, srv->options, srv);
         gsize file_size = 0;
         gchar *file_buf = g_key_file_to_data(keyfile, &file_size, NULL);
+        GError *gerr = NULL;
         if (FALSE == g_file_set_contents(srv->default_file, file_buf, file_size, &gerr)) {
             ret = SAVE_ERROR;
         } else {
             if((ret = chmod(srv->default_file, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP))) {
-                g_debug("remove operate failed, filename:%s, errno:%d", (srv->default_file == NULL? "":srv->default_file), errno);
+                g_debug("remove operate failed, filename:%s, errno:%d", 
+                        (srv->default_file == NULL? "":srv->default_file), errno);
                 ret = CHMOD_ERROR;
             }
         }
     }
 
-    if(0 == ret) {
+    if(ret == ASSIGN_OK) {
         network_mysqld_con_send_ok_full(con->client, effected_rows, 0, SERVER_STATUS_AUTOCOMMIT, 0);
-    } else if(RENAME_ERROR == ret) {
+    } else if(ret == RENAME_ERROR) {
         network_mysqld_con_send_error_full(con->client, C("rename file failed"), 1066, "28000");
-    } else if(SAVE_ERROR == ret) {
+    } else if(ret == SAVE_ERROR) {
         network_mysqld_con_send_error_full(con->client, C("save file failed"), 1066, "28000");
-    } else if(REMOVE_ERROR == ret) {
-        network_mysqld_con_send_error_full(con->client, C("remove old file failed"), 1066, "28000");
-    } else if(CHMOD_ERROR == ret) {
+    } else if(ret == CHMOD_ERROR) {
         network_mysqld_con_send_error_full(con->client, C("chmod file failed"), 1066, "28000");
-    } else {
-        network_mysqld_con_send_error_full(con->client, C("unknown error happened"), 1066, "28000");
     }
 
     return PROXY_SEND_RESULT;

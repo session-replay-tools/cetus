@@ -22,8 +22,6 @@ gboolean network_ssl_decrypt_packet(network_socket* sock);
 
 network_socket_retval_t network_ssl_handshake(network_socket* sock);
 
-gboolean network_ssl_is_init_finished(network_socket* sock);
-
 #endif /* HAVE_OPENSSL */
 
 #endif /* NETWORK_SSL_H */

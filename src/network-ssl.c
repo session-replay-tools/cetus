@@ -490,10 +490,5 @@ network_socket_retval_t network_ssl_handshake(network_socket* sock)
     }
 }
 
-gboolean network_ssl_is_init_finished(network_socket* sock)
-{
-    return sock->ssl->ssl && SSL_is_init_finished(sock->ssl->ssl);
-}
-
 
 #endif /* HAVE_OPENSSL */

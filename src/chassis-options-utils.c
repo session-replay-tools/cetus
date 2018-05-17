@@ -162,9 +162,7 @@ show_plugins(gpointer param) {
             free_str->str[free_str->len - 1] = '\0';
             ret = g_strdup_printf("%s", free_str->str);
         }
-        if(free_str) {
-            g_string_free(free_str, TRUE);
-        }
+        g_string_free(free_str, TRUE);
     }
     return ret;
 }
@@ -1116,13 +1114,10 @@ chassis_options_save(GKeyFile *keyfile, chassis_options_t *opts, chassis  *chas)
             if (value != NULL) {
                 g_key_file_set_value(keyfile, "cetus", opt->long_name, value);
                 effected_rows++;
-            }
-            if(value) {
                 g_free(value);
             }
-            if(opt_param) {
-                g_free(opt_param);
-            }
+
+            g_free(opt_param);
         }
     }
     return effected_rows;

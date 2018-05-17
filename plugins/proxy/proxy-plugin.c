@@ -2275,9 +2275,7 @@ show_proxy_read_only_backend_address(gpointer param) {
             free_str->str[free_str->len -1] = '\0';
             ret = g_strdup(free_str->str);
         }
-        if(free_str) {
-            g_string_free(free_str, TRUE);
-        }
+        g_string_free(free_str, TRUE);
     }
     return ret;
 }
@@ -2306,7 +2304,7 @@ show_proxy_backend_addresses(gpointer param) {
         if(free_str->len) {
             free_str->str[free_str->len -1] = '\0';
         }
-        //handle defaults
+        /* handle defaults */
         if(!strcasecmp(free_str->str, "127.0.0.1:3306")) {
             ret = NULL;
         } else {
@@ -2314,9 +2312,8 @@ show_proxy_backend_addresses(gpointer param) {
                 ret = g_strdup(free_str->str);
             }
         }
-        if(free_str) {
-            g_string_free(free_str, TRUE);
-        }
+
+        g_string_free(free_str, TRUE);
     }
     return ret;
 }
@@ -2329,7 +2326,7 @@ show_proxy_connect_timeout(gpointer param) {
         return g_strdup_printf("%lf (s)", config->connect_timeout_dbl);
     }
     if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        //handle default
+        /* handle default */
         if(config->connect_timeout_dbl == -1) {
             return NULL;
         }
@@ -2367,7 +2364,7 @@ show_proxy_read_timeout(gpointer param) {
         return g_strdup_printf("%lf (s)", config->read_timeout_dbl);
     }
     if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        //handle default
+        /* handle default */
         if(config->read_timeout_dbl == -1) {
             return NULL;
         }
@@ -2454,9 +2451,8 @@ show_proxy_allow_ip(gpointer param) {
                 ret = g_strdup(free_str->str);
             }
         }
-        if(free_str) {
-            g_string_free(free_str, TRUE);
-        }
+
+        g_string_free(free_str, TRUE);
         if(free_list) {
             g_list_free(free_list);
         }
@@ -2484,9 +2480,8 @@ show_proxy_deny_ip(gpointer param) {
                 ret = g_strdup(free_str->str);
             }
         }
-        if(free_str) {
-            g_string_free(free_str, TRUE);
-        }
+
+        g_string_free(free_str, TRUE);
         if(free_list) {
             g_list_free(free_list);
         }
@@ -2502,7 +2497,7 @@ show_read_master_percentage(gpointer param) {
         return g_strdup_printf("%d", config->read_master_percentage);
     }
     if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        //handle default
+        /* handle default */
         if(config->read_master_percentage == 0) {
             return NULL;
         }
@@ -2520,7 +2515,7 @@ assign_read_master_percentage(const gchar *newval, gpointer param) {
         if(NULL != newval) {
             gint value = 0;
             if(try_get_int_value(newval, &value)) {
-                if(value >= 0 || value <= 100) {
+                if(value >= 0 && value <= 100) {
                     config->read_master_percentage = value;
                     ret = ASSIGN_OK;
                 } else {

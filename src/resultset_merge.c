@@ -1590,18 +1590,6 @@ cetus_result_retrieve_field_count(GQueue *input, guint64 *p_field_count)
     return TRUE;
 }
 
-static gboolean
-cetus_result_parse_field_count(cetus_result_t *res_merge, GQueue *input)
-{
-    guint64 field_count = 0;
-    if (cetus_result_retrieve_field_count(input, &field_count) == TRUE) {
-        res_merge->field_count = field_count;
-        return TRUE;
-    } else {
-        return FALSE;
-    }
-}
-
 /**
  * Get order_array.pos, order_array.type
  */

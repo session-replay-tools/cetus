@@ -407,7 +407,7 @@ sql_expr_list_find_fullname(sql_expr_list_t *list, const sql_expr_t *expr)
 int
 sql_expr_list_find_aggregate(sql_expr_list_t *list)
 {
-    int i, index = 0;
+    int i;
     enum sql_func_type_t type;
     for (i = 0; i < list->len; ++i) {
         sql_expr_t *p = g_ptr_array_index(list, i);

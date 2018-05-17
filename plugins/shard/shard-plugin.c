@@ -2108,21 +2108,19 @@ show_proxy_read_only_backend_address(gpointer param) {
         for (i = 0; i < bs->backends->len; i++) {
             network_backend_t *old_backend = g_ptr_array_index(bs->backends, i);
             if(old_backend && old_backend->type == BACKEND_TYPE_RO) {
-            free_str = g_string_append(free_str, old_backend->address->str);
-            if(old_backend->server_group && old_backend->server_group->len) {
-                free_str = g_string_append(free_str, "@");
-                free_str = g_string_append(free_str, old_backend->server_group->str);
+                free_str = g_string_append(free_str, old_backend->address->str);
+                if(old_backend->server_group && old_backend->server_group->len) {
+                    free_str = g_string_append(free_str, "@");
+                    free_str = g_string_append(free_str, old_backend->server_group->str);
+                }
+                free_str = g_string_append(free_str, ",");
             }
-            free_str = g_string_append(free_str, ",");
         }
-	    }
-	    if(free_str->len) {
-                free_str->str[free_str->len -1] = '\0';
-                ret = g_strdup(free_str->str);
-            }
-            if(free_str) {
-		g_string_free(free_str, TRUE);
-            }
+        if(free_str->len) {
+            free_str->str[free_str->len -1] = '\0';
+            ret = g_strdup(free_str->str);
+        }
+        g_string_free(free_str, TRUE);
     }
     return ret;
 }
@@ -2158,9 +2156,8 @@ show_proxy_backend_addresses(gpointer param) {
                 ret = g_strdup(free_str->str);
             }
         }
-        if(free_str) {
-            g_string_free(free_str, TRUE);
-        }
+
+        g_string_free(free_str, TRUE);
     }
     return ret;
 }

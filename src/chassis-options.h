@@ -84,12 +84,6 @@ int chassis_option_set(chassis_option_t *opt,
                        const char *description,
                        const char *arg_desc,
                        chas_opt_assign_hook assign_hook, chas_opt_show_hook show_hook, gint opt_property);
-/**
- * @return newly allocated string, need to be freed
- */
-char *chassis_option_get_value_str(chassis_option_t *opt);
-
-gboolean chassis_option_set_value(chassis_option_t *opt, const char *);
 
 typedef struct chassis_options_t {
     GList *options;             /* List of chassis_option_t */
@@ -119,8 +113,6 @@ int chassis_options_add(chassis_options_t *opts,
                         const char *description,
                         const char *arg_desc,
                         chas_opt_assign_hook assign_hook, chas_opt_show_hook show_hook, gint opt_property);
-
-chassis_option_t *chassis_options_get(GList *opts, const char *long_name);
 
 gboolean chassis_options_parse_cmdline(chassis_options_t *context, int *argc, char ***argv, GError **error);
 

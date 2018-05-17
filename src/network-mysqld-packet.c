@@ -1140,28 +1140,6 @@ network_mysqld_auth_challenge_free(network_mysqld_auth_challenge *shake)
     g_free(shake);
 }
 
-network_mysqld_auth_challenge *
-network_mysqld_auth_challenge_copy(const network_mysqld_auth_challenge *src)
-{
-    network_mysqld_auth_challenge *dst;
-
-    if (!src)
-        return NULL;
-
-    dst = network_mysqld_auth_challenge_new();
-    dst->protocol_version = src->protocol_version;
-    dst->server_version = src->server_version;
-    dst->thread_id = src->thread_id;
-    dst->capabilities = src->capabilities;
-    dst->charset = src->charset;
-    dst->server_status = src->server_status;
-    dst->server_version_str = g_strdup(src->server_version_str);
-    g_string_assign_len(dst->auth_plugin_data, S(src->auth_plugin_data));
-    g_string_assign_len(dst->auth_plugin_name, S(src->auth_plugin_name));
-
-    return dst;
-}
-
 void
 network_mysqld_auth_challenge_set_challenge(network_mysqld_auth_challenge *shake)
 {
@@ -1495,99 +1473,6 @@ network_mysqld_proto_get_auth_response(network_packet *packet, network_mysqld_au
         if ((auth->server_capabilities & CLIENT_PLUGIN_AUTH) && (auth->client_capabilities & CLIENT_PLUGIN_AUTH)) {
             err = err || network_mysqld_proto_get_gstr(packet, auth->auth_plugin_name);
         }
-    } else {
-        err = err || network_mysqld_proto_get_int16(packet, &l_cap);
-        err = err || network_mysqld_proto_get_int24(packet, &auth->max_packet_size);
-        err = err || network_mysqld_proto_get_gstr(packet, auth->username);
-        if (packet->data->len != packet->offset) {
-            /* if there is more, it is the password without a terminating \0 */
-            err = err || network_mysqld_proto_get_gstr_len(packet,
-                                                           packet->data->len - packet->offset, auth->auth_plugin_data);
-        }
-
-        if (!err) {
-            auth->client_capabilities = l_cap;
-        }
-    }
-
-    return err ? -1 : 0;
-}
-
-/* Change the auth process to the simple auth process */
-int
-network_mysqld_proto_get_and_change_auth_response(network_packet *packet, network_mysqld_auth_response *auth)
-{
-    int err = 0;
-    guint32 mysql_packet_len = 0;
-    guint16 l_cap;
-    /* extract the default db from it */
-
-    /*
-     * @\0\0\1
-     *  \215\246\3\0 - client-flags
-     *  \0\0\0\1     - max-packet-len
-     *  \10          - charset-num
-     *  \0\0\0\0
-     *  \0\0\0\0
-     *  \0\0\0\0
-     *  \0\0\0\0
-     *  \0\0\0\0
-     *  \0\0\0       - fillers
-     *  root\0       - username
-     *  \24          - len of the scrambled buf
-     *    ~    \272 \361 \346
-     *    \211 \353 D    \351
-     *    \24  \243 \223 \257
-     *    \0   ^    \n   \254
-     *    t    \347 \365 \244
-     *  
-     *  world\0
-     */
-
-    err = err || network_mysqld_proto_get_int24(packet, &mysql_packet_len);
-    if (err)
-        return -1;
-
-    packet->offset = NET_HEADER_SIZE;
-    mysql_packet_len += NET_HEADER_SIZE;
-
-    /* 4.0 uses 2 byte, 4.1+ uses 4 bytes, but the proto-flag is in the lower 2 bytes */
-    err = err || network_mysqld_proto_peek_int16(packet, &l_cap);
-    if (err)
-        return -1;
-
-    if (l_cap & CLIENT_PROTOCOL_41) {
-        unsigned char *cap = (unsigned char *)packet->data->str + packet->offset;
-        /* unset connect attrs and plugin auth flags in Extended Client Capabilities */
-        cap[2] &= ~(8 | 16);
-        err = err || network_mysqld_proto_get_int32(packet, &auth->client_capabilities);
-
-        err = err || network_mysqld_proto_get_int32(packet, &auth->max_packet_size);
-        err = err || network_mysqld_proto_get_int8(packet, &auth->charset);
-
-        err = err || network_mysqld_proto_skip(packet, 23);
-
-        err = err || network_mysqld_proto_get_gstr(packet, auth->username);
-
-        guint8 len;
-        /* new auth is 1-byte-len + data */
-        err = err || network_mysqld_proto_get_int8(packet, &len);
-
-        err = err || network_mysqld_proto_get_gstr_len(packet, len, auth->auth_plugin_data);
-
-        if ((auth->server_capabilities & CLIENT_CONNECT_WITH_DB) &&
-            (auth->client_capabilities & CLIENT_CONNECT_WITH_DB)) {
-            err = err || network_mysqld_proto_get_gstr(packet, auth->database);
-        }
-
-        if (mysql_packet_len != packet->offset) {
-            network_mysqld_proto_set_packet_len(packet->data, packet->offset - NET_HEADER_SIZE);
-            packet->data->len = packet->offset;
-        }
-        /* if ((auth->server_capabilities & CLIENT_PLUGIN_AUTH) &&
-           (auth->client_capabilities & CLIENT_PLUGIN_AUTH)) {
-           err = err || network_mysqld_proto_get_gstr(packet, auth->auth_plugin_name);
-           } */
     } else {
         err = err || network_mysqld_proto_get_int16(packet, &l_cap);
         err = err || network_mysqld_proto_get_int24(packet, &auth->max_packet_size);

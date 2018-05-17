@@ -133,7 +133,7 @@ network_backends_new()
 void
 network_backends_free(network_backends_t *bs)
 {
-    gsize i, j;
+    gsize i;
 
     if (!bs)
         return;

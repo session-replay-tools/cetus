@@ -902,7 +902,7 @@ main_cmdline(int argc, char **argv)
     {
         gint i = 0;
         srv->plugin_names = g_new(char *, (srv->modules->len + 1));
-        for (i = 0; frontend->plugin_names && frontend->plugin_names[i]; i++) {
+        for (i = 0; frontend->plugin_names[i]; i++) {
             if (!g_strcmp0("", frontend->plugin_names[i])) {
                 continue;
             }
@@ -1072,7 +1072,7 @@ main_cmdline(int argc, char **argv)
     if (frontend && !frontend->print_version) {
         /* add a tag to the logfile */
         g_log(G_LOG_DOMAIN,
-              (srv->verbose_shutdown ? G_LOG_LEVEL_CRITICAL : G_LOG_LEVEL_MESSAGE),
+              ((srv && srv->verbose_shutdown) ? G_LOG_LEVEL_CRITICAL : G_LOG_LEVEL_MESSAGE),
               "shutting down normally, exit code is: %d", exit_code);
     }
 #ifdef HAVE_SIGACTION

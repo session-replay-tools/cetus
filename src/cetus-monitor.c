@@ -409,35 +409,6 @@ cetus_monitor_open(cetus_monitor_t *monitor, monitor_type_t monitor_type)
     }
 }
 
-void
-cetus_monitor_close(cetus_monitor_t *monitor, monitor_type_t monitor_type)
-{
-    switch (monitor_type) {
-    case MONITOR_TYPE_CHECK_ALIVE:
-        if (monitor->check_alive_timer.ev_base) {
-            evtimer_del(&monitor->check_alive_timer);
-        }
-        g_message("check_alive monitor close.");
-        break;
-    case MONITOR_TYPE_CHECK_DELAY:
-        if (monitor->write_master_timer.ev_base) {
-            evtimer_del(&monitor->write_master_timer);
-        }
-        if (monitor->read_slave_timer.ev_base) {
-            evtimer_del(&monitor->read_slave_timer);
-        }
-        g_message("check_slave monitor close.");
-        break;
-    case MONITOR_TYPE_CHECK_CONFIG:
-        if (monitor->check_config_timer.ev_base) {
-            evtimer_del(&monitor->check_config_timer);
-        }
-        g_message("check_config monitor close.");
-        break;
-    default:
-        break;
-    }
-}
 
 static void *
 cetus_monitor_mainloop(void *data)

@@ -211,7 +211,6 @@ NETWORK_API void network_mysqld_auth_challenge_free(network_mysqld_auth_challeng
 NETWORK_API int network_mysqld_proto_get_auth_challenge(network_packet *, network_mysqld_auth_challenge *);
 NETWORK_API int network_mysqld_proto_append_auth_challenge(GString *, network_mysqld_auth_challenge *);
 NETWORK_API void network_mysqld_auth_challenge_set_challenge(network_mysqld_auth_challenge *);
-NETWORK_API network_mysqld_auth_challenge *network_mysqld_auth_challenge_copy(const network_mysqld_auth_challenge *);
 
 struct network_mysqld_auth_response {
     guint32 client_capabilities;
@@ -230,7 +229,6 @@ NETWORK_API void network_mysqld_auth_response_free(network_mysqld_auth_response 
 NETWORK_API int network_mysqld_proto_append_auth_response(GString *, network_mysqld_auth_response *);
 int network_mysqld_proto_append_auth_switch(GString *, char *method_name, GString* salt);
 NETWORK_API int network_mysqld_proto_get_auth_response(network_packet *, network_mysqld_auth_response *);
-NETWORK_API int network_mysqld_proto_get_and_change_auth_response(network_packet *, network_mysqld_auth_response *);
 
 /* COM_STMT_* */
 

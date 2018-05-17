@@ -37,15 +37,15 @@
 #define CAN_SHOW_OPTS_PROPERTY(opt_property) ((opt_property) & SHOW_OPTS_PROPERTY)
 #define CAN_SAVE_OPTS_PROPERTY(opt_property) ((opt_property) & SAVE_OPTS_PROPERTY)
 
-#define ASSIGN_OK 0
-#define ASSIGN_ERROR -1
-#define ASSIGN_NOT_SUPPORT -2
-#define ASSIGN_VALUE_INVALID -3
-#define SAVE_ERROR -10
-#define RENAME_ERROR -11
-#define CHMOD_ERROR -12
-#define REMOVE_ERROR -13
-#define NOT_EXIST -14
+enum {
+    ASSIGN_OK,
+    ASSIGN_ERROR, 
+    ASSIGN_NOT_SUPPORT,
+    ASSIGN_VALUE_INVALID,
+    SAVE_ERROR,
+    RENAME_ERROR,
+    CHMOD_ERROR
+};
 
 /* show utils */
 CHASSIS_API gchar* show_verbose_shutdown(gpointer param);

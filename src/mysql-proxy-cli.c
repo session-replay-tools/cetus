@@ -802,12 +802,6 @@ main_cmdline(int argc, char **argv)
         }
     }
 
-    if(frontend->group_replication_mode != 0 && frontend->group_replication_mode != 1) {
-        g_critical("group-replication-mode is invalid, current value is %d", frontend->group_replication_mode);
-        GOTO_EXIT(EXIT_FAILURE);
-    }
-    srv->group_replication_mode = frontend->group_replication_mode;
-
     if (chassis_frontend_init_basedir(argv[0], &(frontend->base_dir))) {
         GOTO_EXIT(EXIT_FAILURE);
     }
@@ -985,6 +979,12 @@ main_cmdline(int argc, char **argv)
             GOTO_EXIT(EXIT_FAILURE);
         }
     }
+
+    if(frontend->group_replication_mode != 0 && frontend->group_replication_mode != 1) {
+        g_critical("group-replication-mode is invalid, current value is %d", frontend->group_replication_mode);
+        GOTO_EXIT(EXIT_FAILURE);
+    }
+    srv->group_replication_mode = frontend->group_replication_mode;
 
     /*
      * log the versions of all loaded plugins

@@ -42,8 +42,6 @@ void cetus_monitor_open(cetus_monitor_t *, monitor_type_t);
 
 void cetus_monitor_close(cetus_monitor_t *, monitor_type_t);
 
-void cetus_monitor_open(cetus_monitor_t *, monitor_type_t);
-
 void cetus_monitor_start_thread(cetus_monitor_t *, chassis *data);
 
 void cetus_monitor_stop_thread(cetus_monitor_t *);

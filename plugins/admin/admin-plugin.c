@@ -1415,12 +1415,19 @@ static int
 admin_set_maintain(network_mysqld_con *con, const char *sql)
 {
     gboolean error = FALSE;
+    gint effected_rows = 0;
     char *mode = str_nth_token(sql, 2);
     if (mode) {
         if (strcasecmp(mode, "true") == 0) {
-            con->srv->maintain_close_mode = 1;
+            if(con->srv->maintain_close_mode != 1) {
+                con->srv->maintain_close_mode = 1;
+                effected_rows++;
+            }
         } else if (strcasecmp(mode, "false") == 0) {
-            con->srv->maintain_close_mode = 0;
+            if(con->srv->maintain_close_mode != 0) {
+                con->srv->maintain_close_mode = 0;
+                effected_rows++;
+            }
         } else {
             error = TRUE;
         }
@@ -1430,7 +1437,7 @@ admin_set_maintain(network_mysqld_con *con, const char *sql)
     }
     if (error)
         return PROXY_NO_DECISION;
-    network_mysqld_con_send_ok(con->client);
+    network_mysqld_con_send_ok_full(con->client, effected_rows, 0, SERVER_STATUS_AUTOCOMMIT, 0);
     return PROXY_SEND_RESULT;
 }
 

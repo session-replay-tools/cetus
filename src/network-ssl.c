@@ -213,26 +213,22 @@ void network_ssl_free_connection(network_socket* sock)
 
 static ssize_t SSL_writev(SSL *ssl, const struct iovec *vector, int count)
 {
-    char *buffer;
-    register char *bp;
-    size_t bytes, to_copy;
     int i;
-
     /* Find the total number of bytes to be written.  */
-    bytes = 0;
+    size_t bytes = 0;
     for (i = 0; i < count; ++i)
         bytes += vector[i].iov_len;
 
     /* Allocate a temporary buffer to hold the data.  */
-    buffer = (char *) alloca (bytes);
+    char *buffer = (char *) g_malloc(bytes);
 
     /* Copy the data into BUFFER.  */
-    to_copy = bytes;
-    bp = buffer;
+    size_t to_copy = bytes;
+    char *bp = buffer;
     for (i = 0; i < count; ++i) {
         size_t copy = MIN(vector[i].iov_len, to_copy);
 
-        memcpy ((void *) bp, (void *) vector[i].iov_base, copy);
+        memcpy((void *) bp, (void *) vector[i].iov_base, copy);
         bp += copy;
 
         to_copy -= copy;
@@ -240,7 +236,9 @@ static ssize_t SSL_writev(SSL *ssl, const struct iovec *vector, int count)
             break;
     }
 
-    return SSL_write (ssl, buffer, bytes);
+    ssize_t written = SSL_write(ssl, buffer, bytes);
+    g_free(buffer);
+    return written;
 }
 
 network_socket_retval_t

@@ -1012,7 +1012,11 @@ show_group_replication_mode(gpointer param) {
         return g_strdup_printf("%d", srv->group_replication_mode);
     }
     if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        return g_strdup_printf("%d", srv->group_replication_mode);
+        if(srv->group_replication_mode == 0) {
+            return NULL;
+        } else {
+            return g_strdup_printf("%d", srv->group_replication_mode);
+        }
     }
     return NULL;
 }

@@ -99,7 +99,8 @@ typedef struct {
 #define COMPATIBLE_BASIC_FLAGS (CLIENT_BASIC_FLAGS                      \
                                 |CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA  \
                                 |CLIENT_CAN_HANDLE_EXPIRED_PASSWORDS    \
-                                |CLIENT_SESSION_TRACK)
+                                |CLIENT_SESSION_TRACK                   \
+                                |CLIENT_PLUGIN_AUTH)
 #else
 #define COMPATIBLE_BASIC_FLAGS CLIENT_BASIC_FLAGS
 #endif

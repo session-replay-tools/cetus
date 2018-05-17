@@ -159,7 +159,9 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
 
         con->client->response = auth;
 
-        if (g_strcmp0(auth->auth_plugin_name->str, "mysql_native_password") != 0) {
+        if ((auth->client_capabilities & CLIENT_PLUGIN_AUTH)
+            && (g_strcmp0(auth->auth_plugin_name->str, "mysql_native_password") != 0))
+        {
             GString *packet = g_string_new(0);
             network_mysqld_proto_append_auth_switch(packet, "mysql_native_password",
                 con->client->challenge->auth_plugin_data);

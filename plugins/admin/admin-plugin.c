@@ -1996,6 +1996,11 @@ admin_set_config(network_mysqld_con *con, const char *sql)
         return PROXY_SEND_RESULT;
     }
 
+    if (val[0] == '\0') {
+        network_mysqld_con_send_error_full(con->client, C("Value can only contain [a-zA-Z0-9_.-], and don't have to surround with quotes. "), 1065, "28000");
+        return PROXY_SEND_RESULT;
+    }
+
     int affected_rows = 0;
     int ret = 0;
 

@@ -623,7 +623,6 @@ release_resouces_when_exit(struct chassis_frontend_t *frontend, chassis *srv, GE
     g_debug("%s: call chassis_options_free", G_STRLOC);
     if (opts)
         chassis_options_free(opts);
-    g_debug("%s: call g_hash_table_destroy", G_STRLOC);
     g_debug("%s: call chassis_log_free", G_STRLOC);
     chassis_log_free(log);
     tc_log_end();

@@ -455,9 +455,15 @@ shard_conf_destroy(void)
     if (shard_conf_vdbs) {
         g_list_free_full(shard_conf_vdbs, (GDestroyNotify) sharding_vdb_free);
     }
-    g_hash_table_destroy(shard_conf_tables);
-    g_list_free_full(shard_conf_single_tables, (GDestroyNotify) single_table_free);
-    g_list_free_full(shard_conf_all_groups, g_string_true_free);
+    if (shard_conf_tables) {
+        g_hash_table_destroy(shard_conf_tables);
+    }
+    if (shard_conf_single_tables) {
+        g_list_free_full(shard_conf_single_tables, (GDestroyNotify) single_table_free);
+    }
+    if (shard_conf_all_groups) {
+        g_list_free_full(shard_conf_all_groups, g_string_true_free);
+    }
 }
 
 static GHashTable *load_shard_from_json(gchar *json_str);

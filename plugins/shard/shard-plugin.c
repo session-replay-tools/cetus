@@ -2069,7 +2069,6 @@ network_mysqld_shard_plugin_free(chassis *chas, chassis_plugin_config *config)
         g_free(config->address);
     }
     sql_filter_vars_destroy();
-    g_debug("%s: call shard_conf_destroy", G_STRLOC);
     shard_conf_destroy();
 
     g_free(config);

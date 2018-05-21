@@ -2785,6 +2785,7 @@ void Parse(struct lemon *gp)
   filebuf = (char *)malloc( filesize+1);
   if (filesize>100000000 || filebuf == 0) {
     ErrorMsg(ps.filename,0,"Input file too large.");
+    free(filebuf);
     gp->errorcnt++;
     fclose(fp);
     return;
@@ -3278,8 +3279,8 @@ PRIVATE char *pathsearch(char *argv0, char *name, int modemask)
     if (pathlist == 0) pathlist = ".:/bin:/usr/bin";
     pathbuf = (char *) malloc( lemonStrlen(pathlist) + 1);
     path = (char *)malloc( lemonStrlen(pathlist)+lemonStrlen(name)+2);
+    pathbufptr = pathbuf;
     if ((pathbuf != 0) && (path!=0) ) {
-      pathbufptr = pathbuf;
       lemon_strcpy(pathbuf, pathlist);
       while(*pathbuf) {
         cp = strchr(pathbuf,':');
@@ -3292,7 +3293,10 @@ PRIVATE char *pathsearch(char *argv0, char *name, int modemask)
         else pathbuf = &cp[1];
         if (access(path,modemask) == 0) break;
       }
-      free(pathbufptr);
+    }
+
+    if (pathbufptr) {
+        free(pathbufptr);
     }
   }
   return path;
@@ -3356,7 +3360,7 @@ PRIVATE FILE *tplt_open(struct lemon *lemp)
   static char templatename[] = "lempar.c";
   char buf[1000];
   FILE *in;
-  char *tpltname;
+  char *tpltname, *tmp = NULL;
   char *cp;
 
   /* first, see if user specified a template filename on the command line. */
@@ -3388,7 +3392,8 @@ PRIVATE FILE *tplt_open(struct lemon *lemp)
   } else if (access(templatename,004) == 0) {
     tpltname = templatename;
   } else{
-    tpltname = pathsearch(lemp->argv0,templatename,0);
+    tmp = pathsearch(lemp->argv0,templatename,0);
+    tpltname = tmp;
   }
   if (tpltname == 0) {
     fprintf(stderr,"Can't find the parser driver template file \"%s\".\n",
@@ -3397,6 +3402,9 @@ PRIVATE FILE *tplt_open(struct lemon *lemp)
     return 0;
   }
   in = fopen(tpltname,"rb");
+  if (tmp) {
+      free(tmp);
+  }
   if (in == 0) {
     fprintf(stderr,"Can't open the template file \"%s\".\n",templatename);
     lemp->errorcnt++;
@@ -4492,6 +4500,7 @@ void ReportTable(
   /* Append any addition code the user desires */
   tplt_print(out,lemp,lemp->extracode,&lineno);
 
+  free(pActtab);
   fclose(in);
   fclose(out);
   return;

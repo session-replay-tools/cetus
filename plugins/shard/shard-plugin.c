@@ -2040,11 +2040,6 @@ chassis_plugin_config *config;
 static chassis_plugin_config *
 network_mysqld_shard_plugin_new(void)
 {
-#ifdef SIMPLE_PARSER
-    g_critical("try loading shard-plugin.so from rw-edition, exit");
-    exit(1);
-#endif
-
     config = g_new0(chassis_plugin_config, 1);
 
     /* use negative values as defaults to make them ignored */

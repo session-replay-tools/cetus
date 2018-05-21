@@ -504,6 +504,17 @@ check_plugin_mode_valid(struct chassis_frontend_t *frontend, chassis *srv)
         g_critical("shard & proxy is mutual exclusive");
         return FALSE;
     }
+#ifdef SIMPLE_PARSER
+    if (sharding_mode) {
+        g_critical("try loading shard-plugin.so from rw-edition, exit");
+        return FALSE;
+    }
+#else
+    if (proxy_mode) {
+        g_critical("try loading proxy-plugin.so from shard-edition, exit");
+        return FALSE;
+    }
+#endif
 
     return TRUE;
 }

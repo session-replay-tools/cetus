@@ -2202,11 +2202,6 @@ chassis_plugin_config *config;
 chassis_plugin_config *
 network_mysqld_proxy_plugin_new(void)
 {
-#ifndef SIMPLE_PARSER
-    g_critical("try loading proxy-plugin.so from shard-edition, exit");
-    exit(1);
-#endif
-
     config = g_new0(chassis_plugin_config, 1);
 
     /* use negative values as defaults to make them ignored */

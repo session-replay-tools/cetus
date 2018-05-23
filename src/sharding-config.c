@@ -126,13 +126,37 @@ sharding_table_free(gpointer q)
     g_free(info);
 }
 
+sharding_partition_t *sharding_partition_new(const char *group, const sharding_vdb_t *vdb)
+{
+    sharding_partition_t *p = g_new0(sharding_partition_t, 1);
+    p->method = vdb->method;
+    p->key_type = vdb->key_type;
+    p->hash_count = vdb->logic_shard_num;
+    p->group_name = g_string_new(group);
+    return p;
+}
+
 gboolean
 sharding_partition_contain_hash(sharding_partition_t *partition, int val)
 {
-    g_assert(partition->vdb->method == SHARD_METHOD_HASH);
-    if (val >= partition->vdb->logic_shard_num)
+    g_assert(partition->method == SHARD_METHOD_HASH);
+    if (val >= partition->hash_count)
         return FALSE;
     return TestBit(partition->hash_set, val);
+}
+
+void sharding_partition_free(sharding_partition_t *p)
+{
+    if (p->method == SHARD_METHOD_RANGE) {
+        if (p->key_type == SHARD_DATA_TYPE_STR) {
+            g_free(p->value);
+            g_free(p->low_value);
+        }
+    }
+    if (p->group_name) {
+        g_string_free(p->group_name, TRUE);
+    }
+    g_free(p);
 }
 
 static sharding_vdb_t *
@@ -153,20 +177,7 @@ sharding_vdb_free(sharding_vdb_t *vdb)
     int i;
     for (i = 0; i < vdb->partitions->len; i++) {
         sharding_partition_t *item = g_ptr_array_index(vdb->partitions, i);
-        if (vdb->method == SHARD_METHOD_RANGE) {
-            if (vdb->key_type == SHARD_DATA_TYPE_STR) {
-                if (item->value) {
-                    g_free(item->value);
-                }
-                if (item->low_value) {
-                    g_free(item->low_value);
-                }
-            }
-        }
-        if (item->group_name) {
-            g_string_free(item->group_name, TRUE);
-        }
-        g_free(item);
+        sharding_partition_free(item);
     }
     g_ptr_array_free(vdb->partitions, TRUE);
     g_free(vdb);
@@ -577,9 +588,7 @@ parse_partitions(cJSON *root, const sharding_vdb_t *vdb, GPtrArray *partitions /
         /* null means unlimited */
         switch (cur->type) {
         case cJSON_NULL:       /* range: null */
-            item = g_new0(sharding_partition_t, 1);
-            item->vdb = vdb;
-            item->group_name = g_string_new(cur->string);
+            item = sharding_partition_new(cur->string, vdb);
             if (vdb->key_type == SHARD_DATA_TYPE_STR) {
                 item->value = NULL;
             } else {
@@ -588,17 +597,14 @@ parse_partitions(cJSON *root, const sharding_vdb_t *vdb, GPtrArray *partitions /
             g_ptr_array_add(partitions, item);
             break;
         case cJSON_Number:     /* range > 123 */
-            item = g_new0(sharding_partition_t, 1);
-            item->vdb = vdb;
-            item->group_name = g_string_new(cur->string);
+            item = sharding_partition_new(cur->string, vdb);
             item->value = (void *)(uint64_t)cur->valueint;
             g_ptr_array_add(partitions, item);
             break;
         case cJSON_String:     /* range > "str" */
-            item = g_new0(sharding_partition_t, 1);
-            item->vdb = vdb;
-            item->group_name = g_string_new(cur->string);
-            if (vdb->key_type == SHARD_DATA_TYPE_DATETIME || vdb->key_type == SHARD_DATA_TYPE_DATE) {
+            item = sharding_partition_new(cur->string, vdb);
+            if (vdb->key_type == SHARD_DATA_TYPE_DATETIME
+                || vdb->key_type == SHARD_DATA_TYPE_DATE) {
                 gboolean ok;
                 int epoch = chassis_epoch_from_string(cur->valuestring, &ok);
                 if (ok)
@@ -613,9 +619,7 @@ parse_partitions(cJSON *root, const sharding_vdb_t *vdb, GPtrArray *partitions /
         case cJSON_Array:{
             cJSON *elem = cur->child;
             if (cJSON_Number == elem->type) {   /* hash in [0,3,5] */
-                item = g_new0(sharding_partition_t, 1);
-                item->vdb = vdb;
-                item->group_name = g_string_new(cur->string);
+                item = sharding_partition_new(cur->string, vdb);
                 for (; elem; elem = elem->next) {
                     if (elem->type != cJSON_Number) {
                         g_critical(G_STRLOC "array has different type");
@@ -630,10 +634,9 @@ parse_partitions(cJSON *root, const sharding_vdb_t *vdb, GPtrArray *partitions /
                 g_ptr_array_add(partitions, item);
             } else if (cJSON_String == elem->type) {    /* TODO: range in [0, 100, 200] */
                 while (elem != NULL) {
-                    item = g_new0(sharding_partition_t, 1);
-                    item->vdb = vdb;
-                    item->group_name = g_string_new(cur->string);
-                    if (vdb->key_type == SHARD_DATA_TYPE_DATETIME || vdb->key_type == SHARD_DATA_TYPE_DATE) {
+                    item = sharding_partition_new(cur->string, vdb);
+                    if (vdb->key_type == SHARD_DATA_TYPE_DATETIME
+                        || vdb->key_type == SHARD_DATA_TYPE_DATE) {
                         gboolean ok;
                         int epoch = chassis_epoch_from_string(elem->valuestring, &ok);
                         if (ok)

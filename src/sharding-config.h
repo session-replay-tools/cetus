@@ -50,10 +50,13 @@ typedef struct sharding_partition_t {
     char *value;                /* high range OR hash value */
     char *low_value;            /* low range OR null */
 
+    int hash_count;
     BitArray hash_set[MAX_HASH_VALUE_COUNT / 32];   /* hash values of this partition */
 
     GString *group_name;
-    const sharding_vdb_t *vdb;  /* references the vdb it belongs to */
+
+    enum sharding_method_t method;
+    int key_type;
 } sharding_partition_t;
 
 gboolean sharding_partition_contain_hash(sharding_partition_t *, int);

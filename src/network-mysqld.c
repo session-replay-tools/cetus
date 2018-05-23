@@ -2335,7 +2335,8 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
 
     con->resp_too_long = 0;
     g_debug("%s:call read query", G_STRLOC);
-    switch (plugin_call(srv, con, con->state)) {
+    network_socket_retval_t ret = plugin_call(srv, con, con->state);
+    switch (ret) {
     case NETWORK_SOCKET_SUCCESS:
         if (con->retry_serv_cnt > 0 && con->is_wait_server) {
             g_message("%s: wait successful:%d, con:%p", G_STRLOC, con->retry_serv_cnt, con);
@@ -2346,7 +2347,7 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
         break;
     case NETWORK_SOCKET_ERROR_RETRY:
         if (con->retry_serv_cnt < con->max_retry_serv_cnt) {
-            if (con->retry_serv_cnt == 0 || con->retry_serv_cnt == 8) {
+            if (con->retry_serv_cnt % 8 == 0) {
                 network_connection_pool_create_conn(con);
             }
             con->retry_serv_cnt++;
@@ -2359,7 +2360,8 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
         }
         /* fall through */
     default:
-        g_critical("%s: wait failed and no server backend for user:%s", G_STRLOC, con->client->response->username->str);
+        g_critical("%s: wait failed and no server backend for user:%s, ret:%d",
+                G_STRLOC, con->client->response->username->str, ret);
 
         handle_query_wait_stats(con);
         con->state = ST_SEND_QUERY_RESULT;
@@ -3911,8 +3913,7 @@ network_mysqld_con_handle(int event_fd, short events, void *user_data)
                     con->master_conn_shortaged = 1;
                     con->retry_serv_cnt++;
                     con->is_wait_server = 1;
-                    g_debug("%s:PROXY_NO_CONNECTION", G_STRLOC);
-                    if (con->retry_serv_cnt == 0 || con->retry_serv_cnt == 8) {
+                    if (con->retry_serv_cnt % 8 == 0) {
                         network_connection_pool_create_conn(con);
                     }
                     struct timeval timeout = network_mysqld_con_retry_timeout(con);

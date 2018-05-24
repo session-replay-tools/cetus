@@ -4688,6 +4688,9 @@ network_connection_pool_create_conn(network_mysqld_con *con)
         if (backend != NULL) {
 
             if (backend->state != BACKEND_STATE_UP) {
+                if (backend->state != BACKEND_STATE_UNKNOWN) {
+                    continue;
+                }
                 if (backend->last_check_time == cur) {
                     g_debug("%s: omit create, backend:%d state:%d", G_STRLOC, i, backend->state);
                     continue;

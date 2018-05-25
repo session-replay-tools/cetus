@@ -230,14 +230,14 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_auth)
         char **client_addr_arr = g_strsplit(client_addr, ":", -1);
         char *client_ip = client_addr_arr[0];
         if (g_hash_table_size(con->config->allow_ip_table) != 0 &&
-            (g_hash_table_lookup(con->config->allow_ip_table, client_ip)
-             || g_hash_table_lookup(con->config->allow_ip_table, "*")
-             || ip_range_lookup(con->config->allow_ip_table, client_ip))) {
+            (g_hash_table_lookup(con->config->allow_ip_table, "*")
+             || ip_range_lookup(con->config->allow_ip_table, client_ip)
+             || g_hash_table_lookup(con->config->allow_ip_table, client_ip))) {
             check_ip = FALSE;
         } else if (g_hash_table_size(con->config->deny_ip_table) != 0 &&
-                   (g_hash_table_lookup(con->config->deny_ip_table, client_ip)
-                    || g_hash_table_lookup(con->config->deny_ip_table, "*")
-                    || ip_range_lookup(con->config->deny_ip_table, client_ip))) {
+                   (g_hash_table_lookup(con->config->deny_ip_table, "*")
+                    || ip_range_lookup(con->config->deny_ip_table, client_ip)
+                    || g_hash_table_lookup(con->config->deny_ip_table, client_ip))) {
             check_ip = TRUE;
             ip_err_msg = g_strdup_printf("Access denied for user '%s'@'%s'", con->config->admin_username, client_ip);
         } else {

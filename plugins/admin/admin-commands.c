@@ -1379,6 +1379,7 @@ void admin_create_vdb(network_mysqld_con* con, int id, GPtrArray* partitions,
     gboolean ok = sharding_vdb_is_valid(vdb, g->backends->groups->len)
         && shard_conf_add_vdb(vdb);
     if (ok) {
+        shard_conf_write_json(con->srv->config_manager);
         network_mysqld_con_send_ok(con->client);
     } else {
         sharding_vdb_free(vdb);
@@ -1396,6 +1397,7 @@ void admin_create_sharded_table(network_mysqld_con* con, const char* schema,
     t->pkey = g_string_new(key);
     gboolean ok = shard_conf_add_sharded_table(t);
     if (ok) {
+        shard_conf_write_json(con->srv->config_manager);
         network_mysqld_con_send_ok(con->client);
     } else {
         network_mysqld_con_send_error(con->client, C("failed to add sharded table"));

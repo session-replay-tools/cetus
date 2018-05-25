@@ -787,6 +787,7 @@ setup_partitions(GPtrArray *partitions, sharding_vdb_t *vdb)
         int i;
         for (i = 0; i < partitions->len; ++i) {
             sharding_partition_t *part = g_ptr_array_index(partitions, i);
+            part->key_type = vdb->key_type;
             if (vdb->key_type == SHARD_DATA_TYPE_STR) {
                 part->low_value = prev_str;
                 if (i != partitions->len - 1) {
@@ -796,6 +797,13 @@ setup_partitions(GPtrArray *partitions, sharding_vdb_t *vdb)
                 part->low_value = (void *)prev_value;
                 prev_value = (int64_t) part->value;
             }
+        }
+    } else {
+        int i;
+        for (i = 0; i < partitions->len; ++i) {
+            sharding_partition_t *part = g_ptr_array_index(partitions, i);
+            part->key_type = vdb->key_type;
+            part->hash_count = vdb->logic_shard_num;
         }
     }
 }
@@ -963,4 +971,88 @@ gboolean shard_conf_add_sharded_table(sharding_table_t* t)
     } else {
         return FALSE;
     }
+}
+
+static cJSON* json_create_vdb_object(sharding_vdb_t* vdb)
+{
+    cJSON *node = cJSON_CreateObject();
+    cJSON_AddNumberToObject(node, "id", vdb->id);
+    cJSON_AddStringToObject(node, "type", sharding_key_type_str(vdb->key_type));
+    cJSON_AddStringToObject(node, "method", vdb->method==SHARD_METHOD_HASH?"hash":"range");
+    cJSON_AddNumberToObject(node, "num", vdb->logic_shard_num);
+    cJSON* pob = cJSON_CreateObject();
+    int i=0;
+    for (i=0; i < vdb->partitions->len; ++i) {
+        sharding_partition_t* p = g_ptr_array_index(vdb->partitions, i);
+        if (vdb->method == SHARD_METHOD_RANGE) {
+            if (vdb->key_type == SHARD_DATA_TYPE_STR) {
+                cJSON_AddStringToObject(pob, p->group_name->str, (char*)p->value);
+            } else if (vdb->key_type == SHARD_DATA_TYPE_INT) {
+                cJSON_AddNumberToObject(pob, p->group_name->str, (int64_t)p->value);
+            } else { /*datetime*/
+                char time_str[32] = {0};
+                time_t t = (time_t)p->value;
+                chassis_epoch_to_string(&t, C(time_str));
+                cJSON_AddStringToObject(pob, p->group_name->str, time_str);
+            }
+        } else { /*hash*/
+            GArray* numbers = g_array_new(0,0,sizeof(int));
+            int j;
+            for (j = 0; j < p->hash_count; ++j) {
+                if (TestBit(p->hash_set, j)) {
+                    g_array_append_val(numbers, j);
+                }
+            }
+            cJSON* num_array = cJSON_CreateIntArray((int*)numbers->data, numbers->len);
+            g_array_free(numbers, TRUE);
+            cJSON_AddItemToObject(pob, p->group_name->str, num_array);
+        }
+    }
+    cJSON_AddItemToObject(node, "partitions", pob);
+    return node;
+}
+
+gboolean shard_conf_write_json(chassis_config_t* conf_manager)
+{
+    cJSON* vdb_array = cJSON_CreateArray();
+    GList* l;
+    for (l = shard_conf_vdbs; l; l = l->next) {
+        sharding_vdb_t* vdb = l->data;
+        cJSON* node = json_create_vdb_object(vdb);
+        cJSON_AddItemToArray(vdb_array, node);
+    }
+
+    cJSON* table_array = cJSON_CreateArray();
+    GList* tables = shard_conf_get_tables();
+    for (l = tables; l; l = l->next) {
+        sharding_table_t* t = l->data;
+        cJSON* node = cJSON_CreateObject();
+        cJSON_AddStringToObject(node, "db", t->schema->str);
+        cJSON_AddStringToObject(node, "table", t->name->str);
+        cJSON_AddStringToObject(node, "pkey", t->pkey->str);
+        cJSON_AddNumberToObject(node, "vdb", t->vdb_id);
+        cJSON_AddItemToArray(table_array, node);
+    }
+    cJSON* root = cJSON_CreateObject();
+    cJSON_AddItemToObject(root, "vdb", vdb_array);
+    cJSON_AddItemToObject(root, "table", table_array);
+
+    if (shard_conf_single_tables) {
+        cJSON* single_table_array = cJSON_CreateArray();
+        for (l = shard_conf_single_tables; l; l = l->next) {
+            struct single_table_t* t = l->data;
+            cJSON* node = cJSON_CreateObject();
+            cJSON_AddStringToObject(node, "table", t->name->str);
+            cJSON_AddStringToObject(node, "schema", t->schema->str);
+            cJSON_AddStringToObject(node, "group", t->group->str);
+            cJSON_AddItemToArray(single_table_array, node);
+        }
+        cJSON_AddItemToObject(root, "single_tables", single_table_array);
+    }
+
+    char* json_str = cJSON_Print(root);
+    chassis_config_write_object(conf_manager, "sharding-new", json_str);
+    cJSON_Delete(root);
+    g_free(json_str);
+    return TRUE;
 }

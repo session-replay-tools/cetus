@@ -27,6 +27,7 @@
 
 #include "glib-ext.h"
 #include "cetus-util.h"
+#include "chassis-config.h"
 
 #define SHARD_DATA_TYPE_UNSUPPORTED 0
 #define SHARD_DATA_TYPE_INT 1
@@ -128,5 +129,7 @@ gboolean shard_conf_add_sharded_table(sharding_table_t* t);
 
 GList* shard_conf_get_vdb_list();
 GList* shard_conf_get_tables();
+
+gboolean shard_conf_write_json(chassis_config_t* conf_manager);
 
 #endif /* __SHARDING_CONFIG_H__ */

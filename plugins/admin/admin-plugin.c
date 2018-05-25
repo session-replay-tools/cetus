@@ -129,9 +129,9 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_con_init)
     GString *packet;
 
     challenge = network_mysqld_auth_challenge_new();
-    challenge->server_version_str = g_strdup_printf("%s admin", PACKAGE_STRING);
-    challenge->server_version = 50099;
-    challenge->charset = charset_get_number("latin1");
+    challenge->server_version_str = g_strdup_printf("5.7 admin");
+    challenge->server_version = 50700;
+    challenge->charset = charset_get_number("utf8");
     challenge->capabilities = CETUS_DEFAULT_FLAGS & (~CLIENT_TRANSACTIONS);
 #ifdef HAVE_OPENSSL
     if (chas->ssl) {

@@ -16,8 +16,8 @@
 | select conn_details from backend         | display the idle conns                   |
 | select * from backends                   | list the backends and their state        |
 | show connectionlist [\<num>]             | show \<num> connections                  |
-| show allow_ip \<module>                  | show allow_ip rules of module, currently admin\|proxy\|shard |
-| show deny_ip \<module>                   | show deny_ip rules of module, currently admin\|proxy\|shard |
+| show allow_ip \<module>                  | show allow_ip rules of module, currently admin\|proxy |
+| show deny_ip \<module>                   | show deny_ip rules of module, currently admin\|proxy |
 | add allow_ip \<module> \<address>        | add address to white list of module      |
 | add deny_ip \<module> \<address>         | add address to black list of module      |
 | delete allow_ip \<module> \<address>     | delete address from white list of module |

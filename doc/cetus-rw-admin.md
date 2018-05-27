@@ -191,21 +191,13 @@ update后端的state只包括up|down|maintaining三种状态，delete/remove后�
    * `pool.max_resp_len` 最大结果集长度
    * `pool.master_preferred` 是否只允许走主库
 
-### 修改连接池/通用配置
+### 修改配置
 
-`config set [<item>]`
-
-`config set common.[option] = [value]`修改基本配置
+`config set <key>=<value>`
 
 例如
 
->config set common.slave_delay_down = 3
-
-`config set pool.[option] = [value]`修改连接池配置
-
-例如
-
->config set pool.max_pool_size = 200
+>config set slave_delay_down = 3
 
 ### 查看参数配置
 
@@ -314,14 +306,6 @@ update后端的state只包括up|down|maintaining三种状态，delete/remove后�
 ### 密码删除
 
 `delete from user_pwd where user='<name>'`
-
-删除特定用户的后端密码。
-
-例如
-
->delete from user_pwd where user='root'
-
-`delete from app_user_pwd where user='<name>'`
 
 删除特定用户连接Proxy的密码。
 
@@ -507,3 +491,11 @@ Com_select_bad_key 分库键未识别导致走全库的SELECT数量
 ### 减少系统占用的内存
 
 `reduce memory`
+# Cetus 读写分离版本管理手册
+
+## 前言
+
+**有配置修改均能动态生效，配置更改后请务必修改原始配置文件，以确保下次重启时配置能够保留。**
+
+## 查看帮助
+

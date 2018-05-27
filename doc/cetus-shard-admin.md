@@ -215,21 +215,13 @@ update后端的state只包括up|down|maintaining三种状态，delete/remove后�
    * `pool.max_resp_len` 最大结果集长度
    * `pool.master_preferred` 是否只允许走主库
 
-### 修改连接池/通用配置
+### 修改配置
 
-`config set [<item>]`
-
-`config set common.[option] = [value]`修改基本配置
+`config set <key>=<value>`
 
 例如
 
->config set common.slave_delay_down = 3
-
-`config set pool.[option] = [value]`修改连接池配置
-
-例如
-
->config set pool.max_pool_size = 200
+>config set slave_delay_down = 3
 
 ### 查看参数配置
 

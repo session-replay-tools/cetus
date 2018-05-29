@@ -509,7 +509,7 @@ Shard: 仅配置IP，代表限制该IP来源所有用户的访问；配置User@I
 | query_time_table.2 | 5     |
 | query_time_table.5 | 1     |
 
-表示用时1秒的SQL有3条，用时2秒的SQL有5条，用时5秒的SQL有1条
+表示用时1毫秒的SQL有3条，用时2毫秒的SQL有5条，用时5毫秒的SQL有1条
 
 ```
 说明

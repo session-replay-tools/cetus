@@ -1155,7 +1155,7 @@ network_mysqld_auth_challenge_set_challenge(network_mysqld_auth_challenge *shake
     }
 
     shake->auth_plugin_data->len = 21;
-    shake->auth_plugin_data->str[shake->auth_plugin_data->len] = '\0';
+    shake->auth_plugin_data->str[shake->auth_plugin_data->len - 1] = '\0';
     g_string_assign(shake->auth_plugin_name, "mysql_native_password");
 }
 

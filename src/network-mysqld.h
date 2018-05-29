@@ -640,6 +640,7 @@ struct network_mysqld_con {
     struct timeval connect_timeout; /* default = 2 s */
     struct timeval read_timeout;    /* default = 10 min */
     struct timeval write_timeout;   /* default = 10 min */
+    struct timeval dist_tran_decided_read_timeout;    /* default = 30 sec */
     struct timeval wait_clt_next_sql;
     char xid_str[XID_LEN];
     char last_backends_type[MAX_SERVER_NUM];

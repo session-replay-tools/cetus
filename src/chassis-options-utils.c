@@ -1095,6 +1095,50 @@ show_remote_conf_url(gpointer param) {
     return NULL;
 }
 
+gchar*
+show_group_replication_mode(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%d", srv->group_replication_mode);
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if(srv->group_replication_mode == 0) {
+            return NULL;
+        } else {
+            return g_strdup_printf("%d", srv->group_replication_mode);
+        }
+    }
+    return NULL;
+}
+
+gint
+assign_group_replication(const gchar *newval, gpointer param) {
+    gint ret = ASSIGN_ERROR;
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
+        if(NULL != newval) {
+            gint value = 0;
+            if(try_get_int_value(newval, &value)) {
+                if(value == 0 || value == 1) {
+                    srv->group_replication_mode = value;
+                    ret = ASSIGN_OK;
+                } else {
+                    ret = ASSIGN_VALUE_INVALID;
+                }
+            } else {
+                ret = ASSIGN_VALUE_INVALID;
+            }
+        } else {
+            ret = ASSIGN_VALUE_INVALID;
+        }
+    }
+    return ret;
+}
+
 gint
 chassis_options_save(GKeyFile *keyfile, chassis_options_t *opts, chassis  *chas)
 {

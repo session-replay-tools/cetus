@@ -299,22 +299,22 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
             has_master++;
             if(!strcasecmp(backend_addr, master_addr)) {
                 if(backend->state != BACKEND_STATE_UP) {
-                    network_backends_modify(bs, i, BACKEND_TYPE_RW, BACKEND_STATE_UP);
+                    network_backends_modify(bs, i, BACKEND_TYPE_RW, BACKEND_STATE_UP, NO_PREVIOUS_STATE);
                 }
                 break;
             }
             GList *it = g_list_find_custom(slave_list, backend_addr, slave_list_compare);
             if(it) {
                 if(backend->state == BACKEND_STATE_DELETED || backend->state == BACKEND_STATE_MAINTAINING) {
-                    network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN);
+                    network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN, NO_PREVIOUS_STATE);
                 } else {
-                    network_backends_modify(bs, i, BACKEND_TYPE_RO, backend->state);
+                    network_backends_modify(bs, i, BACKEND_TYPE_RO, backend->state, NO_PREVIOUS_STATE);
                 }
                 slave_list = g_list_remove_link(slave_list, it);
                 g_free(it->data);
                 g_list_free(it);
             } else {
-                network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_DELETED);
+                network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_DELETED, NO_PREVIOUS_STATE);
             }
             break;
         }
@@ -333,18 +333,18 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
             GList *it = g_list_find_custom(slave_list, backend_addr, slave_list_compare);
             if(it) {
                 if(backend->state == BACKEND_STATE_DELETED || backend->state == BACKEND_STATE_MAINTAINING) {
-                    network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN);
+                    network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN, NO_PREVIOUS_STATE);
                 }
                 slave_list = g_list_remove_link(slave_list, it);
                 g_free(it->data);
                 g_list_free(it);
             } else {
                 if(master_addr[0] != '\0' && !strcasecmp(backend_addr, master_addr)) {
-                    network_backends_modify(bs, i, BACKEND_TYPE_RW, BACKEND_STATE_UP);
+                    network_backends_modify(bs, i, BACKEND_TYPE_RW, BACKEND_STATE_UP, NO_PREVIOUS_STATE);
                     has_master++;
                 } else {
                     if(backend->type != BACKEND_TYPE_RO || backend->state != BACKEND_STATE_DELETED) {
-                        network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_DELETED);
+                        network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_DELETED, NO_PREVIOUS_STATE);
                     }
                 }
             }
@@ -366,7 +366,7 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
         for(it = slave_list; it; it = it->next) {
             if(server_group[0] != '\0') {
                 gchar slave_addr_temp[ADDRESS_LEN] = {""};
-                snprintf(slave_addr_temp, ADDRESS_LEN, "%s@%s", it->data, server_group);
+                snprintf(slave_addr_temp, ADDRESS_LEN, "%s@%s", (char *)(it->data), server_group);
                 network_backends_add(bs, slave_addr_temp, BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN, monitor->chas);
             } else {
                 network_backends_add(bs, it->data, BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN, monitor->chas);

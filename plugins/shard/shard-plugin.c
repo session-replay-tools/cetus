@@ -80,6 +80,8 @@ struct chassis_plugin_config {
     gdouble connect_timeout_dbl;
     /* exposed in the config as double */
     gdouble read_timeout_dbl;
+
+    gdouble dist_tran_decided_read_timeout_dbl;
     /* exposed in the config as double */
     gdouble write_timeout_dbl;
 
@@ -1943,6 +1945,9 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_init)
     if (config->read_timeout_dbl >= 0) {
         chassis_timeval_from_double(&con->read_timeout, config->read_timeout_dbl);
     }
+    if (config->dist_tran_decided_read_timeout_dbl >= 0) {
+        chassis_timeval_from_double(&con->dist_tran_decided_read_timeout, config->dist_tran_decided_read_timeout_dbl);
+    }
     if (config->write_timeout_dbl >= 0) {
         chassis_timeval_from_double(&con->write_timeout, config->write_timeout_dbl);
     }
@@ -2045,6 +2050,7 @@ network_mysqld_shard_plugin_new(void)
     /* use negative values as defaults to make them ignored */
     config->connect_timeout_dbl = -1.0;
     config->read_timeout_dbl = -1.0;
+    config->dist_tran_decided_read_timeout_dbl = -1.0;
     config->write_timeout_dbl = -1.0;
 
     return config;
@@ -2232,6 +2238,44 @@ assign_proxy_read_timeout(const gchar *newval, gpointer param) {
 }
 
 static gchar*
+show_proxy_dist_tran_decided_read_timeout(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%lf (s)", config->dist_tran_decided_read_timeout_dbl);
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if(config->dist_tran_decided_read_timeout_dbl == -1) {
+            return NULL;
+        }
+        return g_strdup_printf("%lf", config->dist_tran_decided_read_timeout_dbl);
+    }
+    return NULL;
+}
+
+static gint
+assign_proxy_dist_tran_decided_read_timeout(const gchar *newval, gpointer param) {
+    gint ret = ASSIGN_ERROR;
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
+        if(NULL != newval) {
+            gdouble value = 0;
+            if(try_get_double_value(newval, &value)) {
+                config->dist_tran_decided_read_timeout_dbl = value;
+                ret = ASSIGN_OK;
+            } else {
+                ret = ASSIGN_VALUE_INVALID;
+            }
+        } else {
+            ret = ASSIGN_VALUE_INVALID;
+        }
+    }
+    return ret;
+}
+
+
+static gchar*
 show_proxy_write_timeout(gpointer param) {
     struct external_param *opt_param = (struct external_param *)param;
     gint opt_type = opt_param->opt_type;
@@ -2358,12 +2402,18 @@ network_mysqld_shard_plugin_get_options(chassis_plugin_config *config)
 
     chassis_options_add(&opts, "proxy-read-timeout",
                         0, 0, OPTION_ARG_DOUBLE, &(config->read_timeout_dbl),
-                        "read timeout in seconds (default: 10 minuates)", NULL,
+                        "read timeout in seconds (default: 10 minutes)", NULL,
                         assign_proxy_read_timeout, show_proxy_read_timeout, ALL_OPTS_PROPERTY);
+
+    chassis_options_add(&opts, "proxy-xa-commit-or-rollback-read-timeout",
+                        0, 0, OPTION_ARG_DOUBLE, &(config->dist_tran_decided_read_timeout_dbl),
+                        "xa commit or rollback read timeout in seconds (default: 30 seconds)", NULL,
+                        assign_proxy_dist_tran_decided_read_timeout,
+                        show_proxy_dist_tran_decided_read_timeout, ALL_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-write-timeout",
                         0, 0, OPTION_ARG_DOUBLE, &(config->write_timeout_dbl),
-                        "write timeout in seconds (default: 10 minuates)", NULL,
+                        "write timeout in seconds (default: 10 minutes)", NULL,
                         assign_proxy_write_timeout, show_proxy_write_timeout, ALL_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-allow-ip",

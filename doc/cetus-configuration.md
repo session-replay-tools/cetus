@@ -194,7 +194,7 @@ Default: 10485760 (10MB)
 
 每个后端返回结果集的最大数量
 
-> max-resp-size = 1024
+> max-resp-size = 1048576
 
 ### master-preferred
 

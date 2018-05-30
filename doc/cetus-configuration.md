@@ -322,6 +322,16 @@ Default: slave-delay-down / 2  (seconds)
 
 > slave-delay-recover = 5
 
+## MGR配置
+
+### group-replication-mode
+
+Default: 0 (普通MySQL集群)
+
+当后端MySQL集群是单主模式的MGR时，该参数设置为1，Cetus可以自动检测MGR集群的主从状态及节点主从角色变换。目前Cetus只支持单主MGR模式。
+
+> group-replication-mode = 1
+
 ## 其它
 
 ### verbose-shutdown

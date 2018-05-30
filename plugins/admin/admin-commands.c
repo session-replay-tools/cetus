@@ -987,20 +987,24 @@ void admin_insert_backend(network_mysqld_con* con, char *addr, char *type, char 
                                     SERVER_STATUS_AUTOCOMMIT, 0);
 }
 
-void admin_update_backend(network_mysqld_con* con, char *key1, char *val1,
-                          char *key2, char *val2,
+void admin_update_backend(network_mysqld_con* con, GList* equations,
                           char *cond_key, char *cond_val)
 {
-    char* type_str, *state_str;
-    if (strcasecmp(key1, "type")==0 && strcasecmp(key2, "state")==0) {
-        type_str = val1;
-        state_str = val2;
-    } else if (strcasecmp(key1, "state")==0 && strcasecmp(key2, "type")==0) {
-        state_str = val1;
-        type_str = val2;
-    } else {
-        network_mysqld_con_send_error(con->client, C("parameter error"));
-        return;
+    char* type_str = NULL;
+    char* state_str = NULL;
+
+    GList* l; /* list = [key1, val1, key2, val2, ...]*/
+    for (l = equations; l && l->next; l=l->next, l=l->next) {
+        char* key = l->data;
+        char* val = l->next->data;
+        if (strcasecmp(key, "type")==0) {
+            type_str = val;
+        } else if (strcasecmp(key, "state")==0) {
+            state_str = val;
+        } else {
+            network_mysqld_con_send_error(con->client, C("parameter error"));
+            return;
+        }
     }
 
     chassis_private *g = con->srv->priv;

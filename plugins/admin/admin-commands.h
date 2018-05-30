@@ -33,8 +33,7 @@ void admin_update_user_password(network_mysqld_con* con, char *from_table,
                                 char *user, char *password);
 void admin_delete_user_password(network_mysqld_con* con, char* user);
 void admin_insert_backend(network_mysqld_con* con, char *addr, char *type, char *state);
-void admin_update_backend(network_mysqld_con* con, char *key1, char *val1,
-                          char *key2, char *val2,
+void admin_update_backend(network_mysqld_con* con, GList* equations,
                           char *cond_key, char *cond_val);
 void admin_delete_backend(network_mysqld_con* con, char *key, char *val);
 void admin_get_stats(network_mysqld_con* con, char* p);

@@ -121,12 +121,24 @@ input ::= cmd.
 opt_where_user(A) ::= WHERE USER EQ STRING(E). {A = token_strdup(E);}
 opt_where_user(A) ::= . {A = NULL;}
 
-%type equation {equation_t*}
-%destructor equation {free($$);}
+%type equation {equation_t}
 equation(A) ::= ID(X) EQ STRING|ID|INTEGER|FLOAT(Y). {
-  A = calloc(1, sizeof(equation_t));
-  A->left = X;
-  A->right = Y;
+  A.left = X;
+  A.right = Y;
+}
+
+// list of [key1, value1, key2, value2, ...]
+%type equations_prefix {GList*}
+%type equations {GList*}
+%destructor equations_prefix { g_list_free_full($$, free); }
+%destructor equations { g_list_free_full($$, free); }
+
+equations_prefix(A) ::= equations(A) COMMA.
+equations_prefix(A) ::= . {A = NULL;}
+
+equations(A) ::= equations_prefix(X) equation(Y). {
+  A = g_list_append(X, token_strdup(Y.left));
+  A = g_list_append(A, token_strdup(Y.right));
 }
 
 %type opt_like {char*}
@@ -223,27 +235,18 @@ cmd ::= INSERT INTO BACKENDS VALUES LP STRING(X) COMMA STRING(Y) COMMA STRING(Z)
   admin_insert_backend(con, addr, type, state);
   free(addr); free(type); free(state);
 }
-cmd ::= UPDATE BACKENDS SET equation(X) COMMA equation(Y) WHERE equation(Z). {
-//TODO: equation list
-  char* key1 = token_strdup(X->left);
-  char* val1 = token_strdup(X->right);
-  char* key2 = token_strdup(Y->left);
-  char* val2 = token_strdup(Y->right);
-  char* cond_key = token_strdup(Z->left);
-  char* cond_val = token_strdup(Z->right);
-  admin_update_backend(con, key1, val1, key2, val2, cond_key, cond_val);
-  free(key1); free(val1);
-  free(key2); free(val2);
+cmd ::= UPDATE BACKENDS SET equations(X) WHERE equation(Z). {
+  char* cond_key = token_strdup(Z.left);
+  char* cond_val = token_strdup(Z.right);
+  admin_update_backend(con, X, cond_key, cond_val);
   free(cond_key); free(cond_val);
-  free(X); free(Y);
 }
 cmd ::= DELETE FROM BACKENDS WHERE equation(Z). {
-  char* key = token_strdup(Z->left);
-  char* val = token_strdup(Z->right);
+  char* key = token_strdup(Z.left);
+  char* val = token_strdup(Z.right);
   admin_delete_backend(con, key, val);
   free(key);
   free(val);
-  free(Z);
 }
 cmd ::= ADD MASTER STRING(X). {
   char* addr = token_strdup(X);
@@ -264,8 +267,8 @@ cmd ::= CONFIG GET opt_id(X). {
   if (X) free(X);
 }
 cmd ::= CONFIG SET equation(X). {
-  char* key = token_strdup(X->left);
-  char* val = token_strdup(X->right);
+  char* key = token_strdup(X.left);
+  char* val = token_strdup(X.right);
   admin_set_config(con, key, val);
   free(key);
   free(val);
@@ -332,11 +335,13 @@ partition(A) ::= ids(X) COLON ids(Y). {
   A->group_name = g_string_new_len(X.z, X.n);
   A->method = SHARD_METHOD_RANGE;
   A->value = token_strdup(Y);
+  A->key_type = SHARD_DATA_TYPE_STR;
 }
 partition(A) ::= ids(X) COLON INTEGER(Y). {
   A = g_new0(sharding_partition_t, 1);
   A->group_name = g_string_new_len(X.z, X.n);
   A->value = (void*)(int64_t)token2int(Y);
+  A->key_type = SHARD_DATA_TYPE_INT;
 }
 
 %type partitions_prefix {GPtrArray*}

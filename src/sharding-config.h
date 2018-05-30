@@ -29,11 +29,13 @@
 #include "cetus-util.h"
 #include "chassis-config.h"
 
-#define SHARD_DATA_TYPE_UNSUPPORTED 0
-#define SHARD_DATA_TYPE_INT 1
-#define SHARD_DATA_TYPE_STR 2
-#define SHARD_DATA_TYPE_DATE 3
-#define SHARD_DATA_TYPE_DATETIME 4
+enum shardkey_type_t {
+    SHARD_DATA_TYPE_UNSUPPORTED=0,
+    SHARD_DATA_TYPE_INT,
+    SHARD_DATA_TYPE_STR,
+    SHARD_DATA_TYPE_DATE,
+    SHARD_DATA_TYPE_DATETIME,
+};
 
 enum sharding_method_t {
     SHARD_METHOD_UNKNOWN = -1,
@@ -57,7 +59,7 @@ typedef struct sharding_partition_t {
     GString *group_name;
 
     enum sharding_method_t method;
-    int key_type;
+    enum shardkey_type_t key_type;
 } sharding_partition_t;
 
 gboolean sharding_partition_contain_hash(sharding_partition_t *, int);

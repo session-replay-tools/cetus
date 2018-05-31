@@ -321,7 +321,7 @@ int_array(A) ::= int_array_prefix(X) INTEGER(Y). {
 partition(A) ::= ids(X) COLON LBRACKET int_array(Y) RBRACKET. {
   A = g_new0(sharding_partition_t, 1);
   A->group_name = g_string_new_len(X.z, X.n);
-  A->key_type = SHARD_DATA_TYPE_INT;
+  A->key_type = SHARD_DATA_TYPE_INT; //this is temp, it could be str
   A->method = SHARD_METHOD_HASH;
   int i;
   for (i = 0; i < Y->len; ++i) {
@@ -341,6 +341,7 @@ partition(A) ::= ids(X) COLON INTEGER(Y). {
   A = g_new0(sharding_partition_t, 1);
   A->group_name = g_string_new_len(X.z, X.n);
   A->value = (void*)(int64_t)token2int(Y);
+  A->method = SHARD_METHOD_RANGE;
   A->key_type = SHARD_DATA_TYPE_INT;
 }
 
@@ -356,7 +357,23 @@ partitions(A) ::= partitions_prefix(X) partition(Y). {
   } else {
     A = X;
   }
-  g_ptr_array_add(A, Y);
+  if (A->len > 0) {
+    sharding_partition_t* part = g_ptr_array_index(A, 0);
+    if (part->key_type != Y->key_type || part->method != Y->method) {
+      int i = 0;
+      for (i = 0; i < A->len; ++i) {
+        sharding_partition_t* p = g_ptr_array_index(A, i);
+        sharding_partition_free(p);
+      }
+      // !! destructor will do this: g_ptr_array_free(A, TRUE);
+      admin_syntax_error(con);
+      g_warning("create vdb error: different key type or method");
+    } else {
+      g_ptr_array_add(A, Y);
+    }
+  } else {
+    g_ptr_array_add(A, Y);
+  }
 }
 
 %type opt_id {char*}

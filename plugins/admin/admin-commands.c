@@ -1367,6 +1367,41 @@ void admin_send_overview(network_mysqld_con* con)
     g_string_free(plugin_names, TRUE);
 }
 
+/*
+  DATETIME partitions parsed from SQL originally marked as STR type,
+  change it to DATETIME here, release the string memory
+*/
+static gboolean convert_datetime_partitions(GPtrArray *partitions, sharding_vdb_t *vdb)
+{
+    if (vdb->key_type == SHARD_DATA_TYPE_DATE
+        || vdb->key_type == SHARD_DATA_TYPE_DATETIME)
+    {
+        int i;
+        for (i = 0; i < partitions->len; ++i) {
+            sharding_partition_t *part = g_ptr_array_index(partitions, i);
+            if (part->key_type != SHARD_DATA_TYPE_STR) {
+                g_warning("convert_datetime: date time not string");
+                return FALSE;
+            }
+            if (part->method != SHARD_METHOD_RANGE) {
+                g_warning("convert_datetime: date time not using range method");
+                return FALSE;
+            }
+            gboolean ok = FALSE;
+            int epoch = chassis_epoch_from_string(part->value, &ok);
+            if (ok) {
+                part->key_type = vdb->key_type;
+                g_free(part->value);
+                part->value = (void *)(uint64_t)epoch;
+            } else {
+                g_warning("Wrong sharding param <datetime format:%s>", part->value);
+                return FALSE;
+            }
+        }
+    }
+    return TRUE;
+}
+
 void admin_create_vdb(network_mysqld_con* con, int id, GPtrArray* partitions,
                       enum sharding_method_t method, int key_type, int shard_num)
 {
@@ -1377,7 +1412,27 @@ void admin_create_vdb(network_mysqld_con* con, int id, GPtrArray* partitions,
     vdb->logic_shard_num = shard_num;
     int i;
     for (i = 0; i < partitions->len; ++i) {
-        g_ptr_array_add(vdb->partitions, g_ptr_array_index(partitions, i));
+        sharding_partition_t* part = g_ptr_array_index(partitions, i);
+        g_ptr_array_add(vdb->partitions, part);
+    }
+
+    /* some verifcations */
+    sharding_partition_t* part = g_ptr_array_index(vdb->partitions, 0);
+    if (vdb->method != part->method) {
+        network_mysqld_con_send_error(con->client, C("method mismatch"));
+        sharding_vdb_free(vdb);
+        return;
+    }
+    if (!convert_datetime_partitions(vdb->partitions, vdb)) {
+        network_mysqld_con_send_error(con->client, C("date time format error"));
+        sharding_vdb_free(vdb);
+        return;
+    }
+    for (i = 0; i < partitions->len; ++i) {
+        /* can't guess key_type of hash-vdb while parsing, assign it here */
+        if (vdb->method == SHARD_METHOD_HASH) {
+            part->key_type = key_type;
+        }
     }
     chassis_private *g = con->srv->priv;
     gboolean ok = sharding_vdb_is_valid(vdb, g->backends->groups->len)

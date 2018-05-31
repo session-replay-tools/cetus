@@ -770,33 +770,6 @@ cmp_shard_range_groups_str(gconstpointer a, gconstpointer b)
     return strcmp(s1, s2);
 }
 
-/*
-  DATETIME partitions parsed from SQL originally marked as STR type,
-  change it to DATETIME here, release the string memory
-*/
-static gboolean convert_datetime_partitions(GPtrArray *partitions, sharding_vdb_t *vdb)
-{
-    if (vdb->key_type == SHARD_DATA_TYPE_DATE
-        || vdb->key_type == SHARD_DATA_TYPE_DATETIME)
-    {
-        int i;
-        for (i = 0; i < partitions->len; ++i) {
-            sharding_partition_t *part = g_ptr_array_index(partitions, i);
-            gboolean ok = FALSE;
-            int epoch = chassis_epoch_from_string(part->value, &ok);
-            if (ok) {
-                part->key_type = vdb->key_type;
-                g_free(part->value);
-                part->value = (void *)(uint64_t)epoch;
-            } else {
-                g_warning("Wrong sharding param <datetime format:%s>", part->value);
-                return FALSE;
-            }
-        }
-    }
-    return TRUE;
-}
-
 static void setup_partitions(GPtrArray *partitions, sharding_vdb_t *vdb)
 {
     if (vdb->method == SHARD_METHOD_RANGE) {
@@ -985,10 +958,6 @@ gboolean shard_conf_add_vdb(sharding_vdb_t* vdb)
             g_warning("add vdb dup id");
             return FALSE;
         }
-    }
-    if (convert_datetime_partitions(vdb->partitions, vdb) == FALSE) {
-        g_warning("convert_datetime_partitions failed");
-        return FALSE;
     }
     setup_partitions(vdb->partitions, vdb);
     shard_conf_vdbs = g_list_append(shard_conf_vdbs, vdb);

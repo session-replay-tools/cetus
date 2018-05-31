@@ -79,7 +79,7 @@ network_mysqld_con_idle_handle(int event_fd, short events, void *user_data)
                 srv->complement_conn_cnt++;
             }
 
-            g_message("%s:the server decided the close the connection", G_STRLOC);
+            g_message("%s:the server decided to close the connection", G_STRLOC);
         }
     } else if (events == EV_TIMEOUT) {
         if (pool->srv) {

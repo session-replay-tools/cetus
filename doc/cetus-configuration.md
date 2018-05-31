@@ -194,7 +194,7 @@ Default: 10485760 (10MB)
 
 每个后端返回结果集的最大数量
 
-> max-resp-size = 1024
+> max-resp-size = 1048576
 
 ### master-preferred
 
@@ -321,6 +321,16 @@ Default: slave-delay-down / 2  (seconds)
 从库延迟少于该秒数，状态将恢复为UP
 
 > slave-delay-recover = 5
+
+## MGR配置
+
+### group-replication-mode
+
+Default: 0 (普通MySQL集群)
+
+当后端MySQL集群是单主模式的MGR时，该参数设置为1，Cetus可以自动检测MGR集群的主从状态及节点主从角色变换。目前Cetus只支持单主MGR模式。
+
+> group-replication-mode = 1
 
 ## 其它
 

@@ -191,6 +191,8 @@ struct chassis {
     char *remote_config_url;
     gchar *default_file;
     gint print_version;
+
+    gint group_replication_mode;
 };
 
 CHASSIS_API chassis *chassis_new(void);

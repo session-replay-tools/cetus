@@ -282,6 +282,9 @@ network_mysqld_con_new()
     con->read_timeout.tv_sec = 10 * MINUTES;
     con->read_timeout.tv_usec = 0;
 
+    con->dist_tran_decided_read_timeout.tv_sec = 30;
+    con->dist_tran_decided_read_timeout.tv_usec = 0;
+
     con->write_timeout.tv_sec = 10 * MINUTES;
     con->write_timeout.tv_usec = 0;
 
@@ -2617,7 +2620,14 @@ shard_read_response(network_mysqld_con *con, server_session_t *ss)
             if (ss->server->to_read == 0) {
                 ss->state = NET_RW_STATE_READ;
                 g_debug("%s:read wait here for con:%p", G_STRLOC, con);
-                server_sess_wait_for_event(ss, EV_READ, &con->read_timeout);
+                if (con->dist_tran_decided) {
+                    server_sess_wait_for_event(ss, EV_READ,
+                            &con->dist_tran_decided_read_timeout);
+                    g_debug("%s:use dist_tran_decided_read_timeout for con:%p",
+                            G_STRLOC, con);
+                } else {
+                    server_sess_wait_for_event(ss, EV_READ, &con->read_timeout);
+                }
                 return DISP_CONTINUE;
             }
             break;
@@ -2654,7 +2664,13 @@ shard_read_response(network_mysqld_con *con, server_session_t *ss)
         } else {
             ss->state = NET_RW_STATE_READ;
             g_debug("%s:server_sess_wait_for_event for con:%p", G_STRLOC, con);
-            server_sess_wait_for_event(ss, EV_READ, &con->read_timeout);
+            if (con->dist_tran_decided) {
+                server_sess_wait_for_event(ss, EV_READ,
+                        &con->dist_tran_decided_read_timeout);
+                g_message("%s:use dist_tran_decided_read_timeout for con:%p", G_STRLOC, con);
+            } else {
+                server_sess_wait_for_event(ss, EV_READ, &con->read_timeout);
+            }
             con->num_read_pending++;
             ss->read_cal_flag = 0;
             g_debug("%s:num_read_pending:%d, ss->index:%d for con:%p",
@@ -2691,7 +2707,12 @@ shard_read_response(network_mysqld_con *con, server_session_t *ss)
             ss->state = NET_RW_STATE_READ;
             g_debug("%s:num_read_pending:%d for fd:%d, ss->index:%d",
                     G_STRLOC, con->num_read_pending, ss->server->fd, ss->index);
-            server_sess_wait_for_event(ss, EV_READ, &con->read_timeout);
+            if (con->dist_tran_decided) {
+                server_sess_wait_for_event(ss, EV_READ, &con->dist_tran_decided_read_timeout);
+                g_message("%s:use dist_tran_decided_read_timeout for con:%p", G_STRLOC, con);
+            } else {
+                server_sess_wait_for_event(ss, EV_READ, &con->read_timeout);
+            }
         }
         break;
     case NETWORK_SOCKET_ERROR:
@@ -3911,11 +3932,11 @@ network_mysqld_con_handle(int event_fd, short events, void *user_data)
             case NETWORK_SOCKET_WAIT_FOR_EVENT:
                 if (con->retry_serv_cnt < con->max_retry_serv_cnt) {
                     con->master_conn_shortaged = 1;
-                    con->retry_serv_cnt++;
                     con->is_wait_server = 1;
                     if (con->retry_serv_cnt % 8 == 0) {
                         network_connection_pool_create_conn(con);
                     }
+                    con->retry_serv_cnt++;
                     struct timeval timeout = network_mysqld_con_retry_timeout(con);
 
                     g_debug(G_STRLOC ": wait again:%d, con:%p, l:%d", con->retry_serv_cnt, con, (int)timeout.tv_usec);
@@ -4585,7 +4606,7 @@ network_mysqld_self_con_handle(int event_fd, short events, void *user_data)
         case ST_ASYNC_CONN:
             switch (network_socket_connect_finish(con->server)) {
             case NETWORK_SOCKET_SUCCESS:
-                if (con->backend->state != BACKEND_STATE_UP) {
+                if (con->backend->state != BACKEND_STATE_UP && srv->group_replication_mode == 0) {
                     con->backend->state = BACKEND_STATE_UP;
                     g_get_current_time(&(con->backend->state_since));
                     g_message(G_STRLOC ": set backend: %s (%p) up", con->backend->addr->name->str, con->backend);
@@ -4688,6 +4709,9 @@ network_connection_pool_create_conn(network_mysqld_con *con)
         if (backend != NULL) {
 
             if (backend->state != BACKEND_STATE_UP) {
+                if (backend->state != BACKEND_STATE_UNKNOWN) {
+                    continue;
+                }
                 if (backend->last_check_time == cur) {
                     g_debug("%s: omit create, backend:%d state:%d", G_STRLOC, i, backend->state);
                     continue;

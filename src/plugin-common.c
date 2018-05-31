@@ -73,20 +73,34 @@ typedef int socklen_t;
 
 #define MAX_CACHED_ITEMS 65536
 
-/* judge if client_ip is in ip range of allow or deny ip_table*/
+/* judge if client_ip_with_username is in allow or deny ip_table*/
 static gboolean
-ip_range_lookup(GHashTable *ip_table, char *client_ip)
+client_ip_table_lookup(GHashTable *ip_table, char *client_ip_with_username)
 {
     char ip_range[128] = { 0 };
     char wildcard[128] = { 0 };
+    char client_user[128] = { 0 };
+    char client_ip[128] = { 0 };
+    sscanf(client_ip_with_username, "%64[a-zA-Z]@%64[0-9.]", client_user, client_ip);
     GList *ip_range_table = g_hash_table_get_keys(ip_table);
     GList *l;
     for (l = ip_range_table; l; l = l->next) {
-        sscanf(l->data, "%64[0-9.].%s", ip_range, wildcard);
+        char address[128] = { 0 };
+        sscanf(l->data, "%64[a-zA-Z@0-9.]", address);
         gchar *pos = NULL;
-        if ((pos = strcasestr(client_ip, ip_range))) {
-            if(pos == client_ip) {
-                return TRUE;
+        if (strrchr(address, '@') == NULL) {
+            sscanf(address, "%64[0-9.].%s", ip_range, wildcard);
+            if ((pos = strcasestr(client_ip, ip_range))) {
+                if(pos == client_ip) {
+                    return TRUE;
+                }
+            }
+        } else {
+            sscanf(address, "%64[a-zA-Z@0-9.].%s", ip_range, wildcard);
+            if ((pos = strcasestr(client_ip_with_username, ip_range))) {
+                if(pos == client_ip_with_username) {
+                    return TRUE;
+                }
             }
         }
     }
@@ -198,15 +212,13 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
         char *client_username = con->client->response->username->str;
         char *client_ip_with_username = g_strdup_printf("%s@%s", client_username, client_ip);
         char *ip_err_msg = NULL;
-        if ((g_hash_table_size(allow_ip_table) != 0 &&
-            (g_hash_table_lookup(allow_ip_table, client_ip) || g_hash_table_lookup(allow_ip_table, "*") || ip_range_lookup(allow_ip_table, client_ip))) ||
-            g_hash_table_lookup(allow_ip_table, client_ip_with_username)) {
+        if (g_hash_table_size(allow_ip_table) != 0 
+            && (g_hash_table_lookup(allow_ip_table, "*") || client_ip_table_lookup(allow_ip_table, client_ip_with_username))) {
             check_ip = FALSE;
-        } else if ((g_hash_table_size(deny_ip_table) != 0 &&
-                   (g_hash_table_lookup(deny_ip_table, client_ip) || g_hash_table_lookup(deny_ip_table, "*") || ip_range_lookup(deny_ip_table, client_ip))) ||
-                   g_hash_table_lookup(deny_ip_table, client_ip_with_username)) {
+        } else if (g_hash_table_size(deny_ip_table) != 0 
+                  && (g_hash_table_lookup(deny_ip_table, "*") || client_ip_table_lookup(deny_ip_table, client_ip_with_username))) {
             check_ip = TRUE;
-            ip_err_msg = g_strdup_printf("Access denied for user '%s'@'%s'", client_username, client_ip);
+            ip_err_msg = g_strdup_printf("Access denied for user '%s'", client_ip_with_username);
         } else {
             check_ip = FALSE;
         }
@@ -441,7 +453,7 @@ plugin_add_backends(chassis *chas, gchar **backend_addresses, gchar **read_only_
 
     GPtrArray *backends_arr = g->backends->backends;
     for (i = 0; backend_addresses[i]; i++) {
-        if (-1 == network_backends_add(g->backends, backend_addresses[i], BACKEND_TYPE_RW, BACKEND_STATE_DOWN, chas)) {
+        if (-1 == network_backends_add(g->backends, backend_addresses[i], BACKEND_TYPE_RW, BACKEND_STATE_UNKNOWN, chas)) {
             return -1;
         }
         network_backend_init_extra(backends_arr->pdata[backends_arr->len - 1], chas);
@@ -449,7 +461,7 @@ plugin_add_backends(chassis *chas, gchar **backend_addresses, gchar **read_only_
 
     for (i = 0; read_only_backend_addresses && read_only_backend_addresses[i]; i++) {
         if (-1 == network_backends_add(g->backends,
-                                       read_only_backend_addresses[i], BACKEND_TYPE_RO, BACKEND_STATE_DOWN, chas)) {
+                                       read_only_backend_addresses[i], BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN, chas)) {
             return -1;
         }
         /* set conn-pool config */

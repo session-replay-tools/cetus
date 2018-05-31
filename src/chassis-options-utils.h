@@ -90,6 +90,7 @@ CHASSIS_API gchar* show_disable_dns_cache(gpointer param);
 CHASSIS_API gchar* show_master_preferred(gpointer param);
 CHASSIS_API gchar* show_max_allowed_packet(gpointer param);
 CHASSIS_API gchar* show_remote_conf_url(gpointer param);
+CHASSIS_API gchar* show_group_replication_mode(gpointer param);
 
 /* assign utils */
 CHASSIS_API gint assign_log_level(const gchar *newval, gpointer param);
@@ -108,6 +109,7 @@ CHASSIS_API gint assign_default_query_cache_timeout(const gchar *newval, gpointe
 CHASSIS_API gint assign_default_client_idle_timeout(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_long_query_time(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_max_allowed_packet(const gchar *newval, gpointer param);
+CHASSIS_API gint assign_group_replication(const gchar *newval, gpointer param);
 
 CHASSIS_API gint chassis_options_save(GKeyFile *keyfile, chassis_options_t *opts, chassis  *chas);
 

@@ -17,8 +17,8 @@
 | select * from backends                   | list the backends and their state        |
 | select * from groups                     | list the backends and their groups       |
 | show connectionlist [\<num>]             | show \<num> connections                  |
-| show allow_ip \<module>                  | show allow_ip rules of module, currently admin\|proxy\|shard |
-| show deny_ip \<module>                   | show deny_ip rules of module, currently admin\|proxy\|shard |
+| show allow_ip \<module>                  | show allow_ip rules of module, currently admin\|shard |
+| show deny_ip \<module>                   | show deny_ip rules of module, currently admin\|shard |
 | add allow_ip \<module> \<address>        | add address to white list of module      |
 | add deny_ip \<module> \<address>         | add address to black list of module      |
 | delete allow_ip \<module> \<address>     | delete address from white list of module |
@@ -215,21 +215,13 @@ update后端的state只包括up|down|maintaining三种状态，delete/remove后�
    * `pool.max_resp_len` 最大结果集长度
    * `pool.master_preferred` 是否只允许走主库
 
-### 修改连接池/通用配置
+### 修改配置
 
-`config set [<item>]`
-
-`config set common.[option] = [value]`修改基本配置
+`config set <key>=<value>`
 
 例如
 
->config set common.slave_delay_down = 3
-
-`config set pool.[option] = [value]`修改连接池配置
-
-例如
-
->config set pool.max_pool_size = 200
+>config set slave_delay_down = 3
 
 ### 查看参数配置
 
@@ -517,7 +509,7 @@ Shard: 仅配置IP，代表限制该IP来源所有用户的访问；配置User@I
 | query_time_table.2 | 5     |
 | query_time_table.5 | 1     |
 
-表示用时1秒的SQL有3条，用时2秒的SQL有5条，用时5秒的SQL有1条
+表示用时1毫秒的SQL有3条，用时2毫秒的SQL有5条，用时5毫秒的SQL有1条
 
 ```
 说明

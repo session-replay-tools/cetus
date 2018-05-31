@@ -1,7 +1,6 @@
 [cetus]
 # For mode-switch
 daemon = true
-disable-sharding-mode=true
 
 # Loaded Plugins
 plugins=proxy,admin

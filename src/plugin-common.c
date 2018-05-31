@@ -453,7 +453,7 @@ plugin_add_backends(chassis *chas, gchar **backend_addresses, gchar **read_only_
 
     GPtrArray *backends_arr = g->backends->backends;
     for (i = 0; backend_addresses[i]; i++) {
-        if (-1 == network_backends_add(g->backends, backend_addresses[i], BACKEND_TYPE_RW, BACKEND_STATE_DOWN, chas)) {
+        if (-1 == network_backends_add(g->backends, backend_addresses[i], BACKEND_TYPE_RW, BACKEND_STATE_UNKNOWN, chas)) {
             return -1;
         }
         network_backend_init_extra(backends_arr->pdata[backends_arr->len - 1], chas);
@@ -461,7 +461,7 @@ plugin_add_backends(chassis *chas, gchar **backend_addresses, gchar **read_only_
 
     for (i = 0; read_only_backend_addresses && read_only_backend_addresses[i]; i++) {
         if (-1 == network_backends_add(g->backends,
-                                       read_only_backend_addresses[i], BACKEND_TYPE_RO, BACKEND_STATE_DOWN, chas)) {
+                                       read_only_backend_addresses[i], BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN, chas)) {
             return -1;
         }
         /* set conn-pool config */

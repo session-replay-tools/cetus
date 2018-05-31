@@ -20,7 +20,7 @@ default-db=testdb
 default-username=cetus_app
 default-pool-size=100
 max-pool-size=400
-max-resp-len=10485760
+max-resp-=10485760
 long-query-time=100
 
 # Log Configuration, put log in /data and marked by proxy port , /data/cetus needs to be created manually and has rw authority for cetus os user

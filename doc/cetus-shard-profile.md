@@ -251,3 +251,5 @@ log-file的值是日志文件路径，我们设置为当前安装路径下的cet
 **6）master-preferred=\[true\|false\]，除非注释强制访问从库，否则一律访问主库**
 
 **7）reduce-connections=\[true\|false\]，自动减少过多的后端连接数量**
+
+**8）max-alive-time=\<num\>，设置后端连接最大存活时间**

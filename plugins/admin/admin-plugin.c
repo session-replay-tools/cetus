@@ -42,10 +42,25 @@
 #include "server-session.h"
 #include "sys-pedantic.h"
 #include "network-ssl.h"
+#include "chassis-options-utils.h"
 
 #include "admin-lexer.l.h"
 #include "admin-commands.h"
 #include "admin-stats.h"
+
+/* get config->has_shard_plugin */
+static gboolean
+has_shard_plugin(GPtrArray *modules)
+{
+    int i;
+    for (i = 0; i < modules->len; i++) {
+        chassis_plugin *plugin = modules->pdata[i];
+        if (strcmp(plugin->name, "shard") == 0) {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
 
 /* judge if client_ip is in allowed or denied ip range*/
 static gboolean
@@ -427,9 +442,10 @@ static int network_mysqld_server_connection_init(network_mysqld_con *con) {
     return 0;
 }
 
-static chassis_plugin_config *network_mysqld_admin_plugin_new(void) {
-    chassis_plugin_config *config;
+chassis_plugin_config *config;
 
+static chassis_plugin_config *network_mysqld_admin_plugin_new(void)
+{
     config = g_new0(chassis_plugin_config, 1);
 
     return config;
@@ -452,9 +468,114 @@ static void network_mysqld_admin_plugin_free(chassis *chas, chassis_plugin_confi
     g_free(config->deny_ip);
     if (config->deny_ip_table) g_hash_table_destroy(config->deny_ip_table);
 
-    admin_stats_free(config->admin_stats);
+    if (config->admin_stats) admin_stats_free(config->admin_stats);
 
     g_free(config);
+}
+
+gchar*
+show_admin_address(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%s", config->address != NULL ? config->address: "NULL");
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if(config->address != NULL) {
+            return g_strdup_printf("%s", config->address);
+        }
+    }
+    return NULL;
+}
+
+gchar*
+show_admin_username(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%s", config->admin_username != NULL ? config->admin_username: "NULL");
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if(config->admin_username != NULL) {
+            return g_strdup_printf("%s", config->admin_username);
+        }
+    }
+    return NULL;
+}
+
+gchar*
+show_admin_password(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%s", config->admin_password != NULL ? config->admin_password: "NULL");
+    }
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if(config->admin_password != NULL) {
+            return g_strdup_printf("%s", config->admin_password);
+        }
+    }
+    return NULL;
+}
+
+gchar*
+show_admin_allow_ip(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gchar *ret = NULL;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        GString *free_str = g_string_new(NULL);
+        GList *free_list = NULL;
+        if(config && config->allow_ip_table && g_hash_table_size(config->allow_ip_table)) {
+            free_list = g_hash_table_get_keys(config->allow_ip_table);
+            GList *it = NULL;
+            for(it = free_list; it; it=it->next) {
+                free_str = g_string_append(free_str, it->data);
+                free_str = g_string_append(free_str, ",");
+            }
+            if(free_str->len) {
+                free_str->str[free_str->len - 1] = '\0';
+                ret = g_strdup(free_str->str);
+            }
+        }
+        if(free_str) {
+            g_string_free(free_str, TRUE);
+        }
+        if(free_list) {
+            g_list_free(free_list);
+        }
+    }
+    return ret;
+}
+
+gchar*
+show_admin_deny_ip(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gchar *ret = NULL;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        GString *free_str = g_string_new(NULL);
+        GList *free_list = NULL;
+        if(config && config->deny_ip_table && g_hash_table_size(config->deny_ip_table)) {
+            free_list = g_hash_table_get_keys(config->deny_ip_table);
+            GList *it = NULL;
+            for(it = free_list; it; it=it->next) {
+                free_str = g_string_append(free_str, it->data);
+                free_str = g_string_append(free_str, ",");
+            }
+            if(free_str->len) {
+                free_str->str[free_str->len - 1] = '\0';
+                ret = g_strdup(free_str->str);
+            }
+        }
+        if(free_str) {
+            g_string_free(free_str, TRUE);
+        }
+        if(free_list) {
+            g_list_free(free_list);
+        }
+    }
+    return ret;
 }
 
 /**
@@ -463,24 +584,29 @@ static void network_mysqld_admin_plugin_free(chassis *chas, chassis_plugin_confi
 static GList *
 network_mysqld_admin_plugin_get_options(chassis_plugin_config *config)
 {
-    chassis_options_t opts = {0};
+    chassis_options_t opts = { 0 };
 
     chassis_options_add(&opts, "admin-address",
-        0, 0, OPTION_ARG_STRING, &(config->address),
-        "listening address:port of the admin-server (default: :4041)",
-                        "<host:port>", 0,0,0);
+                        0, 0, OPTION_ARG_STRING, &(config->address),
+                        "listening address:port of the admin-server (default: :4041)", "<host:port>",
+                        NULL, show_admin_address, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "admin-username",
-        0, 0, OPTION_ARG_STRING, &(config->admin_username),
-                        "username to allow to log in", "<string>",0,0,0);
+                        0, 0, OPTION_ARG_STRING, &(config->admin_username), "username to allow to log in", "<string>",
+                        NULL, show_admin_username, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "admin-password",
-        0, 0, OPTION_ARG_STRING, &(config->admin_password),
-                        "password to allow to log in", "<string>",0,0,0);
+                        0, 0, OPTION_ARG_STRING, &(config->admin_password), "password to allow to log in", "<string>",
+                        NULL, show_admin_password, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "admin-allow-ip",
-        0, 0, OPTION_ARG_STRING, &(config->allow_ip),
-                        "ip address allowed to connect to admin", "<string>",0,0,0);
+                        0, 0, OPTION_ARG_STRING, &(config->allow_ip),
+                        "ip address allowed to connect to admin", "<string>",
+                        NULL, show_admin_allow_ip, SAVE_OPTS_PROPERTY);
+    chassis_options_add(&opts, "admin-deny-ip",
+                        0, 0, OPTION_ARG_STRING, &(config->deny_ip),
+                        "ip address denyed to connect to admin", "<string>",
+                        NULL, show_admin_deny_ip, SAVE_OPTS_PROPERTY);
 
     return opts.options;
 }
@@ -561,6 +687,8 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
         return -1;
     }
     g_message("admin-server listening on port %s", config->address);
+
+    config->has_shard_plugin = has_shard_plugin(chas->modules);
 
     /**
      * call network_mysqld_con_accept() with this connection when we are done

@@ -26,6 +26,8 @@ struct chassis_plugin_config {
     gchar *deny_ip;                  /**< deny ip addr list */
     GHashTable *deny_ip_table;
 
+    gboolean has_shard_plugin;
+
     network_mysqld_con *listen_con;
 
     admin_stats_t *admin_stats;

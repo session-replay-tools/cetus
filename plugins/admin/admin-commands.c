@@ -62,7 +62,7 @@ void admin_select_all_backends(network_mysqld_con* admin_con)
 {
     chassis *chas = admin_con->srv;
     chassis_private *priv = chas->priv;
-
+    chassis_plugin_config *config = admin_con->config;
     GPtrArray *fields = g_ptr_array_new_with_free_func(
         (GDestroyNotify)network_mysqld_proto_fielddef_free);
 
@@ -112,6 +112,13 @@ void admin_select_all_backends(network_mysqld_con* admin_con)
     field->type = MYSQL_TYPE_STRING;
     g_ptr_array_add(fields, field);
 
+    if (config->has_shard_plugin) {
+        field = network_mysqld_proto_fielddef_new();
+        field->name = g_strdup("group");
+        field->type = MYSQL_TYPE_STRING;
+        g_ptr_array_add(fields, field);
+    }
+
     GPtrArray *rows = g_ptr_array_new_with_free_func(
         (GDestroyNotify)network_mysqld_mysql_field_row_free);
 
@@ -147,7 +154,9 @@ void admin_select_all_backends(network_mysqld_con* admin_con)
 
         sprintf(buffer, "%d", backend->pool->cur_idle_connections + backend->connected_clients); 
         g_ptr_array_add(row, g_strdup(buffer));
-
+        if (config->has_shard_plugin) {
+            g_ptr_array_add(row, backend->server_group->len ? g_strdup(backend->server_group->str) : NULL);
+        }
         g_ptr_array_add(rows, row);
 
     }
@@ -358,7 +367,7 @@ void admin_show_connectionlist(network_mysqld_con *admin_con, int show_count)
 
     chassis *chas = admin_con->srv;
     chassis_private *priv = chas->priv;
-
+    chassis_plugin_config *config = admin_con->config;
     int i, len;
     char buffer[32];
     GPtrArray *fields;
@@ -408,16 +417,17 @@ void admin_show_connectionlist(network_mysqld_con *admin_con, int show_count)
     field->type = MYSQL_TYPE_STRING;
     g_ptr_array_add(fields, field);
 
-    field = network_mysqld_proto_fielddef_new();
-    field->name = g_strdup("Xa");
-    field->type = MYSQL_TYPE_STRING;
-    g_ptr_array_add(fields, field);
+    if (config->has_shard_plugin) {
+        field = network_mysqld_proto_fielddef_new();
+        field->name = g_strdup("Xa");
+        field->type = MYSQL_TYPE_STRING;
+        g_ptr_array_add(fields, field);
 
-    field = network_mysqld_proto_fielddef_new();
-    field->name = g_strdup("Xid");
-    field->type = MYSQL_TYPE_STRING;
-    g_ptr_array_add(fields, field);
-
+        field = network_mysqld_proto_fielddef_new();
+        field->name = g_strdup("Xid");
+        field->type = MYSQL_TYPE_STRING;
+        g_ptr_array_add(fields, field);
+    }
     field = network_mysqld_proto_fielddef_new();
     field->name = g_strdup("Server");
     field->type = MYSQL_TYPE_STRING;
@@ -473,12 +483,15 @@ void admin_show_connectionlist(network_mysqld_con *admin_con, int show_count)
         g_ptr_array_add(row, g_strdup(con->is_prepared ? "Y" : "N"));
 
         g_ptr_array_add(row, g_strdup(network_mysqld_con_st_name(con->state)));
-        g_ptr_array_add(row, g_strdup(get_conn_xa_state_name(con->dist_tran_state)));
-        if (con->dist_tran) {
-            sprintf(buffer, "%lld", con->xa_id);
-            g_ptr_array_add(row, g_strdup(buffer));
-        } else {
-            g_ptr_array_add(row, NULL);
+
+        if (config->has_shard_plugin) {
+            g_ptr_array_add(row, g_strdup(get_conn_xa_state_name(con->dist_tran_state)));
+            if (con->dist_tran) {
+                snprintf(buffer, sizeof(buffer), "%lld", con->xa_id);
+                g_ptr_array_add(row, g_strdup(buffer));
+            } else {
+                g_ptr_array_add(row, NULL);
+            }
         }
 
         if (con->servers != NULL) {
@@ -1250,52 +1263,63 @@ void admin_select_all_groups(network_mysqld_con* con)
     g_list_free_full(free_list, g_string_true_free);
 }
 
+enum {
+    SHARD_HELP = 0x01,
+    RW_HELP = 0x02,
+    ALL_HELP = 0x03,
+};
 static struct sql_help_entry_t {
     const char* pattern;
     const char* desc;
+    int type;
 } sql_help_entries[] = {
-    {"select conn_details from backends", "display the idle conns"},
-    {"select * from backends", "list the backends and their state"},
-    {"select * from groups"},
-    {"show connectionlist [<num>]", "show <num> connections"},
-    {"show allow_ip <module>", "show allow_ip rules of module, currently admin|proxy|shard"},
-    {"add allow_ip <module> '<address>'", "add address to white list of module"},
-    {"delete allow_ip <module> '<address>'", "delete address from white list of module"},
-    {"set reduce_conns (true|false)", "reduce idle connections if set to true"},
-    {"set maintain (true|false)", "close all client connections if set to true"},
-    {"show status [like '%pattern%']", "show select/update/insert/delete statistics"},
-    {"show variables [like '%pattern%']"},
-    {"select version", "cetus version"},
-    {"select conn_num from backends where backend_ndx=<index> and user='<name>')"},
-    {"select * from user_pwd [where user='<name>']"},
-    {"select * from app_user_pwd [where user='<name>']"},
-    {"update user_pwd set password='xx' where user='<name>'"},
-    {"update app_user_pwd set password='xx' where user='<name>'"},
-    {"delete from user_pwd where user='<name>'"},
-    {"delete from app_user_pwd where user='<name>'"},
+    {"select conn_details from backends", "display the idle conns", ALL_HELP},
+    {"select * from backends", "list the backends and their state", ALL_HELP},
+    {"show connectionlist [<num>]", "show <num> connections", ALL_HELP},
+    {"select * from groups","list the backends and their groups", SHARD_HELP},
+    {"show allow_ip <module>", "show allow_ip rules of module, currently admin|proxy|shard", ALL_HELP},
+    {"add allow_ip <module> '<address>'", "add address to white list of module", ALL_HELP},
+    {"delete allow_ip <module> '<address>'", "delete address from white list of module", ALL_HELP},
+    {"set reduce_conns (true|false)", "reduce idle connections if set to true", ALL_HELP},
+    {"set maintain (true|false)", "close all client connections if set to true", ALL_HELP},
+    {"show status [like '%pattern%']", "show select/update/insert/delete statistics", ALL_HELP},
+    {"show variables [like '%pattern%']", NULL, ALL_HELP},
+    {"select version", "cetus version", ALL_HELP},
+    {"select conn_num from backends where backend_ndx=<index> and user='<name>')", NULL, ALL_HELP},
+    {"select * from user_pwd [where user='<name>']", NULL, ALL_HELP},
+    {"select * from app_user_pwd [where user='<name>']", NULL, ALL_HELP},
+    {"update user_pwd set password='xx' where user='<name>'", NULL, ALL_HELP},
+    {"update app_user_pwd set password='xx' where user='<name>'", NULL, ALL_HELP},
+    {"delete from user_pwd where user='<name>'", NULL, ALL_HELP},
+    {"delete from app_user_pwd where user='<name>'", NULL, ALL_HELP},
     {"insert into backends values ('<ip:port>', '(ro|rw)', '<state>')",
-     "add mysql instance to backends list"},
+     "add mysql instance to backends list", RW_HELP},
+    {"insert into backends values ('<ip:port@group>', '(ro|rw)', '<state>')",
+     "add mysql instance to backends list", SHARD_HELP},
     {"update backends set (type|state)=x where (backend_ndx=<index>|address=<'ip:port'>)",
-     "update mysql instance type or state"},
-    {"delete from backends where (backend_ndx=<index>|address=<'ip:port'>)"},
-    {"add master <'ip:port'>"},
-    {"add slave <'ip:port'>"},
-    {"stats get [<item>]", "show query statistics"},
-    {"config get [<item>]", "show config"},
-    {"config set <key>=<value>"},
-    {"stats reset", "reset query statistics"},
-    {"select * from help", "show this help"},
-    {"select help", "show this help"},
-    {"cetus", "Show overall status of Cetus"},
-    {"create vdb <id> (groupA:xx, groupB:xx) using <method>", "method example: hash(int,4) range(str)"},
-    {"create sharded table <schema>.<table> vdb <id> shardkey <key>", "create sharded table"},
-    {"select * from vdb", "show all vdb"},
-    {"select sharded table", "show all sharded table"},
-    {NULL, NULL}
+     "update mysql instance type or state", ALL_HELP},
+    {"delete from backends where (backend_ndx=<index>|address=<'ip:port'>)", NULL, ALL_HELP},
+    {"add master <'ip:port'>", NULL, RW_HELP},
+    {"add master <'ip:port@group'>", NULL, SHARD_HELP},
+    {"add slave <'ip:port'>", NULL, RW_HELP},
+    {"add slave <'ip:port@group'>", NULL, SHARD_HELP},
+    {"stats get [<item>]", "show query statistics", ALL_HELP},
+    {"config get [<item>]", "show config", ALL_HELP},
+    {"config set <key>=<value>", NULL, ALL_HELP},
+    {"stats reset", "reset query statistics", ALL_HELP},
+    {"select * from help", "show this help", ALL_HELP},
+    {"select help", "show this help", ALL_HELP},
+    {"cetus", "Show overall status of Cetus", ALL_HELP},
+    {"create vdb <id> (groupA:xx, groupB:xx) using <method>", "method example: hash(int,4) range(str)", SHARD_HELP},
+    {"create sharded table <schema>.<table> vdb <id> shardkey <key>", "create sharded table", SHARD_HELP},
+    {"select * from vdb", "show all vdb", SHARD_HELP},
+    {"select sharded table", "show all sharded table", SHARD_HELP},
+    {NULL, NULL, 0}
 };
 
 void admin_select_help(network_mysqld_con* con)
 {
+    int needed_type = con->config->has_shard_plugin ? SHARD_HELP : RW_HELP;
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();
     MAKE_FIELD_DEF_2_COL(fields, "Command", "Description");
     GPtrArray *rows = g_ptr_array_new_with_free_func(
@@ -1303,9 +1327,11 @@ void admin_select_help(network_mysqld_con* con)
     int i;
     for (i=0; sql_help_entries[i].pattern; ++i) {
         struct sql_help_entry_t* e = &(sql_help_entries[i]);
-        char* pattern = e->pattern ? (char*)e->pattern : "";
-        char* desc = e->desc ? (char*)e->desc : "";
-        APPEND_ROW_2_COL(rows, pattern, desc);
+        if (e->type & needed_type) {
+            char* pattern = e->pattern ? (char*)e->pattern : "";
+            char* desc = e->desc ? (char*)e->desc : "";
+            APPEND_ROW_2_COL(rows, pattern, desc);
+        }
     }
     network_mysqld_con_send_resultset(con->client, fields, rows);
     network_mysqld_proto_fielddefs_free(fields);
@@ -1326,6 +1352,7 @@ static void get_module_names(chassis* chas, GString* plugin_names)
 void admin_send_overview(network_mysqld_con* con)
 {
     chassis_private* g = con->srv->priv;
+    chassis_plugin_config *config = con->config;
     GPtrArray *fields = network_mysqld_proto_fielddefs_new();
     MAKE_FIELD_DEF_2_COL(fields, "Status", "Value");
 
@@ -1351,9 +1378,12 @@ void admin_send_overview(network_mysqld_con* con)
     char qcount[32];
     snprintf(qcount, 32, "%ld", stats->client_query.ro+stats->client_query.rw);
     APPEND_ROW_2_COL(rows, "Query count", qcount);
-    char xacount[32];
-    snprintf(xacount, 32, "%ld", stats->xa_count);
-    APPEND_ROW_2_COL(rows, "XA count", xacount);
+
+    if (config->has_shard_plugin) {
+        char xacount[32];
+        snprintf(xacount, 32, "%ld", stats->xa_count);
+        APPEND_ROW_2_COL(rows, "XA count", xacount);
+    }
     char qps[64];
     admin_stats_get_average(con->config->admin_stats, ADMIN_STATS_QPS, C(qps));
     APPEND_ROW_2_COL(rows, "QPS (1min, 5min, 15min)", qps);

@@ -237,6 +237,7 @@ network_backends_add(network_backends_t *bs, const gchar *address,
     }
 
     set_backend_config(new_backend, srv);
+    network_connection_pool_create_conns(srv);
     network_backends_into_group(bs, new_backend);
     g_message("added %s backend: %s, state: %s", backend_type_t_str[type], address, backend_state_t_str[state]);
 

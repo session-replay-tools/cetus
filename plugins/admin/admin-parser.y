@@ -274,7 +274,10 @@ cmd ::= CONFIG SET equation(X). {
   free(val);
 }
 cmd ::= CONFIG RELOAD. {
-  admin_config_reload(con);
+  admin_config_reload(con, 0);
+}
+cmd ::= CONFIG RELOAD USER. {
+  admin_config_reload(con, "user");
 }
 cmd ::= STATS RESET. {
   admin_reset_stats(con);

@@ -345,7 +345,11 @@ chassis_config_object_set_cache(struct config_object_t *ob, const char *str, tim
     if (ob->cache) {
         g_free(ob->cache);
     }
-    ob->cache = g_strdup(str);
+    if (str) {
+        ob->cache = g_strdup(str);
+    } else {
+        ob->cache = NULL;
+    }
     ob->mtime = mt;
 }
 
@@ -638,10 +642,8 @@ chassis_config_update_object_cache(chassis_config_t *conf, const char *name)
     struct config_object_t *object = chassis_config_get_object(conf, name);
     if (!object)
         return;
-    if (object->cache) {
-        g_free(object->cache);
-        object->cache = NULL;
-    }
+    time_t now = time(0);
+    chassis_config_object_set_cache(object, NULL, now);
     char *str;
     chassis_config_query_object(conf, name, &str);
     if (str) {                  /* we just want to trigger query&caching, result is not needed */

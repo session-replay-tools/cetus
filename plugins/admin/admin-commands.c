@@ -1225,7 +1225,7 @@ void admin_set_config(network_mysqld_con* con, char* key, char* value)
     }
 }
 
-void admin_config_reload(network_mysqld_con* con)
+static void admin_reload_settings(network_mysqld_con* con)
 {
     GList *options = admin_get_all_options(con->srv);
 
@@ -1259,6 +1259,25 @@ void admin_config_reload(network_mysqld_con* con)
     g_list_free(options);
     network_mysqld_con_send_ok_full(con->client, affected_rows, 0,
                                     SERVER_STATUS_AUTOCOMMIT, 0);
+}
+
+void admin_config_reload(network_mysqld_con* con, char* object)
+{
+    if (object == NULL) {
+        return admin_reload_settings(con);
+    } else if (strcasecmp(object, "user")==0) {
+        chassis_config_t* conf = con->srv->config_manager;
+        chassis_config_update_object_cache(conf, "users");
+
+        gboolean ok = cetus_users_read_json(con->srv->priv->users, conf);
+        if (ok) {
+            network_mysqld_con_send_ok(con->client);
+        } else {
+            network_mysqld_con_send_error(con->client, C("read user failed"));
+        }
+    } else {
+        network_mysqld_con_send_error(con->client, C("wrong parameter"));
+    }
 }
 
 void admin_reset_stats(network_mysqld_con* con)

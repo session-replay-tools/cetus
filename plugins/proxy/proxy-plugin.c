@@ -137,7 +137,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
     if (st == NULL)
         return NETWORK_SOCKET_ERROR;
 
-    guint32 diff = time(0) - con->client->create_or_update_time;
+    int diff = con->srv->current_time - con->client->update_time;
     g_debug("%s, con:%p:call proxy_timeout", G_STRLOC, con);
     switch (con->state) {
     case ST_READ_QUERY:

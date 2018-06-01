@@ -581,6 +581,12 @@ proxy_put_shard_conn_to_pool(network_mysqld_con *con)
                 is_put_to_pool_allowed = 0;
                 g_debug("%s: con server_to_be_closed is true", G_STRLOC);
             }
+
+            int alive_time = con->srv->current_time - server->create_time;
+            if (alive_time > con->srv->max_alive_time) {
+                is_put_to_pool_allowed = 0;
+            }
+
             if (is_put_to_pool_allowed && server->is_closed) {
                 is_put_to_pool_allowed = 0;
                 g_debug("%s: server is_closed is true", G_STRLOC);

@@ -1678,13 +1678,15 @@ backend_type(const char *str)
 static backend_state_t
 backend_state(const char *str)
 {
-    backend_state_t state = BACKEND_STATE_UNKNOWN;
+    backend_state_t state = BACKEND_STATE_END;
     if (strcasecmp(str, "up") == 0)
         state = BACKEND_STATE_UP;
     else if (strcasecmp(str, "down") == 0)
         state = BACKEND_STATE_DOWN;
     else if (strcasecmp(str, "maintaining") == 0)
         state = BACKEND_STATE_MAINTAINING;
+    else if (strcasecmp(str, "unknown") == 0)
+        state = BACKEND_STATE_UNKNOWN;
     return state;
 }
 
@@ -1804,7 +1806,7 @@ admin_update_backend(network_mysqld_con *con, const char *sql)
     if(ret == 0) {
         network_mysqld_con_send_ok_full(con->client, affected_rows, 0, SERVER_STATUS_AUTOCOMMIT, 0);
     } else {
-        network_mysqld_con_send_error_full(con->client, C("update failed."), 1045, "28000");
+        network_mysqld_con_send_error_full(con->client, C("Command or parameter is incorrect."), 1045, "28000");
     }
     return PROXY_SEND_RESULT;
 }

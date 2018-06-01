@@ -325,6 +325,10 @@ network_backends_modify(network_backends_t *bs, guint ndx, backend_type_t type, 
     g_get_current_time(&now);
     if (ndx >= network_backends_count(bs))
         return -1;
+    if(state >= BACKEND_STATE_END) {
+        return -1;
+    }
+
     network_backend_t *cur = bs->backends->pdata[ndx];
 
     g_message("change backend: %s from type: %s, state: %s to type: %s, state: %s",

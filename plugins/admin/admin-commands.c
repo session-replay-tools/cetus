@@ -724,14 +724,6 @@ static gboolean sql_pattern_like(const char* pattern, const char* string)
 static GList* admin_get_all_options(chassis* chas)
 {
     GList* options = g_list_copy(chas->options->options); /* shallow copy */
-    int i = 0;
-    for (i = 0; i < chas->modules->len; i++) {
-        chassis_plugin *plugin = chas->modules->pdata[i];
-        if (strcmp(plugin->name, "admin") == 0)
-            continue;
-        GList* p_list = plugin->get_options(plugin->config);
-        options = g_list_concat(options, g_list_copy(p_list));
-    }
     return options;
 }
 
@@ -1206,7 +1198,66 @@ void admin_get_config(network_mysqld_con* con, char* p)
 
 void admin_set_config(network_mysqld_con* con, char* key, char* value)
 {
-    network_mysqld_con_send_ok_full(con->client, 1, 0,
+    char msg[128] = {0};
+    GList *options = admin_get_all_options(con->srv);
+    chassis_option_t* opt = chassis_options_get(options, key);
+    if (!opt) {
+        snprintf(msg, sizeof(msg), "no such variable: %s", key);
+        network_mysqld_con_send_error(con->client, L(msg));
+        g_list_free(options);
+        return;
+    }
+    struct external_param param = {0};
+    param.chas = con->srv;
+    param.opt_type = opt->opt_property;
+    int ret = opt->assign_hook != NULL? opt->assign_hook(value, &param) : ASSIGN_NOT_SUPPORT;
+
+    g_list_free(options);
+
+    if(0 == ret) {
+        network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+    } else if(ASSIGN_NOT_SUPPORT == ret){
+        network_mysqld_con_send_error_full(con->client, C("Variable cannot be set dynamically"), 1065, "28000");
+    } else if(ASSIGN_VALUE_INVALID == ret){
+        network_mysqld_con_send_error_full(con->client, C("Value is illegal"), 1065, "28000");
+    } else {
+        network_mysqld_con_send_error_full(con->client, C("You have an error in your SQL syntax"), 1065, "28000");
+    }
+}
+
+void admin_config_reload(network_mysqld_con* con)
+{
+    GList *options = admin_get_all_options(con->srv);
+
+    if (!chassis_config_reload_options(con->srv->config_manager)) {
+        network_mysqld_con_send_error(con->client,
+            C("Can't load options, only support remote config"));
+        return;
+    }
+    GHashTable *opts_table = chassis_config_get_options(con->srv->config_manager);
+
+    int affected_rows = 0;
+    GHashTableIter iter;
+    char* key = NULL;
+    char* value = NULL; /* don't use value directly */
+    g_hash_table_iter_init(&iter, opts_table);
+    while (g_hash_table_iter_next(&iter, (gpointer*)&key, (gpointer*)&value)) {
+        chassis_option_t* opt = chassis_options_get(options, key);
+        if (!opt) {
+            g_warning(G_STRLOC "no such variable: %s", key);
+            continue;
+        }
+        struct external_param param = {0};
+        param.chas = con->srv;
+        param.opt_type = opt->opt_property;
+        int ret = opt->assign_hook != NULL?
+            opt->assign_hook(value, &param) : ASSIGN_NOT_SUPPORT;
+        if (ret == 0) {
+            affected_rows += 1;
+        }
+    }
+    g_list_free(options);
+    network_mysqld_con_send_ok_full(con->client, affected_rows, 0,
                                     SERVER_STATUS_AUTOCOMMIT, 0);
 }
 

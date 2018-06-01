@@ -111,7 +111,7 @@ input ::= cmd.
 
 %fallback ID
   CONN_DETAILS BACKENDS AT_SIGN REDUCE_CONNS ADD MAINTAIN STATUS
-  CONN_NUM BACKEND_NDX RESET CETUS VDB HASH RANGE SHARDKEY
+  CONN_NUM BACKEND_NDX RESET CETUS VDB HASH RANGE SHARDKEY RELOAD
   .
 
 %wildcard ANY.
@@ -272,6 +272,9 @@ cmd ::= CONFIG SET equation(X). {
   admin_set_config(con, key, val);
   free(key);
   free(val);
+}
+cmd ::= CONFIG RELOAD. {
+  admin_config_reload(con);
 }
 cmd ::= STATS RESET. {
   admin_reset_stats(con);

@@ -39,6 +39,7 @@ void admin_delete_backend(network_mysqld_con* con, char *key, char *val);
 void admin_get_stats(network_mysqld_con* con, char* p);
 void admin_get_config(network_mysqld_con* con, char* p);
 void admin_set_config(network_mysqld_con* con, char* key, char* value);
+void admin_config_reload(network_mysqld_con* con);
 void admin_reset_stats(network_mysqld_con* con);
 void admin_select_help(network_mysqld_con* con);
 void admin_send_overview(network_mysqld_con* con);

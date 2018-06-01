@@ -87,12 +87,13 @@
 "sharded" return TK_SHARDED;
 "table" return TK_TABLE;
 "shardkey" return TK_SHARDKEY;
+"reload" return TK_RELOAD;
 
 [0-9]+                 return TK_INTEGER; /*sign symbol is handled in parser*/
 
 [0-9]*\.[0-9]+([eE][-+]?[0-9]+)? return TK_FLOAT;
 
-[a-zA-Z][a-zA-Z0-9_]*  return TK_ID;
+[a-zA-Z][a-zA-Z0-9_-]*  return TK_ID;
 
 '([^'\\]|\\.|'')*'     return TK_STRING;
 \"([^"\\]|\"\"|\\.)*\"   return TK_STRING;

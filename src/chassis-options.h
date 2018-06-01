@@ -115,5 +115,5 @@ int chassis_options_add(chassis_options_t *opts,
                         chas_opt_assign_hook assign_hook, chas_opt_show_hook show_hook, gint opt_property);
 
 gboolean chassis_options_parse_cmdline(chassis_options_t *context, int *argc, char ***argv, GError **error);
-
+chassis_option_t *chassis_options_get(GList *opts, const char *long_name);
 #endif

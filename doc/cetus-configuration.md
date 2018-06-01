@@ -188,6 +188,14 @@ Default: default-pool-size * 2
 
 > max-pool-size = 300
 
+### max-alive-time
+
+Default: 7200 (seconds)
+
+后端连接最大存活时间
+
+> max-alive-time = 7200
+
 ### max-resp-size
 
 Default: 10485760 (10MB)

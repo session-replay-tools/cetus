@@ -109,7 +109,8 @@ network_socket_new()
 
     s->src = network_address_new();
     s->dst = network_address_new();
-    s->create_or_update_time = time(0);
+    s->create_time = time(0);
+    s->update_time = s->create_time;
 
     return s;
 }

@@ -4835,6 +4835,14 @@ network_connection_pool_create_conns(chassis *srv)
     for (i = 0; i < network_backends_count(g->backends); i++) {
         network_backend_t *backend = network_backends_get(g->backends, i);
         if (backend != NULL) {
+            if (backend->state != BACKEND_STATE_UP && backend->state != BACKEND_STATE_UNKNOWN) {
+                continue;
+            }
+            int total = backend->pool->cur_idle_connections + backend->connected_clients;
+            if (total > 0) {
+                continue;
+            }
+
             for (j = 0; j < backend->config->mid_conn_pool; j++) {
                 server_connection_state_t *scs = network_mysqld_self_con_init(srv);
                 if (srv->disable_dns_cache)

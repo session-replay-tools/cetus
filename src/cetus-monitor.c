@@ -186,7 +186,6 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
 
         char *backend_addr = backend->addr->name->str;
         MYSQL *conn = get_mysql_connection(monitor, backend_addr);
-        int result = 0;
         MYSQL_RES *rs_set = NULL;
         MYSQL_ROW row = NULL;
         gchar ip[ADDRESS_LEN] = {""};

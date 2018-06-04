@@ -319,7 +319,8 @@ network_backends_check(network_backends_t *bs)
  */
 
 int
-network_backends_modify(network_backends_t *bs, guint ndx, backend_type_t type, backend_state_t state, backend_state_t oldstate)
+network_backends_modify(network_backends_t *bs, guint ndx,
+        backend_type_t type, backend_state_t state, backend_state_t oldstate)
 {
     GTimeVal now;
     g_get_current_time(&now);
@@ -340,6 +341,11 @@ network_backends_modify(network_backends_t *bs, guint ndx, backend_type_t type, 
     if(cur->state != state) {
         if(__sync_bool_compare_and_swap(&(cur->state), oldstate, state)) {
             cur->state_since = now;
+            if (state == BACKEND_STATE_UP || state == BACKEND_TYPE_UNKNOWN) {
+                if (cur->pool->srv) {
+                    network_connection_pool_create_conns(cur->pool->srv);
+                }
+            }
         } else {
             g_debug("there might be conflict, network_backends_modify failed.");
             return -1;

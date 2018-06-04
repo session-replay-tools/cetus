@@ -2311,7 +2311,8 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
                     con->client->is_need_q_peek_exec = 0;
                     g_debug("%s: set a short timeout:%p", G_STRLOC, con);
                 } else {
-                    timeout = con->read_timeout;
+                    timeout.tv_sec = con->srv->client_idle_timeout;
+                    timeout.tv_usec = 0;
                     g_debug("%s: set a long timeout:%p", G_STRLOC, con);
                 }
 

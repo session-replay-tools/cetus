@@ -2510,12 +2510,8 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_query)
 
 NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
 {
-    int diff = con->srv->current_time - con->client->update_time;
-
-    if (diff >= con->srv->client_idle_timeout) {
-        con->prev_state = con->state;
-        con->state = ST_SEND_ERROR;
-    }
+    con->prev_state = con->state;
+    con->state = ST_SEND_ERROR;
 
     return NETWORK_SOCKET_SUCCESS;
 }

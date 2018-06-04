@@ -4482,8 +4482,11 @@ process_self_event(server_connection_state_t *con, int events, int event_fd)
             g_message("%s: self conn timeout, state:%d, con:%p, server:%p", G_STRLOC, con->state, con, con->server);
             con->state = ST_ASYNC_ERROR;
             if (con->backend->type != BACKEND_TYPE_RW) {
-                con->backend->state = BACKEND_STATE_DOWN;
-                g_critical("%s: set backend:%p down", G_STRLOC, con->backend);
+                if (con->srv->disable_threads) {
+                    con->backend->state = BACKEND_STATE_DOWN;
+                    g_get_current_time(&(con->backend->state_since));
+                    g_critical("%s: set backend:%p down", G_STRLOC, con->backend);
+                }
             } else {
                 g_critical("%s: get conn timeout from master", G_STRLOC);
             }
@@ -4607,18 +4610,25 @@ network_mysqld_self_con_handle(int event_fd, short events, void *user_data)
         case ST_ASYNC_CONN:
             switch (network_socket_connect_finish(con->server)) {
             case NETWORK_SOCKET_SUCCESS:
-                if (con->backend->state != BACKEND_STATE_UP && srv->group_replication_mode == 0) {
-                    con->backend->state = BACKEND_STATE_UP;
-                    g_get_current_time(&(con->backend->state_since));
-                    g_message(G_STRLOC ": set backend: %s (%p) up", con->backend->addr->name->str, con->backend);
+                if (con->srv->disable_threads) {
+                    if (con->backend->state != BACKEND_STATE_UP && srv->group_replication_mode == 0) {
+                        con->backend->state = BACKEND_STATE_UP;
+                        g_get_current_time(&(con->backend->state_since));
+                        g_message(G_STRLOC ": set backend: %s (%p) up", 
+                                con->backend->addr->name->str, con->backend);
+                    }
                 }
                 con->state = ST_ASYNC_READ_HANDSHAKE;
                 break;
             default:
                 con->state = ST_ASYNC_ERROR;
                 if (con->backend->type != BACKEND_TYPE_RW) {
-                    con->backend->state = BACKEND_STATE_DOWN;
-                    g_critical(G_STRLOC ": set backend: %s (%p) down", con->backend->addr->name->str, con->backend);
+                    if (con->srv->disable_threads) {
+                        con->backend->state = BACKEND_STATE_DOWN;
+                        g_get_current_time(&(con->backend->state_since));
+                        g_critical(G_STRLOC ": set backend: %s (%p) down", 
+                                con->backend->addr->name->str, con->backend);
+                    }
                 } else {
                     g_critical(G_STRLOC ": error when creating conn for backend: %s (%p)",
                             con->backend->addr->name->str, con->backend);
@@ -4803,7 +4813,7 @@ network_connection_pool_create_conn(network_mysqld_con *con)
                 break;
             }
             case NETWORK_SOCKET_SUCCESS:
-                if (backend->state != BACKEND_STATE_UP) {
+                if (scs->srv->disable_threads && backend->state != BACKEND_STATE_UP) {
                     backend->state = BACKEND_STATE_UP;
                     g_get_current_time(&(backend->state_since));
                     g_message("%s: set backend:%p, ndx:%d up", G_STRLOC, backend, i);
@@ -4813,13 +4823,15 @@ network_connection_pool_create_conn(network_mysqld_con *con)
                 break;
             default:
                 scs->backend->connected_clients--;
-                if (scs->backend->type != BACKEND_TYPE_RW) {
-                    backend->state = BACKEND_STATE_DOWN;
-                    g_message("%s: set backend ndx:%d down", G_STRLOC, i);
-                } else {
-                    g_message("%s: error when creating conn for backend ndx:%d", G_STRLOC, i);
+                if (scs->srv->disable_threads) {
+                    if (scs->backend->type != BACKEND_TYPE_RW) {
+                        backend->state = BACKEND_STATE_DOWN;
+                        g_message("%s: set backend ndx:%d down", G_STRLOC, i);
+                    } else {
+                        g_message("%s: error when creating conn for backend ndx:%d", G_STRLOC, i);
+                    }
+                    g_get_current_time(&(backend->state_since));
                 }
-                g_get_current_time(&(backend->state_since));
                 network_mysqld_self_con_free(scs);
                 break;
             }
@@ -4878,7 +4890,7 @@ network_connection_pool_create_conns(chassis *srv)
                     break;
                 }
                 case NETWORK_SOCKET_SUCCESS:
-                    if (backend->state != BACKEND_STATE_UP) {
+                    if (scs->srv->disable_threads && backend->state != BACKEND_STATE_UP) {
                         backend->state = BACKEND_STATE_UP;
                         g_message("%s: set backend:%p, ndx:%d up", G_STRLOC, backend, i);
                         g_get_current_time(&(backend->state_since));
@@ -4890,13 +4902,15 @@ network_connection_pool_create_conns(chassis *srv)
                 default:
                     scs->backend->connected_clients--;
                     network_mysqld_self_con_free(scs);
-                    if (scs->backend->type != BACKEND_TYPE_RW) {
-                        backend->state = BACKEND_STATE_DOWN;
-                        g_message("%s: set backend ndx:%d down, connected_clients sub", G_STRLOC, i);
-                    } else {
-                        g_message("%s: error when creating conn for backend ndx:%d", G_STRLOC, i);
+                    if (scs->srv->disable_threads) {
+                        if (scs->backend->type != BACKEND_TYPE_RW) {
+                            backend->state = BACKEND_STATE_DOWN;
+                            g_message("%s: set backend ndx:%d down, connected_clients sub", G_STRLOC, i);
+                        } else {
+                            g_message("%s: error when creating conn for backend ndx:%d", G_STRLOC, i);
+                        }
+                        g_get_current_time(&(backend->state_since));
                     }
-                    g_get_current_time(&(backend->state_since));
                     break;
                 }
             }

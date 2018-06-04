@@ -689,7 +689,7 @@ admin_show_connectionlist(network_mysqld_con *admin_con, const char *sql)
     g_ptr_array_add(fields, field);
 
     field = network_mysqld_proto_fielddef_new();
-    field->name = g_strdup("Time");
+    field->name = g_strdup("ProcessTime");
     field->type = MYSQL_TYPE_STRING;
     g_ptr_array_add(fields, field);
 

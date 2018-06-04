@@ -186,7 +186,6 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
 
         char *backend_addr = backend->addr->name->str;
         MYSQL *conn = get_mysql_connection(monitor, backend_addr);
-        int result = 0;
         MYSQL_RES *rs_set = NULL;
         MYSQL_ROW row = NULL;
         gchar ip[ADDRESS_LEN] = {""};
@@ -560,7 +559,7 @@ check_slave_timestamp(int fd, short what, void *arg)
         if (result == 0) {
             MYSQL_RES *rs_set = mysql_store_result(conn);
             MYSQL_ROW row = mysql_fetch_row(rs_set);
-            double ts_slave;
+            double ts_slave = 0;
             if (row != NULL) {
                 if (strstr(row[0], ".") != NULL) {
                     char **tms = g_strsplit(row[0], ".", -1);
@@ -573,28 +572,30 @@ check_slave_timestamp(int fd, short what, void *arg)
                 }
             } else {
                 g_critical("Check slave delay no data:%s", sql);
-                ts_slave = (double)G_MAXINT32;
             }
+            double delay_secs = G_MAXINT32/1000.0;
             if (ts_slave != 0) {
                 struct timeval tv;
                 gettimeofday(&tv, NULL);
                 double ts_now = tv.tv_sec + ((double)tv.tv_usec) / 1000000;
-                double delay_secs = ts_now - ts_slave;
+                delay_secs = ts_now - ts_slave;
                 backend->slave_delay_msec = (int)delay_secs *1000;
-                if (delay_secs > chas->slave_delay_down_threshold_sec && backend->state != BACKEND_STATE_DOWN) {
-                    ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN, oldstate);
-                    if(ret == 0) {
-                        g_critical("Slave delay %.3f seconds. Set slave to DOWN.", delay_secs);
-                    } else {
-                        g_critical("Slave delay %.3f seconds. Set slave to DOWN failed.", delay_secs);
-                    }
-                } else if (delay_secs <= chas->slave_delay_recover_threshold_sec && backend->state != BACKEND_STATE_UP) {
-                    ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP, oldstate);
-                    if(ret == 0) {
-                        g_message("Slave delay %.3f seconds. Recovered. Set slave to UP.", delay_secs);
-                    } else {
-                        g_message("Slave delay %.3f seconds. Recovered. Set slave to UP failed.", delay_secs);
-                    }
+            } else {
+                backend->slave_delay_msec = G_MAXINT32;
+            }
+            if (delay_secs > chas->slave_delay_down_threshold_sec && backend->state != BACKEND_STATE_DOWN) {
+                ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN, oldstate);
+                if(ret == 0) {
+                    g_critical("Slave delay %.3f seconds. Set slave to DOWN.", delay_secs);
+                } else {
+                    g_critical("Slave delay %.3f seconds. Set slave to DOWN failed.", delay_secs);
+                }
+            } else if (delay_secs <= chas->slave_delay_recover_threshold_sec && backend->state != BACKEND_STATE_UP) {
+                ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP, oldstate);
+                if(ret == 0) {
+                    g_message("Slave delay %.3f seconds. Recovered. Set slave to UP.", delay_secs);
+                } else {
+                    g_message("Slave delay %.3f seconds. Recovered. Set slave to UP failed.", delay_secs);
                 }
             }
             mysql_free_result(rs_set);

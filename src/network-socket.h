@@ -103,14 +103,16 @@ typedef struct {
 typedef struct network_ssl_connection_s network_ssl_connection_t;
 
 typedef struct {
+    int socket_type; /**< SOCK_STREAM or SOCK_DGRAM for now */
     int fd;             /**< socket-fd */
-    guint32 create_or_update_time;
+    guint32 create_time;
+    guint32 update_time;
+
     struct event event; /**< events for this fd */
 
     network_address *src; /**< getsockname() */
     network_address *dst; /**< getpeername() */
 
-    int socket_type; /**< SOCK_STREAM or SOCK_DGRAM for now */
 
     /**< internal tracking of the packet_id's the automaticly set the next good packet-id */
     guint8 last_packet_id;
@@ -130,10 +132,10 @@ typedef struct {
 
     GString *last_compressed_packet;
     int compressed_unsend_offset;
+    int total_output;
 
     off_t to_read;
     off_t resp_len;
-    int total_output;
 
     /**
      * data extracted from the handshake  

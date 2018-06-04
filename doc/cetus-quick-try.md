@@ -37,9 +37,43 @@ Cetus对外暴露两类端口：proxy｜shard端口和admin端口。proxy｜shar
 
 ### 2. 连接Cetus管理端口
 
+**2.1 mysql客户端连接**
+
 ```
    $  mysql --prompt="admin> " --comments -h**.**.**.** -P**** -u**** -p***
-   admin> select * from backends；
+   admin> show maintain status；
+```
+
+**2.2 Python连接**
+
+支持Python的pymysql模块和MySQLdb模块连接管理端口。
+
+- pymysql：
+
+**注意：需要设置链接参数 autocommit=None**
+```
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+import pymysql as connector
+
+conn = connector.connect(host="127.0.0.1", user="admin", passwd="admin", port=6666, autocommit=None )
+cursor = conn.cursor()
+cursor.execute("show maintain status")
+data = cursor.fetchone()
+print "maintain status: %s" % data
+```
+
+- MySQLdb：
+```
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+import MySQLdb as connector
+
+conn = connector.connect(host="127.0.0.1", user="admin", passwd="admin", port=6666)
+cursor = conn.cursor()
+cursor.execute("show maintain status")
+data = cursor.fetchone()
+print "maintain status: %s" % data
 ```
 
 可以使用在配置文件中的admin用户名和密码，登陆地址为admin-address的mysql对Cetus进行管理，例如在查询Cetus的后端详细信息时，可以登录后通过命令 select * from backends，显示后端端口的地址、状态、读写类型，以及读写延迟时间和连接数等信息。

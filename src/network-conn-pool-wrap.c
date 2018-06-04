@@ -79,7 +79,7 @@ network_mysqld_con_idle_handle(int event_fd, short events, void *user_data)
                 srv->complement_conn_cnt++;
             }
 
-            g_message("%s:the server decided the close the connection", G_STRLOC);
+            g_message("%s:the server decided to close the connection", G_STRLOC);
         }
     } else if (events == EV_TIMEOUT) {
         if (pool->srv) {
@@ -98,7 +98,7 @@ network_pool_add_idle_conn(network_connection_pool *pool, chassis *srv, network_
     event_set(&(server->event), server->fd, EV_READ, network_mysqld_con_idle_handle, pool_entry);
     g_debug("%s: ev:%p add network_mysqld_con_idle_handle for server:%p, fd:%d",
             G_STRLOC, &(server->event), server, server->fd);
-    int surplus_time = srv->current_time - server->create_or_update_time;
+    int surplus_time = srv->current_time - server->create_time;
     surplus_time = srv->max_alive_time - surplus_time;
     if (surplus_time < 60) {
         g_debug("%s: negtive surplus_time:%d", G_STRLOC, surplus_time);

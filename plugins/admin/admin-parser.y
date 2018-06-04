@@ -194,6 +194,9 @@ cmd ::= SET REDUCE_CONNS boolean(X). {
 cmd ::= SET MAINTAIN boolean(X). {
   admin_set_maintain(con, X);
 }
+cmd ::= SHOW MAINTAIN STATUS. {
+  admin_show_maintain(con);
+}
 cmd ::= SHOW STATUS opt_like(X). {
   admin_show_status(con, X);
   if (X) free(X);

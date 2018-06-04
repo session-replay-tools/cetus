@@ -809,6 +809,21 @@ void admin_set_maintain(network_mysqld_con* con, int mode)
     network_mysqld_con_send_ok_full(con->client, affected, 0,2,0);
 }
 
+void admin_show_maintain(network_mysqld_con* con)
+{
+    GPtrArray *fields = network_mysqld_proto_fielddefs_new();
+    GPtrArray *rows = g_ptr_array_new_with_free_func((void *)network_mysqld_mysql_field_row_free);
+    MAKE_FIELD_DEF_1_COL(fields, "Cetus maintain status");
+    if(con->srv->maintain_close_mode == 1) {
+        APPEND_ROW_1_COL(rows, "true");
+    } else {
+        APPEND_ROW_1_COL(rows, "false");
+    }
+    network_mysqld_con_send_resultset(con->client, fields, rows);
+    network_mysqld_proto_fielddefs_free(fields);
+    g_ptr_array_free(rows, TRUE);
+}
+
 void admin_select_version(network_mysqld_con* con)
 {
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();

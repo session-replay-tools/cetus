@@ -36,6 +36,7 @@
 "[" return TK_LBRACKET;
 "]" return TK_RBRACKET;
 "." return TK_DOT;
+";" return TK_SEMI;
 
 "!" return TK_NOT;
 "OR"            return TK_OR         ;

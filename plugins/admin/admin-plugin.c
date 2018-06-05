@@ -45,6 +45,7 @@
 #include "chassis-options-utils.h"
 
 #include "admin-lexer.l.h"
+#include "admin-parser.y.h"
 #include "admin-commands.h"
 #include "admin-stats.h"
 
@@ -348,21 +349,27 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
     adminyylex_init(&scanner);
     YY_BUFFER_STATE buf_state = adminyy_scan_string(sql, scanner);
     void* parser = adminParserAlloc(malloc);
-#if 0
+#if 1
     adminParserTrace(stdout, "---ParserTrace: ");
 #endif
     int code;
+    int last_parsed_token;
     token_t token;
     while ((code = adminyylex(scanner)) > 0) {
         token.z = adminyyget_text(scanner);
         token.n = adminyyget_leng(scanner);
         adminParser(parser, code, token, con);
 
+        last_parsed_token = code;
+
         if (admin_get_error(con) != 0) {
             break;
         }
     }
     if (admin_get_error(con) == 0) {
+        if (last_parsed_token != TK_SEMI) {
+            adminParser(parser, TK_SEMI, token, con);
+        }
         adminParser(parser, 0, token, con);
     }
 

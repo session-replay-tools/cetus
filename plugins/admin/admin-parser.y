@@ -157,68 +157,68 @@ opt_integer(A) ::= INTEGER(X). {A = token2int(X);}
 
 %token_class ids STRING|ID.
 
-cmd ::= SELECT CONN_DETAILS FROM BACKENDS. {
+cmd ::= SELECT CONN_DETAILS FROM BACKENDS SEMI. {
   admin_select_conn_details(con);
 }
-cmd ::= SELECT STAR FROM BACKENDS. {
+cmd ::= SELECT STAR FROM BACKENDS SEMI. {
   admin_select_all_backends(con);
 }
-cmd ::= SELECT STAR FROM GROUPS. {
+cmd ::= SELECT STAR FROM GROUPS SEMI. {
   admin_select_all_groups(con);
 }
-cmd ::= SHOW CONNECTIONLIST opt_integer(X). {
+cmd ::= SHOW CONNECTIONLIST opt_integer(X) SEMI. {
   admin_show_connectionlist(con, X);
 }
-cmd ::= SHOW ALLOW_IP ids(X). {
+cmd ::= SHOW ALLOW_IP ids(X) SEMI. {
   char* module = token_strdup(X);
   admin_show_allow_ip(con, module);
   free(module);
 }
-cmd ::= ADD ALLOW_IP ids(X) STRING(Y). {
+cmd ::= ADD ALLOW_IP ids(X) STRING(Y) SEMI. {
   char* module = token_strdup(X);
   char* ip = token_strdup(Y);
   admin_add_allow_ip(con, module, ip);
   free(module);
   free(ip);
 }
-cmd ::= DELETE ALLOW_IP ids(X) STRING(Y). {
+cmd ::= DELETE ALLOW_IP ids(X) STRING(Y) SEMI. {
   char* module = token_strdup(X);
   char* ip = token_strdup(Y);
   admin_delete_allow_ip(con, module, ip);
   free(module);
   free(ip);
 }
-cmd ::= SET REDUCE_CONNS boolean(X). {
+cmd ::= SET REDUCE_CONNS boolean(X) SEMI. {
   admin_set_reduce_conns(con, X);
 }
-cmd ::= SET MAINTAIN boolean(X). {
+cmd ::= SET MAINTAIN boolean(X) SEMI. {
   admin_set_maintain(con, X);
 }
-cmd ::= SHOW MAINTAIN STATUS. {
+cmd ::= SHOW MAINTAIN STATUS SEMI. {
   admin_show_maintain(con);
 }
-cmd ::= SHOW STATUS opt_like(X). {
+cmd ::= SHOW STATUS opt_like(X) SEMI. {
   admin_show_status(con, X);
   if (X) free(X);
 }
-cmd ::= SHOW VARIABLES opt_like(X). {
+cmd ::= SHOW VARIABLES opt_like(X) SEMI. {
   admin_show_variables(con, X);
   if (X) free(X);
 }
-cmd ::= SELECT VERSION. {
+cmd ::= SELECT VERSION SEMI. {
   admin_select_version(con);
 }
-cmd ::= SELECT CONN_NUM FROM BACKENDS WHERE BACKEND_NDX EQ INTEGER(X) AND USER EQ STRING(Y). {
+cmd ::= SELECT CONN_NUM FROM BACKENDS WHERE BACKEND_NDX EQ INTEGER(X) AND USER EQ STRING(Y) SEMI. {
   char* user = token_strdup(Y);
   admin_select_connection_stat(con, token2int(X), user);
   free(user);
 }
-cmd ::= SELECT STAR FROM USER_PWD|APP_USER_PWD(T) opt_where_user(X). {
+cmd ::= SELECT STAR FROM USER_PWD|APP_USER_PWD(T) opt_where_user(X) SEMI. {
   char* table = (@T == TK_USER_PWD)?"user_pwd":"app_user_pwd";
   admin_select_user_password(con, table, X);
   if (X) free(X);
 }
-cmd ::= UPDATE USER_PWD|APP_USER_PWD(T) SET PASSWORD EQ STRING(P) WHERE USER EQ STRING(U). {
+cmd ::= UPDATE USER_PWD|APP_USER_PWD(T) SET PASSWORD EQ STRING(P) WHERE USER EQ STRING(U) SEMI. {
   char* table = (@T == TK_USER_PWD)?"user_pwd":"app_user_pwd";
   char* user = token_strdup(U);
   char* pass = token_strdup(P);
@@ -226,72 +226,72 @@ cmd ::= UPDATE USER_PWD|APP_USER_PWD(T) SET PASSWORD EQ STRING(P) WHERE USER EQ 
   free(user);
   free(pass);
 }
-cmd ::= DELETE FROM USER_PWD|APP_USER_PWD WHERE USER EQ STRING(U). {
+cmd ::= DELETE FROM USER_PWD|APP_USER_PWD WHERE USER EQ STRING(U) SEMI. {
   char* user = token_strdup(U);
   admin_delete_user_password(con, user);
   free(user);
 }
-cmd ::= INSERT INTO BACKENDS VALUES LP STRING(X) COMMA STRING(Y) COMMA STRING(Z) RP. {
+cmd ::= INSERT INTO BACKENDS VALUES LP STRING(X) COMMA STRING(Y) COMMA STRING(Z) RP SEMI. {
   char* addr = token_strdup(X);
   char* type = token_strdup(Y);
   char* state = token_strdup(Z);
   admin_insert_backend(con, addr, type, state);
   free(addr); free(type); free(state);
 }
-cmd ::= UPDATE BACKENDS SET equations(X) WHERE equation(Z). {
+cmd ::= UPDATE BACKENDS SET equations(X) WHERE equation(Z) SEMI. {
   char* cond_key = token_strdup(Z.left);
   char* cond_val = token_strdup(Z.right);
   admin_update_backend(con, X, cond_key, cond_val);
   free(cond_key); free(cond_val);
 }
-cmd ::= DELETE FROM BACKENDS WHERE equation(Z). {
+cmd ::= DELETE FROM BACKENDS WHERE equation(Z) SEMI. {
   char* key = token_strdup(Z.left);
   char* val = token_strdup(Z.right);
   admin_delete_backend(con, key, val);
   free(key);
   free(val);
 }
-cmd ::= ADD MASTER STRING(X). {
+cmd ::= ADD MASTER STRING(X) SEMI. {
   char* addr = token_strdup(X);
   admin_insert_backend(con, addr, "rw", "unknown");
   free(addr);
 }
-cmd ::= ADD SLAVE STRING(X). {
+cmd ::= ADD SLAVE STRING(X) SEMI. {
   char* addr = token_strdup(X);
   admin_insert_backend(con, addr, "ro", "unknown");
   free(addr);
 }
-cmd ::= STATS GET opt_id(X). {
+cmd ::= STATS GET opt_id(X) SEMI. {
   admin_get_stats(con, X);
   if (X) free(X);
 }
-cmd ::= CONFIG GET opt_id(X). {
+cmd ::= CONFIG GET opt_id(X) SEMI. {
   admin_get_config(con, X);
   if (X) free(X);
 }
-cmd ::= CONFIG SET equation(X). {
+cmd ::= CONFIG SET equation(X) SEMI. {
   char* key = token_strdup(X.left);
   char* val = token_strdup(X.right);
   admin_set_config(con, key, val);
   free(key);
   free(val);
 }
-cmd ::= CONFIG RELOAD. {
+cmd ::= CONFIG RELOAD SEMI. {
   admin_config_reload(con, 0);
 }
-cmd ::= CONFIG RELOAD USER. {
+cmd ::= CONFIG RELOAD USER SEMI. {
   admin_config_reload(con, "user");
 }
-cmd ::= STATS RESET. {
+cmd ::= STATS RESET SEMI. {
   admin_reset_stats(con);
 }
-cmd ::= SELECT STAR FROM HELP. {
+cmd ::= SELECT STAR FROM HELP SEMI. {
   admin_select_help(con);
 }
-cmd ::= SELECT HELP. {
+cmd ::= SELECT HELP SEMI. {
   admin_select_help(con);
 }
-cmd ::= CETUS. {
+cmd ::= CETUS SEMI. {
   admin_send_overview(con);
 }
 
@@ -304,7 +304,7 @@ struct vdb_method {
 
 } //end %include
 
-cmd ::= CREATE VDB INTEGER(X) LP partitions(Y) RP USING method(Z). {
+cmd ::= CREATE VDB INTEGER(X) LP partitions(Y) RP USING method(Z) SEMI. {
   admin_create_vdb(con, token2int(X), Y, Z.method, Z.key_type, Z.logic_shard_num);
   g_ptr_array_free(Y, TRUE);
 }
@@ -406,7 +406,7 @@ method(A) ::= RANGE LP ID(X) RP. {
   g_free(key);
 }
 
-cmd ::= CREATE SHARDED TABLE ids(X) DOT ids(Y) VDB INTEGER(Z) SHARDKEY ids(W). {
+cmd ::= CREATE SHARDED TABLE ids(X) DOT ids(Y) VDB INTEGER(Z) SHARDKEY ids(W) SEMI. {
   char* schema = token_strdup(X);
   char* table = token_strdup(Y);
   char* key = token_strdup(W);
@@ -416,10 +416,10 @@ cmd ::= CREATE SHARDED TABLE ids(X) DOT ids(Y) VDB INTEGER(Z) SHARDKEY ids(W). {
   g_free(key);
 }
 
-cmd ::= SELECT STAR FROM VDB. {
+cmd ::= SELECT STAR FROM VDB SEMI. {
   admin_select_vdb(con);
 }
 
-cmd ::= SELECT SHARDED TABLE. {
+cmd ::= SELECT SHARDED TABLE SEMI. {
   admin_select_sharded_table(con);
 }

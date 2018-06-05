@@ -54,7 +54,9 @@ typedef struct chassis chassis;
 #define MAX_SERVER_NUM 64
 #define MAX_QUERY_TIME 1000
 #define MAX_WAIT_TIME 1024
+#define MAX_TRY_NUM 6
 #define MAX_DIST_TRAN_PREFIX 32
+#define DEFAULT_LIVE_TIME 7200
 
 #define MAX_ALLOWED_PACKET_CEIL    (1 * GB)
 #define MAX_ALLOWED_PACKET_DEFAULT (32 * MB)

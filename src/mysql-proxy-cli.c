@@ -166,7 +166,7 @@ chassis_frontend_new(void)
 
     frontend->default_pool_size = 100;
     frontend->max_resp_len = 10 * 1024 * 1024;  /* 10M */
-    frontend->max_alive_time = 7200;
+    frontend->max_alive_time = DEFAULT_LIVE_TIME;
     frontend->merged_output_size = 8192;
     frontend->max_header_size = 65536;
     frontend->config_port = 3306;

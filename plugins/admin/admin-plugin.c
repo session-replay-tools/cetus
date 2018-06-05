@@ -349,7 +349,7 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
     adminyylex_init(&scanner);
     YY_BUFFER_STATE buf_state = adminyy_scan_string(sql, scanner);
     void* parser = adminParserAlloc(malloc);
-#if 1
+#if 0
     adminParserTrace(stdout, "---ParserTrace: ");
 #endif
     int code;

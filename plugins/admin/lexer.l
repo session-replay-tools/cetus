@@ -89,6 +89,8 @@
 "table" return TK_TABLE;
 "shardkey" return TK_SHARDKEY;
 "reload" return TK_RELOAD;
+"save" return TK_SAVE;
+"settings" return TK_SETTINGS;
 
 [0-9]+                 return TK_INTEGER; /*sign symbol is handled in parser*/
 

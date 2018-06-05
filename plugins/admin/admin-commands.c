@@ -1,6 +1,7 @@
 #include "admin-commands.h"
 
 #include <ctype.h>
+#include <sys/stat.h>
 
 #include "cetus-users.h"
 #include "cetus-util.h"
@@ -1629,3 +1630,80 @@ void admin_select_sharded_table(network_mysqld_con* con)
     g_list_free_full(freelist, g_free);
 }
 
+void admin_save_settings(network_mysqld_con *con)
+{
+    chassis *srv = con->srv;
+    GKeyFile *keyfile = g_key_file_new();
+    g_key_file_set_list_separator(keyfile, ',');
+    gint ret = ASSIGN_OK;
+    gint effected_rows = 0;
+    GString *free_path = g_string_new(NULL);
+
+    if(srv->default_file == NULL) {
+        free_path = g_string_append(free_path, get_current_dir_name());
+        free_path = g_string_append(free_path, "/default.conf");
+        srv->default_file = g_strdup(free_path->str);
+    }
+
+    if(!g_path_is_absolute(srv->default_file)) {
+        free_path = g_string_append(free_path, get_current_dir_name());
+        free_path = g_string_append(free_path, "/");
+        free_path = g_string_append(free_path, srv->default_file);
+        if(srv->default_file) {
+            g_free(srv->default_file);
+        }
+        srv->default_file = g_strdup(free_path->str);
+    }
+    if(free_path) {
+        g_string_free(free_path, TRUE);
+    }
+    /* rename config file */
+    if(srv->default_file) {
+        GString *new_file = g_string_new(NULL);
+        new_file = g_string_append(new_file, srv->default_file);
+        new_file = g_string_append(new_file, ".old");
+
+        if (remove(new_file->str)) {
+            g_debug("remove operate, filename:%s, errno:%d",
+                    new_file->str == NULL? "":new_file->str, errno);
+        }
+
+        if(rename(srv->default_file, new_file->str)) {
+            g_debug("rename operate failed, filename:%s, filename:%s, errno:%d",
+                    (srv->default_file == NULL ? "":srv->default_file),
+                    (new_file->str == NULL ? "":new_file->str), errno);
+            ret = RENAME_ERROR;
+        }
+        g_string_free(new_file, TRUE);
+    }
+
+    if(ret == ASSIGN_OK) {
+        /* save new config */
+        effected_rows = chassis_options_save(keyfile, srv->options, srv);
+        gsize file_size = 0;
+        gchar *file_buf = g_key_file_to_data(keyfile, &file_size, NULL);
+        GError *gerr = NULL;
+        if (FALSE == g_file_set_contents(srv->default_file, file_buf, file_size, &gerr)) {
+            ret = SAVE_ERROR;
+        } else {
+            if((ret = chmod(srv->default_file, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP))) {
+                g_debug("remove operate failed, filename:%s, errno:%d",
+                        (srv->default_file == NULL? "":srv->default_file), errno);
+                ret = CHMOD_ERROR;
+            }
+        }
+    }
+
+    if(ret == ASSIGN_OK) {
+        network_mysqld_con_send_ok_full(con->client, effected_rows,
+                                        0, SERVER_STATUS_AUTOCOMMIT, 0);
+    } else {
+        char *msg = NULL;
+        switch (ret) {
+        case RENAME_ERROR: msg = "rename file failed"; break;
+        case SAVE_ERROR: msg = "save file failed"; break;
+        case CHMOD_ERROR: msg = "chmod file failed"; break;
+        }
+        network_mysqld_con_send_error_full(con->client, L(msg), 1066, "28000");
+    }
+}

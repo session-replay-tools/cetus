@@ -4881,6 +4881,8 @@ network_connection_pool_create_conns(chassis *srv)
                           G_STRLOC, i, scs->server, scs);
 
                 scs->backend->connected_clients++;
+                int create_err = 0;
+
                 switch (network_socket_connect(scs->server)) {
                 case NETWORK_SOCKET_ERROR_RETRY:{
                     scs->state = ST_ASYNC_CONN;
@@ -4899,6 +4901,7 @@ network_connection_pool_create_conns(chassis *srv)
                     g_message("%s: set backend conn:%p read handshake", G_STRLOC, scs);
                     break;
                 default:
+                    create_err = 1;
                     scs->backend->connected_clients--;
                     network_mysqld_self_con_free(scs);
                     if (scs->srv->disable_threads) {
@@ -4910,6 +4913,10 @@ network_connection_pool_create_conns(chassis *srv)
                         }
                         g_get_current_time(&(backend->state_since));
                     }
+                    break;
+                }
+
+                if (create_err) {
                     break;
                 }
             }

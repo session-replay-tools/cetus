@@ -4507,6 +4507,11 @@ process_self_server_read(server_connection_state_t *con)
     case NETWORK_SOCKET_SUCCESS:
         break;
     case NETWORK_SOCKET_WAIT_FOR_EVENT:{
+        con->retry_cnt++;
+        if (con->retry_cnt >= MAX_TRY_NUM) {
+            con->state = ST_ASYNC_ERROR;
+            break;
+        }
         struct timeval timeout;
         timeout.tv_sec = 3;
         timeout.tv_usec = 0;

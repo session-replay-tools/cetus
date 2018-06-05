@@ -4658,6 +4658,10 @@ network_mysqld_self_con_handle(int event_fd, short events, void *user_data)
                 return;
             }
 
+            if (con->state == ST_ASYNC_ERROR) {
+                break;
+            }
+
             switch (proxy_self_read_handshake(srv, con)) {
             case RET_SUCCESS:
                 break;

@@ -329,6 +329,7 @@ chassis_mainloop(void *_chas)
         }
     }
 
+#ifndef SIMPLE_PARSER
     chas->dist_tran_id = g_random_int_range(0, 100000000);
     int srv_id = g_random_int_range(0, 10000);
     if (chas->proxy_address) {
@@ -338,6 +339,7 @@ chassis_mainloop(void *_chas)
     }
     g_message("Initial dist_tran_id:%llu", chas->dist_tran_id);
     g_message("dist_tran_prefix:%s", chas->dist_tran_prefix);
+#endif
 
     /*
      * drop root privileges if requested

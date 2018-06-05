@@ -31,7 +31,7 @@
 #include "cetus-users.h"
 
 const char *backend_state_t_str[] = {
-    "unkown",
+    "unknown",
     "online",
     "down",
     "maintaining",
@@ -39,7 +39,7 @@ const char *backend_state_t_str[] = {
 };
 
 const char *backend_type_t_str[] = {
-    "unkown",
+    "unknown",
     "read/write",
     "readonly"
 };

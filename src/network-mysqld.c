@@ -3304,6 +3304,7 @@ process_service_unavailable(network_mysqld_con *con)
         for (i = 0; i < con->servers->len; i++) {
             server_session_t *ss = g_ptr_array_index(con->servers, i);
             if (ss->fresh) {
+                CHECK_PENDING_EVENT(&(ss->server->event));
                 network_pool_add_idle_conn(ss->backend->pool, con->srv, ss->server);
                 ss->backend->connected_clients--;
                 g_message("%s: connected_clients sub:%d, %d ndx for con:%p", G_STRLOC,
@@ -4570,12 +4571,10 @@ process_self_read_auth_result(server_connection_state_t *con)
         network_mysqld_queue_reset(con->server);
         network_queue_clear(con->server->recv_queue);
         con->server->is_multi_stmt_set = con->is_multi_stmt_set;
-#if NETWORK_DEBUG_TRACE_EVENT
-        CHECK_PENDING_EVENT(&(con->server->event));
-#endif
         if (con->srv->is_back_compressed) {
             con->server->do_compress = 1;
         }
+        CHECK_PENDING_EVENT(&(con->server->event));
         network_pool_add_idle_conn(con->pool, con->srv, con->server);
         con->server = NULL;     /* tell _self_con_free we succeed */
         network_mysqld_self_con_free(con);

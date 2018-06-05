@@ -4642,6 +4642,9 @@ network_mysqld_self_con_handle(int event_fd, short events, void *user_data)
                 return;
             }
 
+            g_debug("%s: connection between %s and %s",
+                G_STRLOC, con->client->src->name->str, con->server ? con->server->dst->name->str : "(server)");
+
             switch (proxy_self_read_handshake(srv, con)) {
             case RET_SUCCESS:
                 break;

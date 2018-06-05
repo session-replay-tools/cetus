@@ -4461,7 +4461,9 @@ chassis_event_add_with_timeout(srv, &(sock->event), timeout);
 static int
 process_self_event(server_connection_state_t *con, int events, int event_fd)
 {
+    g_debug("%s:events:%d, ev:%p, state:%d", G_STRLOC, events, (&con->server->event), con->state);
     if (events == EV_READ) {
+        g_debug("%s:EV_READ, ev:%p, state:%d", G_STRLOC, (&con->server->event), con->state);
         int b = -1;
         if (ioctl(con->server->fd, FIONREAD, &b)) {
             g_warning("ioctl(%d, FIONREAD, ...) failed: %s", event_fd, strerror(errno));
@@ -4478,7 +4480,7 @@ process_self_event(server_connection_state_t *con, int events, int event_fd)
             }
         }
     } else if (events == EV_TIMEOUT) {
-        g_debug("%s:timeout, ev:%p", G_STRLOC, (&con->server->event));
+        g_debug("%s:timeout, ev:%p, state:%d", G_STRLOC, (&con->server->event), con->state);
         if (con->state == ST_ASYNC_CONN) {
             g_message("%s: self conn timeout, state:%d, con:%p, server:%p", G_STRLOC, con->state, con, con->server);
             con->state = ST_ASYNC_ERROR;
@@ -4638,12 +4640,13 @@ network_mysqld_self_con_handle(int event_fd, short events, void *user_data)
         case ST_ASYNC_READ_HANDSHAKE:
             g_assert(events == 0 || event_fd == con->server->fd);
 
+            g_debug("%s: ST_ASYNC_READ_HANDSHAKE for con:%p, connection %s and %s",
+                G_STRLOC, con, con->server->src->name->str, con->server->dst->name->str);
+
+
             if (!process_self_server_read(con)) {
                 return;
             }
-
-            g_debug("%s: connection %s and %s",
-                G_STRLOC, con->server->src->name->str, con->server->dst->name->str);
 
             switch (proxy_self_read_handshake(srv, con)) {
             case RET_SUCCESS:

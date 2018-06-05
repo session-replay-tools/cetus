@@ -1044,7 +1044,7 @@ gboolean shard_conf_write_json(chassis_config_t* conf_manager)
             struct single_table_t* t = l->data;
             cJSON* node = cJSON_CreateObject();
             cJSON_AddStringToObject(node, "table", t->name->str);
-            cJSON_AddStringToObject(node, "schema", t->schema->str);
+            cJSON_AddStringToObject(node, "db", t->schema->str);
             cJSON_AddStringToObject(node, "group", t->group->str);
             cJSON_AddItemToArray(single_table_array, node);
         }

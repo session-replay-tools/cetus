@@ -4507,8 +4507,13 @@ process_self_server_read(server_connection_state_t *con)
     case NETWORK_SOCKET_SUCCESS:
         break;
     case NETWORK_SOCKET_WAIT_FOR_EVENT:{
+        struct timeval timeout;
+        timeout.tv_sec = 3;
+        timeout.tv_usec = 0;
+        g_debug("%s: set timeout:%d for new conn:%p", G_STRLOC,
+                (int)timeout.tv_sec, con);
         /* call us again when you have a event */
-        ASYNC_WAIT_FOR_EVENT(con->server, EV_READ, NULL, con);
+        ASYNC_WAIT_FOR_EVENT(con->server, EV_READ, &timeout, con);
         return 0;
     }
     case NETWORK_SOCKET_ERROR:

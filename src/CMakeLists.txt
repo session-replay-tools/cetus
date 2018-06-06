@@ -32,10 +32,9 @@ LINK_DIRECTORIES(${GLIB_LIBRARY_DIRS})
 INCLUDE_DIRECTORIES(${MYSQL_INCLUDE_DIRS})
 LINK_DIRECTORIES(${MYSQL_LIBRARY_DIRS})
 
-INCLUDE_DIRECTORIES(${EVENT_INCLUDE_DIRS})
-LINK_DIRECTORIES(${EVENT_LIBRARY_DIRS})
-
 LINK_DIRECTORIES(${LIBINTL_LIBRARY_DIRS})
+
+include_directories(${PROJECT_SOURCE_DIR}/libev)
 
 STRING(REPLACE "." "" SHARED_LIBRARY_SUFFIX ${CMAKE_SHARED_LIBRARY_SUFFIX})
 ADD_DEFINITIONS(-DSHARED_LIBRARY_SUFFIX="${SHARED_LIBRARY_SUFFIX}")
@@ -132,8 +131,8 @@ if(HAVE_TCMALLOC)
         ${GLIB_LIBRARIES} 
         ${GMODULE_LIBRARIES} 
         ${GTHREAD_LIBRARIES} 
-        ${EVENT_LIBRARIES}
         ${MYSQL_LIBRARIES}
+        ev-cetus
         tcmalloc
         mysql-chassis-timing
         mysql-chassis-glibext
@@ -158,9 +157,9 @@ if(HAVE_TCMALLOC)
         ${GLIB_LIBRARIES}
         ${GMODULE_LIBRARIES}
         ${GTHREAD_LIBRARIES}
-        ${EVENT_LIBRARIES}
         ${MYSQL_LIBRARIES}
         ${ZLIB_LIBRARIES}
+        ev-cetus
         )
 
 else(HAVE_TCMALLOC)
@@ -181,8 +180,8 @@ else(HAVE_TCMALLOC)
     TARGET_LINK_LIBRARIES(mysql-chassis 
         ${GLIB_LIBRARIES} 
         ${GMODULE_LIBRARIES} 
-        ${GTHREAD_LIBRARIES} 
-        ${EVENT_LIBRARIES}
+        ${GTHREAD_LIBRARIES}
+        ev-cetus
         ${MYSQL_LIBRARIES}
         mysql-chassis-timing
         mysql-chassis-glibext
@@ -205,7 +204,7 @@ else(HAVE_TCMALLOC)
         ${GLIB_LIBRARIES}
         ${GMODULE_LIBRARIES}
         ${GTHREAD_LIBRARIES}
-        ${EVENT_LIBRARIES}
+        ev-cetus
         ${MYSQL_LIBRARIES}
         ${ZLIB_LIBRARIES}
         )

@@ -125,3 +125,37 @@ try_get_double_value(const gchar *option_value, gdouble *return_value)
         return FALSE;
     }
 }
+
+int make_iso8601_timestamp(char *buf, uint64_t utime)
+{
+    struct tm  my_tm;
+    char       tzinfo[7]="Z";  // max 6 chars plus \0
+    size_t     len;
+    time_t     seconds;
+
+    seconds= utime / 1000000;
+    utime = utime % 1000000;
+    {
+        localtime_r(&seconds, &my_tm);
+        long tim= timezone; // seconds West of UTC.
+        char dir= '-';
+
+        if (tim < 0) {
+            dir= '+';
+            tim= -tim;
+        }
+        snprintf(tzinfo, sizeof(tzinfo), "%c%02d:%02d",
+                    dir, (int) (tim / (60 * 60)), (int) ((tim / 60) % 60));
+    }
+
+    len = snprintf(buf, 64, "%04d-%02d-%02dT%02d:%02d:%02d.%06lu%s",
+                     my_tm.tm_year + 1900,
+                     my_tm.tm_mon  + 1,
+                     my_tm.tm_mday,
+                     my_tm.tm_hour,
+                     my_tm.tm_min,
+                     my_tm.tm_sec,
+                     (unsigned long) utime,
+                     tzinfo);
+    return len;
+}

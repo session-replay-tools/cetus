@@ -679,12 +679,6 @@ static void
 slow_query_log_handler(const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
 {
     FILE *fp = user_data;
-    time_t t = time(0);
-    struct tm *tm = localtime(&t);
-    char timestr[32] = { 0 };
-    const int len = 20;
-    strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S ", tm);
-    fwrite(timestr, 1, len, fp);
     fwrite(message, 1, strlen(message), fp);
     fwrite("\n", 1, 1, fp);
 }

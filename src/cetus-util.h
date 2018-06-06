@@ -49,4 +49,6 @@ gboolean read_file_to_buffer(const char *filename, char **buffer);
 gboolean try_get_int_value(const gchar *option_value, gint *return_value);
 gboolean try_get_double_value(const gchar *option_value, gdouble *return_value);
 
+int make_iso8601_timestamp(char *buf, uint64_t utime);
+
 #endif

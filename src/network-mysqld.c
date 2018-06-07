@@ -2235,6 +2235,23 @@ disp_query_after_consistant_attr(network_mysqld_con *con)
     }
 }
 
+void log_slowquery(int interval_ms, char* host, char* user, char* sql)
+{
+    uint64_t usec;
+    struct timeval t;
+    gettimeofday(&t, NULL);
+    usec = (uint64_t)t.tv_sec * 1000000 + t.tv_usec;
+    char time_str[64];
+    make_iso8601_timestamp(time_str, usec);
+
+    float interval = interval_ms / 1000.0;
+    g_log("slowquery", G_LOG_LEVEL_MESSAGE,
+          "# Time: %s\n"
+          "# User@Host: %s @ %s Id: 0\n"
+          "# Query_time: %f Lock_time: 0.000000 Rows_sent: 0 Rows_examined: 0\n"
+          "SET timestamp=%ld\n%s", time_str, user, host, interval, t.tv_sec, sql);
+}
+
 static void
 handle_query_time_stats(network_mysqld_con *con)
 {
@@ -2243,9 +2260,8 @@ handle_query_time_stats(network_mysqld_con *con)
 
     diff = MAX(0, diff);
     if (diff >= con->srv->long_query_time) {
-        g_log("slowquery", G_LOG_LEVEL_MESSAGE,
-              "time: %dms, client: %s, user: %s, sql: %s",
-              diff, con->client->src->name->str, con->client->response->username->str, con->orig_sql->str);
+        log_slowquery(diff, con->client->src->name->str,
+                      con->client->response->username->str, con->orig_sql->str);
         diff = con->srv->long_query_time - 1;
     }
     con->srv->query_stats.query_time_table[diff]++;
@@ -2289,6 +2305,11 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
     con->is_read_ro_server_allowed = 0;
 
     gettimeofday(&(con->req_recv_time), NULL);
+
+    if (srv->is_need_to_create_conns) {
+        srv->is_need_to_create_conns = 0;
+        network_connection_pool_create_conns(srv);
+    }
 
     if (!con->is_wait_server) {
         do {
@@ -3304,6 +3325,7 @@ process_service_unavailable(network_mysqld_con *con)
         for (i = 0; i < con->servers->len; i++) {
             server_session_t *ss = g_ptr_array_index(con->servers, i);
             if (ss->fresh) {
+                CHECK_PENDING_EVENT(&(ss->server->event));
                 network_pool_add_idle_conn(ss->backend->pool, con->srv, ss->server);
                 ss->backend->connected_clients--;
                 g_message("%s: connected_clients sub:%d, %d ndx for con:%p", G_STRLOC,
@@ -4460,7 +4482,9 @@ chassis_event_add_with_timeout(srv, &(sock->event), timeout);
 static int
 process_self_event(server_connection_state_t *con, int events, int event_fd)
 {
+    g_debug("%s:events:%d, ev:%p, state:%d", G_STRLOC, events, (&con->server->event), con->state);
     if (events == EV_READ) {
+        g_debug("%s:EV_READ, ev:%p, state:%d", G_STRLOC, (&con->server->event), con->state);
         int b = -1;
         if (ioctl(con->server->fd, FIONREAD, &b)) {
             g_warning("ioctl(%d, FIONREAD, ...) failed: %s", event_fd, strerror(errno));
@@ -4477,7 +4501,7 @@ process_self_event(server_connection_state_t *con, int events, int event_fd)
             }
         }
     } else if (events == EV_TIMEOUT) {
-        g_debug("%s:timeout, ev:%p", G_STRLOC, (&con->server->event));
+        g_debug("%s:timeout, ev:%p, state:%d", G_STRLOC, (&con->server->event), con->state);
         if (con->state == ST_ASYNC_CONN) {
             g_message("%s: self conn timeout, state:%d, con:%p, server:%p", G_STRLOC, con->state, con, con->server);
             con->state = ST_ASYNC_ERROR;
@@ -4504,8 +4528,18 @@ process_self_server_read(server_connection_state_t *con)
     case NETWORK_SOCKET_SUCCESS:
         break;
     case NETWORK_SOCKET_WAIT_FOR_EVENT:{
+        con->retry_cnt++;
+        if (con->retry_cnt >= MAX_TRY_NUM) {
+            con->state = ST_ASYNC_ERROR;
+            break;
+        }
+        struct timeval timeout;
+        timeout.tv_sec = 3;
+        timeout.tv_usec = 0;
+        g_debug("%s: set timeout:%d for new conn:%p", G_STRLOC,
+                (int)timeout.tv_sec, con);
         /* call us again when you have a event */
-        ASYNC_WAIT_FOR_EVENT(con->server, EV_READ, NULL, con);
+        ASYNC_WAIT_FOR_EVENT(con->server, EV_READ, &timeout, con);
         return 0;
     }
     case NETWORK_SOCKET_ERROR:
@@ -4570,12 +4604,10 @@ process_self_read_auth_result(server_connection_state_t *con)
         network_mysqld_queue_reset(con->server);
         network_queue_clear(con->server->recv_queue);
         con->server->is_multi_stmt_set = con->is_multi_stmt_set;
-#if NETWORK_DEBUG_TRACE_EVENT
-        CHECK_PENDING_EVENT(&(con->server->event));
-#endif
         if (con->srv->is_back_compressed) {
             con->server->do_compress = 1;
         }
+        CHECK_PENDING_EVENT(&(con->server->event));
         network_pool_add_idle_conn(con->pool, con->srv, con->server);
         con->server = NULL;     /* tell _self_con_free we succeed */
         network_mysqld_self_con_free(con);
@@ -4639,8 +4671,16 @@ network_mysqld_self_con_handle(int event_fd, short events, void *user_data)
         case ST_ASYNC_READ_HANDSHAKE:
             g_assert(events == 0 || event_fd == con->server->fd);
 
+            g_debug("%s: ST_ASYNC_READ_HANDSHAKE for con:%p, connection %s and %s",
+                G_STRLOC, con, con->server->src->name->str, con->server->dst->name->str);
+
+
             if (!process_self_server_read(con)) {
                 return;
+            }
+
+            if (con->state == ST_ASYNC_ERROR) {
+                break;
             }
 
             switch (proxy_self_read_handshake(srv, con)) {
@@ -4856,7 +4896,12 @@ network_connection_pool_create_conns(chassis *srv)
                 continue;
             }
 
-            for (j = 0; j < backend->config->mid_conn_pool; j++) {
+            int allowd_conn_num = backend->config->mid_conn_pool;
+            if (allowd_conn_num > MAX_CREATE_CONN_NUM) {
+                allowd_conn_num = MAX_CREATE_CONN_NUM;
+            }
+
+            for (j = 0; j < allowd_conn_num; j++) {
                 server_connection_state_t *scs = network_mysqld_self_con_init(srv);
                 if (srv->disable_dns_cache)
                     network_address_set_address(scs->server->dst, backend->address->str);
@@ -4882,6 +4927,8 @@ network_connection_pool_create_conns(chassis *srv)
                           G_STRLOC, i, scs->server, scs);
 
                 scs->backend->connected_clients++;
+                int create_err = 0;
+
                 switch (network_socket_connect(scs->server)) {
                 case NETWORK_SOCKET_ERROR_RETRY:{
                     scs->state = ST_ASYNC_CONN;
@@ -4900,6 +4947,7 @@ network_connection_pool_create_conns(chassis *srv)
                     g_message("%s: set backend conn:%p read handshake", G_STRLOC, scs);
                     break;
                 default:
+                    create_err = 1;
                     scs->backend->connected_clients--;
                     network_mysqld_self_con_free(scs);
                     if (scs->srv->disable_threads) {
@@ -4911,6 +4959,10 @@ network_connection_pool_create_conns(chassis *srv)
                         }
                         g_get_current_time(&(backend->state_since));
                     }
+                    break;
+                }
+
+                if (create_err) {
                     break;
                 }
             }

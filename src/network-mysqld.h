@@ -340,6 +340,7 @@ struct server_connection_state_t {
     chassis *srv;
     network_connection_pool *pool;
     unsigned int is_multi_stmt_set:1;
+    unsigned int retry_cnt:4;
     guint8 charset_code;
 };
 

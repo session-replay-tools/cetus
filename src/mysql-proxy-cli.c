@@ -166,7 +166,7 @@ chassis_frontend_new(void)
 
     frontend->default_pool_size = 100;
     frontend->max_resp_len = 10 * 1024 * 1024;  /* 10M */
-    frontend->max_alive_time = 7200;
+    frontend->max_alive_time = DEFAULT_LIVE_TIME;
     frontend->merged_output_size = 8192;
     frontend->max_header_size = 65536;
     frontend->config_port = 3306;
@@ -679,12 +679,6 @@ static void
 slow_query_log_handler(const gchar *log_domain, GLogLevelFlags log_level, const gchar *message, gpointer user_data)
 {
     FILE *fp = user_data;
-    time_t t = time(0);
-    struct tm *tm = localtime(&t);
-    char timestr[32] = { 0 };
-    const int len = 20;
-    strftime(timestr, sizeof(timestr), "%Y-%m-%d %H:%M:%S ", tm);
-    fwrite(timestr, 1, len, fp);
     fwrite(message, 1, strlen(message), fp);
     fwrite("\n", 1, 1, fp);
 }

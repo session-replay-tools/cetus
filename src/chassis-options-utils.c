@@ -532,7 +532,7 @@ show_max_alive_time(gpointer param) {
         return g_strdup_printf("%d (s)", srv->max_alive_time);
     }
     if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        if(srv->max_alive_time == 7200) {
+        if(srv->max_alive_time == DEFAULT_LIVE_TIME) {
             return NULL;
         }
         return g_strdup_printf("%d", srv->max_alive_time);

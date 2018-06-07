@@ -584,6 +584,7 @@ proxy_put_shard_conn_to_pool(network_mysqld_con *con)
 
             int alive_time = con->srv->current_time - server->create_time;
             if (alive_time > con->srv->max_alive_time) {
+                g_debug("%s: reach max_alive_time", G_STRLOC);
                 is_put_to_pool_allowed = 0;
             }
 

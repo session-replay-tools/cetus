@@ -399,7 +399,7 @@ void admin_show_connectionlist(network_mysqld_con *admin_con, int show_count)
     g_ptr_array_add(fields, field);
 
     field = network_mysqld_proto_fielddef_new();
-    field->name = g_strdup("Time");
+    field->name = g_strdup("ProcessTime");
     field->type = MYSQL_TYPE_STRING;
     g_ptr_array_add(fields, field);
 
@@ -976,25 +976,31 @@ void admin_delete_user_password(network_mysqld_con* con, char* user)
                                     SERVER_STATUS_AUTOCOMMIT, 0);
 }
 
+#define ERROR_PARAM -1
+
 static backend_type_t backend_type(const char* str)
 {
-    backend_type_t type = BACKEND_TYPE_UNKNOWN;
+    backend_type_t type = ERROR_PARAM;
     if (strcasecmp(str, "ro")==0)
         type = BACKEND_TYPE_RO;
     else if (strcasecmp(str, "rw")==0)
         type = BACKEND_TYPE_RW;
+    else if (strcasecmp(str, "unknown")==0)
+        type = BACKEND_TYPE_UNKNOWN;
     return type;
 }
 
 static backend_state_t backend_state(const char* str)
 {
-    backend_state_t state = BACKEND_STATE_UNKNOWN;
+    backend_state_t state = ERROR_PARAM;
     if (strcasecmp(str, "up")==0)
         state = BACKEND_STATE_UP;
     else if (strcasecmp(str, "down")==0)
         state = BACKEND_STATE_DOWN;
     else if (strcasecmp(str, "maintaining")==0)
         state = BACKEND_STATE_MAINTAINING;
+    else if (strcasecmp(str, "unknown") == 0)
+        state = BACKEND_STATE_UNKNOWN;
     return state;
 }
 
@@ -1047,6 +1053,10 @@ void admin_update_backend(network_mysqld_con* con, GList* equations,
     }
     int type = type_str ? backend_type(type_str) : bk->type;
     int state = state_str ? backend_state(state_str) : bk->state;
+    if (type == ERROR_PARAM || state == ERROR_PARAM) {
+        network_mysqld_con_send_error(con->client, C("parameter error"));
+        return;
+    }
     int ok = network_backends_modify(g->backends, backend_ndx, type, state, NO_PREVIOUS_STATE);
     int affected_rows = ok ? 1 : 0;
     network_mysqld_con_send_ok_full(con->client, affected_rows, 0,

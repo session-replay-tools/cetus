@@ -38,7 +38,6 @@ typedef enum {
     BACKEND_STATE_DOWN,
     BACKEND_STATE_MAINTAINING,
     BACKEND_STATE_DELETED,
-    BACKEND_STATE_END,
 } backend_state_t;
 
 #define NO_PREVIOUS_STATE -1

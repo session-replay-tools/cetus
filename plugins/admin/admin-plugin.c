@@ -424,6 +424,14 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_query) {
     return NETWORK_SOCKET_SUCCESS;
 }
 
+NETWORK_MYSQLD_PLUGIN_PROTO(server_timeout)
+{
+    con->prev_state = con->state;
+    con->state = ST_SEND_ERROR;
+
+    return NETWORK_SOCKET_SUCCESS;
+}
+
 /**
  * cleanup the admin specific data on the current connection
  *
@@ -443,6 +451,8 @@ static int network_mysqld_server_connection_init(network_mysqld_con *con) {
     con->plugins.con_read_auth        = server_read_auth;
 
     con->plugins.con_read_query       = server_read_query;
+
+    con->plugins.con_timeout          = server_timeout;
 
     con->plugins.con_cleanup          = admin_disconnect_client;
 

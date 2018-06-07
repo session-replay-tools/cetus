@@ -110,7 +110,7 @@ typedef struct {
 
 NETWORK_API network_backends_t *network_backends_new();
 NETWORK_API void network_backends_free(network_backends_t *);
-NETWORK_API int network_backends_add(network_backends_t *, const gchar *, backend_type_t, backend_state_t, void *);
+NETWORK_API int network_backends_add(network_backends_t *, const gchar *, backend_type_t, backend_state_t, chassis *);
 NETWORK_API int network_backends_remove(network_backends_t *bs, guint index);
 NETWORK_API int network_backends_check(network_backends_t *bs);
 NETWORK_API int network_backends_modify(network_backends_t *, guint, backend_type_t, backend_state_t, backend_state_t);

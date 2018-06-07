@@ -2306,6 +2306,11 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
 
     gettimeofday(&(con->req_recv_time), NULL);
 
+    if (srv->is_need_to_create_conns) {
+        srv->is_need_to_create_conns = 0;
+        network_connection_pool_create_conns(srv);
+    }
+
     if (!con->is_wait_server) {
         do {
             switch (network_mysqld_read(srv, recv_sock)) {
@@ -4891,7 +4896,12 @@ network_connection_pool_create_conns(chassis *srv)
                 continue;
             }
 
-            for (j = 0; j < backend->config->mid_conn_pool; j++) {
+            int allowd_conn_num = backend->config->mid_conn_pool;
+            if (allowd_conn_num > MAX_CREATE_CONN_NUM) {
+                allowd_conn_num = MAX_CREATE_CONN_NUM;
+            }
+
+            for (j = 0; j < allowd_conn_num; j++) {
                 server_connection_state_t *scs = network_mysqld_self_con_init(srv);
                 if (srv->disable_dns_cache)
                     network_address_set_address(scs->server->dst, backend->address->str);

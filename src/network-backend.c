@@ -197,7 +197,7 @@ static void set_backend_config(network_backend_t *backend, chassis *srv) {
  */
 int
 network_backends_add(network_backends_t *bs, const gchar *address,
-                     backend_type_t type, backend_state_t state, void *srv)
+                     backend_type_t type, backend_state_t state, chassis *srv)
 {
     network_backend_t *new_backend = network_backend_new();
     new_backend->type = type;
@@ -237,7 +237,7 @@ network_backends_add(network_backends_t *bs, const gchar *address,
     }
 
     set_backend_config(new_backend, srv);
-    network_connection_pool_create_conns(srv);
+    srv->is_need_to_create_conns = 1;
     network_backends_into_group(bs, new_backend);
     g_message("added %s backend: %s, state: %s", backend_type_t_str[type], address, backend_state_t_str[state]);
 
@@ -343,7 +343,8 @@ network_backends_modify(network_backends_t *bs, guint ndx,
             cur->state_since = now;
             if (state == BACKEND_STATE_UP || state == BACKEND_TYPE_UNKNOWN) {
                 if (cur->pool->srv) {
-                    network_connection_pool_create_conns(cur->pool->srv);
+                    chassis *srv = cur->pool->srv;
+                    srv->is_need_to_create_conns = 1;
                 }
             }
         } else {

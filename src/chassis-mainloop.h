@@ -55,6 +55,7 @@ typedef struct chassis chassis;
 #define MAX_QUERY_TIME 1000
 #define MAX_WAIT_TIME 1024
 #define MAX_TRY_NUM 6
+#define MAX_CREATE_CONN_NUM 512
 #define MAX_DIST_TRAN_PREFIX 32
 #define DEFAULT_LIVE_TIME 7200
 
@@ -151,6 +152,7 @@ struct chassis {
     int merged_output_size;
     int max_header_size;
     int compressed_merged_output_size;
+    int is_need_to_create_conns;
 
     /* Conn-pool initialize settings */
     int max_idle_connections;

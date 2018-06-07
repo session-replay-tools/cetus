@@ -4795,20 +4795,24 @@ network_connection_pool_create_conn(network_mysqld_con *con)
                 backend->last_check_time = cur;
                 continue;
             } else if (total >= pool->mid_idle_connections) {
+                int idle_conn = total - backend->connected_clients;
+                if (idle_conn > backend->connected_clients) {
+                    continue;
+                }
                 int is_need_to_create = 0;
                 switch (backend->type) {
-                case BACKEND_TYPE_RW:
-                    if (con->master_conn_shortaged) {
-                        is_need_to_create = 1;
-                    }
-                    break;
-                case BACKEND_TYPE_RO:
-                    if (con->slave_conn_shortaged) {
-                        is_need_to_create = 1;
-                    }
-                    break;
-                default:
-                    break;
+                    case BACKEND_TYPE_RW:
+                        if (con->master_conn_shortaged) {
+                            is_need_to_create = 1;
+                        }
+                        break;
+                    case BACKEND_TYPE_RO:
+                        if (con->slave_conn_shortaged) {
+                            is_need_to_create = 1;
+                        }
+                        break;
+                    default:
+                        break;
                 }
                 if (!is_need_to_create) {
                     continue;

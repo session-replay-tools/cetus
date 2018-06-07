@@ -56,7 +56,9 @@ void
 chassis_event_add_with_timeout(chassis *chas, struct event *ev, struct timeval *tv)
 {
     event_base_set(chas->event_base, ev);
+#if NETWORK_DEBUG_TRACE_EVENT
     CHECK_PENDING_EVENT(ev);
+#endif
     event_add(ev, tv);
     g_debug("%s:event add ev:%p", G_STRLOC, ev);
 }

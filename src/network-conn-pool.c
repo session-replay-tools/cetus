@@ -64,9 +64,6 @@ network_connection_pool_entry_free(network_connection_pool_entry *e, gboolean fr
 
     if (e->sock && free_sock) {
         network_socket *sock = e->sock;
-
-        g_debug("%s:event del, ev:%p", G_STRLOC, &(sock->event));
-        event_del(&(sock->event));
         network_socket_free(sock);
     }
 

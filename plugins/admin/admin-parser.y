@@ -157,6 +157,16 @@ opt_integer(A) ::= INTEGER(X). {A = token2int(X);}
 
 %token_class ids STRING|ID.
 
+cmd ::= compatible_cmd SEMI. {
+  admin_compatible_cmd(con);
+}
+compatible_cmd ::= SET NAMES ID.
+
+compatible_cmd ::= USE ID.
+
+cmd ::= SHOW DATABASES SEMI. {
+  admin_show_databases(con);
+}
 cmd ::= SELECT CONN_DETAILS FROM BACKENDS SEMI. {
   admin_select_conn_details(con);
 }

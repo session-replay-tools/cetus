@@ -91,6 +91,8 @@
 "reload" return TK_RELOAD;
 "save" return TK_SAVE;
 "settings" return TK_SETTINGS;
+"NAMES" return TK_NAMES;
+"DATABASES" return TK_DATABASES;
 
 [0-9]+                 return TK_INTEGER; /*sign symbol is handled in parser*/
 

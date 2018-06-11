@@ -53,5 +53,6 @@ void admin_create_sharded_table(network_mysqld_con*, const char* schema, const c
 void admin_select_vdb(network_mysqld_con* con);
 void admin_select_sharded_table(network_mysqld_con* con);
 void admin_save_settings(network_mysqld_con* con);
-
+void admin_compatible_cmd(network_mysqld_con* con);
+void admin_show_databases(network_mysqld_con* con);
 #endif // ADMIN_COMMANDS_H

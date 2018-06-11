@@ -1717,3 +1717,23 @@ void admin_save_settings(network_mysqld_con *con)
         network_mysqld_con_send_error_full(con->client, L(msg), 1066, "28000");
     }
 }
+void admin_compatible_cmd(network_mysqld_con* con)
+{
+    network_mysqld_con_send_ok(con->client);
+}
+void admin_show_databases(network_mysqld_con* con)
+{
+    GPtrArray* fields = network_mysqld_proto_fielddefs_new();
+
+    MAKE_FIELD_DEF_1_COL(fields, "Database");
+
+    GPtrArray *rows = g_ptr_array_new_with_free_func(
+        (void*)network_mysqld_mysql_field_row_free);
+
+    APPEND_ROW_1_COL(rows, "cetus-admin");
+
+    network_mysqld_con_send_resultset(con->client, fields, rows);
+
+    network_mysqld_proto_fielddefs_free(fields);
+    g_ptr_array_free(rows, TRUE);
+}

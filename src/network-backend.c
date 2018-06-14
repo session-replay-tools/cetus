@@ -500,84 +500,26 @@ network_group_update(network_group_t *gp)
     g_list_free(backends);
 }
 
-static int
-backends_get_ro_ndx_round_robin(network_backends_t *bs)
+/* round robin choose read only backend */
+int network_backends_get_ro_ndx(network_backends_t *bs)
 {
-    int ro_index = 0, remainder = 0;
-    if (bs->ro_server_num > 0) {
-        remainder = (bs->read_count++) % bs->ro_server_num;
-    }
+    GArray* active_ro_indices = g_array_sized_new(FALSE, TRUE, sizeof(int), 4);
     int count = network_backends_count(bs);
     int i = 0;
     for (i = 0; i < count; i++) {
         network_backend_t *backend = network_backends_get(bs, i);
         if ((backend->type == BACKEND_TYPE_RO)
             && (backend->state == BACKEND_STATE_UP || backend->state == BACKEND_STATE_UNKNOWN)) {
-            if (ro_index == remainder) {
-                break;
-            }
-            ro_index++;
+            g_array_append_val(active_ro_indices, i);
         }
     }
-    return i < count ? i : -1;
-}
-
-static int
-backends_get_ro_ndx_first(network_backends_t *bs)
-{
-    int i = 0;
-    int count = network_backends_count(bs);
-    for (i = 0; i < count; i++) {
-        network_backend_t *backend = network_backends_get(bs, i);
-        if ((backend->type == BACKEND_TYPE_RO)
-            && (backend->state == BACKEND_STATE_UP || backend->state == BACKEND_STATE_UNKNOWN)) {
-            return i;
-        }
+    int num = active_ro_indices->len;
+    int result = -1;
+    if (num > 0) {
+        result = g_array_index(active_ro_indices, int, (bs->read_count++) % num);
     }
-    return -1;
-}
-
-static int
-backends_get_ro_ndx_random(network_backends_t *bs)
-{
-    int count = network_backends_count(bs);
-    int ndx = g_random_int_range(0, count);
-    network_backend_t *backend = network_backends_get(bs, ndx);
-    if (backend->type == BACKEND_TYPE_RO) { /* luckily run into a RO */
-        if (backend->state == BACKEND_STATE_UP || backend->state == BACKEND_STATE_UNKNOWN) {
-            return ndx;
-        }
-    } else {                    /* if we run into a RW, try it's neighbours */
-        if (ndx - 1 >= 0) {
-            backend = network_backends_get(bs, ndx - 1);
-            if ((backend->type == BACKEND_TYPE_RO)
-                && (backend->state == BACKEND_STATE_UP || backend->state == BACKEND_STATE_UNKNOWN)) {
-                return ndx - 1;
-            }
-        } else if (ndx + 1 < count) {
-            if ((backend->type == BACKEND_TYPE_RO)
-                && (backend->state == BACKEND_STATE_UP || backend->state == BACKEND_STATE_UNKNOWN)) {
-                return ndx + 1;
-            }
-        }
-    }
-
-    return backends_get_ro_ndx_first(bs);
-}
-
-int
-network_backends_get_ro_ndx(network_backends_t *bs, backend_algo_t algo)
-{
-    switch (algo) {
-    case BACKEND_ALGO_ROUND_ROBIN:
-        return backends_get_ro_ndx_round_robin(bs);
-    case BACKEND_ALGO_RANDOM:
-        return backends_get_ro_ndx_random(bs);
-    case BACKEND_ALGO_FIRST:
-        return backends_get_ro_ndx_first(bs);
-    default:
-        return -1;
-    }
+    g_array_free(active_ro_indices, TRUE);
+    return result;
 }
 
 int

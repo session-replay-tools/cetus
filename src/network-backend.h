@@ -49,12 +49,6 @@ typedef enum {
     BACKEND_TYPE_RO,
 } backend_type_t;
 
-typedef enum {
-    BACKEND_ALGO_ROUND_ROBIN,
-    BACKEND_ALGO_RANDOM,
-    BACKEND_ALGO_FIRST,
-} backend_algo_t;
-
 typedef struct backend_config {
     GString *default_username;
     GString *default_db;
@@ -142,7 +136,7 @@ network_backend_t *network_group_pick_slave_backend(network_group_t *);
 
 void network_group_get_slave_names(network_group_t *, GString *);
 
-int network_backends_get_ro_ndx(network_backends_t *, backend_algo_t);
+int network_backends_get_ro_ndx(network_backends_t *);
 
 int network_backends_get_rw_ndx(network_backends_t *);
 

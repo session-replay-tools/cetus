@@ -1615,13 +1615,13 @@ proxy_get_backend_ndx(network_mysqld_con *con, int type, gboolean force_slave)
     int idx;
     if (type == BACKEND_TYPE_RO) {
         if (force_slave) {
-            idx = network_backends_get_ro_ndx(g->backends, BACKEND_ALGO_ROUND_ROBIN);
+            idx = network_backends_get_ro_ndx(g->backends);
         } else {
             int x = g_random_int_range(0, 100);
             if (x < con->config->read_master_percentage) {
                 idx = network_backends_get_rw_ndx(g->backends);
             } else {
-                idx = network_backends_get_ro_ndx(g->backends, BACKEND_ALGO_ROUND_ROBIN);
+                idx = network_backends_get_ro_ndx(g->backends);
             }
             g_debug(G_STRLOC "x: %d, read_master_percentage: %d, read: %d\n",
                     x, con->config->read_master_percentage, idx);

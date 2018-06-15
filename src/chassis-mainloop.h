@@ -71,9 +71,6 @@ typedef struct rw_op_t {
 typedef struct query_stats_t {
     rw_op_t client_query;
     rw_op_t proxyed_query;
-    uint64_t query_time_table[MAX_QUERY_TIME];
-    uint64_t query_wait_table[MAX_WAIT_TIME];
-    rw_op_t server_query_details[MAX_SERVER_NUM];
     uint64_t com_select;
     uint64_t com_insert;
     uint64_t com_update;
@@ -85,6 +82,9 @@ typedef struct query_stats_t {
     uint64_t com_select_global;
     uint64_t com_select_bad_key;
     uint64_t xa_count;
+    uint64_t query_time_table[MAX_QUERY_TIME];
+    uint64_t query_wait_table[MAX_WAIT_TIME];
+    rw_op_t server_query_details[MAX_SERVER_NUM];
 } query_stats_t;
 
 /* For generating unique global ids for MySQL */
@@ -120,10 +120,8 @@ struct chassis {
     char *default_charset;
     char *default_hashed_pwd;
 
-    unsigned int auto_key;
     unsigned int sess_key;
     unsigned int maintain_close_mode;
-    unsigned int config_remote;
     unsigned int disable_threads;
     int ssl;
     unsigned int is_tcp_stream_enabled;
@@ -135,7 +133,6 @@ struct chassis {
     unsigned int is_manual_down;
     unsigned int is_reduce_conns;
     unsigned int xa_log_detailed;
-    unsigned int sharding_reload;
     unsigned int check_slave_delay;
     int complement_conn_cnt;
     int default_query_cache_timeout;

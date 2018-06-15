@@ -317,8 +317,6 @@ network_connection_pool_swap(network_mysqld_con *con, int backend_ndx)
     if (!backend)
         return NULL;
 
-    g_debug(G_STRLOC ": user: %s", con->client->response ? "nil" : con->client->response->username->str);
-
     g_debug("%s: check server switch for conn:%p, prep_stmt_cnt:%d, orig ndx:%d, now:%d",
             G_STRLOC, con, con->prepare_stmt_count, st->backend_ndx, backend_ndx);
     /**

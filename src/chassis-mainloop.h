@@ -144,6 +144,8 @@ struct chassis {
     int cetus_max_allowed_packet;
     int disable_dns_cache;
 
+    int worker_processes;
+
     int max_alive_time;
     int max_resp_len;
     int merged_output_size;

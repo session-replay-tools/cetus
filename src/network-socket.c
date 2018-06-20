@@ -423,6 +423,12 @@ network_socket_bind(network_socket *con)
                            G_STRLOC, con->dst->name->str, g_strerror(errno), errno);
                 return NETWORK_SOCKET_ERROR;
             }
+
+            if (0 != setsockopt(con->fd, SOL_SOCKET, SO_REUSEPORT, SETSOCKOPT_OPTVAL_CAST & val, sizeof(val))) {
+                g_critical("%s: setsockopt(%s, SOL_SOCKET, SO_REUSEPORT) failed: %s (%d)",
+                        G_STRLOC, con->dst->name->str, g_strerror(errno), errno);
+                return NETWORK_SOCKET_ERROR;
+            }
         }
 
         if (con->dst->addr.common.sa_family == AF_INET6) {

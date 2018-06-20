@@ -547,6 +547,7 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->default_charset = DUP_STRING(frontend->default_charset, NULL);
     srv->default_db = DUP_STRING(frontend->default_db, NULL);
 
+    srv->worker_processes = 2;
     srv->mid_idle_connections = frontend->default_pool_size;
     g_message("set default pool size:%d", srv->mid_idle_connections);
 

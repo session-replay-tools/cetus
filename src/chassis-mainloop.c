@@ -48,6 +48,7 @@
 #include "chassis-event.h"
 #include "chassis-log.h"
 #include "chassis-timings.h"
+#include "cetus-process-cycle.h"
 
 static volatile sig_atomic_t signal_shutdown;
 
@@ -318,17 +319,6 @@ chassis_mainloop(void *_chas)
     chas->event_base = mainloop;
     g_assert(chas->event_base);
 
-    /* setup all plugins */
-    for (i = 0; i < chas->modules->len; i++) {
-        chassis_plugin *p = chas->modules->pdata[i];
-
-        g_assert(p->apply_config);
-        if (0 != p->apply_config(chas, p->config)) {
-            g_critical("%s: applying config of plugin %s failed", G_STRLOC, p->name);
-            return -1;
-        }
-    }
-
 #ifndef SIMPLE_PARSER
     chas->dist_tran_id = g_random_int_range(0, 100000000);
     int srv_id = g_random_int_range(0, 10000);
@@ -375,22 +365,6 @@ chassis_mainloop(void *_chas)
         g_debug("now running as user: %s (%d/%d)", chas->user, user_info->pw_uid, user_info->pw_gid);
     }
 
-    signal_set(&ev_sigterm, SIGTERM, sigterm_handler, NULL);
-    event_base_set(chas->event_base, &ev_sigterm);
-    signal_add(&ev_sigterm, NULL);
-
-    signal_set(&ev_sigint, SIGINT, sigterm_handler, NULL);
-    event_base_set(chas->event_base, &ev_sigint);
-    signal_add(&ev_sigint, NULL);
-
-#ifdef SIGHUP
-    signal_set(&ev_sighup, SIGHUP, sighup_handler, chas);
-    event_base_set(chas->event_base, &ev_sighup);
-    if (signal_add(&ev_sighup, NULL)) {
-        g_critical("%s: signal_add(SIGHUP) failed", G_STRLOC);
-    }
-#endif
-
 #if !GLIB_CHECK_VERSION(2, 32, 0)
     /* GLIB below 2.32 must call thread_init if multi threads */
     if (!chas->disable_threads) {
@@ -403,13 +377,9 @@ chassis_mainloop(void *_chas)
     /**
      * block until we are asked to shutdown
      */
-    chassis_event_loop(mainloop);
+    cetus_master_process_cycle(chas);
+    /* chassis_event_loop(mainloop);*/
 
-    signal_del(&ev_sigterm);
-    signal_del(&ev_sigint);
-#ifdef SIGHUP
-    signal_del(&ev_sighup);
-#endif
     return 0;
 }
 

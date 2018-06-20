@@ -4927,8 +4927,8 @@ network_connection_pool_create_conns(chassis *srv)
 
                 }
 
-                g_message("%s: connected_clients add, backend ndx:%d, for server:%p, faked con:%p",
-                          G_STRLOC, i, scs->server, scs);
+                g_message("%s: connected_clients add, backend ndx:%d, for server:%p, faked con:%p, pid:%d",
+                          G_STRLOC, i, scs->server, scs, getpid());
 
                 scs->backend->connected_clients++;
                 int create_err = 0;

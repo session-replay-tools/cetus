@@ -1,0 +1,36 @@
+
+#ifndef _CETUS_PROCESS_CYCLE_H_INCLUDED_
+#define _CETUS_PROCESS_CYCLE_H_INCLUDED_
+
+#include "cetus-process.h"
+
+#define CETUS_PROCESS_SINGLE     0
+#define CETUS_PROCESS_MASTER     1
+#define CETUS_PROCESS_SIGNALLER  2
+#define CETUS_PROCESS_WORKER     3
+#define CETUS_PROCESS_HELPER     4
+
+
+void cetus_master_process_cycle(cetus_cycle_t *cycle);
+
+
+extern unsigned int cetus_process;
+extern unsigned int cetus_worker;
+extern pid_t       cetus_pid;
+extern pid_t       cetus_new_binary;
+extern unsigned int cetus_inherited;
+extern unsigned int cetus_daemonized;
+extern unsigned int cetus_exiting;
+
+extern sig_atomic_t    cetus_reap;
+extern sig_atomic_t    cetus_sigio;
+extern sig_atomic_t    cetus_sigalrm;
+extern sig_atomic_t    cetus_quit;
+extern sig_atomic_t    cetus_debug_quit;
+extern sig_atomic_t    cetus_terminate;
+extern sig_atomic_t    cetus_noaccept;
+extern sig_atomic_t    cetus_reconfigure;
+extern sig_atomic_t    cetus_reopen;
+
+
+#endif /* _CETUS_PROCESS_CYCLE_H_INCLUDED_ */

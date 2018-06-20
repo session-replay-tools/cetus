@@ -832,6 +832,31 @@ join_on_sharding_key(char *default_db, GPtrArray *sharding_tables, sql_expr_t *w
     return num_linkage + 1 == sharding_tables->len;
 }
 
+static void sql_expr_find_subqueries(sql_expr_t *where, GList **queries)
+{
+    if (!where) {
+        return;
+    }
+    GQueue *stack = g_queue_new();
+    g_queue_push_head(stack, where);
+
+    while (!g_queue_is_empty(stack)) {  /* TODO: NOT op is not supported */
+        sql_expr_t *p = g_queue_pop_head(stack);
+        if (is_logical_op(p->op)) {
+            if (p->right)
+                g_queue_push_head(stack, p->right);
+            if (p->left)
+                g_queue_push_head(stack, p->left);
+            continue;
+        } else if (p->op == TK_IN || p->op == TK_EXISTS) {
+            if (p->select) {
+                *queries = g_list_append(*queries, p->select);
+            }
+        }
+    }
+    g_queue_free(stack);
+}
+
 static void
 sql_select_get_single_tables(sql_select_t *select, char *current_db, GList **single_tables /*out */ )
 {
@@ -850,6 +875,27 @@ sql_select_get_single_tables(sql_select_t *select, char *current_db, GList **sin
         }
         select = select->prior;
     }
+}
+
+static gboolean
+sql_select_has_single_table(sql_select_t *select, char *current_db)
+{
+    char *db = current_db;
+    while (select) {
+        sql_src_list_t *sources = select->from_src;
+        int i = 0;
+        for (i = 0; sources && i < sources->len; ++i) {
+            sql_src_item_t *src = g_ptr_array_index(sources, i);
+            if (src->dbname) {
+                db = src->dbname;
+            }
+            if (src->table_name && shard_conf_is_single_table(db, src->table_name)) {
+                return TRUE;
+            }
+        }
+        select = select->prior;
+    }
+    return FALSE;
 }
 
 static int
@@ -918,6 +964,20 @@ routing_select(sql_context_t *context, const sql_select_t *select,
             return USE_NON_SHARDING_TABLE;
         }
     }
+
+    /* handle subquery in where clause */
+    GList *subqueries = NULL;
+    sql_expr_find_subqueries(select->where_clause, &subqueries);
+    GList *l;
+    for (l = subqueries; l; l = l->next) {
+        if (sql_select_has_single_table(l->data, db)) {
+            g_ptr_array_free(sharding_tables, TRUE);
+            g_list_free(subqueries);
+            sql_context_append_msg(context, "(cetus) Found single-table in subquery, not allowed");
+            return ERROR_UNPARSABLE;
+        }
+    }
+    g_list_free(subqueries);
 
     if (sharding_tables->len == 0) {
         shard_conf_get_fixed_group(groups, fixture);

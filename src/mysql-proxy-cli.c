@@ -82,6 +82,8 @@
 
 #define GETTEXT_PACKAGE "cetus"
 
+extern pid_t       cetus_pid;
+
 /**
  * options of the cetus frontend
  */
@@ -885,6 +887,8 @@ main_cmdline(int argc, char **argv)
 
         GOTO_EXIT(EXIT_FAILURE);
     }
+
+    cetus_pid = getpid();
 
     g_message("starting " PACKAGE_STRING);
 #ifdef CHASSIS_BUILD_TAG

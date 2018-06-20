@@ -230,10 +230,10 @@ cetus_pass_open_channel(cetus_cycle_t *cycle, cetus_channel_t *ch)
             continue;
         }
 
-        g_debug("%s: pass channel s:%i pid:%d fd:%d to s:%i pid:%d fd:%d", G_STRLOC,
+        g_debug("%s: pass channel s:%i pid:%d fd:%d to s:%i pid:%d fd:%d, ev base:%p, ev:%p", G_STRLOC,
                 ch->slot, ch->pid, ch->fd,
                 i, cetus_processes[i].pid,
-                cetus_processes[i].channel[0]);
+                cetus_processes[i].channel[0], cycle->event_base, &cetus_channel_event);
 
         /* TODO: AGAIN */
         cetus_write_channel(cetus_processes[i].channel[0],
@@ -383,7 +383,7 @@ cetus_reap_children(cetus_cycle_t *cycle)
                     g_debug("%s: pass close channel s:%i pid:%d to:%d", G_STRLOC,
                                    ch.slot, ch.pid, cetus_processes[n].pid);
 
-                    /* TODO: CETUS_AGAIN */
+                    /* TODO: AGAIN */
                     cetus_write_channel(cetus_processes[n].channel[0],
                                       &ch, sizeof(cetus_channel_t));
                 }
@@ -446,6 +446,7 @@ cetus_master_process_exit(cetus_cycle_t *cycle)
 static void
 cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
 {
+    g_message("%s: call cetus_worker_process_cycle", G_STRLOC);
     int worker = (intptr_t) data;
 
     cetus_process = CETUS_PROCESS_WORKER;
@@ -468,12 +469,12 @@ cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
             cetus_worker_process_exit(cycle);
         }
 
-        g_debug("%s: worker cycle, pid:%d", G_STRLOC, getpid());
+        g_debug("%s: worker cycle", G_STRLOC);
 
         /* call main procedures for worker */
         chassis_event_loop_t *loop = cycle->event_base;
         chassis_event_loop(loop);
-        g_debug("%s: after chassis_event_loop:%d", G_STRLOC, getpid());
+        g_debug("%s: after chassis_event_loop", G_STRLOC);
 
         if (cetus_terminate) {
             g_message("%s: exiting", G_STRLOC);
@@ -534,10 +535,17 @@ cetus_worker_process_init(cetus_cycle_t *cycle, int worker)
             continue;
         }
 
+        g_debug("%s: close() channel one fd:%d, n:%d", 
+                G_STRLOC, cetus_processes[n].channel[1], n);
+
         if (close(cetus_processes[n].channel[1]) == -1) {
             g_critical("%s: close() channel failed, errno:%d", G_STRLOC, errno);
         }
     }
+
+    g_debug("%s: close() channel zero fd:%d, n:%d", 
+            G_STRLOC, cetus_processes[cetus_process_slot].channel[0], cetus_process_slot);
+
 
     if (close(cetus_processes[cetus_process_slot].channel[0]) == -1) {
         g_critical("%s: close() channel failed, errno:%d", G_STRLOC, errno);
@@ -547,7 +555,10 @@ cetus_worker_process_init(cetus_cycle_t *cycle, int worker)
     cycle->event_base = mainloop;
     g_assert(cycle->event_base);
 
-    event_set(&cetus_channle_event, cetus_channel, EV_READ, cetus_channel_handler, NULL);
+    event_set(&cetus_channel_event, cetus_channel, EV_READ | EV_PERSIST, cetus_channel_handler, NULL);
+    chassis_event_add(cycle, &cetus_channel_event);
+    g_message("%s: cetus_channel:%d is waiting for read, event base:%p, ev:%p",
+            G_STRLOC, cetus_channel, cycle->event_base, &cetus_channel_event);
 }
 
 

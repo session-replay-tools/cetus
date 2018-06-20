@@ -164,7 +164,7 @@ chassis_config_parse_mysql_url(chassis_config_t *rconf, const char *url, int len
 static MYSQL *
 chassis_config_get_mysql_connection(chassis_config_t *conf)
 {
-    g_debug("%s:call chassis_config_get_mysql_connection for pid:%d", G_STRLOC, getpid());
+    g_debug("%s:call chassis_config_get_mysql_connection", G_STRLOC);
     /* TODO could not use cache connection */
     conf->mysql_conn = NULL;
     /* first try the cached connection */
@@ -177,7 +177,7 @@ chassis_config_get_mysql_connection(chassis_config_t *conf)
         }
     }
 
-    g_debug("%s:call mysql_init for pid:%d,", G_STRLOC, getpid());
+    g_debug("%s:call mysql_init", G_STRLOC);
     MYSQL *conn = mysql_init(NULL);
     if (!conn)
         return NULL;
@@ -187,7 +187,7 @@ chassis_config_get_mysql_connection(chassis_config_t *conf)
     mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
     mysql_options(conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
 
-    g_debug("%s:call mysql_real_connect for pid:%d,", G_STRLOC, getpid());
+    g_debug("%s:call mysql_real_connect", G_STRLOC);
     if (mysql_real_connect(conn, conf->host, conf->user, conf->password, NULL, conf->port, NULL, 0) == NULL) {
         g_critical("%s", mysql_error(conn));
         mysql_close(conn);
@@ -387,7 +387,7 @@ chassis_config_mysql_query_object(chassis_config_t *conf,
         goto mysql_error;
     }
         
-    g_debug("%s:reach mysql_query, pid:%d", G_STRLOC, getpid());
+    g_debug("%s:reach mysql_query", G_STRLOC);
     char sql[256] = { 0 };
     snprintf(sql, sizeof(sql), "SELECT object_value,mtime FROM %s.objects where object_name='%s'", conf->schema, name);
     if (mysql_query(conn, sql)) {
@@ -460,10 +460,10 @@ chassis_config_query_object(chassis_config_t *conf, const char *name, char **jso
         strncpy(object->name, name, RF_MAX_NAME_LEN - 1);
         conf->objects = g_list_append(conf->objects, object);
     } else {
-        g_critical(G_STRLOC "object is nil, name:%s", name);
+        g_critical(G_STRLOC ": object is nil, name:%s", name);
     }
 
-    g_debug(G_STRLOC "config type:%d", conf->type);
+    g_debug(G_STRLOC ": config type:%d", conf->type);
     switch (conf->type) {
     case CHASSIS_CONF_MYSQL:
         return chassis_config_mysql_query_object(conf, object, name, json_res);

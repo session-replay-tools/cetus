@@ -114,7 +114,7 @@ chassis_unix_proc_keepalive(int *child_exit_status)
             if (pid == 0) {
                 /* child */
 
-                g_debug("%s: we are the child: %d, nprocs:%d", G_STRLOC, getpid(), nprocs);
+                g_debug("%s: we are the child, nprocs:%d", G_STRLOC,  nprocs);
                 return 0;
             } else if (pid < 0) {
                 /* fork() failed */

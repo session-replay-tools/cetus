@@ -74,7 +74,7 @@ extern pid_t    cetus_parent;
 extern int      cetus_channel;
 extern int      cetus_process_slot;
 extern int      cetus_last_process;
-extern struct event cetus_channle_event;
+extern struct event cetus_channel_event;
 extern cetus_process_t  cetus_processes[CETUS_MAX_PROCESSES];
 
 

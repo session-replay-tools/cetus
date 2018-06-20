@@ -30,7 +30,7 @@ char           **cetus_os_argv;
 int              cetus_process_slot;
 int              cetus_channel;
 int              cetus_last_process;
-struct event     cetus_channle_event;
+struct event     cetus_channel_event;
 cetus_process_t  cetus_processes[CETUS_MAX_PROCESSES];
 
 
@@ -116,9 +116,9 @@ cetus_spawn_process(cetus_cycle_t *cycle, cetus_spawn_proc_pt proc, void *data,
             return CETUS_INVALID_PID;
         }
 
-        g_debug("%s: index:%d, channel %d:%d, pid:%d, cycle:%p", G_STRLOC, s,
+        g_debug("%s: index:%d, channel %d:%d, cycle:%p", G_STRLOC, s,
                        cetus_processes[s].channel[0],
-                       cetus_processes[s].channel[1], getpid(), cycle );
+                       cetus_processes[s].channel[1], cycle );
 
         if (fcntl(cetus_processes[s].channel[0], F_SETFL, O_NONBLOCK | O_RDWR) != 0) {
             g_critical("%s: nonblock failed while spawning \"%s\": %s (%d)",
@@ -173,10 +173,10 @@ cetus_spawn_process(cetus_cycle_t *cycle, cetus_spawn_proc_pt proc, void *data,
     cetus_process_slot = s;
 
 
-    g_message("%s: call fork:%d", G_STRLOC, getpid());
+    g_message("%s: before call fork, channel:%d", G_STRLOC, s);
     pid = fork();
 
-    g_message("%s: after call fork:%d, pid:%d", G_STRLOC, getpid(), pid);
+    g_message("%s: after call fork, pid:%d", G_STRLOC, pid);
     switch (pid) {
 
     case -1:
@@ -195,7 +195,7 @@ cetus_spawn_process(cetus_cycle_t *cycle, cetus_spawn_proc_pt proc, void *data,
         break;
     }
 
-    g_message("%s: start %s %d", G_STRLOC, name, pid);
+    g_message("%s: start %s %d, respawn:%d", G_STRLOC, name, pid, respawn);
 
     cetus_processes[s].pid = pid;
     cetus_processes[s].exited = 0;

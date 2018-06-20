@@ -3724,7 +3724,7 @@ network_mysqld_con_handle(int event_fd, short events, void *user_data)
          * if you need the state-change information without dtrace,
          * enable this
          */
-        g_debug("%s: [%d] %s, con:%p", G_STRLOC, getpid(), network_mysqld_con_st_name(con->state), con);
+        g_debug("%s: %s, con:%p", G_STRLOC, network_mysqld_con_st_name(con->state), con);
 #endif
         switch (con->state) {
         case ST_ERROR:
@@ -4927,8 +4927,8 @@ network_connection_pool_create_conns(chassis *srv)
 
                 }
 
-                g_message("%s: connected_clients add, backend ndx:%d, for server:%p, faked con:%p, pid:%d",
-                          G_STRLOC, i, scs->server, scs, getpid());
+                g_message("%s: connected_clients add, backend ndx:%d, for server:%p, faked con:%p",
+                          G_STRLOC, i, scs->server, scs);
 
                 scs->backend->connected_clients++;
                 int create_err = 0;

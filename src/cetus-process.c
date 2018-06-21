@@ -318,6 +318,7 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
         }
     }
 
+    g_message("%s: we call here:%d", G_STRLOC, signo);
     action = "";
 
     switch (cetus_process) {
@@ -409,7 +410,7 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
         g_message("%s: signal %d (%s) received from %d %s", G_STRLOC,
                 signo, sig->signame, siginfo->si_pid, action);
     } else {
-        g_message("%s: signal %d (%s) received%s", G_STRLOC,
+        g_message("%s: signal %d (%s) received %s", G_STRLOC,
                 signo, sig->signame, action);
     }
 
@@ -479,11 +480,11 @@ cetus_process_get_status(void)
         }
 
         if (WTERMSIG(status)) {
-            g_critical("%s: %P exited on signal %d",
-                    G_STRLOC, process, pid, WTERMSIG(status));
+            g_critical("%s: %s exited on signal %d",
+                    G_STRLOC, process, WTERMSIG(status));
         } else {
-            g_message("%s: %P exited on code %d",
-                    G_STRLOC, process, pid, WEXITSTATUS(status));
+            g_message("%s: %s exited on code %d",
+                    G_STRLOC, process, WEXITSTATUS(status));
         }
 
         if (WEXITSTATUS(status) == 2 && cetus_processes[i].respawn) {

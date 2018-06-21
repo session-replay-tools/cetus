@@ -100,7 +100,7 @@ cetus_read_channel(int s, cetus_channel_t *ch, size_t size)
 
     n = recvmsg(s, &msg, 0);
 
-    g_debug("%s: recvmsg to fd:%d, n:%d)", G_STRLOC, s, (int) n);
+    g_debug("%s: recvmsg fd:%d, n:%d)", G_STRLOC, s, (int) n);
 
     if (n == -1) {
         err = errno;

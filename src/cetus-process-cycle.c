@@ -121,6 +121,7 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
         }
 
         if (!live && (cetus_terminate || cetus_quit)) {
+            g_message("%s: cetus_master_process_exit here", G_STRLOC);
             cetus_master_process_exit(cycle);
         }
 
@@ -588,7 +589,8 @@ cetus_channel_handler(int fd, short events, void *user_data)
         g_debug("%s: channel:%i", G_STRLOC, n);
 
         if (ret == NETWORK_SOCKET_ERROR) {
-            /* cetus_close_connection(c); */
+            cetus_terminate = 1;
+            closesocket(fd);
             return;
         }
 
@@ -596,7 +598,7 @@ cetus_channel_handler(int fd, short events, void *user_data)
             return;
         }
 
-        g_debug("%s: channel command: %ui", G_STRLOC, ch.command);
+        g_debug("%s: channel command: %u", G_STRLOC, ch.command);
 
         switch (ch.command) {
 

@@ -374,6 +374,10 @@ chassis_mainloop(void *_chas)
     }
 #endif
 
+    if (cetus_init_signals() == -1 ) {
+        return 1;
+    }
+
     /**
      * block until we are asked to shutdown
      */

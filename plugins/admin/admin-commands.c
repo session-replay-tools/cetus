@@ -1,8 +1,11 @@
-#include "admin-commands.h"
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 
 #include <ctype.h>
 #include <sys/stat.h>
 
+#include "admin-commands.h"
 #include "cetus-users.h"
 #include "cetus-util.h"
 #include "cetus-variable.h"

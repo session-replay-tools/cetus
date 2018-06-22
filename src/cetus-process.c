@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/ioctl.h>
+#include "glib-ext.h"
 #include "cetus-channel.h"
 #include "cetus-process.h"
 #include "network-socket.h"
@@ -318,7 +319,7 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
         }
     }
 
-    g_message("%s: cetus_signal_handler is called:%d, errno:%d", G_STRLOC, signo, errno);
+    g_debug("%s: cetus_signal_handler is called:%d, errno:%d", G_STRLOC, signo, errno);
     action = "";
 
     switch (cetus_process) {

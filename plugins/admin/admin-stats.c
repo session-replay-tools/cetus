@@ -1,3 +1,4 @@
+#include "glib-ext.h"
 #include "admin-stats.h"
 #include "admin-plugin.h"
 #include "chassis-event.h"

@@ -2,6 +2,8 @@
 #include <errno.h>
 #include <sys/uio.h>
 #include <sys/socket.h>
+
+#include "glib-ext.h"
 #include "cetus-channel.h"
 #include "network-socket.h"
 

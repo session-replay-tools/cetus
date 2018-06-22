@@ -1,15 +1,16 @@
-#include "cetus-channel.h"
-#include "cetus-process.h"
-#include "cetus-process-cycle.h"
-#include "network-socket.h"
-#include "chassis-event.h"
-#include "chassis-plugin.h"
 #include <sys/resource.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 
+#include "cetus-channel.h"
+#include "cetus-process.h"
+#include "cetus-process-cycle.h"
+#include "network-socket.h"
+#include "chassis-event.h"
+#include "chassis-plugin.h"
+#include "glib-ext.h"
 
 static void cetus_start_worker_processes(cetus_cycle_t *cycle, int n, int type);
 static void cetus_pass_open_channel(cetus_cycle_t *cycle, cetus_channel_t *ch);
@@ -101,7 +102,7 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
                 cetus_sigalrm = 0;
             }
 
-            g_message("%s: termination cycle: %d", G_STRLOC, delay);
+            g_debug("%s: termination cycle: %d", G_STRLOC, delay);
 
             itv.it_interval.tv_sec = 0;
             itv.it_interval.tv_usec = 0;
@@ -115,15 +116,13 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
 
         sigsuspend(&set);
 
-        g_message("%s: wake up", G_STRLOC);
-
         if (cetus_reap) {
             cetus_reap = 0;
             live = cetus_reap_children(cycle);
         }
 
         if (!live && (cetus_terminate || cetus_quit)) {
-            g_message("%s: cetus_master_process_exit here", G_STRLOC);
+            g_message("%s: call cetus_master_process_exit", G_STRLOC);
             cetus_master_process_exit(cycle);
         }
 
@@ -215,7 +214,7 @@ cetus_start_worker_processes(cetus_cycle_t *cycle, int n, int type)
         ch.slot = cetus_process_slot;
         ch.fd = cetus_processes[cetus_process_slot].channel[0];
 
-        g_message("%s: call cetus_pass_open_channel", G_STRLOC);
+        g_debug("%s: call cetus_pass_open_channel", G_STRLOC);
         cetus_pass_open_channel(cycle, &ch);
     }
 }
@@ -304,7 +303,7 @@ cetus_signal_worker_processes(cetus_cycle_t *cycle, int signo)
         }
 
         if (ch.command) {
-            g_message("%s: call cetus_pass_open_channel", G_STRLOC);
+            g_debug("%s: call cetus_pass_open_channel", G_STRLOC);
             if (cetus_write_channel(cetus_processes[i].channel[0],
                                   &ch, sizeof(cetus_channel_t))
                 == NETWORK_SOCKET_SUCCESS)
@@ -415,7 +414,7 @@ cetus_reap_children(cetus_cycle_t *cycle)
                 ch.slot = cetus_process_slot;
                 ch.fd = cetus_processes[cetus_process_slot].channel[0];
 
-                g_message("%s: call cetus_pass_open_channel", G_STRLOC);
+                g_debug("%s: call cetus_pass_open_channel", G_STRLOC);
                 cetus_pass_open_channel(cycle, &ch);
 
                 live = 1;
@@ -564,7 +563,7 @@ cetus_worker_process_init(cetus_cycle_t *cycle, int worker)
 
     event_set(&cetus_channel_event, cetus_channel, EV_READ | EV_PERSIST, cetus_channel_handler, NULL);
     chassis_event_add(cycle, &cetus_channel_event);
-    g_message("%s: cetus_channel:%d is waiting for read, event base:%p, ev:%p",
+    g_debug("%s: cetus_channel:%d is waiting for read, event base:%p, ev:%p",
             G_STRLOC, cetus_channel, cycle->event_base, &cetus_channel_event);
 }
 
@@ -586,7 +585,7 @@ cetus_channel_handler(int fd, short events, void *user_data)
     int                n;
     cetus_channel_t    ch;
 
-    g_message("%s: channel handler", G_STRLOC);
+    g_debug("%s: channel handler", G_STRLOC);
 
     do {
 

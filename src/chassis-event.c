@@ -107,11 +107,9 @@ chassis_event_loop(chassis_event_loop_t *loop)
             break;
         }
 
-        g_message("%s: enter event_base_dispatch", G_STRLOC);
-
         r = event_base_dispatch(loop);
 
-        g_message("%s: after event_base_dispatch:%d, errno:%d, str:%s",
+        g_debug("%s: after event_base_dispatch:%d, errno:%d, str:%s",
                 G_STRLOC, r, errno, strerror(errno));
 
         if (r == -1) {

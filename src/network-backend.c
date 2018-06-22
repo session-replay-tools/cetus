@@ -326,9 +326,6 @@ network_backends_modify(network_backends_t *bs, guint ndx,
     g_get_current_time(&now);
     if (ndx >= network_backends_count(bs))
         return -1;
-    if(state >= BACKEND_STATE_END) {
-        return -1;
-    }
 
     network_backend_t *cur = bs->backends->pdata[ndx];
 

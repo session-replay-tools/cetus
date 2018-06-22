@@ -783,3 +783,15 @@ chassis_options_parse_cmdline(chassis_options_t *context, int *argc, char ***arg
     free_pending_nulls(context, FALSE);
     return FALSE;
 }
+
+chassis_option_t *chassis_options_get(GList *opts, const char *long_name)
+{
+    GList *l = opts;
+    for (l = opts; l; l = l->next) {
+        chassis_option_t *opt = l->data;
+        if (strcmp(opt->long_name, long_name)==0) {
+            return opt;
+        }
+    }
+    return NULL;
+}

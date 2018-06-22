@@ -27,12 +27,15 @@
 
 #include "glib-ext.h"
 #include "cetus-util.h"
+#include "chassis-config.h"
 
-#define SHARD_DATA_TYPE_UNSUPPORTED 0
-#define SHARD_DATA_TYPE_INT 1
-#define SHARD_DATA_TYPE_STR 2
-#define SHARD_DATA_TYPE_DATE 3
-#define SHARD_DATA_TYPE_DATETIME 4
+enum shardkey_type_t {
+    SHARD_DATA_TYPE_UNSUPPORTED=0,
+    SHARD_DATA_TYPE_INT,
+    SHARD_DATA_TYPE_STR,
+    SHARD_DATA_TYPE_DATE,
+    SHARD_DATA_TYPE_DATETIME,
+};
 
 enum sharding_method_t {
     SHARD_METHOD_UNKNOWN = -1,
@@ -50,14 +53,19 @@ typedef struct sharding_partition_t {
     char *value;                /* high range OR hash value */
     char *low_value;            /* low range OR null */
 
+    int hash_count;
     BitArray hash_set[MAX_HASH_VALUE_COUNT / 32];   /* hash values of this partition */
 
     GString *group_name;
-    const sharding_vdb_t *vdb;  /* references the vdb it belongs to */
+
+    enum sharding_method_t method;
+    enum shardkey_type_t key_type;
 } sharding_partition_t;
 
 gboolean sharding_partition_contain_hash(sharding_partition_t *, int);
+void sharding_partition_free(sharding_partition_t *);
 //gboolean sharding_partition_cover_range(sharding_partition_t *, );
+void sharding_partition_to_string(sharding_partition_t *, GString*);
 
 struct sharding_vdb_t {
     int id;
@@ -67,6 +75,8 @@ struct sharding_vdb_t {
     GPtrArray *partitions;      /* GPtrArray<sharding_partition_t *> */
 };
 
+void sharding_vdb_partitions_to_string(sharding_vdb_t* vdb, GString* repr);
+
 struct sharding_table_t {
     GString *schema;
     GString *name;
@@ -75,7 +85,8 @@ struct sharding_table_t {
     int vdb_id;
     struct sharding_vdb_t *vdb_ref;
 };
-
+int sharding_key_type(const char *str);
+const char* sharding_key_type_str(int type);
 GPtrArray *shard_conf_get_any_group(GPtrArray *groups, const char *db, const char *table);
 
 GPtrArray *shard_conf_get_all_groups(GPtrArray *groups);
@@ -109,5 +120,18 @@ void shard_conf_find_groups(GPtrArray *groups, const char *match);
 gboolean shard_conf_load(char *, int);
 
 void shard_conf_destroy(void);
+
+gboolean shard_conf_add_vdb(sharding_vdb_t* vdb);
+
+sharding_vdb_t *sharding_vdb_new();
+gboolean sharding_vdb_is_valid(sharding_vdb_t *vdb, int num_groups);
+void sharding_vdb_free(sharding_vdb_t *vdb);
+
+gboolean shard_conf_add_sharded_table(sharding_table_t* t);
+
+GList* shard_conf_get_vdb_list();
+GList* shard_conf_get_tables();
+
+gboolean shard_conf_write_json(chassis_config_t* conf_manager);
 
 #endif /* __SHARDING_CONFIG_H__ */

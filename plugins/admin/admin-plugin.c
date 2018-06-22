@@ -2795,7 +2795,7 @@ sql_stats_sampling_func(int fd, short what, void *arg)
     ring_buffer_add(&g_sql_count, stats->client_query.ro + stats->client_query.rw);
     ring_buffer_add(&g_trx_count, stats->xa_count);
 
-    g_debug("%s:call sql_stats_sampling_func", G_STRLOC);
+    g_message("%s:call sql_stats_sampling_func", G_STRLOC);
     static struct timeval ten_sec = { 10, 0 };
     /* EV_PERSIST not work for libevent1.4, re-activate timer each time */
     chassis_event_add_with_timeout(chas, g_sampling_timer, &ten_sec);

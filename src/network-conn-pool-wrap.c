@@ -54,6 +54,7 @@
 static void
 network_mysqld_con_idle_handle(int event_fd, short events, void *user_data)
 {
+    g_message("%s:visit network_mysqld_con_idle_handle", G_STRLOC);
     network_connection_pool_entry *pool_entry = user_data;
     network_connection_pool *pool = pool_entry->pool;
 

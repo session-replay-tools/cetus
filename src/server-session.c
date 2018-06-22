@@ -396,6 +396,7 @@ process_after_read(network_mysqld_con *con, server_session_t *ss)
 void
 server_session_con_handler(int event_fd, short events, void *user_data)
 {
+    g_message("%s:visit server_session_con_handler", G_STRLOC);
     server_session_t *ss = (server_session_t *)user_data;
     network_mysqld_con *con = ss->con;
     network_socket *sock = ss->server;

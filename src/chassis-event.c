@@ -19,6 +19,7 @@
  $%ENDLICENSE%$ */
 
 #include <glib.h>
+#include <string.h>
 #include <errno.h>
 
 #ifdef HAVE_CONFIG_H
@@ -106,11 +107,18 @@ chassis_event_loop(chassis_event_loop_t *loop)
             break;
         }
 
+        g_message("%s: enter event_base_dispatch", G_STRLOC);
+
         r = event_base_dispatch(loop);
 
+        g_message("%s: after event_base_dispatch:%d, errno:%d, str:%s",
+                G_STRLOC, r, errno, strerror(errno));
+
         if (r == -1) {
-            if (errno == EINTR)
+            if (errno == EINTR) {
+                g_message("%s: EINTR is met", G_STRLOC);
                 continue;
+            }
             g_critical("%s: leaving chassis_event_loop early, errno != EINTR was: %s (%d)",
                        G_STRLOC, g_strerror(errno), errno);
             break;

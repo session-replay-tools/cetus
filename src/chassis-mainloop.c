@@ -257,7 +257,7 @@ chassis_set_shutdown_location(const gchar *location)
 gboolean
 chassis_is_shutdown()
 {
-    return signal_shutdown == 1;
+    return signal_shutdown == 1 || cetus_terminate == 1;
 }
 
 static void

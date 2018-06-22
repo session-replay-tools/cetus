@@ -14,7 +14,7 @@ cetus_write_channel(int s, cetus_channel_t *ch, size_t size)
     struct iovec        iov[1];
     struct msghdr       msg;
 
-    g_debug("%s:call cetus_write_channel, fd:%d)", G_STRLOC, s);
+    g_debug("%s:call cetus_write_channel, fd:%d", G_STRLOC, s);
 
     union {
         struct cmsghdr  cm; 
@@ -58,7 +58,7 @@ cetus_write_channel(int s, cetus_channel_t *ch, size_t size)
 
     n = sendmsg(s, &msg, 0);
 
-    g_debug("%s: sendmsg to fd:%d, n:%d), size:%d", G_STRLOC, s, (int) n, (int) size);
+    g_debug("%s: sendmsg fd:%d, n:%d, size:%d", G_STRLOC, s, (int) n, (int) size);
     if (n == -1) {
         err = errno;
         if (err == EAGAIN) {
@@ -100,11 +100,12 @@ cetus_read_channel(int s, cetus_channel_t *ch, size_t size)
 
     n = recvmsg(s, &msg, 0);
 
-    g_debug("%s: recvmsg fd:%d, n:%d)", G_STRLOC, s, (int) n);
+    g_debug("%s: recvmsg fd:%d, n:%d", G_STRLOC, s, (int) n);
 
     if (n == -1) {
         err = errno;
         if (err == EAGAIN) {
+            g_message("%s:recvmsg() EAGAIN, errno:%d", G_STRLOC, errno);
             return NETWORK_SOCKET_WAIT_FOR_EVENT;
         }
 

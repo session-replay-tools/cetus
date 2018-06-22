@@ -3700,6 +3700,7 @@ process_timeout_event(network_mysqld_con *con)
 void
 network_mysqld_con_handle(int event_fd, short events, void *user_data)
 {
+    g_message("%s:visit network_mysqld_con_handle", G_STRLOC);
     network_mysqld_con_state_t ostate;
     network_mysqld_con *con = user_data;
     chassis *srv = con->srv;
@@ -4621,6 +4622,7 @@ process_self_read_auth_result(server_connection_state_t *con)
 static void
 network_mysqld_self_con_handle(int event_fd, short events, void *user_data)
 {
+    g_message("%s:visit network_mysqld_self_con_handle", G_STRLOC);
     int ostate;
     server_connection_state_t *con = (server_connection_state_t *)user_data;
     chassis *srv = con->srv;

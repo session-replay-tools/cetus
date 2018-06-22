@@ -14,7 +14,7 @@ typedef struct {
     int     signo;
     char   *signame;
     char   *name;
-    void  (*handler)(int signo, siginfo_t *siginfo, void *ucontext);
+    void (*handler)(int signo, siginfo_t *siginfo, void *ucontext);
 } cetus_signal_t;
 
 
@@ -300,7 +300,7 @@ cetus_init_signals()
 }
 
 
-static void
+static void 
 cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
 {
     char            *action;
@@ -318,7 +318,7 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
         }
     }
 
-    g_message("%s: we call here:%d", G_STRLOC, signo);
+    g_message("%s: cetus_signal_handler is called:%d, errno:%d", G_STRLOC, signo, errno);
     action = "";
 
     switch (cetus_process) {
@@ -387,6 +387,7 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
 
         case cetus_signal_value(CETUS_TERMINATE_SIGNAL):
         case SIGINT:
+            g_message("%s: call here:%d", G_STRLOC, signo);
             cetus_terminate = 1;
             action = ", exiting";
             break;
@@ -410,8 +411,8 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
         g_message("%s: signal %d (%s) received from %d %s", G_STRLOC,
                 signo, sig->signame, siginfo->si_pid, action);
     } else {
-        g_message("%s: signal %d (%s) received %s", G_STRLOC,
-                signo, sig->signame, action);
+        g_message("%s: signal %d (%s) received %s, err:%d", G_STRLOC,
+                signo, sig->signame, action, err);
     }
 
     if (ignore) {
@@ -450,6 +451,7 @@ cetus_process_get_status(void)
             err = errno;
 
             if (err == EINTR) {
+                g_message("%s: EINTR met when waitpid:%d", G_STRLOC, err);
                 continue;
             }
 

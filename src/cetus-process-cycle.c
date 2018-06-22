@@ -115,6 +115,8 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
 
         sigsuspend(&set);
 
+        g_message("%s: wake up", G_STRLOC);
+
         if (cetus_reap) {
             cetus_reap = 0;
             live = cetus_reap_children(cycle);
@@ -135,9 +137,10 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
                 continue;
             }
 
-            sigio = cycle->worker_processes + 2 /* cache processes */;
+            sigio = cycle->worker_processes;
 
             if (delay > 1000) {
+                g_message("%s: send kill sig to workers", G_STRLOC);
                 cetus_signal_worker_processes(cycle, SIGKILL);
             } else {
                 cetus_signal_worker_processes(cycle,
@@ -212,6 +215,7 @@ cetus_start_worker_processes(cetus_cycle_t *cycle, int n, int type)
         ch.slot = cetus_process_slot;
         ch.fd = cetus_processes[cetus_process_slot].channel[0];
 
+        g_message("%s: call cetus_pass_open_channel", G_STRLOC);
         cetus_pass_open_channel(cycle, &ch);
     }
 }
@@ -231,7 +235,7 @@ cetus_pass_open_channel(cetus_cycle_t *cycle, cetus_channel_t *ch)
             continue;
         }
 
-        g_debug("%s: pass channel s:%i pid:%d fd:%d to s:%i pid:%d fd:%d, ev base:%p, ev:%p", G_STRLOC,
+        g_message("%s: pass channel s:%i pid:%d fd:%d to s:%i pid:%d fd:%d, ev base:%p, ev:%p", G_STRLOC,
                 ch->slot, ch->pid, ch->fd,
                 i, cetus_processes[i].pid,
                 cetus_processes[i].channel[0], cycle->event_base, &cetus_channel_event);
@@ -300,6 +304,7 @@ cetus_signal_worker_processes(cetus_cycle_t *cycle, int signo)
         }
 
         if (ch.command) {
+            g_message("%s: call cetus_pass_open_channel", G_STRLOC);
             if (cetus_write_channel(cetus_processes[i].channel[0],
                                   &ch, sizeof(cetus_channel_t))
                 == NETWORK_SOCKET_SUCCESS)
@@ -381,7 +386,7 @@ cetus_reap_children(cetus_cycle_t *cycle)
                         continue;
                     }
 
-                    g_debug("%s: pass close channel s:%i pid:%d to:%d", G_STRLOC,
+                    g_message("%s: pass close channel s:%i pid:%d to:%d", G_STRLOC,
                                    ch.slot, ch.pid, cetus_processes[n].pid);
 
                     /* TODO: AGAIN */
@@ -410,6 +415,7 @@ cetus_reap_children(cetus_cycle_t *cycle)
                 ch.slot = cetus_process_slot;
                 ch.fd = cetus_processes[cetus_process_slot].channel[0];
 
+                g_message("%s: call cetus_pass_open_channel", G_STRLOC);
                 cetus_pass_open_channel(cycle, &ch);
 
                 live = 1;
@@ -580,9 +586,9 @@ cetus_channel_handler(int fd, short events, void *user_data)
     int                n;
     cetus_channel_t    ch;
 
-    g_debug("%s: channel handler", G_STRLOC);
+    g_message("%s: channel handler", G_STRLOC);
 
-    for ( ;; ) {
+    do {
 
         int ret = cetus_read_channel(fd, &ch, sizeof(cetus_channel_t));
 
@@ -636,6 +642,6 @@ cetus_channel_handler(int fd, short events, void *user_data)
             cetus_processes[ch.slot].channel[0] = -1;
             break;
         }
-    }
+    } while (!chassis_is_shutdown());
 }
 

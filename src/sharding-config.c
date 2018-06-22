@@ -90,6 +90,16 @@ sharding_tables_get(const char *schema, const char *table)
     return tinfo;
 }
 
+gboolean sharding_tables_add(sharding_table_t* table)
+{
+    if (sharding_tables_get(table->schema->str, table->name->str)) {
+        return FALSE; /* !! DON'T REPLACE ONLINE */
+    }
+    struct schema_table_t *st = schema_table_new(table->schema->str, table->name->str);
+    g_hash_table_insert(shard_conf_tables, st, table);
+    return TRUE;
+}
+
 static sharding_vdb_t *
 shard_vdbs_get_by_id(GList *vdbs, int id)
 {
@@ -126,25 +136,86 @@ sharding_table_free(gpointer q)
     g_free(info);
 }
 
+sharding_partition_t *sharding_partition_new(const char *group, const sharding_vdb_t *vdb)
+{
+    sharding_partition_t *p = g_new0(sharding_partition_t, 1);
+    p->method = vdb->method;
+    p->key_type = vdb->key_type;
+    p->hash_count = vdb->logic_shard_num;
+    p->group_name = g_string_new(group);
+    return p;
+}
+
 gboolean
 sharding_partition_contain_hash(sharding_partition_t *partition, int val)
 {
-    g_assert(partition->vdb->method == SHARD_METHOD_HASH);
-    if (val >= partition->vdb->logic_shard_num)
+    g_assert(partition->method == SHARD_METHOD_HASH);
+    if (val >= partition->hash_count)
         return FALSE;
     return TestBit(partition->hash_set, val);
 }
 
-static sharding_vdb_t *
-sharding_vdb_new()
+void sharding_partition_free(sharding_partition_t *p)
+{
+    if (p->method == SHARD_METHOD_RANGE) {
+        if (p->key_type == SHARD_DATA_TYPE_STR) {
+            g_free(p->value);
+            g_free(p->low_value);
+        }
+    }
+    if (p->group_name) {
+        g_string_free(p->group_name, TRUE);
+    }
+    g_free(p);
+}
+
+void sharding_partition_to_string(sharding_partition_t* p, GString* repr)
+{
+    g_string_truncate(repr, 0);
+    if (p->method == SHARD_METHOD_RANGE) {
+        if (p->key_type == SHARD_DATA_TYPE_STR) {
+            g_string_printf(repr, "(%s, %s]->%s", (char*)p->low_value, (char*)p->value,
+                            p->group_name->str);
+        } else {
+            g_string_printf(repr, "(%ld, %ld]->%s",(int64_t)p->low_value, (int64_t)p->value,
+                            p->group_name->str);
+        }
+    } else {
+        int i = 0;
+        g_string_append_c(repr, '[');
+        for (i = 0; i < p->hash_count; ++i) {
+            if (TestBit(p->hash_set, i)) {
+                g_string_append_printf(repr, "%d,", i);
+            }
+        }
+        g_string_truncate(repr, repr->len-1);
+        g_string_append_printf(repr, "]->%s", p->group_name->str);
+    }
+}
+
+void sharding_vdb_partitions_to_string(sharding_vdb_t* vdb, GString* repr)
+{
+    g_string_truncate(repr, 0);
+    GString* str = g_string_new(0);
+    int i = 0;
+    for (i=0; i < vdb->partitions->len; ++i) {
+        sharding_partition_t* part = g_ptr_array_index(vdb->partitions, i);
+        sharding_partition_to_string(part, str);
+        g_string_append(repr, str->str);
+        if (i != vdb->partitions->len - 1)
+            g_string_append(repr, "; ");
+    }
+    g_string_free(str, TRUE);
+}
+
+sharding_vdb_t *sharding_vdb_new()
 {
     sharding_vdb_t *vdb = g_new0(struct sharding_vdb_t, 1);
     vdb->partitions = g_ptr_array_new();
     return vdb;
 }
 
-static void
-sharding_vdb_free(sharding_vdb_t *vdb)
+void sharding_vdb_free(sharding_vdb_t *vdb)
 {
     if (!vdb) {
         return;
@@ -153,27 +224,13 @@ sharding_vdb_free(sharding_vdb_t *vdb)
     int i;
     for (i = 0; i < vdb->partitions->len; i++) {
         sharding_partition_t *item = g_ptr_array_index(vdb->partitions, i);
-        if (vdb->method == SHARD_METHOD_RANGE) {
-            if (vdb->key_type == SHARD_DATA_TYPE_STR) {
-                if (item->value) {
-                    g_free(item->value);
-                }
-                if (item->low_value) {
-                    g_free(item->low_value);
-                }
-            }
-        }
-        if (item->group_name) {
-            g_string_free(item->group_name, TRUE);
-        }
-        g_free(item);
+        sharding_partition_free(item);
     }
     g_ptr_array_free(vdb->partitions, TRUE);
     g_free(vdb);
 }
 
-static gboolean
-sharding_vdb_is_valid(sharding_vdb_t *vdb, int num_groups)
+gboolean sharding_vdb_is_valid(sharding_vdb_t *vdb, int num_groups)
 {
     if (vdb->method == SHARD_METHOD_HASH) {
         if (vdb->logic_shard_num <= 0 || vdb->logic_shard_num > MAX_HASH_VALUE_COUNT) {
@@ -361,12 +418,37 @@ shard_conf_set_vdb_list(GList *vdbs)
     shard_conf_vdbs = vdbs;
 }
 
+GList* shard_conf_get_vdb_list()
+{
+    return shard_conf_vdbs;
+}
+
 static void
 shard_conf_set_tables(GHashTable *tables)
 {
     if (shard_conf_tables)
         g_hash_table_destroy(shard_conf_tables);
     shard_conf_tables = tables;
+}
+
+static gboolean
+sharding_table_equal(gconstpointer v1, gconstpointer v2)
+{
+  const sharding_table_t *st1 = v1;
+  const sharding_table_t *st2 = v2;
+  int a = strcasecmp(st1->schema->str, st2->schema->str);
+  if (a == 0) {
+      return strcasecmp(st1->name->str, st2->name->str);
+  } else {
+      return a;
+  }
+}
+
+GList* shard_conf_get_tables()
+{
+    GList* tables = g_hash_table_get_values(shard_conf_tables);
+    tables = g_list_sort(tables, sharding_table_equal);
+    return tables;
 }
 
 static void
@@ -530,25 +612,35 @@ shard_conf_get_single_table_distinct_group(GPtrArray *groups, const char *db, co
     return groups;
 }
 
-static int
-sharding_type(const char *str)
+struct code_map_t {
+    const char *name;
+    int code;
+} key_type_map[] = {
+    {"INT", SHARD_DATA_TYPE_INT},
+    {"STR", SHARD_DATA_TYPE_STR},
+    {"DATE", SHARD_DATA_TYPE_DATE},
+    {"DATETIME", SHARD_DATA_TYPE_DATETIME},
+};
+
+int sharding_key_type(const char *str)
 {
-    struct code_map_t {
-        const char *name;
-        int code;
-    } map[] = {
-        {
-        "INT", SHARD_DATA_TYPE_INT}, {
-        "STR", SHARD_DATA_TYPE_STR}, {
-        "DATE", SHARD_DATA_TYPE_DATE}, {
-    "DATETIME", SHARD_DATA_TYPE_DATETIME},};
     int i;
-    for (i = 0; i < sizeof(map) / sizeof(*map); ++i) {
-        if (strcasecmp(map[i].name, str) == 0)
-            return map[i].code;
+    for (i = 0; i < sizeof(key_type_map) / sizeof(*key_type_map); ++i) {
+        if (strcasecmp(key_type_map[i].name, str) == 0)
+            return key_type_map[i].code;
     }
     g_critical("Wrong sharding setting <key_type:%s>", str);
     return -1;
+}
+
+const char* sharding_key_type_str(int type)
+{
+    int i;
+    for (i = 0; i < sizeof(key_type_map) / sizeof(*key_type_map); ++i) {
+        if (key_type_map[i].code == type)
+            return key_type_map[i].name;
+    }
+    return "error";
 }
 
 static int
@@ -577,9 +669,7 @@ parse_partitions(cJSON *root, const sharding_vdb_t *vdb, GPtrArray *partitions /
         /* null means unlimited */
         switch (cur->type) {
         case cJSON_NULL:       /* range: null */
-            item = g_new0(sharding_partition_t, 1);
-            item->vdb = vdb;
-            item->group_name = g_string_new(cur->string);
+            item = sharding_partition_new(cur->string, vdb);
             if (vdb->key_type == SHARD_DATA_TYPE_STR) {
                 item->value = NULL;
             } else {
@@ -588,17 +678,14 @@ parse_partitions(cJSON *root, const sharding_vdb_t *vdb, GPtrArray *partitions /
             g_ptr_array_add(partitions, item);
             break;
         case cJSON_Number:     /* range > 123 */
-            item = g_new0(sharding_partition_t, 1);
-            item->vdb = vdb;
-            item->group_name = g_string_new(cur->string);
+            item = sharding_partition_new(cur->string, vdb);
             item->value = (void *)(uint64_t)cur->valueint;
             g_ptr_array_add(partitions, item);
             break;
         case cJSON_String:     /* range > "str" */
-            item = g_new0(sharding_partition_t, 1);
-            item->vdb = vdb;
-            item->group_name = g_string_new(cur->string);
-            if (vdb->key_type == SHARD_DATA_TYPE_DATETIME || vdb->key_type == SHARD_DATA_TYPE_DATE) {
+            item = sharding_partition_new(cur->string, vdb);
+            if (vdb->key_type == SHARD_DATA_TYPE_DATETIME
+                || vdb->key_type == SHARD_DATA_TYPE_DATE) {
                 gboolean ok;
                 int epoch = chassis_epoch_from_string(cur->valuestring, &ok);
                 if (ok)
@@ -613,9 +700,7 @@ parse_partitions(cJSON *root, const sharding_vdb_t *vdb, GPtrArray *partitions /
         case cJSON_Array:{
             cJSON *elem = cur->child;
             if (cJSON_Number == elem->type) {   /* hash in [0,3,5] */
-                item = g_new0(sharding_partition_t, 1);
-                item->vdb = vdb;
-                item->group_name = g_string_new(cur->string);
+                item = sharding_partition_new(cur->string, vdb);
                 for (; elem; elem = elem->next) {
                     if (elem->type != cJSON_Number) {
                         g_critical(G_STRLOC "array has different type");
@@ -630,10 +715,9 @@ parse_partitions(cJSON *root, const sharding_vdb_t *vdb, GPtrArray *partitions /
                 g_ptr_array_add(partitions, item);
             } else if (cJSON_String == elem->type) {    /* TODO: range in [0, 100, 200] */
                 while (elem != NULL) {
-                    item = g_new0(sharding_partition_t, 1);
-                    item->vdb = vdb;
-                    item->group_name = g_string_new(cur->string);
-                    if (vdb->key_type == SHARD_DATA_TYPE_DATETIME || vdb->key_type == SHARD_DATA_TYPE_DATE) {
+                    item = sharding_partition_new(cur->string, vdb);
+                    if (vdb->key_type == SHARD_DATA_TYPE_DATETIME
+                        || vdb->key_type == SHARD_DATA_TYPE_DATE) {
                         gboolean ok;
                         int epoch = chassis_epoch_from_string(elem->valuestring, &ok);
                         if (ok)
@@ -686,13 +770,14 @@ cmp_shard_range_groups_str(gconstpointer a, gconstpointer b)
     return strcmp(s1, s2);
 }
 
-static void
-setup_partitions(GPtrArray *partitions, sharding_vdb_t *vdb)
+static void setup_partitions(GPtrArray *partitions, sharding_vdb_t *vdb)
 {
     if (vdb->method == SHARD_METHOD_RANGE) {
         /* sort partitions */
         if (vdb->key_type == SHARD_DATA_TYPE_INT
-            || vdb->key_type == SHARD_DATA_TYPE_DATETIME || vdb->key_type == SHARD_DATA_TYPE_DATE) {
+            || vdb->key_type == SHARD_DATA_TYPE_DATETIME
+            || vdb->key_type == SHARD_DATA_TYPE_DATE)
+        {
             g_ptr_array_sort(partitions, cmp_shard_range_groups_int);
         } else {
             g_ptr_array_sort(partitions, cmp_shard_range_groups_str);
@@ -703,6 +788,7 @@ setup_partitions(GPtrArray *partitions, sharding_vdb_t *vdb)
         int i;
         for (i = 0; i < partitions->len; ++i) {
             sharding_partition_t *part = g_ptr_array_index(partitions, i);
+            part->key_type = vdb->key_type;
             if (vdb->key_type == SHARD_DATA_TYPE_STR) {
                 part->low_value = prev_str;
                 if (i != partitions->len - 1) {
@@ -712,6 +798,13 @@ setup_partitions(GPtrArray *partitions, sharding_vdb_t *vdb)
                 part->low_value = (void *)prev_value;
                 prev_value = (int64_t) part->value;
             }
+        }
+    } else {
+        int i;
+        for (i = 0; i < partitions->len; ++i) {
+            sharding_partition_t *part = g_ptr_array_index(partitions, i);
+            part->key_type = vdb->key_type;
+            part->hash_count = vdb->logic_shard_num;
         }
     }
 }
@@ -741,7 +834,7 @@ parse_vdbs(cJSON *vdb_root)
         } else {
             vdb->id = atoi(id->valuestring);
         }
-        vdb->key_type = sharding_type(key_type->valuestring);
+        vdb->key_type = sharding_key_type(key_type->valuestring);
         if (vdb->key_type < 0) {
             g_critical("Wrong sharding settings <key_type:%s>", key_type->valuestring);
         }
@@ -854,4 +947,113 @@ load_shard_from_json(gchar *json_str)
     g_hash_table_insert(shard_hash, "vdb_list", vdb_list);
     g_hash_table_insert(shard_hash, "single_tables", single_list);  /* NULLable */
     return shard_hash;
+}
+
+gboolean shard_conf_add_vdb(sharding_vdb_t* vdb)
+{
+    GList* l = shard_conf_vdbs;
+    for (l; l; l = l->next) {
+        sharding_vdb_t* base = l->data;
+        if (base->id == vdb->id) {
+            g_warning("add vdb dup id");
+            return FALSE;
+        }
+    }
+    setup_partitions(vdb->partitions, vdb);
+    shard_conf_vdbs = g_list_append(shard_conf_vdbs, vdb);
+    return TRUE;
+}
+
+gboolean shard_conf_add_sharded_table(sharding_table_t* t)
+{
+    sharding_vdb_t* vdb = shard_vdbs_get_by_id(shard_conf_vdbs, t->vdb_id);
+    if (vdb) {
+        return sharding_tables_add(t);
+    } else {
+        return FALSE;
+    }
+}
+
+static cJSON* json_create_vdb_object(sharding_vdb_t* vdb)
+{
+    cJSON *node = cJSON_CreateObject();
+    cJSON_AddNumberToObject(node, "id", vdb->id);
+    cJSON_AddStringToObject(node, "type", sharding_key_type_str(vdb->key_type));
+    cJSON_AddStringToObject(node, "method", vdb->method==SHARD_METHOD_HASH?"hash":"range");
+    cJSON_AddNumberToObject(node, "num", vdb->logic_shard_num);
+    cJSON* pob = cJSON_CreateObject();
+    int i=0;
+    for (i=0; i < vdb->partitions->len; ++i) {
+        sharding_partition_t* p = g_ptr_array_index(vdb->partitions, i);
+        if (vdb->method == SHARD_METHOD_RANGE) {
+            if (vdb->key_type == SHARD_DATA_TYPE_STR) {
+                cJSON_AddStringToObject(pob, p->group_name->str, (char*)p->value);
+            } else if (vdb->key_type == SHARD_DATA_TYPE_INT) {
+                cJSON_AddNumberToObject(pob, p->group_name->str, (int64_t)p->value);
+            } else { /*datetime*/
+                char time_str[32] = {0};
+                time_t t = (time_t)p->value;
+                chassis_epoch_to_string(&t, C(time_str));
+                cJSON_AddStringToObject(pob, p->group_name->str, time_str);
+            }
+        } else { /*hash*/
+            GArray* numbers = g_array_new(0,0,sizeof(int));
+            int j;
+            for (j = 0; j < p->hash_count; ++j) {
+                if (TestBit(p->hash_set, j)) {
+                    g_array_append_val(numbers, j);
+                }
+            }
+            cJSON* num_array = cJSON_CreateIntArray((int*)numbers->data, numbers->len);
+            g_array_free(numbers, TRUE);
+            cJSON_AddItemToObject(pob, p->group_name->str, num_array);
+        }
+    }
+    cJSON_AddItemToObject(node, "partitions", pob);
+    return node;
+}
+
+gboolean shard_conf_write_json(chassis_config_t* conf_manager)
+{
+    cJSON* vdb_array = cJSON_CreateArray();
+    GList* l;
+    for (l = shard_conf_vdbs; l; l = l->next) {
+        sharding_vdb_t* vdb = l->data;
+        cJSON* node = json_create_vdb_object(vdb);
+        cJSON_AddItemToArray(vdb_array, node);
+    }
+
+    cJSON* table_array = cJSON_CreateArray();
+    GList* tables = shard_conf_get_tables();
+    for (l = tables; l; l = l->next) {
+        sharding_table_t* t = l->data;
+        cJSON* node = cJSON_CreateObject();
+        cJSON_AddStringToObject(node, "db", t->schema->str);
+        cJSON_AddStringToObject(node, "table", t->name->str);
+        cJSON_AddStringToObject(node, "pkey", t->pkey->str);
+        cJSON_AddNumberToObject(node, "vdb", t->vdb_id);
+        cJSON_AddItemToArray(table_array, node);
+    }
+    cJSON* root = cJSON_CreateObject();
+    cJSON_AddItemToObject(root, "vdb", vdb_array);
+    cJSON_AddItemToObject(root, "table", table_array);
+
+    if (shard_conf_single_tables) {
+        cJSON* single_table_array = cJSON_CreateArray();
+        for (l = shard_conf_single_tables; l; l = l->next) {
+            struct single_table_t* t = l->data;
+            cJSON* node = cJSON_CreateObject();
+            cJSON_AddStringToObject(node, "table", t->name->str);
+            cJSON_AddStringToObject(node, "db", t->schema->str);
+            cJSON_AddStringToObject(node, "group", t->group->str);
+            cJSON_AddItemToArray(single_table_array, node);
+        }
+        cJSON_AddItemToObject(root, "single_tables", single_table_array);
+    }
+
+    char* json_str = cJSON_Print(root);
+    chassis_config_write_object(conf_manager, "sharding-new", json_str);
+    cJSON_Delete(root);
+    g_free(json_str);
+    return TRUE;
 }

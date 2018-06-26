@@ -2,13 +2,12 @@
 #define ADMIN_COMMANDS_H
 
 #include "glib-ext.h"
+#include "network-mysqld.h"
 
 typedef struct token_t {
   char* z;
   int n;
 } token_t;
-
-typedef struct network_mysqld_con network_mysqld_con;
 
 void admin_clear_error(network_mysqld_con*);
 int admin_get_error(network_mysqld_con*);

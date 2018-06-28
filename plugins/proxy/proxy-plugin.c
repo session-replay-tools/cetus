@@ -2556,12 +2556,12 @@ network_mysqld_proxy_plugin_get_options(chassis_plugin_config *config)
 
     chassis_options_add(&opts, "proxy-read-timeout",
                         0, 0, OPTION_ARG_DOUBLE, &(config->read_timeout_dbl),
-                        "read timeout in seconds (default: 10 minutes)", NULL,
+                        "read timeout in seconds (default: 600 seconds)", NULL,
                         assign_proxy_read_timeout, show_proxy_read_timeout, ALL_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-write-timeout",
                         0, 0, OPTION_ARG_DOUBLE, &(config->write_timeout_dbl),
-                        "write timeout in seconds (default: 10 minutes)", NULL,
+                        "write timeout in seconds (default: 600 seconds)", NULL,
                         assign_proxy_write_timeout, show_proxy_write_timeout, ALL_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-allow-ip",

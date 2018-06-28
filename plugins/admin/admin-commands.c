@@ -3,6 +3,7 @@
 #endif
 
 #include <ctype.h>
+#include <errno.h>
 #include <sys/stat.h>
 
 #include "admin-commands.h"

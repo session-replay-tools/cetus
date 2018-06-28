@@ -10,8 +10,9 @@
 #define CETUS_CMD_QUIT           3
 #define CETUS_CMD_TERMINATE      4
 #define CETUS_CMD_REOPEN         5
+#define CETUS_CMD_ADMIN          6
 
-
+#define MAX_ADMIN_SQL_LEN 512
 typedef struct {
     unsigned int command;
     int slot;
@@ -19,6 +20,15 @@ typedef struct {
     int num;
     pid_t   pid;
     struct event *event;
+} cetus_channel_mininum_t;
+
+
+typedef struct {
+    cetus_channel_mininum_t basics;
+    int len;
+    int admin_sql_resp_len;
+    char admin_sql[MAX_ADMIN_SQL_LEN];
+    unsigned char admin_sql_resp[0];
 } cetus_channel_t;
 
 

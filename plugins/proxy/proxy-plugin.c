@@ -626,6 +626,7 @@ process_non_trans_query(network_mysqld_con *con, sql_context_t *context, mysqld_
     }                           /* end switch */
 
     if (con->srv->master_preferred || context->rw_flag & CF_WRITE || need_to_visit_master) {
+            g_debug("%s:rw here", G_STRLOC);
         /* rw operation */
         con->srv->query_stats.client_query.rw++;
         if (is_orig_ro_server) {
@@ -636,6 +637,7 @@ process_non_trans_query(network_mysqld_con *con, sql_context_t *context, mysqld_
             }
         }
     } else {                    /* ro operation */
+            g_debug("%s:ro here", G_STRLOC);
         con->srv->query_stats.client_query.ro++;
         con->is_read_ro_server_allowed = 1;
         if (con->srv->query_cache_enabled) {
@@ -1257,7 +1259,8 @@ network_read_query(network_mysqld_con *con, proxy_plugin_con_t *st)
     con->parse.command = command;
     con->is_in_sess_context = 0;
 
-    g_debug("%s: command:%d, backend ndx:%d, con:%p", G_STRLOC, command, backend_ndx, con);
+    g_debug("%s: command:%d, backend ndx:%d, con:%p, orig sql:%s",
+            G_STRLOC, command, backend_ndx, con, con->orig_sql->str);
 
     if (con->is_in_transaction) {
         g_debug("%s: still in tran, backend ndx:%d", G_STRLOC, backend_ndx);
@@ -1623,7 +1626,7 @@ proxy_get_backend_ndx(network_mysqld_con *con, int type, gboolean force_slave)
             } else {
                 idx = network_backends_get_ro_ndx(g->backends);
             }
-            g_debug(G_STRLOC "x: %d, read_master_percentage: %d, read: %d\n",
+            g_debug(G_STRLOC ": %d, read_master_percentage: %d, read: %d\n",
                     x, con->config->read_master_percentage, idx);
         }
     } else {                    /* type == BACKEND_TYPE_RW */
@@ -2556,12 +2559,12 @@ network_mysqld_proxy_plugin_get_options(chassis_plugin_config *config)
 
     chassis_options_add(&opts, "proxy-read-timeout",
                         0, 0, OPTION_ARG_DOUBLE, &(config->read_timeout_dbl),
-                        "read timeout in seconds (default: 10 minutes)", NULL,
+                        "read timeout in seconds (default: 600 seconds)", NULL,
                         assign_proxy_read_timeout, show_proxy_read_timeout, ALL_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-write-timeout",
                         0, 0, OPTION_ARG_DOUBLE, &(config->write_timeout_dbl),
-                        "write timeout in seconds (default: 10 minutes)", NULL,
+                        "write timeout in seconds (default: 600 seconds)", NULL,
                         assign_proxy_write_timeout, show_proxy_write_timeout, ALL_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-allow-ip",

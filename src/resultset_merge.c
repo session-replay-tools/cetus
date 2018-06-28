@@ -2802,6 +2802,146 @@ merge_for_show_warnings(network_queue *send_queue, GPtrArray *recv_queues,
 }
 
 static int
+merge_for_admin(sql_context_t *context, network_queue *send_queue, GPtrArray *recv_queues,
+                        network_mysqld_con *con, cetus_result_t *res_merge, result_merge_t *merged_result)
+{
+    guint64 field_count = 0;
+    if (!check_field_count_consistant(recv_queues, merged_result, &field_count)) {
+        return 0;
+    }
+    res_merge->field_count = field_count;
+
+    GList **candidates = g_new0(GList *, recv_queues->len);
+    /* field-count-packet + eof-packet */
+    guint pkt_count = res_merge->field_count + 2;
+
+    if (!check_network_packet_err(con, candidates, recv_queues, send_queue, res_merge, merged_result)) {
+        g_warning("%s:packet err is met", G_STRLOC);
+        g_free(candidates);
+        return 0;
+    }
+
+    merge_parameters_t *data = g_new0(merge_parameters_t, 1);
+
+    data->send_queue = send_queue;
+    data->recv_queues = recv_queues;
+    data->candidates = candidates;
+    data->pkt_count = pkt_count;
+    data->limit.offset = 0;
+    data->limit.row_count = G_MAXINT32;
+
+    data->pack_err_met = 0;
+
+    con->data = data;
+
+    if (!do_simple_merge(con, con->data, 1)) {
+        g_warning("%s:merge failed", G_STRLOC);
+        merged_result->status = RM_FAIL;
+        return 0;
+    }
+
+    pkt_count = data->pkt_count;
+
+    /* after adding all packets we don't need candidate list anymore */
+
+    /* need to append EOF after all Row Data Packets?? Yes
+     * update packet number in header 
+     */
+
+    g_debug("%s: append here", G_STRLOC);
+    /* TODO if in trans, then needs to set 'in transaction' flag ? */
+    GString *eof_pkt = g_string_new_len("\x05\x00\x00\x07\xfe\x00\x00\x02\x00", 9);
+    eof_pkt->str[3] = pkt_count + 1;
+    network_queue_append(send_queue, eof_pkt);
+
+    return 1;
+}
+
+static int
+check_fail_met(sql_context_t *context, network_queue *send_queue, GPtrArray *recv_queues,
+               network_mysqld_con *con, uint64_t *uniq_id, int *call_fail_met, result_merge_t *merged_result)
+{
+    int p;
+    char *orig_sql = con->orig_sql->str;
+    for (p = 0; p < recv_queues->len; p++) {
+        network_queue *recv_q = g_ptr_array_index(recv_queues, p);
+        GString *pkt = g_queue_peek_head(recv_q->chunks);
+        /* only check the first packet in each recv_queue */
+        if (pkt != NULL && pkt->len > NET_HEADER_SIZE) {
+            guchar pkt_type = get_pkt_type(pkt);
+            if (pkt_type == MYSQLD_PACKET_ERR || pkt_type == MYSQLD_PACKET_EOF) {
+                server_session_t *ss = g_ptr_array_index(con->servers, p);
+                if (pkt_type == MYSQLD_PACKET_ERR) {
+                    g_warning("%s: failed query:%s, server:%s", G_STRLOC, orig_sql, ss->server->dst->name->str);
+                }
+                if (context->stmt_type == STMT_CALL) {
+                    if (!(*call_fail_met)) {
+                        *call_fail_met = 1;
+                        chassis *srv = con->srv;
+                        *uniq_id = incremental_guid_get_next(&(srv->guid_state));
+                    }
+                    log_packet_error_info(con->client, ss->server, orig_sql, pkt, *uniq_id);
+                    continue;
+                } else {
+                    network_queue_append(send_queue, pkt);
+                    g_queue_pop_head(recv_q->chunks);
+                    if (context->rw_flag & CF_DDL) {
+                        g_warning("%s: failed ddl query:%s, server:%s",
+                                  G_STRLOC, orig_sql, ss->server->dst->name->str);
+                    }
+                    return 0;
+                }
+            }
+        } else {
+            g_warning("%s: merge failed for con:%p", G_STRLOC, con);
+            merged_result->status = RM_FAIL;
+            return 0;
+        }
+    }
+
+    return 1;
+}
+
+
+void
+admin_resultset_merge(network_mysqld_con *con, network_queue *send_queue, GPtrArray *recv_queues,
+        result_merge_t *merged_result)
+{
+    shard_plugin_con_t *st = con->plugin_con_state;
+    sql_context_t *context = st->sql_context;
+
+    cetus_result_t res_merge = { 0 };
+
+    if (!send_queue || !recv_queues || recv_queues->len <= 0 || !context) {
+        g_warning("%s: packet->str[NET_HEADER_SIZE] != MYSQLD_PACKET_EOF", G_STRLOC);
+        merged_result->status = RM_FAIL;
+        return;
+    }
+
+    switch (context->stmt_type) {
+    case STMT_SELECT:
+        if (!merge_for_admin(context, send_queue, recv_queues, con, &res_merge, merged_result)) {
+            cetus_result_destroy(&res_merge);
+            return;
+        }
+        break;
+    case STMT_INSERT:
+    case STMT_UPDATE:
+    case STMT_DELETE:
+    case STMT_SET:
+    default:
+        if (!merge_for_modify(context, send_queue, recv_queues, con, &res_merge, merged_result)) {
+            cetus_result_destroy(&res_merge);
+            return;
+        }
+        break;
+    }
+
+    cetus_result_destroy(&res_merge);
+    merged_result->status = RM_SUCCESS;
+}
+
+static int
 merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *recv_queues,
                  network_mysqld_con *con, cetus_result_t *res_merge, result_merge_t *merged_result)
 {
@@ -2985,51 +3125,6 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
             network_queue_append(send_queue, eof_pkt);
         } else {
             g_debug("%s: err packet is met", G_STRLOC);
-        }
-    }
-
-    return 1;
-}
-
-static int
-check_fail_met(sql_context_t *context, network_queue *send_queue, GPtrArray *recv_queues,
-               network_mysqld_con *con, uint64_t *uniq_id, int *call_fail_met, result_merge_t *merged_result)
-{
-    int p;
-    char *orig_sql = con->orig_sql->str;
-    for (p = 0; p < recv_queues->len; p++) {
-        network_queue *recv_q = g_ptr_array_index(recv_queues, p);
-        GString *pkt = g_queue_peek_head(recv_q->chunks);
-        /* only check the first packet in each recv_queue */
-        if (pkt != NULL && pkt->len > NET_HEADER_SIZE) {
-            guchar pkt_type = get_pkt_type(pkt);
-            if (pkt_type == MYSQLD_PACKET_ERR || pkt_type == MYSQLD_PACKET_EOF) {
-                server_session_t *ss = g_ptr_array_index(con->servers, p);
-                if (pkt_type == MYSQLD_PACKET_ERR) {
-                    g_warning("%s: failed query:%s, server:%s", G_STRLOC, orig_sql, ss->server->dst->name->str);
-                }
-                if (context->stmt_type == STMT_CALL) {
-                    if (!(*call_fail_met)) {
-                        *call_fail_met = 1;
-                        chassis *srv = con->srv;
-                        *uniq_id = incremental_guid_get_next(&(srv->guid_state));
-                    }
-                    log_packet_error_info(con->client, ss->server, orig_sql, pkt, *uniq_id);
-                    continue;
-                } else {
-                    network_queue_append(send_queue, pkt);
-                    g_queue_pop_head(recv_q->chunks);
-                    if (context->rw_flag & CF_DDL) {
-                        g_warning("%s: failed ddl query:%s, server:%s",
-                                  G_STRLOC, orig_sql, ss->server->dst->name->str);
-                    }
-                    return 0;
-                }
-            }
-        } else {
-            g_warning("%s: merge failed for con:%p", G_STRLOC, con);
-            merged_result->status = RM_FAIL;
-            return 0;
         }
     }
 

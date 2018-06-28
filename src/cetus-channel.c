@@ -23,7 +23,7 @@ cetus_write_channel(int s, cetus_channel_t *ch, size_t size)
         char            space[CMSG_SPACE(sizeof(int))];
     } cmsg;
 
-    if (ch->fd == -1) {
+    if (ch->basics.fd == -1) {
         msg.msg_control = NULL;
         msg.msg_controllen = 0;
 
@@ -37,7 +37,7 @@ cetus_write_channel(int s, cetus_channel_t *ch, size_t size)
         cmsg.cm.cmsg_level = SOL_SOCKET;
         cmsg.cm.cmsg_type = SCM_RIGHTS;
 
-        memcpy(CMSG_DATA(&cmsg.cm), &ch->fd, sizeof(int));
+        memcpy(CMSG_DATA(&cmsg.cm), &ch->basics.fd, sizeof(int));
     }
 
     msg.msg_flags = 0;
@@ -120,27 +120,31 @@ cetus_read_channel(int s, cetus_channel_t *ch, size_t size)
         return NETWORK_SOCKET_ERROR;
     }
 
-    if ((size_t) n < sizeof(cetus_channel_t)) {
+    if ((size_t) n < sizeof(cetus_channel_mininum_t)) {
         g_critical("%s:recvmsg() returned not enough data: %d", G_STRLOC, (int) n);
         return NETWORK_SOCKET_ERROR;
     }
 
-    if (ch->command == CETUS_CMD_OPEN_CHANNEL) {
+    switch (ch->basics.command) {
+        case CETUS_CMD_ADMIN:
+        case CETUS_CMD_OPEN_CHANNEL: 
+            if (cmsg.cm.cmsg_len < (socklen_t) CMSG_LEN(sizeof(int))) {
+                g_critical("%s:recvmsg() returned too small ancillary data:%d", 
+                        G_STRLOC, (int) n);
+                return NETWORK_SOCKET_ERROR;
+            }
 
-        if (cmsg.cm.cmsg_len < (socklen_t) CMSG_LEN(sizeof(int))) {
-            g_critical("%s:recvmsg() returned too small ancillary data:%d", 
-                    G_STRLOC, (int) n);
-            return NETWORK_SOCKET_ERROR;
-        }
+            if (cmsg.cm.cmsg_level != SOL_SOCKET || cmsg.cm.cmsg_type != SCM_RIGHTS)
+            {
+                g_critical("%s:recvmsg() returned invalid ancillary data level %d or type %d", 
+                        G_STRLOC, cmsg.cm.cmsg_level, cmsg.cm.cmsg_type);
+                return NETWORK_SOCKET_ERROR;
+            }
 
-        if (cmsg.cm.cmsg_level != SOL_SOCKET || cmsg.cm.cmsg_type != SCM_RIGHTS)
-        {
-            g_critical("%s:recvmsg() returned invalid ancillary data level %d or type %d", 
-                    G_STRLOC, cmsg.cm.cmsg_level, cmsg.cm.cmsg_type);
-            return NETWORK_SOCKET_ERROR;
-        }
-
-        memcpy(&ch->fd, CMSG_DATA(&cmsg.cm), sizeof(int));
+            memcpy(&ch->basics.fd, CMSG_DATA(&cmsg.cm), sizeof(int));
+            break;
+        default:
+            break;
     }
 
     if (msg.msg_flags & (MSG_TRUNC|MSG_CTRUNC)) {
@@ -148,7 +152,7 @@ cetus_read_channel(int s, cetus_channel_t *ch, size_t size)
     }
 
 
-    ch->num = n;
+    ch->basics.num = n;
 
     return NETWORK_SOCKET_SUCCESS;
 }

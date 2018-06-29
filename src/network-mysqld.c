@@ -1710,11 +1710,17 @@ build_attr_statements(network_mysqld_con *con)
     }
 }
 
-void
+int
 shard_build_xa_query(network_mysqld_con *con, server_session_t *ss)
 {
     network_socket *recv_sock = con->client;
     GList *chunk = recv_sock->recv_queue->chunks->head;
+
+    if (chunk == NULL) {
+        g_critical("%s:chunk is nil", G_STRLOC);
+        return -1;
+    }
+
     GString *packet = (GString *)(chunk->data);
 
     g_debug("%s:packet id:%d when get server", G_STRLOC, ss->server->last_packet_id);
@@ -1736,6 +1742,8 @@ shard_build_xa_query(network_mysqld_con *con, server_session_t *ss)
     con->is_xa_query_sent = 1;
     con->all_participate_num++;
     con->resp_expected_num++;
+
+    return 0;
 }
 
 static void
@@ -1885,7 +1893,7 @@ disp_xa_abnormal_resultset(network_mysqld_con *con, server_session_t *ss,
     }
 }
 
-static void
+static int
 disp_xa_according_state(network_mysqld_con *con, server_session_t *ss,
                         int *is_xa_cmd_met, int *is_xa_query, char **p_buffer, char *buffer, int end)
 {
@@ -1901,7 +1909,10 @@ disp_xa_according_state(network_mysqld_con *con, server_session_t *ss,
         snprintf(*p_buffer, XA_BUF_LEN - (*p_buffer - buffer), "%s@%d",
                  ss->server->dst->name->str, ss->server->challenge->thread_id);
         *p_buffer = *p_buffer + strlen(*p_buffer);
-        shard_build_xa_query(con, ss);
+        if (shard_build_xa_query(con, ss) == -1) {
+            g_warning("%s:shard_build_xa_query failed for con:%p", G_STRLOC, con);
+            return -1;
+        }
         *is_xa_query = 1;
         g_debug("%s:set is xa query true for con:%p", G_STRLOC, con);
         if (con->is_auto_commit) {
@@ -1931,6 +1942,8 @@ disp_xa_according_state(network_mysqld_con *con, server_session_t *ss,
             break;
         }
     }
+    
+    return 0;
 }
 
 static void
@@ -2010,7 +2023,13 @@ build_xa_statements(network_mysqld_con *con)
         if (result == -1) {
             disp_xa_abnormal_resultset(con, ss, &is_xa_cmd_met, &p_buffer, buffer, end);
         } else {
-            disp_xa_according_state(con, ss, &is_xa_cmd_met, &is_xa_query, &p_buffer, buffer, end);
+            if (disp_xa_according_state(con, ss, &is_xa_cmd_met,
+                        &is_xa_query, &p_buffer, buffer, end) == -1)
+            {
+                con->server_to_be_closed = 1;
+                con->dist_tran_state = NEXT_ST_XA_OVER;
+                return;
+            }
         }
 
         global_xa_state = ss->dist_tran_state;
@@ -2359,6 +2378,12 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
     }
 
     con->resp_too_long = 0;
+
+    /* check for tracing some problems and it will be removed later */
+    if (con->client->recv_queue->chunks->head == NULL) {
+        g_critical("%s:client recv queue head is nil", G_STRLOC);
+    }
+
     g_debug("%s:call read query", G_STRLOC);
     network_socket_retval_t ret = plugin_call(srv, con, con->state);
     switch (ret) {
@@ -4797,6 +4822,7 @@ network_connection_pool_create_conn(network_mysqld_con *con)
             } else if (total >= pool->mid_idle_connections) {
                 int idle_conn = total - backend->connected_clients;
                 if (idle_conn > backend->connected_clients) {
+                    g_debug("%s: idle conn num is enough:%d, %d", G_STRLOC, idle_conn, backend->connected_clients);
                     continue;
                 }
                 int is_need_to_create = 0;
@@ -4804,17 +4830,23 @@ network_connection_pool_create_conn(network_mysqld_con *con)
                     case BACKEND_TYPE_RW:
                         if (con->master_conn_shortaged) {
                             is_need_to_create = 1;
+                        } else {
+                            g_message("%s: master_conn_shortaged false", G_STRLOC);
                         }
                         break;
                     case BACKEND_TYPE_RO:
                         if (con->slave_conn_shortaged) {
                             is_need_to_create = 1;
+                        } else {
+                            g_message("%s: slave_conn_shortaged false", G_STRLOC);
                         }
                         break;
                     default:
+                        g_warning("%s: unknown type:%d", G_STRLOC, backend->type);
                         break;
                 }
                 if (!is_need_to_create) {
+                    g_message("%s: is_need_to_create false", G_STRLOC);
                     continue;
                 }
             }

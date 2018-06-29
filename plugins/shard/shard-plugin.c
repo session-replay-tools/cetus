@@ -270,6 +270,10 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
         }
     }
 
+    con->master_conn_shortaged = 0;
+    con->slave_conn_shortaged = 0;
+    con->use_slave_forced = 0;
+
     rc = proxy_get_server_list(con);
 
     switch (rc) {
@@ -1257,6 +1261,12 @@ proxy_get_pooled_connection(network_mysqld_con *con,
 
     *sock = network_connection_pool_get(backend->pool, con->client->response->username, is_robbed);
     if (*sock == NULL) {
+        if (type == BACKEND_TYPE_RW) {
+            con->master_conn_shortaged = 1;
+        } else {
+            con->slave_conn_shortaged = 1;
+        }
+
         return FALSE;
     }
 
@@ -1797,6 +1807,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
                         if (con->dist_tran_failed) {
                             network_queue_clear(con->client->recv_queue);
                             network_mysqld_queue_reset(con->client);
+                            g_message("%s: clear recv queue", G_STRLOC);
                         }
                     } else {
                         if (!ss->participated) {
@@ -1817,7 +1828,12 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
                         snprintf(p_xa_log_buffer, XA_LOG_BUF_LEN - (p_xa_log_buffer - xa_log_buffer),
                                  "%s@%d", ss->server->dst->name->str, ss->server->challenge->thread_id);
                         p_xa_log_buffer = p_xa_log_buffer + strlen(p_xa_log_buffer);
-                        shard_build_xa_query(con, ss);
+                        if (shard_build_xa_query(con, ss) == -1) {
+                            g_warning("%s:shard_build_xa_query failed for con:%p", G_STRLOC, con);
+                            con->server_to_be_closed = 1;
+                            con->dist_tran_state = NEXT_ST_XA_OVER;
+                            return NETWORK_SOCKET_ERROR;
+                        }
                         is_xa_query = 1;
                         if (con->is_auto_commit) {
                             ss->dist_tran_state = NEXT_ST_XA_END;

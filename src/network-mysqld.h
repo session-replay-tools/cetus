@@ -771,6 +771,6 @@ NETWORK_API gboolean shard_set_autocommit(network_mysqld_con *con);
 NETWORK_API gboolean shard_set_charset_consistant(network_mysqld_con *con);
 NETWORK_API gboolean shard_set_default_db_consistant(network_mysqld_con *con);
 NETWORK_API gboolean shard_set_multi_stmt_consistant(network_mysqld_con *con);
-NETWORK_API void shard_build_xa_query(network_mysqld_con *con, server_session_t *ss);
+NETWORK_API int shard_build_xa_query(network_mysqld_con *con, server_session_t *ss);
 
 #endif

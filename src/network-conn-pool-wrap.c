@@ -208,6 +208,8 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
                 g_message("%s: st backend ndx array is null:%p", G_STRLOC, con);
             } else {
                 if (st->backend_ndx_array[i] == 0) {
+                    g_message("%s: i:%d backend_ndx_array value:%d for con:%p",
+                            G_STRLOC, i, st->backend_ndx_array[i], con);
                     continue;
                 }
 
@@ -267,6 +269,7 @@ mysqld_con_reserved_connections_add(network_mysqld_con *con, network_socket *soc
     if (st->backend_ndx_array == NULL) {
         st->backend_ndx_array = g_new0(short, MAX_SERVER_NUM);
         st->backend_ndx_array[st->backend_ndx] = 1; /* current sock index = 0 */
+        g_debug("%s: set st->backend_ndx:%d ndx array 1", G_STRLOC, st->backend_ndx);
     }
 
     if (con->servers == NULL) {
@@ -276,6 +279,7 @@ mysqld_con_reserved_connections_add(network_mysqld_con *con, network_socket *soc
     }
     g_ptr_array_add(con->servers, sock);
     st->backend_ndx_array[backend_idx] = con->servers->len;
+    g_debug("%s: set backend_ndx:%d ndx array:%d", G_STRLOC, backend_idx, con->servers->len);
 }
 
 network_socket *

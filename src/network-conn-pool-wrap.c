@@ -349,9 +349,15 @@ network_connection_pool_swap(network_mysqld_con *con, int backend_ndx)
     GString *name = con->client->response ? con->client->response->username : &empty_name;
     network_socket *sock = network_connection_pool_get(backend->pool, name, &is_robbed);
     if (sock == NULL) {
+        if (server_switch_need_add) {
+            g_message("%s:retrieve master conn failed, but still hold read server", G_STRLOC);
+            return NULL;
+        }
+
         if (con->server) {
             if (network_pool_add_conn(con, 1) != 0) {
-                g_warning("%s: move the curr conn back into the pool failed", G_STRLOC);
+                g_warning("%s: move the curr conn back into the pool failed:%p",
+                        G_STRLOC, con);
                 return NULL;
             }
         }

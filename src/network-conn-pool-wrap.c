@@ -202,12 +202,12 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
         network_socket *server;
         network_backend_t *backend;
 
-        for (i = 0; i < con->servers->len; i++) {
+        for (i = 0; i < MAX_SERVER_NUM_FOR_PREPARE; i++) {
 
             if (st->backend_ndx_array == NULL) {
                 g_message("%s: st backend ndx array is null:%p", G_STRLOC, con);
             } else {
-                if (st->backend_ndx_array[i] == 0) {
+                if (st->backend_ndx_array[i] <= 0) {
                     g_message("%s: i:%d backend_ndx_array value:%d for con:%p",
                             G_STRLOC, i, st->backend_ndx_array[i], con);
                     continue;
@@ -267,7 +267,7 @@ mysqld_con_reserved_connections_add(network_mysqld_con *con, network_socket *soc
 {
     proxy_plugin_con_t *st = con->plugin_con_state;
     if (st->backend_ndx_array == NULL) {
-        st->backend_ndx_array = g_new0(short, MAX_SERVER_NUM);
+        st->backend_ndx_array = g_new0(short, MAX_SERVER_NUM_FOR_PREPARE);
         st->backend_ndx_array[st->backend_ndx] = 1; /* current sock index = 0 */
         g_debug("%s: set st->backend_ndx:%d ndx array 1", G_STRLOC, st->backend_ndx);
     }
@@ -287,6 +287,8 @@ mysqld_con_reserved_connections_get(network_mysqld_con *con, int backend_idx)
 {
     proxy_plugin_con_t *st = con->plugin_con_state;
     if (con->servers) {
+        g_debug("%s: backend_idx:%d backend_ndx_array value:%d for con:%p",
+                            G_STRLOC, backend_idx, st->backend_ndx_array[backend_idx], con);
         int conn_idx = st->backend_ndx_array[backend_idx];
         if (conn_idx > 0) {
             conn_idx -= 1;

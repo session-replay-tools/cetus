@@ -52,6 +52,7 @@ typedef struct chassis_private chassis_private;
 typedef struct chassis chassis;
 
 #define MAX_SERVER_NUM 64
+#define MAX_SERVER_NUM_FOR_PREPARE 16
 #define MAX_QUERY_TIME 1000
 #define MAX_WAIT_TIME 1024
 #define MAX_TRY_NUM 6

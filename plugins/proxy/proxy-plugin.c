@@ -2039,8 +2039,8 @@ mysqld_con_reserved_connections_free(network_mysqld_con *con)
     chassis_private *g = srv->priv;
     if (st->backend_ndx_array) {
         int i, checked = 0;
-        for (i = 0; i < MAX_SERVER_NUM; i++) {
-            if (st->backend_ndx_array[i] == 0) {
+        for (i = 0; i < MAX_SERVER_NUM_FOR_PREPARE; i++) {
+            if (st->backend_ndx_array[i] <= 0) {
                 continue;
             }
             /* rw-edition: after filtering, now [i] is a valid backend index */

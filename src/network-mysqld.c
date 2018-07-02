@@ -1710,11 +1710,17 @@ build_attr_statements(network_mysqld_con *con)
     }
 }
 
-void
+int
 shard_build_xa_query(network_mysqld_con *con, server_session_t *ss)
 {
     network_socket *recv_sock = con->client;
     GList *chunk = recv_sock->recv_queue->chunks->head;
+
+    if (chunk == NULL) {
+        g_critical("%s:chunk is nil", G_STRLOC);
+        return -1;
+    }
+
     GString *packet = (GString *)(chunk->data);
 
     g_debug("%s:packet id:%d when get server", G_STRLOC, ss->server->last_packet_id);
@@ -1736,6 +1742,8 @@ shard_build_xa_query(network_mysqld_con *con, server_session_t *ss)
     con->is_xa_query_sent = 1;
     con->all_participate_num++;
     con->resp_expected_num++;
+
+    return 0;
 }
 
 static void
@@ -1885,7 +1893,7 @@ disp_xa_abnormal_resultset(network_mysqld_con *con, server_session_t *ss,
     }
 }
 
-static void
+static int
 disp_xa_according_state(network_mysqld_con *con, server_session_t *ss,
                         int *is_xa_cmd_met, int *is_xa_query, char **p_buffer, char *buffer, int end)
 {
@@ -1901,7 +1909,10 @@ disp_xa_according_state(network_mysqld_con *con, server_session_t *ss,
         snprintf(*p_buffer, XA_BUF_LEN - (*p_buffer - buffer), "%s@%d",
                  ss->server->dst->name->str, ss->server->challenge->thread_id);
         *p_buffer = *p_buffer + strlen(*p_buffer);
-        shard_build_xa_query(con, ss);
+        if (shard_build_xa_query(con, ss) == -1) {
+            g_warning("%s:shard_build_xa_query failed for con:%p", G_STRLOC, con);
+            return -1;
+        }
         *is_xa_query = 1;
         g_debug("%s:set is xa query true for con:%p", G_STRLOC, con);
         if (con->is_auto_commit) {
@@ -1931,6 +1942,8 @@ disp_xa_according_state(network_mysqld_con *con, server_session_t *ss,
             break;
         }
     }
+    
+    return 0;
 }
 
 static void
@@ -2010,7 +2023,13 @@ build_xa_statements(network_mysqld_con *con)
         if (result == -1) {
             disp_xa_abnormal_resultset(con, ss, &is_xa_cmd_met, &p_buffer, buffer, end);
         } else {
-            disp_xa_according_state(con, ss, &is_xa_cmd_met, &is_xa_query, &p_buffer, buffer, end);
+            if (disp_xa_according_state(con, ss, &is_xa_cmd_met,
+                        &is_xa_query, &p_buffer, buffer, end) == -1)
+            {
+                con->server_to_be_closed = 1;
+                con->dist_tran_state = NEXT_ST_XA_OVER;
+                return;
+            }
         }
 
         global_xa_state = ss->dist_tran_state;
@@ -2306,11 +2325,6 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
 
     gettimeofday(&(con->req_recv_time), NULL);
 
-    if (srv->is_need_to_create_conns) {
-        srv->is_need_to_create_conns = 0;
-        network_connection_pool_create_conns(srv);
-    }
-
     if (!con->is_wait_server) {
         do {
             switch (network_mysqld_read(srv, recv_sock)) {
@@ -2359,6 +2373,12 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
     }
 
     con->resp_too_long = 0;
+
+    /* check for tracing some problems and it will be removed later */
+    if (con->client->recv_queue->chunks->head == NULL) {
+        g_critical("%s:client recv queue head is nil", G_STRLOC);
+    }
+
     g_debug("%s:call read query", G_STRLOC);
     network_socket_retval_t ret = plugin_call(srv, con, con->state);
     switch (ret) {
@@ -4799,6 +4819,7 @@ network_connection_pool_create_conn(network_mysqld_con *con)
             } else if (total >= pool->mid_idle_connections) {
                 int idle_conn = total - backend->connected_clients;
                 if (idle_conn > backend->connected_clients) {
+                    g_debug("%s: idle conn num is enough:%d, %d", G_STRLOC, idle_conn, backend->connected_clients);
                     continue;
                 }
                 int is_need_to_create = 0;
@@ -4806,17 +4827,23 @@ network_connection_pool_create_conn(network_mysqld_con *con)
                     case BACKEND_TYPE_RW:
                         if (con->master_conn_shortaged) {
                             is_need_to_create = 1;
+                        } else {
+                            g_message("%s: master_conn_shortaged false", G_STRLOC);
                         }
                         break;
                     case BACKEND_TYPE_RO:
                         if (con->slave_conn_shortaged) {
                             is_need_to_create = 1;
+                        } else {
+                            g_message("%s: slave_conn_shortaged false", G_STRLOC);
                         }
                         break;
                     default:
+                        g_warning("%s: unknown type:%d", G_STRLOC, backend->type);
                         break;
                 }
                 if (!is_need_to_create) {
+                    g_message("%s: is_need_to_create false", G_STRLOC);
                     continue;
                 }
             }
@@ -4885,6 +4912,7 @@ network_connection_pool_create_conn(network_mysqld_con *con)
     }
 }
 
+
 void
 network_connection_pool_create_conns(chassis *srv)
 {
@@ -4897,12 +4925,15 @@ network_connection_pool_create_conns(chassis *srv)
             if (backend->state != BACKEND_STATE_UP && backend->state != BACKEND_STATE_UNKNOWN) {
                 continue;
             }
+            int allowd_conn_num = backend->config->mid_conn_pool;
+
             int total = backend->pool->cur_idle_connections + backend->connected_clients;
-            if (total > 0) {
+            if (total >= allowd_conn_num) {
                 continue;
             }
 
-            int allowd_conn_num = backend->config->mid_conn_pool;
+            allowd_conn_num = allowd_conn_num - total;
+
             if (allowd_conn_num > MAX_CREATE_CONN_NUM) {
                 allowd_conn_num = MAX_CREATE_CONN_NUM;
             }
@@ -4974,6 +5005,27 @@ network_connection_pool_create_conns(chassis *srv)
             }
         }
     }
+
+}
+
+void
+check_and_create_conns_func(int fd, short what, void *arg)
+{
+    chassis* chas = arg;
+
+    if (chas->is_need_to_create_conns) {
+        network_connection_pool_create_conns(chas);
+        chas->is_need_to_create_conns = 0;
+    } else {
+        if (chas->complement_conn_flag) {
+            network_connection_pool_create_conns(chas);
+            chas->complement_conn_flag = 0;
+        }
+    }
+
+    g_message("%s: check_and_create_conns_func", G_STRLOC);
+    struct timeval check_interval = {10, 0};
+    chassis_event_add_with_timeout(chas, &chas->auto_create_conns_event, &check_interval);
 }
 
 void

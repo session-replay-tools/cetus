@@ -77,7 +77,7 @@ network_mysqld_con_idle_handle(int event_fd, short events, void *user_data)
             network_connection_pool_remove(pool, pool_entry);
             if (pool->srv) {
                 chassis *srv = pool->srv;
-                srv->complement_conn_cnt++;
+                srv->complement_conn_flag = 1;
             }
 
             g_message("%s:the server decided to close the connection", G_STRLOC);
@@ -85,7 +85,7 @@ network_mysqld_con_idle_handle(int event_fd, short events, void *user_data)
     } else if (events == EV_TIMEOUT) {
         if (pool->srv) {
             chassis *srv = pool->srv;
-            srv->complement_conn_cnt++;
+            srv->complement_conn_flag = 1;
         }
         network_connection_pool_remove(pool, pool_entry);
     }
@@ -97,18 +97,18 @@ network_pool_add_idle_conn(network_connection_pool *pool, chassis *srv, network_
     network_connection_pool_entry *pool_entry = NULL;
     pool_entry = network_connection_pool_add(pool, server);
     event_set(&(server->event), server->fd, EV_READ, network_mysqld_con_idle_handle, pool_entry);
-    g_debug("%s: ev:%p add network_mysqld_con_idle_handle for server:%p, fd:%d",
-            G_STRLOC, &(server->event), server, server->fd);
     int surplus_time = srv->current_time - server->create_time;
-    surplus_time = srv->max_alive_time - surplus_time;
+    surplus_time = srv->max_alive_time - surplus_time + g_random_int_range(0, 240);
+
     if (surplus_time < 60) {
-        g_debug("%s: negtive surplus_time:%d", G_STRLOC, surplus_time);
-        surplus_time = 60 + g_random_int_range(0, 240);
+        surplus_time = 60;
     }
 
     struct timeval timeout;
     timeout.tv_sec = surplus_time;
     timeout.tv_usec = 0;
+    g_debug("%s: ev:%p add network_mysqld_con_idle_handle for server:%p, fd:%d, timeout:%d",
+            G_STRLOC, &(server->event), server, server->fd, surplus_time);
 
     chassis_event_add_with_timeout(srv, &(server->event), &timeout);
 
@@ -203,12 +203,14 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
         network_socket *server;
         network_backend_t *backend;
 
-        for (i = 0; i < con->servers->len; i++) {
+        for (i = 0; i < MAX_SERVER_NUM_FOR_PREPARE; i++) {
 
             if (st->backend_ndx_array == NULL) {
                 g_message("%s: st backend ndx array is null:%p", G_STRLOC, con);
             } else {
-                if (st->backend_ndx_array[i] == 0) {
+                if (st->backend_ndx_array[i] <= 0) {
+                    g_message("%s: i:%d backend_ndx_array value:%d for con:%p",
+                            G_STRLOC, i, st->backend_ndx_array[i], con);
                     continue;
                 }
 
@@ -266,8 +268,9 @@ mysqld_con_reserved_connections_add(network_mysqld_con *con, network_socket *soc
 {
     proxy_plugin_con_t *st = con->plugin_con_state;
     if (st->backend_ndx_array == NULL) {
-        st->backend_ndx_array = g_new0(short, MAX_SERVER_NUM);
+        st->backend_ndx_array = g_new0(short, MAX_SERVER_NUM_FOR_PREPARE);
         st->backend_ndx_array[st->backend_ndx] = 1; /* current sock index = 0 */
+        g_debug("%s: set st->backend_ndx:%d ndx array 1", G_STRLOC, st->backend_ndx);
     }
 
     if (con->servers == NULL) {
@@ -277,6 +280,7 @@ mysqld_con_reserved_connections_add(network_mysqld_con *con, network_socket *soc
     }
     g_ptr_array_add(con->servers, sock);
     st->backend_ndx_array[backend_idx] = con->servers->len;
+    g_debug("%s: set backend_ndx:%d ndx array:%d", G_STRLOC, backend_idx, con->servers->len);
 }
 
 network_socket *
@@ -284,6 +288,8 @@ mysqld_con_reserved_connections_get(network_mysqld_con *con, int backend_idx)
 {
     proxy_plugin_con_t *st = con->plugin_con_state;
     if (con->servers) {
+        g_debug("%s: backend_idx:%d backend_ndx_array value:%d for con:%p",
+                            G_STRLOC, backend_idx, st->backend_ndx_array[backend_idx], con);
         int conn_idx = st->backend_ndx_array[backend_idx];
         if (conn_idx > 0) {
             conn_idx -= 1;
@@ -350,9 +356,15 @@ network_connection_pool_swap(network_mysqld_con *con, int backend_ndx)
     GString *name = con->client->response ? con->client->response->username : &empty_name;
     network_socket *sock = network_connection_pool_get(backend->pool, name, &is_robbed);
     if (sock == NULL) {
+        if (server_switch_need_add) {
+            g_message("%s:retrieve master conn failed, but still hold read server", G_STRLOC);
+            return NULL;
+        }
+
         if (con->server) {
             if (network_pool_add_conn(con, 1) != 0) {
-                g_warning("%s: move the curr conn back into the pool failed", G_STRLOC);
+                g_warning("%s: move the curr conn back into the pool failed:%p",
+                        G_STRLOC, con);
                 return NULL;
             }
         }

@@ -295,6 +295,15 @@ struct condition_t {
 };
 
 /**
+ * ! we don't handle negative `b`
+ */
+static int32_t modulo(int64_t a, int32_t b)
+{
+    int32_t r = a % b;
+    return r < 0 ? r + b : r;
+}
+
+/**
  * check if the group satisfies an inequation
  *   suppose condition is "Greater Than 42", (op = TK_GT, v.num = 42)
  *   if exists X -> (low, high] that satifies X > 42, return true
@@ -308,7 +317,7 @@ partition_satisfies(sharding_partition_t *partition, struct condition_t cond)
         int64_t hash_value = (partition->key_type == SHARD_DATA_TYPE_STR)
             ? cetus_str_hash((const unsigned char *)cond.v.str) : cond.v.num;
 
-        int32_t hash_mod = hash_value % partition->hash_count;
+        int32_t hash_mod = modulo(hash_value, partition->hash_count);
 
         if (cond.op == TK_EQ) {
             return sharding_partition_contain_hash(partition, hash_mod);

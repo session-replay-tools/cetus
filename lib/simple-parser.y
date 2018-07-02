@@ -1020,7 +1020,9 @@ collate(C) ::= .              {C = 0;}
 collate(C) ::= COLLATE ids.   {C = 1;}
 
 ///////////////////////LOCK TABLES///////////////////////////
-cmd ::= LOCK TABLES lock_tables.
+cmd ::= LOCK TABLES lock_tables. {
+  context->rw_flag |= CF_WRITE;
+}
 lock_tables ::= fullname as lock_type.
 lock_tables ::= lock_tables COMMA fullname as lock_type.
 lock_type ::= READ opt_local.
@@ -1029,4 +1031,6 @@ opt_local ::= LOCAL.
 opt_local ::= .
 opt_priority ::= LOW_PRIORITY.
 opt_priority ::= .
-cmd ::= UNLOCK TABLES.
+cmd ::= UNLOCK TABLES. {
+  context->rw_flag |= CF_WRITE;
+}

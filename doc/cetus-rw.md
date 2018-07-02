@@ -136,6 +136,8 @@ Cetus内置监控功能，可通过配置选择开启或关闭。开启后Cetus�
 
 注释的使用方式为在SQL中SELECT字段之后插入/\*# mode=READWRITE \*/；部分应用可能对数据准确性特别敏感，这种情况下，我们可以设置默认所有请求都走主节点，但是，对于部分后台的统计分析功能，主要分析历史数据时，我们可以通过SQL指定后端到只读节点，来减少批量查询业务对主库的影响，我们可以在SELECT字段后插入/\*# mode=READONLY \*/来指定Cetus将SQL发送到只读从库进行执行。
 
+**注：若使用注释请在连接Cetus时加上-c参数，如 mysql --prompt="proxy> " --comments -hxxx.xxx.xxx.xxx -Pxxxx -uxxxx -pxxx -c**
+
 ### 5.不支持 Kill query
 
 不支持在SQL执行过程中 kill query操作，一旦SQL语句开始执行就不能通过这种方式来终止，此时可以连接Cetus管理后端，通过执行 show connectionlist 命令查看正在执行的SQL，从而找到正在执行的后端信息，通过数据库中 kill query的命令进行终止操作。

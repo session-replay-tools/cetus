@@ -88,6 +88,12 @@ struct transact_feature_t {
     int isolation_level;
 };
 
+struct idlist_opt_t {
+  sql_id_list_t* list;
+  const char* span_start;
+  const char* span_end;
+};
+
 } // end %include
 
 // Input is a single SQL command
@@ -825,7 +831,9 @@ insert_stmt ::= insert_cmd(R) INTO fullname(X) idlist_opt(F) select(S). {
   sql_insert_t* p = sql_insert_new();
   p->is_replace = R;
   p->table = X;
-  p->columns = F;
+  p->columns = F.list;
+  p->columns_start = F.span_start;
+  p->columns_end = F.span_end;
   p->sel_val = S;
   sql_insert(context, p);
 }
@@ -833,7 +841,9 @@ insert_stmt ::= insert_cmd(R) INTO fullname(X) idlist_opt(F) DEFAULT VALUES. {
   sql_insert_t* p = sql_insert_new();
   p->is_replace = R;
   p->table = X;
-  p->columns = F;
+  p->columns = F.list;
+  p->columns_start = F.span_start;
+  p->columns_end = F.span_end;
   p->sel_val = 0;
   sql_insert(context, p);
 }
@@ -842,7 +852,9 @@ insert_stmt ::= insert_cmd(R) INTO fullname(X) idlist_opt(F) values(S)
   sql_insert_t* p = sql_insert_new();
   p->is_replace = R;
   p->table = X;
-  p->columns = F;
+  p->columns = F.list;
+  p->columns_start = F.span_start;
+  p->columns_end = F.span_end;
   p->sel_val = S;
   sql_insert(context, p);
 }
@@ -852,13 +864,20 @@ insert_cmd(A) ::= INSERT. {A=0;}
 insert_cmd(A) ::= REPLACE.  {A = 1;}
 insert_cmd(A) ::= INSERT IGNORE. {A=1;}
 
-%type idlist_opt {sql_id_list_t*}
-%destructor idlist_opt {sql_id_list_free($$);}
+%type idlist_opt {struct idlist_opt_t}
+%destructor idlist_opt {sql_id_list_free($$.list);}
 %type idlist {sql_id_list_t*}
 %destructor idlist {sql_id_list_free($$);}
 
-idlist_opt(A) ::= .                   {A = 0;}
-idlist_opt(A) ::= LP idlist(X) RP.    {A = X;}
+idlist_opt(A) ::= . {
+  A.list = 0;
+  A.span_start = A.span_end = 0;
+}
+idlist_opt(A) ::= LP(U) idlist(X) RP(V).    {
+  A.list = X;
+  A.span_start = U.z;
+  A.span_end = V.z + V.n;
+}
 idlist(A) ::= idlist(A) COMMA nm(Y).
     {A = sql_id_list_append(A,&Y);}
 idlist(A) ::= nm(Y).

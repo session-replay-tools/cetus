@@ -430,16 +430,9 @@ sql_construct_insert(GString *s, sql_insert_t *p)
         g_string_append_c(s, ' ');
     }
     if (p->columns && p->columns->len > 0) {
-        g_string_append_c(s, '(');
-        int i = 0;
-        for (i = 0; i < p->columns->len; ++i) {
-            const char *col = g_ptr_array_index(p->columns, i);
-            g_string_append(s, col);
-            if (i != p->columns->len - 1) {
-                g_string_append_c(s, ',');
-            }
-        }
-        g_string_append(s, ") ");
+        g_string_append_len(s, p->columns_start,
+                            p->columns_end - p->columns_start);
+        g_string_append_c(s, ' ');
     }
     if (p->sel_val) {
         if (p->sel_val->from_src) {

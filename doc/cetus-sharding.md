@@ -331,7 +331,9 @@ Cetus提供注释功能，用以解决日常维护时的需求（DBA同学经常
 
 Sharding版支持的key类型：table|group|mode|transaction，支持的value包括all/readwrite/readonly/single_node。
 
-使用示例如下：
+**注：若使用注释请在连接Cetus时加上-c参数，如 mysql --prompt="proxy> " --comments -hxxx.xxx.xxx.xxx -Pxxxx -uxxxx -pxxx -c**
+
+注释功能使用示例如下：
 
 **1.Key类型为table的用法**
 
@@ -348,12 +350,6 @@ Sharding版支持的key类型：table|group|mode|transaction，支持的value包
   SQL: select /\*# group=dataA \*/ count(\*) from employee;
 
   说明：查询后端节点dataA中，表employee的记录数。
-
-  用法：/\*# group=all \*/
-
-  SQL: create /\*# group=all \*/ table employee xxxx;
-
-  说明：在后端所有节点均创建此表。
 
 **3.Key类型为mode的用法**
 

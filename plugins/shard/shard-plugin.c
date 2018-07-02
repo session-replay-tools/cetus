@@ -270,6 +270,10 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
         }
     }
 
+    con->master_conn_shortaged = 0;
+    con->slave_conn_shortaged = 0;
+    con->use_slave_forced = 0;
+
     rc = proxy_get_server_list(con);
 
     switch (rc) {
@@ -1257,6 +1261,12 @@ proxy_get_pooled_connection(network_mysqld_con *con,
 
     *sock = network_connection_pool_get(backend->pool, con->client->response->username, is_robbed);
     if (*sock == NULL) {
+        if (type == BACKEND_TYPE_RW) {
+            con->master_conn_shortaged = 1;
+        } else {
+            con->slave_conn_shortaged = 1;
+        }
+
         return FALSE;
     }
 
@@ -1654,11 +1664,6 @@ build_xa_end_command(network_mysqld_con *con, server_session_t *ss, int first)
 
 NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
 {
-    if (con->srv->complement_conn_cnt > 0) {
-        network_connection_pool_create_conn(con);
-        con->srv->complement_conn_cnt--;
-    }
-
     GList *chunk = con->client->recv_queue->chunks->head;
     GString *packet = (GString *)(chunk->data);
     gboolean do_query = FALSE;
@@ -1797,6 +1802,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
                         if (con->dist_tran_failed) {
                             network_queue_clear(con->client->recv_queue);
                             network_mysqld_queue_reset(con->client);
+                            g_message("%s: clear recv queue", G_STRLOC);
                         }
                     } else {
                         if (!ss->participated) {
@@ -1817,7 +1823,12 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
                         snprintf(p_xa_log_buffer, XA_LOG_BUF_LEN - (p_xa_log_buffer - xa_log_buffer),
                                  "%s@%d", ss->server->dst->name->str, ss->server->challenge->thread_id);
                         p_xa_log_buffer = p_xa_log_buffer + strlen(p_xa_log_buffer);
-                        shard_build_xa_query(con, ss);
+                        if (shard_build_xa_query(con, ss) == -1) {
+                            g_warning("%s:shard_build_xa_query failed for con:%p", G_STRLOC, con);
+                            con->server_to_be_closed = 1;
+                            con->dist_tran_state = NEXT_ST_XA_OVER;
+                            return NETWORK_SOCKET_ERROR;
+                        }
                         is_xa_query = 1;
                         if (con->is_auto_commit) {
                             ss->dist_tran_state = NEXT_ST_XA_END;
@@ -2402,7 +2413,7 @@ network_mysqld_shard_plugin_get_options(chassis_plugin_config *config)
 
     chassis_options_add(&opts, "proxy-read-timeout",
                         0, 0, OPTION_ARG_DOUBLE, &(config->read_timeout_dbl),
-                        "read timeout in seconds (default: 10 minutes)", NULL,
+                        "read timeout in seconds (default: 600 seconds)", NULL,
                         assign_proxy_read_timeout, show_proxy_read_timeout, ALL_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-xa-commit-or-rollback-read-timeout",
@@ -2413,7 +2424,7 @@ network_mysqld_shard_plugin_get_options(chassis_plugin_config *config)
 
     chassis_options_add(&opts, "proxy-write-timeout",
                         0, 0, OPTION_ARG_DOUBLE, &(config->write_timeout_dbl),
-                        "write timeout in seconds (default: 10 minutes)", NULL,
+                        "write timeout in seconds (default: 600 seconds)", NULL,
                         assign_proxy_write_timeout, show_proxy_write_timeout, ALL_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-allow-ip",
@@ -2542,6 +2553,9 @@ network_mysqld_shard_plugin_apply_config(chassis *chas, chassis_plugin_config *c
 
     if (network_backends_load_config(g->backends, chas) != -1) {
         network_connection_pool_create_conns(chas);
+        evtimer_set(&chas->auto_create_conns_event, check_and_create_conns_func, chas);
+        struct timeval check_interval = {10, 0};
+        chassis_event_add_with_timeout(chas, &chas->auto_create_conns_event, &check_interval);
     }
     chassis_config_register_service(chas->config_manager, config->address, "shard");
 

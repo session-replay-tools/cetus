@@ -146,7 +146,7 @@ Default: : 2 (seconds)
 
 ### proxy-read-timeout
 
-Default: : 10 (minutes)
+Default: : 600 (seconds)
 
 读Proxy的超时时间
 
@@ -154,7 +154,7 @@ Default: : 10 (minutes)
 
 ### proxy-write-timeout
 
-Default: : 10 (minutes)
+Default: : 600 (seconds)
 
 写Proxy的超时时间
 

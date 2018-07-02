@@ -551,8 +551,8 @@ assign_max_alive_time(const gchar *newval, gpointer param) {
             gint value = 0;
             if (try_get_int_value(newval, &value)) {
                 if (value >= 0) {
-                    if (value < 600) {
-                        value = 600;
+                    if (value < 60) {
+                        value = 60;
                     }
                     srv->max_alive_time = value;
                     ret = ASSIGN_OK;

@@ -629,7 +629,7 @@ proxy_put_shard_conn_to_pool(network_mysqld_con *con)
                         G_STRLOC, server, con, (int)con->servers->len);
                 network_socket_free(server);
                 if (!is_reduced) {
-                    con->srv->complement_conn_cnt++;
+                    con->srv->complement_conn_flag = 1;
                 }
             }
 

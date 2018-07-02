@@ -765,6 +765,7 @@ NETWORK_API int network_mysqld_queue_reset(network_socket *sock);
 
 NETWORK_API void network_connection_pool_create_conn(network_mysqld_con *con);
 NETWORK_API void network_connection_pool_create_conns(chassis *srv);
+NETWORK_API void check_and_create_conns_func(int fd, short what, void *arg);
 
 NETWORK_API void record_xa_log_for_mending(network_mysqld_con *con, network_socket *sock);
 NETWORK_API gboolean shard_set_autocommit(network_mysqld_con *con);

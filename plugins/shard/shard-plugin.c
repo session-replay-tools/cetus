@@ -1664,11 +1664,6 @@ build_xa_end_command(network_mysqld_con *con, server_session_t *ss, int first)
 
 NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
 {
-    if (con->srv->complement_conn_cnt > 0) {
-        network_connection_pool_create_conn(con);
-        con->srv->complement_conn_cnt--;
-    }
-
     GList *chunk = con->client->recv_queue->chunks->head;
     GString *packet = (GString *)(chunk->data);
     gboolean do_query = FALSE;
@@ -2558,6 +2553,9 @@ network_mysqld_shard_plugin_apply_config(chassis *chas, chassis_plugin_config *c
 
     if (network_backends_load_config(g->backends, chas) != -1) {
         network_connection_pool_create_conns(chas);
+        evtimer_set(&chas->auto_create_conns_event, check_and_create_conns_func, chas);
+        struct timeval check_interval = {10, 0};
+        chassis_event_add_with_timeout(chas, &chas->auto_create_conns_event, &check_interval);
     }
     chassis_config_register_service(chas->config_manager, config->address, "shard");
 

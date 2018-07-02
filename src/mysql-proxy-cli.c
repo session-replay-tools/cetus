@@ -561,8 +561,8 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     g_message("set max resp len:%d", srv->max_resp_len);
 
     srv->current_time = time(0);
-    if (frontend->max_alive_time < 600) {
-        frontend->max_alive_time = 600;
+    if (frontend->max_alive_time < 60) {
+        frontend->max_alive_time = 60;
     }
     srv->max_alive_time = frontend->max_alive_time;
     g_message("set max alive time:%d", srv->max_alive_time);

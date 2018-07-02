@@ -135,7 +135,7 @@ struct chassis {
     unsigned int is_reduce_conns;
     unsigned int xa_log_detailed;
     unsigned int check_slave_delay;
-    int complement_conn_cnt;
+    int complement_conn_flag;
     int default_query_cache_timeout;
     int client_idle_timeout;
     double slave_delay_down_threshold_sec;
@@ -195,6 +195,8 @@ struct chassis {
     gint print_version;
 
     gint group_replication_mode;
+
+    struct event auto_create_conns_event;
 };
 
 CHASSIS_API chassis *chassis_new(void);

@@ -2325,11 +2325,6 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
 
     gettimeofday(&(con->req_recv_time), NULL);
 
-    if (srv->is_need_to_create_conns) {
-        srv->is_need_to_create_conns = 0;
-        network_connection_pool_create_conns(srv);
-    }
-
     if (!con->is_wait_server) {
         do {
             switch (network_mysqld_read(srv, recv_sock)) {
@@ -4915,6 +4910,7 @@ network_connection_pool_create_conn(network_mysqld_con *con)
     }
 }
 
+
 void
 network_connection_pool_create_conns(chassis *srv)
 {
@@ -4927,12 +4923,15 @@ network_connection_pool_create_conns(chassis *srv)
             if (backend->state != BACKEND_STATE_UP && backend->state != BACKEND_STATE_UNKNOWN) {
                 continue;
             }
+            int allowd_conn_num = backend->config->mid_conn_pool;
+
             int total = backend->pool->cur_idle_connections + backend->connected_clients;
-            if (total > 0) {
+            if (total >= allowd_conn_num) {
                 continue;
             }
 
-            int allowd_conn_num = backend->config->mid_conn_pool;
+            allowd_conn_num = allowd_conn_num - total;
+
             if (allowd_conn_num > MAX_CREATE_CONN_NUM) {
                 allowd_conn_num = MAX_CREATE_CONN_NUM;
             }
@@ -5004,6 +5003,27 @@ network_connection_pool_create_conns(chassis *srv)
             }
         }
     }
+
+}
+
+void
+check_and_create_conns_func(int fd, short what, void *arg)
+{
+    chassis* chas = arg;
+
+    if (chas->is_need_to_create_conns) {
+        network_connection_pool_create_conns(chas);
+        chas->is_need_to_create_conns = 0;
+    } else {
+        if (chas->complement_conn_flag) {
+            network_connection_pool_create_conns(chas);
+            chas->complement_conn_flag = 0;
+        }
+    }
+
+    g_message("%s: check_and_create_conns_func", G_STRLOC);
+    struct timeval check_interval = {10, 0};
+    chassis_event_add_with_timeout(chas, &chas->auto_create_conns_event, &check_interval);
 }
 
 void

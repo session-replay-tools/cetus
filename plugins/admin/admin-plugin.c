@@ -132,6 +132,11 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_auth) {
     send_sock = con->client;
 
     packet.data = g_queue_peek_head(recv_sock->recv_queue->chunks);
+    if (packet.data == NULL) {
+        g_critical("%s: packet.data is nil", G_STRLOC);
+        return NETWORK_SOCKET_ERROR;
+    }
+
     packet.offset = 0;
 
     /* decode the packet */

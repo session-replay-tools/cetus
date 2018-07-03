@@ -204,6 +204,14 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
     GQueue *chunks = con->client->recv_queue->chunks;
     network_packet p;
     p.data = g_queue_peek_head(chunks);
+    if (p.data == NULL) {
+        g_critical("%s: packet data is nil", G_STRLOC);
+        network_mysqld_con_send_error(con->client, C("(proxy) unable to process command"));
+        con->state = ST_SEND_QUERY_RESULT;
+        network_mysqld_queue_reset(con->client);
+        return NETWORK_SOCKET_SUCCESS;
+    }
+
     p.offset = 0;
     network_mysqld_con_reset_command_response_state(con);
     g_debug("%s: call network_mysqld_con_command_states_init", G_STRLOC);

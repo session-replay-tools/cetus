@@ -1232,6 +1232,13 @@ network_read_query(network_mysqld_con *con, proxy_plugin_con_t *st)
     network_packet packet;
     GQueue *recv_queue = con->client->recv_queue->chunks;
     packet.data = g_queue_peek_head(recv_queue);
+
+    if (packet.data == NULL) {
+        g_critical("%s: chunk is null", G_STRLOC);
+        network_mysqld_con_send_error(con->client, C("(proxy) unable to retrieve command"));
+        return PROXY_SEND_RESULT;
+    }
+
     packet.offset = 0;
 
     mysqld_query_attr_t query_attr = { 0 };

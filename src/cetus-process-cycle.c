@@ -90,6 +90,17 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
     cetus_start_worker_processes(cycle, cycle->worker_processes,
                                CETUS_PROCESS_RESPAWN);
 
+    for (i = 0; i < cycle->modules->len; i++) {
+        chassis_plugin *p = cycle->modules->pdata[i];
+        if (strcmp(p->name, "admin") == 0) {
+            g_assert(p->apply_config);
+            g_message("%s: call apply_config", G_STRLOC);
+            if (0 != p->apply_config(cycle, p->config)) {
+                g_critical("%s: applying config of plugin %s failed", G_STRLOC, p->name);
+            }
+        }
+    }
+
     delay = 0;
     sigio = 0;
     live = 1;
@@ -463,7 +474,11 @@ cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
     int i;
     for (i = 0; i < cycle->modules->len; i++) {
         chassis_plugin *p = cycle->modules->pdata[i];
+        if (strcmp(p->name, "admin") == 0) {
+            continue;
+        }
         g_assert(p->apply_config);
+        g_message("%s: call apply_config", G_STRLOC);
         if (0 != p->apply_config(cycle, p->config)) {
             g_critical("%s: applying config of plugin %s failed", G_STRLOC, p->name);
         }

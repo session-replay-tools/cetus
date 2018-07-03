@@ -918,18 +918,16 @@ main_cmdline(int argc, char **argv)
         GOTO_EXIT(EXIT_FAILURE);
     }
 
-    {
-        gint i = 0;
-        srv->plugin_names = g_new(char *, (srv->modules->len + 1));
-        for (i = 0; frontend->plugin_names[i]; i++) {
-            if (!g_strcmp0("", frontend->plugin_names[i])) {
-                continue;
-            }
-
-            srv->plugin_names[i] = g_strdup(frontend->plugin_names[i]);
+    gint i = 0;
+    srv->plugin_names = g_new(char *, (srv->modules->len + 1));
+    for (i = 0; frontend->plugin_names[i]; i++) {
+        if (!g_strcmp0("", frontend->plugin_names[i])) {
+            continue;
         }
-        srv->plugin_names[i] = NULL;
+
+        srv->plugin_names[i] = g_strdup(frontend->plugin_names[i]);
     }
+    srv->plugin_names[i] = NULL;
 
     if (chassis_frontend_init_plugins(srv->modules,
                                       opts, srv->config_manager, &argc, &argv, frontend->keyfile, "cetus", &gerr)) {

@@ -5021,7 +5021,7 @@ check_and_create_conns_func(int fd, short what, void *arg)
         }
     }
 
-    g_message("%s: check_and_create_conns_func", G_STRLOC);
+    g_debug("%s: check_and_create_conns_func", G_STRLOC);
     struct timeval check_interval = {10, 0};
     chassis_event_add_with_timeout(chas, &chas->auto_create_conns_event, &check_interval);
 }

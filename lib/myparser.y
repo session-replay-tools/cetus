@@ -1018,19 +1018,20 @@ func_expr(A) ::= INSERT(N) LP expr(X) COMMA expr(Y) COMMA expr(Z) COMMA expr(W) 
     sql_expr_list_append(args, W);
     A = function_expr_new(&N, args, &R);
 }
-func_expr(A) ::= TRIM(N) LP expr RP(R). {
+// TRIM, POSITION includes LP in itself, hack for special function
+func_expr(A) ::= TRIM(N) expr RP(R). {
     A = function_expr_new(&N, 0, &R);
 }
-func_expr(A) ::= TRIM(N) LP expr FROM expr RP(R). {
+func_expr(A) ::= TRIM(N) expr FROM expr RP(R). {
     A = function_expr_new(&N, 0, &R);
 }
-func_expr(A) ::= TRIM(N) LP TRIM_SPEC expr FROM expr RP(R). {
+func_expr(A) ::= TRIM(N) TRIM_SPEC expr FROM expr RP(R). {
     A = function_expr_new(&N, 0, &R);
 }
-func_expr(A) ::= TRIM(N) LP TRIM_SPEC FROM expr RP(R). {
+func_expr(A) ::= TRIM(N) TRIM_SPEC FROM expr RP(R). {
     A = function_expr_new(&N, 0, &R);
 }
-func_expr(A) ::= POSITION(N) LP STRING IN expr RP(R). {
+func_expr(A) ::= POSITION(N) STRING IN expr RP(R). {
     A = function_expr_new(&N, 0, &R);
 }
 func_expr(A) ::= CURRENT_DATE(N) opt_parentheses. {

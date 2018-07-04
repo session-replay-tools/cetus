@@ -3,6 +3,7 @@
 #define _CETUS_PROCESS_CYCLE_H_INCLUDED_
 
 #include "cetus-process.h"
+#include "cetus-channel.h"
 
 #define CETUS_PROCESS_SINGLE     0
 #define CETUS_PROCESS_MASTER     1
@@ -12,7 +13,6 @@
 
 
 void cetus_master_process_cycle(cetus_cycle_t *cycle);
-
 
 extern unsigned int cetus_process;
 extern unsigned int cetus_worker;

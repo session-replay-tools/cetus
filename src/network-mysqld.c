@@ -2352,6 +2352,7 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
                 }
 
                 WAIT_FOR_EVENT(con->client, EV_READ, &timeout);
+
                 return DISP_STOP;
             case NETWORK_SOCKET_ERROR_RETRY:
             case NETWORK_SOCKET_ERROR:
@@ -5023,7 +5024,7 @@ check_and_create_conns_func(int fd, short what, void *arg)
         }
     }
 
-    g_message("%s: check_and_create_conns_func", G_STRLOC);
+    g_debug("%s: check_and_create_conns_func", G_STRLOC);
     struct timeval check_interval = {10, 0};
     chassis_event_add_with_timeout(chas, &chas->auto_create_conns_event, &check_interval);
 }

@@ -106,6 +106,7 @@ struct chassis {
 
     /**< array(chassis_plugin) */
     GPtrArray *modules;
+    void *admin_plugin;
 
     /**< base directory for all relative paths referenced */
     gchar *base_dir;

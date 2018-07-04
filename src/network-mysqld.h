@@ -176,6 +176,8 @@ typedef struct {
      */
     NETWORK_MYSQLD_PLUGIN_FUNC(con_cleanup);
 
+    NETWORK_MYSQLD_PLUGIN_FUNC(con_exectute_sql);
+
     NETWORK_MYSQLD_PLUGIN_FUNC(con_timeout);
 } network_mysqld_hooks;
 

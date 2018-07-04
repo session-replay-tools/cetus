@@ -4,6 +4,7 @@
 
 #include "cetus-setaffinity.h"
 #include "chassis-mainloop.h"
+#include "network-mysqld.h"
 
 
 typedef chassis cetus_cycle_t;

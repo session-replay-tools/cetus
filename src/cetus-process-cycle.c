@@ -4,6 +4,7 @@
 #include <unistd.h>
 #include <string.h>
 
+#include "network-mysqld.h"
 #include "cetus-channel.h"
 #include "cetus-process.h"
 #include "cetus-process-cycle.h"
@@ -576,7 +577,7 @@ cetus_worker_process_init(cetus_cycle_t *cycle, int worker)
     cycle->event_base = mainloop;
     g_assert(cycle->event_base);
 
-    event_set(&cetus_channel_event, cetus_channel, EV_READ | EV_PERSIST, cetus_channel_handler, NULL);
+    event_set(&cetus_channel_event, cetus_channel, EV_READ | EV_PERSIST, cetus_channel_handler, cycle);
     chassis_event_add(cycle, &cetus_channel_event);
     g_debug("%s: cetus_channel:%d is waiting for read, event base:%p, ev:%p",
             G_STRLOC, cetus_channel, cycle->event_base, &cetus_channel_event);
@@ -595,8 +596,23 @@ cetus_worker_process_exit(cetus_cycle_t *cycle)
 
 
 static void
-process_admin_sql(cetus_channel_t *ch)
+process_admin_sql(cetus_cycle_t *cycle, cetus_channel_t *ch)
 {
+    network_mysqld_con *con = network_mysqld_con_new();
+    con->plugin_con_state = g_new0(int, 1);
+    network_socket *client = network_socket_new();
+    con->client = client;
+    con->srv = cycle;
+
+    g_string_assign_len(con->orig_sql, ch->admin_sql, strlen(ch->admin_sql));
+
+    if (cycle->admin_plugin) {
+        network_socket_retval_t retval = NETWORK_SOCKET_SUCCESS;
+        NETWORK_MYSQLD_PLUGIN_FUNC(func) = NULL;
+        network_mysqld_hooks *plugin = cycle->admin_plugin;
+        func = plugin->con_exectute_sql;
+        retval = (*func) (cycle, con);
+    }
 }
 
 static void
@@ -628,7 +644,7 @@ cetus_channel_handler(int fd, short events, void *user_data)
         switch (ch.basics.command) {
 
         case CETUS_CMD_ADMIN:
-            process_admin_sql(&ch);
+            process_admin_sql(user_data, &ch);
             break;
         case CETUS_CMD_QUIT:
             cetus_quit = 1;

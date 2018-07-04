@@ -43,6 +43,8 @@
 #include "sys-pedantic.h"
 #include "network-ssl.h"
 #include "chassis-options-utils.h"
+#include "cetus-channel.h"
+#include "cetus-process-cycle.h"
 
 #include "admin-lexer.l.h"
 #include "admin-parser.y.h"
@@ -325,29 +327,38 @@ void adminParserFree(void*, void (*freeProc)(void*));
 void adminParser(void*, int yymajor, token_t, void*);
 void adminParserTrace(FILE*, char*);
 
-static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
+static 
+void construct_channel_info(chassis *cycle, char *sql)
 {
-    network_socket *recv_sock = con->client;
-    GList   *chunk  = recv_sock->recv_queue->chunks->head;
-    GString *packet = chunk->data;
+    g_message("%s:call construct_channel_info", G_STRLOC);
+    cetus_channel_t  ch; 
+    memset(&ch, 0, sizeof(cetus_channel_t));
+   ch.basics.command = CETUS_CMD_ADMIN;
+   ch.basics.pid = cetus_processes[cetus_process_slot].pid;
+   ch.basics.slot = cetus_process_slot;
+   ch.basics.fd = cetus_processes[cetus_process_slot].channel[0];
 
-    if (packet->len < NET_HEADER_SIZE) {
-        /* packet too short */
-        return PROXY_SEND_QUERY;
-    }
+   int len = strlen(sql);
+   if (len >= MAX_ADMIN_SQL_LEN) {
+   } else {
+       strncpy(ch.admin_sql, sql, len);
+       int i;
+       for (i = 0; i < cetus_last_process; i++) {
+           g_message("%s: pass close channel s:%i pid:%d to:%d", G_STRLOC,
+                   ch.basics.slot, ch.basics.pid, cetus_processes[i].pid);
 
-    char command = packet->str[NET_HEADER_SIZE + 0];
+           /* TODO: AGAIN */
+           cetus_write_channel(cetus_processes[i].channel[0],
+                   &ch, sizeof(cetus_channel_t));
+       }
+   }
+}
 
-    if (COM_QUERY == command) {
-        /* we need some more data after the COM_QUERY */
-        if (packet->len < NET_HEADER_SIZE + 2) return PROXY_SEND_QUERY;
-    }
 
-    g_string_assign_len(con->orig_sql, packet->str + (NET_HEADER_SIZE + 1),
-                        packet->len - (NET_HEADER_SIZE + 1));
-
-    const char* sql = con->orig_sql->str;
-    admin_clear_error(con);
+NETWORK_MYSQLD_PLUGIN_PROTO(execute_admin_query)
+{
+    g_message("%s:call execute_admin_query", G_STRLOC);
+    char *sql = con->orig_sql->str;
 
     /* init lexer & parser */
     yyscan_t scanner;
@@ -387,6 +398,33 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
     adminParserFree(parser, free);
     adminyy_delete_buffer(buf_state, scanner);
     adminyylex_destroy(scanner);
+}
+
+static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
+{
+    network_socket *recv_sock = con->client;
+    GList   *chunk  = recv_sock->recv_queue->chunks->head;
+    GString *packet = chunk->data;
+
+    if (packet->len < NET_HEADER_SIZE) {
+        /* packet too short */
+        return PROXY_SEND_QUERY;
+    }
+
+    char command = packet->str[NET_HEADER_SIZE + 0];
+
+    if (COM_QUERY == command) {
+        /* we need some more data after the COM_QUERY */
+        if (packet->len < NET_HEADER_SIZE + 2) return PROXY_SEND_QUERY;
+    }
+
+    g_string_assign_len(con->orig_sql, packet->str + (NET_HEADER_SIZE + 1),
+                        packet->len - (NET_HEADER_SIZE + 1));
+
+    construct_channel_info(con->srv, con->orig_sql->str);
+
+    admin_clear_error(con);
+
     return PROXY_SEND_RESULT;
 }
 
@@ -394,6 +432,7 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
  * gets called after a query has been read
  */
 NETWORK_MYSQLD_PLUGIN_PROTO(server_read_query) {
+    g_message("%s:call server_read_query", G_STRLOC);
     network_socket *recv_sock;
     network_mysqld_stmt_ret ret;
 
@@ -458,6 +497,8 @@ static int network_mysqld_server_connection_init(network_mysqld_con *con) {
     con->plugins.con_read_query       = server_read_query;
 
     con->plugins.con_timeout          = server_timeout;
+
+    con->plugins.con_exectute_sql     = execute_admin_query;
 
     con->plugins.con_cleanup          = admin_disconnect_client;
 
@@ -690,6 +731,7 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
     listen_sock = network_socket_new();
     con->server = listen_sock;
 
+
     /*
      * set the plugin hooks as we want to apply them to the new
      * connections too later
@@ -717,6 +759,8 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
     event_set(&(listen_sock->event), listen_sock->fd,
             EV_READ|EV_PERSIST, network_mysqld_con_accept, con);
     chassis_event_add(chas, &(listen_sock->event));
+
+    chas->admin_plugin = &(con->plugins);
 
     chassis_config_register_service(chas->config_manager, config->address, "admin");
     config->admin_stats = admin_stats_init(chas);

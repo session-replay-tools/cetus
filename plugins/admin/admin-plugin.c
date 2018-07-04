@@ -342,6 +342,7 @@ void construct_channel_info(chassis *cycle, char *sql)
    if (len >= MAX_ADMIN_SQL_LEN) {
    } else {
        strncpy(ch.admin_sql, sql, len);
+       g_message("%s:ch admin sql:%s", G_STRLOC, ch.admin_sql);
        int i;
        for (i = 0; i < cetus_last_process; i++) {
            g_message("%s: pass close channel s:%i pid:%d to:%d", G_STRLOC,
@@ -421,6 +422,7 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
     g_string_assign_len(con->orig_sql, packet->str + (NET_HEADER_SIZE + 1),
                         packet->len - (NET_HEADER_SIZE + 1));
 
+    g_message("%s:admin sql:%s", G_STRLOC, con->orig_sql->str);
     construct_channel_info(con->srv, con->orig_sql->str);
 
     admin_clear_error(con);

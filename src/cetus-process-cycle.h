@@ -9,7 +9,8 @@
 #define CETUS_PROCESS_MASTER     1
 #define CETUS_PROCESS_SIGNALLER  2
 #define CETUS_PROCESS_WORKER     3
-#define CETUS_PROCESS_HELPER     4
+#define CETUS_PROCESS_ADMIN      4
+#define CETUS_PROCESS_HELPER     5
 
 
 void cetus_master_process_cycle(cetus_cycle_t *cycle);

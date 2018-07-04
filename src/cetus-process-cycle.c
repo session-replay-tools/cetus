@@ -51,6 +51,86 @@ static u_char  master_process[] = "master process";
 
 static cetus_cycle_t      cetus_exit_cycle;
 
+static void
+cetus_admin_process_cycle(cetus_cycle_t *cycle, void *data)
+{
+    g_message("%s: call cetus_admin_process_cycle", G_STRLOC);
+
+    cetus_process = CETUS_PROCESS_ADMIN;
+
+    cetus_worker_process_init(cycle, -1);
+
+    int i;
+    for (i = 0; i < cycle->modules->len; i++) {
+        chassis_plugin *p = cycle->modules->pdata[i];
+        if (strcmp(p->name, "admin") == 0) {
+            g_assert(p->apply_config);
+            g_message("%s: call apply_config", G_STRLOC);
+            if (0 != p->apply_config(cycle, p->config)) {
+                g_critical("%s: applying config of plugin %s failed", G_STRLOC, p->name);
+            }
+        }
+    }
+
+    for ( ;; ) {
+
+        if (cetus_exiting) {
+            cetus_worker_process_exit(cycle);
+        }
+
+        g_debug("%s: admin cycle", G_STRLOC);
+
+        /* call main procedures for worker */
+        chassis_event_loop_t *loop = cycle->event_base;
+        chassis_event_loop(loop);
+        g_debug("%s: after chassis_event_loop", G_STRLOC);
+
+        if (cetus_terminate) {
+            g_message("%s: exiting", G_STRLOC);
+            cetus_worker_process_exit(cycle);
+        }
+
+        if (cetus_quit) {
+            cetus_quit = 0;
+            g_message("%s: gracefully shutting down", G_STRLOC);
+
+            if (!cetus_exiting) {
+                cetus_exiting = 1;
+                /* Call cetus shut down */
+            }
+        }
+
+        if (cetus_reopen) {
+            cetus_reopen = 0;
+            g_message("%s: reopening logs", G_STRLOC);
+        }
+    }
+}
+
+
+
+static void
+cetus_start_admin_processes(cetus_cycle_t *cycle, int respawn)
+{
+    int      i;
+    cetus_channel_t  ch;
+
+    memset(&ch, 0, sizeof(cetus_channel_t));
+
+    ch.basics.command = CETUS_CMD_OPEN_CHANNEL;
+
+    cetus_spawn_process(cycle, cetus_admin_process_cycle,
+            NULL, "admin process", CETUS_PROCESS_RESPAWN);
+
+    ch.basics.pid = cetus_processes[cetus_process_slot].pid;
+    ch.basics.slot = cetus_process_slot;
+    ch.basics.fd = cetus_processes[cetus_process_slot].channel[0];
+
+    g_debug("%s: call cetus_pass_open_channel", G_STRLOC);
+    cetus_pass_open_channel(cycle, &ch);
+}
+
+
 void
 cetus_master_process_cycle(cetus_cycle_t *cycle)
 {
@@ -91,16 +171,7 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
     cetus_start_worker_processes(cycle, cycle->worker_processes,
                                CETUS_PROCESS_RESPAWN);
 
-    for (i = 0; i < cycle->modules->len; i++) {
-        chassis_plugin *p = cycle->modules->pdata[i];
-        if (strcmp(p->name, "admin") == 0) {
-            g_assert(p->apply_config);
-            g_message("%s: call apply_config", G_STRLOC);
-            if (0 != p->apply_config(cycle, p->config)) {
-                g_critical("%s: applying config of plugin %s failed", G_STRLOC, p->name);
-            }
-        }
-    }
+    cetus_start_admin_processes(cycle, 0);
 
     delay = 0;
     sigio = 0;
@@ -175,6 +246,7 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
             /* init cycle */
             cetus_start_worker_processes(cycle, cycle->worker_processes,
                                        CETUS_PROCESS_JUST_RESPAWN);
+            cetus_start_admin_processes(cycle, 1);
 
             /* allow new processes to start */
             usleep(100 * 1000);
@@ -188,6 +260,8 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
             cetus_restart = 0;
             cetus_start_worker_processes(cycle, cycle->worker_processes,
                                        CETUS_PROCESS_RESPAWN);
+            cetus_start_admin_processes(cycle, 0);
+    
             live = 1;
         }
 
@@ -206,7 +280,6 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
         }
     }
 }
-
 
 static void
 cetus_start_worker_processes(cetus_cycle_t *cycle, int n, int type)

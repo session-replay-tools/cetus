@@ -17,7 +17,8 @@ typedef void (*cetus_spawn_proc_pt) (cetus_cycle_t *cycle, void *data);
 typedef struct {
     cetus_pid_t           pid;
     int                   status;
-    int                   channel[2];
+    int                   parent_child_channel[2];
+    int                   admin_worker_channel[2];
 
     cetus_spawn_proc_pt   proc;
     void                 *data;

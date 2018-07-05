@@ -110,7 +110,7 @@ cetus_spawn_process(cetus_cycle_t *cycle, cetus_spawn_proc_pt proc, void *data,
 
     if (respawn != CETUS_PROCESS_DETACHED) {
 
-        if (socketpair(AF_UNIX, SOCK_STREAM, 0, cetus_processes[s].channel) == -1)
+        if (socketpair(AF_UNIX, SOCK_STREAM, 0, cetus_processes[s].parent_child_channel) == -1)
         {
             g_critical("%s: socketpair() failed while spawning \"%s\"",
                     G_STRLOC, name);
@@ -118,57 +118,57 @@ cetus_spawn_process(cetus_cycle_t *cycle, cetus_spawn_proc_pt proc, void *data,
         }
 
         g_debug("%s: index:%d, channel %d:%d, cycle:%p", G_STRLOC, s,
-                       cetus_processes[s].channel[0],
-                       cetus_processes[s].channel[1], cycle );
+                       cetus_processes[s].parent_child_channel[0],
+                       cetus_processes[s].parent_child_channel[1], cycle );
 
-        if (fcntl(cetus_processes[s].channel[0], F_SETFL, O_NONBLOCK | O_RDWR) != 0) {
+        if (fcntl(cetus_processes[s].parent_child_channel[0], F_SETFL, O_NONBLOCK | O_RDWR) != 0) {
             g_critical("%s: nonblock failed while spawning \"%s\": %s (%d)",
                     G_STRLOC, name, g_strerror(errno), errno);
-            cetus_close_channel(cetus_processes[s].channel);
+            cetus_close_channel(cetus_processes[s].parent_child_channel);
             return CETUS_INVALID_PID;
         }
 
-        if (fcntl(cetus_processes[s].channel[1], F_SETFL, O_NONBLOCK | O_RDWR) != 0) {
+        if (fcntl(cetus_processes[s].parent_child_channel[1], F_SETFL, O_NONBLOCK | O_RDWR) != 0) {
             g_critical("%s: nonblock failed while spawning \"%s\": %s (%d)",
                     G_STRLOC, name, g_strerror(errno), errno);
-            cetus_close_channel(cetus_processes[s].channel);
+            cetus_close_channel(cetus_processes[s].parent_child_channel);
             return CETUS_INVALID_PID;
         }
 
         on = 1;
-        if (ioctl(cetus_processes[s].channel[0], FIOASYNC, &on) == -1) {
+        if (ioctl(cetus_processes[s].parent_child_channel[0], FIOASYNC, &on) == -1) {
             g_critical("%s: ioctl(FIOASYNC) failed while spawning \"%s\"",
                     G_STRLOC, name);
-            cetus_close_channel(cetus_processes[s].channel);
+            cetus_close_channel(cetus_processes[s].parent_child_channel);
             return CETUS_INVALID_PID;
         }
 
-        if (fcntl(cetus_processes[s].channel[0], F_SETOWN, cetus_pid) == -1) {
+        if (fcntl(cetus_processes[s].parent_child_channel[0], F_SETOWN, cetus_pid) == -1) {
             g_critical("%s: fcntl(F_SETOWN) failed while spawning \"%s\"",
                     G_STRLOC, name);
-            cetus_close_channel(cetus_processes[s].channel);
+            cetus_close_channel(cetus_processes[s].parent_child_channel);
             return CETUS_INVALID_PID;
         }
 
-        if (fcntl(cetus_processes[s].channel[0], F_SETFD, FD_CLOEXEC) == -1) {
+        if (fcntl(cetus_processes[s].parent_child_channel[0], F_SETFD, FD_CLOEXEC) == -1) {
             g_critical("%s: fcntl(FD_CLOEXEC) failed while spawning \"%s\"",
                     G_STRLOC, name);
-            cetus_close_channel(cetus_processes[s].channel);
+            cetus_close_channel(cetus_processes[s].parent_child_channel);
             return CETUS_INVALID_PID;
         }
 
-        if (fcntl(cetus_processes[s].channel[1], F_SETFD, FD_CLOEXEC) == -1) {
+        if (fcntl(cetus_processes[s].parent_child_channel[1], F_SETFD, FD_CLOEXEC) == -1) {
             g_critical("%s: fcntl(FD_CLOEXEC) failed while spawning \"%s\"",
                     G_STRLOC, name);
-            cetus_close_channel(cetus_processes[s].channel);
+            cetus_close_channel(cetus_processes[s].parent_child_channel);
             return CETUS_INVALID_PID;
         }
 
-        cetus_channel = cetus_processes[s].channel[1];
+        cetus_channel = cetus_processes[s].parent_child_channel[1];
 
     } else {
-        cetus_processes[s].channel[0] = -1;
-        cetus_processes[s].channel[1] = -1;
+        cetus_processes[s].parent_child_channel[0] = -1;
+        cetus_processes[s].parent_child_channel[1] = -1;
     }
 
     cetus_process_slot = s;
@@ -183,7 +183,7 @@ cetus_spawn_process(cetus_cycle_t *cycle, cetus_spawn_proc_pt proc, void *data,
     case -1:
         g_critical("%s: fork() failed while spawning \"%s\"",
                     G_STRLOC, name);
-        cetus_close_channel(cetus_processes[s].channel);
+        cetus_close_channel(cetus_processes[s].parent_child_channel);
         return CETUS_INVALID_PID;
 
     case 0:
@@ -244,6 +244,7 @@ cetus_spawn_process(cetus_cycle_t *cycle, cetus_spawn_proc_pt proc, void *data,
     }
 
     if (s == cetus_last_process) {
+        g_message("%s: cetus_last_process add,orig:%d", G_STRLOC, cetus_last_process);
         cetus_last_process++;
     }
 

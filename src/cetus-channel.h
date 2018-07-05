@@ -11,6 +11,7 @@
 #define CETUS_CMD_TERMINATE      4
 #define CETUS_CMD_REOPEN         5
 #define CETUS_CMD_ADMIN          6
+#define CETUS_CMD_ADMIN_RESP     7
 
 #define MAX_ADMIN_SQL_LEN 512
 typedef struct {

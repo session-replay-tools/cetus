@@ -333,26 +333,26 @@ void construct_channel_info(chassis *cycle, char *sql)
     g_message("%s:call construct_channel_info", G_STRLOC);
     cetus_channel_t  ch; 
     memset(&ch, 0, sizeof(cetus_channel_t));
-   ch.basics.command = CETUS_CMD_ADMIN;
-   ch.basics.pid = cetus_processes[cetus_process_slot].pid;
-   ch.basics.slot = cetus_process_slot;
-   ch.basics.fd = cetus_processes[cetus_process_slot].channel[0];
+    ch.basics.command = CETUS_CMD_ADMIN;
+    ch.basics.pid = cetus_processes[cetus_process_slot].pid;
+    ch.basics.slot = cetus_process_slot;
+    ch.basics.fd = cetus_processes[cetus_process_slot].parent_child_channel[0];
 
-   int len = strlen(sql);
-   if (len >= MAX_ADMIN_SQL_LEN) {
-   } else {
-       strncpy(ch.admin_sql, sql, len);
-       g_message("%s:ch admin sql:%s", G_STRLOC, ch.admin_sql);
-       int i;
-       for (i = 0; i < cetus_last_process; i++) {
-           g_message("%s: pass close channel s:%i pid:%d to:%d", G_STRLOC,
-                   ch.basics.slot, ch.basics.pid, cetus_processes[i].pid);
+    int len = strlen(sql);
+    if (len >= MAX_ADMIN_SQL_LEN) {
+    } else {
+        strncpy(ch.admin_sql, sql, len);
+        g_message("%s:ch admin sql:%s", G_STRLOC, ch.admin_sql);
+        int i;
+        for (i = 0; i < cetus_last_process; i++) {
+            g_message("%s: pass close channel s:%i pid:%d to:%d", G_STRLOC,
+                    ch.basics.slot, ch.basics.pid, cetus_processes[i].pid);
 
-           /* TODO: AGAIN */
-           cetus_write_channel(cetus_processes[i].channel[0],
-                   &ch, sizeof(cetus_channel_t));
-       }
-   }
+            /* TODO: AGAIN */
+            cetus_write_channel(cetus_processes[i].parent_child_channel[0],
+                    &ch, sizeof(cetus_channel_t));
+        }
+    }
 }
 
 
@@ -360,6 +360,8 @@ NETWORK_MYSQLD_PLUGIN_PROTO(execute_admin_query)
 {
     g_message("%s:call execute_admin_query", G_STRLOC);
     char *sql = con->orig_sql->str;
+
+    g_message("%s:call execute_admin_query:%s", G_STRLOC, sql);
 
     /* init lexer & parser */
     yyscan_t scanner;
@@ -391,6 +393,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(execute_admin_query)
     }
 
     if (admin_get_error(con) != 0) {
+        g_message("%s:syntax error", G_STRLOC);
         network_mysqld_con_send_error(con->client,
            C("syntax error, 'select help' for usage"));
     }
@@ -683,6 +686,7 @@ static int
 network_mysqld_admin_plugin_apply_config(chassis *chas,
         chassis_plugin_config *config)
 {
+    g_message("%s:call network_mysqld_admin_plugin_apply_config", G_STRLOC);
     network_mysqld_con *con;
     network_socket *listen_sock;
 
@@ -721,18 +725,21 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
     config->allow_ip_table = allow_ip_table;
 
 
+    con = network_mysqld_con_new();
+    con->config = config;
+    network_mysqld_add_connection(chas, con, TRUE);
+
     /**
      * create a connection handle for the listen socket
      */
-    con = network_mysqld_con_new();
-    network_mysqld_add_connection(chas, con, TRUE);
-    con->config = config;
+    if (chas->enable_admin_listen) {
+        g_message("%s:enable_admin_listen true", G_STRLOC);
+        config->listen_con = con;
+        listen_sock = network_socket_new();
+        con->server = listen_sock;
+    }
 
-    config->listen_con = con;
-
-    listen_sock = network_socket_new();
-    con->server = listen_sock;
-
+    g_message("%s:before set hooks", G_STRLOC);
 
     /*
      * set the plugin hooks as we want to apply them to the new
@@ -740,29 +747,34 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
      */
     network_mysqld_server_connection_init(con);
 
-    /* FIXME: network_socket_set_address() */
-    if (0 != network_address_set_address(listen_sock->dst,
-                config->address))
-    {
-        return -1;
+    g_message("%s:after set hooks", G_STRLOC);
+
+    if (chas->enable_admin_listen) {
+        /* FIXME: network_socket_set_address() */
+        if (0 != network_address_set_address(listen_sock->dst,
+                    config->address))
+        {
+            return -1;
+        }
+
+        /* FIXME: network_socket_bind() */
+        if (0 != network_socket_bind(listen_sock)) {
+            return -1;
+        }
+        g_message("admin-server listening on port %s", config->address);
+
+
+        /**
+         * call network_mysqld_con_accept() with this connection when we are done
+         */
+        event_set(&(listen_sock->event), listen_sock->fd,
+                EV_READ|EV_PERSIST, network_mysqld_con_accept, con);
+        chassis_event_add(chas, &(listen_sock->event));
     }
-
-    /* FIXME: network_socket_bind() */
-    if (0 != network_socket_bind(listen_sock)) {
-        return -1;
-    }
-    g_message("admin-server listening on port %s", config->address);
-
-    config->has_shard_plugin = has_shard_plugin(chas->modules);
-
-    /**
-     * call network_mysqld_con_accept() with this connection when we are done
-     */
-    event_set(&(listen_sock->event), listen_sock->fd,
-            EV_READ|EV_PERSIST, network_mysqld_con_accept, con);
-    chassis_event_add(chas, &(listen_sock->event));
 
     chas->admin_plugin = &(con->plugins);
+
+    config->has_shard_plugin = has_shard_plugin(chas->modules);
 
     chassis_config_register_service(chas->config_manager, config->address, "admin");
     config->admin_stats = admin_stats_init(chas);

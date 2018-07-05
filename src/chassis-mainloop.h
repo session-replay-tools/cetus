@@ -145,6 +145,7 @@ struct chassis {
     unsigned int min_req_time_for_cache;
     int cetus_max_allowed_packet;
     int disable_dns_cache;
+    int enable_admin_listen;
 
     int worker_processes;
 

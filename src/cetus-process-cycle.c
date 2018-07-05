@@ -64,6 +64,7 @@ cetus_admin_process_cycle(cetus_cycle_t *cycle, void *data)
     for (i = 0; i < cycle->modules->len; i++) {
         chassis_plugin *p = cycle->modules->pdata[i];
         if (strcmp(p->name, "admin") == 0) {
+            cycle->enable_admin_listen = 1;
             g_assert(p->apply_config);
             g_message("%s: call apply_config", G_STRLOC);
             if (0 != p->apply_config(cycle, p->config)) {
@@ -124,7 +125,7 @@ cetus_start_admin_processes(cetus_cycle_t *cycle, int respawn)
 
     ch.basics.pid = cetus_processes[cetus_process_slot].pid;
     ch.basics.slot = cetus_process_slot;
-    ch.basics.fd = cetus_processes[cetus_process_slot].channel[0];
+    ch.basics.fd = cetus_processes[cetus_process_slot].parent_child_channel[0];
 
     g_debug("%s: call cetus_pass_open_channel", G_STRLOC);
     cetus_pass_open_channel(cycle, &ch);
@@ -297,7 +298,7 @@ cetus_start_worker_processes(cetus_cycle_t *cycle, int n, int type)
 
         ch.basics.pid = cetus_processes[cetus_process_slot].pid;
         ch.basics.slot = cetus_process_slot;
-        ch.basics.fd = cetus_processes[cetus_process_slot].channel[0];
+        ch.basics.fd = cetus_processes[cetus_process_slot].parent_child_channel[0];
 
         g_debug("%s: call cetus_pass_open_channel", G_STRLOC);
         cetus_pass_open_channel(cycle, &ch);
@@ -314,7 +315,7 @@ cetus_pass_open_channel(cetus_cycle_t *cycle, cetus_channel_t *ch)
 
         if (i == cetus_process_slot
             || cetus_processes[i].pid == -1
-            || cetus_processes[i].channel[0] == -1)
+            || cetus_processes[i].parent_child_channel[0] == -1)
         {
             continue;
         }
@@ -322,10 +323,10 @@ cetus_pass_open_channel(cetus_cycle_t *cycle, cetus_channel_t *ch)
         g_message("%s: pass channel s:%i pid:%d fd:%d to s:%i pid:%d fd:%d, ev base:%p, ev:%p", G_STRLOC,
                 ch->basics.slot, ch->basics.pid, ch->basics.fd,
                 i, cetus_processes[i].pid,
-                cetus_processes[i].channel[0], cycle->event_base, &cetus_channel_event);
+                cetus_processes[i].parent_child_channel[0], cycle->event_base, &cetus_channel_event);
 
         /* TODO: AGAIN */
-        cetus_write_channel(cetus_processes[i].channel[0],
+        cetus_write_channel(cetus_processes[i].parent_child_channel[0],
                           ch, sizeof(cetus_channel_mininum_t));
     }
 }
@@ -389,7 +390,7 @@ cetus_signal_worker_processes(cetus_cycle_t *cycle, int signo)
 
         if (ch.basics.command) {
             g_debug("%s: call cetus_pass_open_channel", G_STRLOC);
-            if (cetus_write_channel(cetus_processes[i].channel[0],
+            if (cetus_write_channel(cetus_processes[i].parent_child_channel[0],
                                   &ch, sizeof(cetus_channel_mininum_t))
                 == NETWORK_SOCKET_SUCCESS)
             {
@@ -454,10 +455,10 @@ cetus_reap_children(cetus_cycle_t *cycle)
         if (cetus_processes[i].exited) {
 
             if (!cetus_processes[i].detached) {
-                cetus_close_channel(cetus_processes[i].channel);
+                cetus_close_channel(cetus_processes[i].parent_child_channel);
 
-                cetus_processes[i].channel[0] = -1;
-                cetus_processes[i].channel[1] = -1;
+                cetus_processes[i].parent_child_channel[0] = -1;
+                cetus_processes[i].parent_child_channel[1] = -1;
 
                 ch.basics.pid = cetus_processes[i].pid;
                 ch.basics.slot = i;
@@ -465,7 +466,7 @@ cetus_reap_children(cetus_cycle_t *cycle)
                 for (n = 0; n < cetus_last_process; n++) {
                     if (cetus_processes[n].exited
                         || cetus_processes[n].pid == -1
-                        || cetus_processes[n].channel[0] == -1)
+                        || cetus_processes[n].parent_child_channel[0] == -1)
                     {
                         continue;
                     }
@@ -474,7 +475,7 @@ cetus_reap_children(cetus_cycle_t *cycle)
                                    ch.basics.slot, ch.basics.pid, cetus_processes[n].pid);
 
                     /* TODO: AGAIN */
-                    cetus_write_channel(cetus_processes[n].channel[0],
+                    cetus_write_channel(cetus_processes[n].parent_child_channel[0],
                                       &ch, sizeof(cetus_channel_mininum_t));
                 }
             }
@@ -497,7 +498,7 @@ cetus_reap_children(cetus_cycle_t *cycle)
                 ch.basics.command = CETUS_CMD_OPEN_CHANNEL;
                 ch.basics.pid = cetus_processes[cetus_process_slot].pid;
                 ch.basics.slot = cetus_process_slot;
-                ch.basics.fd = cetus_processes[cetus_process_slot].channel[0];
+                ch.basics.fd = cetus_processes[cetus_process_slot].parent_child_channel[0];
 
                 g_debug("%s: call cetus_pass_open_channel", G_STRLOC);
                 cetus_pass_open_channel(cycle, &ch);
@@ -508,6 +509,7 @@ cetus_reap_children(cetus_cycle_t *cycle)
             }
 
             if (i == cetus_last_process - 1) {
+                g_message("%s: cetus_last_process sub,orig:%d", G_STRLOC, cetus_last_process);
                 cetus_last_process--;
 
             } else {
@@ -548,9 +550,6 @@ cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
     int i;
     for (i = 0; i < cycle->modules->len; i++) {
         chassis_plugin *p = cycle->modules->pdata[i];
-        if (strcmp(p->name, "admin") == 0) {
-            continue;
-        }
         g_assert(p->apply_config);
         g_message("%s: call apply_config", G_STRLOC);
         if (0 != p->apply_config(cycle, p->config)) {
@@ -626,23 +625,23 @@ cetus_worker_process_init(cetus_cycle_t *cycle, int worker)
             continue;
         }
 
-        if (cetus_processes[n].channel[1] == -1) {
+        if (cetus_processes[n].parent_child_channel[1] == -1) {
             continue;
         }
 
         g_debug("%s: close() channel one fd:%d, n:%d", 
-                G_STRLOC, cetus_processes[n].channel[1], n);
+                G_STRLOC, cetus_processes[n].parent_child_channel[1], n);
 
-        if (close(cetus_processes[n].channel[1]) == -1) {
+        if (close(cetus_processes[n].parent_child_channel[1]) == -1) {
             g_critical("%s: close() channel failed, errno:%d", G_STRLOC, errno);
         }
     }
 
     g_debug("%s: close() channel zero fd:%d, n:%d", 
-            G_STRLOC, cetus_processes[cetus_process_slot].channel[0], cetus_process_slot);
+            G_STRLOC, cetus_processes[cetus_process_slot].parent_child_channel[0], cetus_process_slot);
 
 
-    if (close(cetus_processes[cetus_process_slot].channel[0]) == -1) {
+    if (close(cetus_processes[cetus_process_slot].parent_child_channel[0]) == -1) {
         g_critical("%s: close() channel failed, errno:%d", G_STRLOC, errno);
     }
 
@@ -667,6 +666,59 @@ cetus_worker_process_exit(cetus_cycle_t *cycle)
     exit(0);
 }
 
+static
+cetus_channel_t *retrieve_admin_resp(network_mysqld_con *con)
+{
+    int resp_len = 0;
+    GList *chunk;
+    cetus_channel_t *ch = NULL;
+
+    g_message("%s:call retrieve_admin_resp", G_STRLOC);
+    if (con->client) {
+        g_message("%s:con client is not nil", G_STRLOC);
+        if (con->client->send_queue) {
+            g_message("%s:con client send queue is not nil", G_STRLOC);
+        }
+    }
+    for (chunk = con->client->send_queue->chunks->head; chunk; chunk = chunk->next) {
+        g_message("%s:call call send_admin_resp", G_STRLOC);
+        GString *s = chunk->data;
+        resp_len = s->len;
+        if (chunk->next == NULL) {
+            int total = sizeof(cetus_channel_t) + resp_len; 
+            ch = (cetus_channel_t *) g_new0(char, total);
+            ch->admin_sql_resp_len = resp_len;
+            strncpy(ch->admin_sql_resp, s->str, resp_len);
+        }
+    }
+    g_message("%s:call retrieve_admin_resp end", G_STRLOC);
+    
+    return ch;
+}
+
+
+static 
+void send_admin_resp(chassis *cycle, network_mysqld_con *con)
+{
+    g_message("%s:call send_admin_resp", G_STRLOC);
+    cetus_channel_t  *ch = retrieve_admin_resp(con); 
+    ch->basics.command = CETUS_CMD_ADMIN_RESP;
+    ch->basics.pid = cetus_processes[cetus_process_slot].pid;
+    ch->basics.slot = cetus_process_slot;
+    ch->basics.fd = cetus_processes[cetus_process_slot].parent_child_channel[0];
+
+    g_message("%s:send resp to admin:%d", G_STRLOC, cetus_last_process);
+    int i;
+    for (i = 0; i < 1; i++) {
+        g_message("%s: pass sql resp channel s:%i pid:%d to:%d", G_STRLOC,
+                ch->basics.slot, ch->basics.pid, cetus_processes[i].pid);
+
+        /* TODO: AGAIN */
+        cetus_write_channel(cetus_processes[i].parent_child_channel[0],
+                ch, sizeof(*ch));
+    }
+}
+
 
 static void
 process_admin_sql(cetus_cycle_t *cycle, cetus_channel_t *ch)
@@ -679,19 +731,24 @@ process_admin_sql(cetus_cycle_t *cycle, cetus_channel_t *ch)
 
     g_string_assign_len(con->orig_sql, ch->admin_sql, strlen(ch->admin_sql));
 
+    g_debug("%s: call process_admin_sql", G_STRLOC);
     if (cycle->admin_plugin) {
+        g_debug("%s: call admin", G_STRLOC);
         network_socket_retval_t retval = NETWORK_SOCKET_SUCCESS;
         NETWORK_MYSQLD_PLUGIN_FUNC(func) = NULL;
         network_mysqld_hooks *plugin = cycle->admin_plugin;
         func = plugin->con_exectute_sql;
         retval = (*func) (cycle, con);
+        g_debug("%s: call admin", G_STRLOC);
+        send_admin_resp(cycle, con);
     }
+
+
 }
 
 static void
 cetus_channel_handler(int fd, short events, void *user_data)
 {
-    int                n;
     cetus_channel_t    ch;
 
     g_debug("%s: channel handler", G_STRLOC);
@@ -700,7 +757,7 @@ cetus_channel_handler(int fd, short events, void *user_data)
 
         int ret = cetus_read_channel(fd, &ch, sizeof(cetus_channel_t));
 
-        g_debug("%s: channel:%i", G_STRLOC, n);
+        g_debug("%s: cetus_read_channel channel, fd:%d", G_STRLOC, fd);
 
         if (ret == NETWORK_SOCKET_ERROR) {
             cetus_terminate = 1;
@@ -737,20 +794,20 @@ cetus_channel_handler(int fd, short events, void *user_data)
                     ch.basics.slot, ch.basics.pid, ch.basics.fd);
 
             cetus_processes[ch.basics.slot].pid = ch.basics.pid;
-            cetus_processes[ch.basics.slot].channel[0] = ch.basics.fd;
+            cetus_processes[ch.basics.slot].parent_child_channel[0] = ch.basics.fd;
             break;
 
         case CETUS_CMD_CLOSE_CHANNEL:
 
             g_debug("%s: close channel s:%i pid:%d our:%d fd:%d", G_STRLOC, 
                     ch.basics.slot, ch.basics.pid, cetus_processes[ch.basics.slot].pid,
-                    cetus_processes[ch.basics.slot].channel[0]);
+                    cetus_processes[ch.basics.slot].parent_child_channel[0]);
 
-            if (close(cetus_processes[ch.basics.slot].channel[0]) == -1) {
+            if (close(cetus_processes[ch.basics.slot].parent_child_channel[0]) == -1) {
                 g_critical("%s: close() channel failed:%d", G_STRLOC, errno);
             }
 
-            cetus_processes[ch.basics.slot].channel[0] = -1;
+            cetus_processes[ch.basics.slot].parent_child_channel[0] = -1;
             break;
         }
     } while (!chassis_is_shutdown());

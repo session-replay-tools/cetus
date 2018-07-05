@@ -29,6 +29,8 @@ typedef struct {
     unsigned              detached:1;
     unsigned              exiting:1;
     unsigned              exited:1;
+    unsigned              is_admin:1;
+    unsigned              is_worker:1;
 } cetus_process_t;
 
 

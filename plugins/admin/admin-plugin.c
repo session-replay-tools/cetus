@@ -336,7 +336,7 @@ void construct_channel_info(chassis *cycle, char *sql)
     ch.basics.command = CETUS_CMD_ADMIN;
     ch.basics.pid = cetus_processes[cetus_process_slot].pid;
     ch.basics.slot = cetus_process_slot;
-    ch.basics.fd = cetus_processes[cetus_process_slot].parent_child_channel[0];
+    ch.basics.fd = cetus_processes[cetus_process_slot].admin_worker_channel[0];
 
     int len = strlen(sql);
     if (len >= MAX_ADMIN_SQL_LEN) {
@@ -349,7 +349,7 @@ void construct_channel_info(chassis *cycle, char *sql)
                     ch.basics.slot, ch.basics.pid, cetus_processes[i].pid);
 
             /* TODO: AGAIN */
-            cetus_write_channel(cetus_processes[i].parent_child_channel[0],
+            cetus_write_channel(cetus_processes[i].admin_worker_channel[0],
                     &ch, sizeof(cetus_channel_t));
         }
     }

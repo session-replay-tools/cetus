@@ -167,7 +167,8 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
     }
 
     if (to_be_put_to_pool == TRUE && con->is_in_transaction) {
-        g_critical("%s: server in tran and put to pool:%p", G_STRLOC, con);
+        g_critical("%s: server in tran and put to pool:%p, client:%s",
+                G_STRLOC, con, con->client->src->name->str);
         to_be_put_to_pool = FALSE;
     }
 

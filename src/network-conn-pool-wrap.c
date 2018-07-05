@@ -161,6 +161,12 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
     gboolean to_be_put_to_pool = TRUE;
 
     if (con->server_in_tran_and_auto_commit_received) {
+        g_critical("%s:server in tran and auto commit and put to pool:%p",
+                G_STRLOC, con);
+        to_be_put_to_pool = FALSE;
+    }
+
+    if (to_be_put_to_pool == TRUE && con->is_in_transaction) {
         g_critical("%s: server in tran and put to pool:%p", G_STRLOC, con);
         to_be_put_to_pool = FALSE;
     }

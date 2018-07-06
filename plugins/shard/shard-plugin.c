@@ -106,7 +106,16 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
     if (st == NULL)
         return NETWORK_SOCKET_ERROR;
 
-    g_debug("%s, con:%p:call proxy_timeout, state:%d", G_STRLOC, con, con->state);
+    int idle_timeout = con->srv->client_idle_timeout;
+    if (con->srv->maintain_close_mode) {
+        idle_timeout = con->srv->maintained_client_idle_timeout;
+    }
+
+    diff = con->srv->current_time - con->client->update_time + 1;
+
+    g_debug("%s, con:%p:call proxy_timeout, state:%d, idle timeout:%d, diff:%d",
+            G_STRLOC, con, con->state, idle_timeout, diff);
+
     switch (con->state) {
     case ST_READ_M_QUERY_RESULT:
     case ST_READ_QUERY_RESULT:
@@ -120,10 +129,13 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
                            G_STRLOC, con, con->dist_tran_state, con->xid_str);
             }
         }
+
+        con->server_to_be_closed = 1;
+        con->prev_state = con->state;
+        con->state = ST_ERROR;
         break;
     default:
-        diff = con->srv->current_time - con->client->update_time;
-        if (diff < con->srv->client_idle_timeout) {
+        if (diff < idle_timeout) {
             if (!con->client->is_server_conn_reserved) {
                 g_debug("%s, is_server_conn_reserved is false", G_STRLOC);
                 if (con->servers && con->servers->len > 0) {
@@ -132,7 +144,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
                 }
             }
         } else {
-            g_message("%s, client timeout, closeing, diff:%d, con:%p", G_STRLOC, diff, con);
+            g_message("%s, client timeout, closing, diff:%d, con:%p", G_STRLOC, diff, con);
             con->prev_state = con->state;
             con->state = ST_ERROR;
         }
@@ -2569,6 +2581,10 @@ network_mysqld_shard_plugin_apply_config(chassis *chas, chassis_plugin_config *c
     g_debug("%s:listen sock, ev:%p", G_STRLOC, (&listen_sock->event));
 
     if (network_backends_load_config(g->backends, chas) != -1) {
+        evtimer_set(&chas->update_timer_event, update_time_func, chas);
+        struct timeval update_time_interval = {1, 0};
+        chassis_event_add_with_timeout(chas, &chas->update_timer_event, &update_time_interval);
+
         network_connection_pool_create_conns(chas);
         evtimer_set(&chas->auto_create_conns_event, check_and_create_conns_func, chas);
         struct timeval check_interval = {10, 0};

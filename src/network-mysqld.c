@@ -3485,8 +3485,6 @@ send_result_to_client(network_mysqld_con *con, network_mysqld_con_state_t ostate
         }
     }
 
-    srv->current_time = time(0);
-
     if (con->resultset_is_finished) {
         con->client->update_time = srv->current_time;
         if (!con->client->is_server_conn_reserved) {
@@ -5013,9 +5011,22 @@ network_connection_pool_create_conns(chassis *srv)
 }
 
 void
-check_and_create_conns_func(int fd, short what, void *arg)
+update_time_func(int fd, short what, void *arg)
 {
     chassis* chas = arg;
+
+    chas->current_time = time(0);
+
+    g_debug("%s: update time", G_STRLOC);
+    struct timeval update_time_interval = {1, 0};
+    chassis_event_add_with_timeout(chas, &chas->update_timer_event, &update_time_interval);
+}
+
+
+void
+check_and_create_conns_func(int fd, short what, void *arg)
+{
+    chassis *chas = arg;
 
     if (chas->is_need_to_create_conns) {
         network_connection_pool_create_conns(chas);

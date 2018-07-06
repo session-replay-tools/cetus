@@ -198,6 +198,7 @@ struct chassis {
     gint group_replication_mode;
 
     struct event auto_create_conns_event;
+    struct event update_timer_event;
 };
 
 CHASSIS_API chassis *chassis_new(void);

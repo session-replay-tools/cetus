@@ -625,7 +625,8 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     }
 
     srv->default_query_cache_timeout = MAX(frontend->default_query_cache_timeout, 1);
-    srv->client_idle_timeout = MAX(frontend->client_idle_timeout, 1);
+    srv->client_idle_timeout = MAX(frontend->client_idle_timeout, 10);
+    srv->maintained_client_idle_timeout = MAX(frontend->maintained_client_idle_timeout, 10);
     srv->long_query_time = MIN(frontend->long_query_time, MAX_QUERY_TIME);
     srv->cetus_max_allowed_packet = CLAMP(frontend->cetus_max_allowed_packet,
                                           MAX_ALLOWED_PACKET_FLOOR, MAX_ALLOWED_PACKET_CEIL);

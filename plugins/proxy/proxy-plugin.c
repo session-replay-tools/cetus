@@ -137,11 +137,19 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
     if (st == NULL)
         return NETWORK_SOCKET_ERROR;
 
-    int diff = con->srv->current_time - con->client->update_time;
-    g_debug("%s, con:%p:call proxy_timeout", G_STRLOC, con);
+    int diff = con->srv->current_time - con->client->update_time + 1;
+    int idle_timeout = con->srv->client_idle_timeout;
+
+    if (con->srv->maintain_close_mode) {
+        idle_timeout = con->srv->maintained_client_idle_timeout;
+    }
+
+    g_debug("%s, con:%p:call proxy_timeout, idle timeout:%d, diff:%d", 
+            G_STRLOC, con, idle_timeout, diff);
+
     switch (con->state) {
     case ST_READ_QUERY:
-        if (diff < con->srv->client_idle_timeout) {
+        if (diff < idle_timeout) {
             if (con->server && !con->client->is_server_conn_reserved) {
                 if (network_pool_add_conn(con, 0) != 0) {
                     g_debug("%s, con:%p:conn to pool failed", G_STRLOC, con);
@@ -155,23 +163,18 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
         }
         break;
     case ST_READ_QUERY_RESULT:
-        if (diff < con->srv->client_idle_timeout) {
-            if (con->server && !con->client->is_server_conn_reserved) {
-                con->server_to_be_closed = 1;
-                g_critical("%s, con:%p read query result timeout, sql:%s", G_STRLOC, con, con->orig_sql->str);
+        if (con->server && !con->client->is_server_conn_reserved) {
+            con->server_to_be_closed = 1;
+            g_critical("%s, con:%p read query result timeout, sql:%s", G_STRLOC, con, con->orig_sql->str);
 
-                network_mysqld_con_send_error_full(con->client,
-                                                   C("Read query result timeout"), ER_ABORTING_CONNECTION, "29001");
-                con->prev_state = con->state;
-                con->state = ST_SEND_ERROR;
-            }
-        } else {
+            network_mysqld_con_send_error_full(con->client,
+                    C("Read query result timeout"), ER_ABORTING_CONNECTION, "29001");
             con->prev_state = con->state;
             con->state = ST_SEND_ERROR;
+            break;
         }
-        break;
     default:
-        if (diff >= con->srv->client_idle_timeout) {
+        if (diff >= idle_timeout) {
             con->prev_state = con->state;
             con->state = ST_SEND_ERROR;
         }
@@ -2661,6 +2664,10 @@ network_mysqld_proxy_plugin_apply_config(chassis *chas, chassis_plugin_config *c
     g_debug("%s:listen sock, ev:%p", G_STRLOC, (&listen_sock->event));
 
     if (network_backends_load_config(g->backends, chas) != -1) {
+        evtimer_set(&chas->update_timer_event, update_time_func, chas);
+        struct timeval update_time_interval = {1, 0};
+        chassis_event_add_with_timeout(chas, &chas->update_timer_event, &update_time_interval);
+
         network_connection_pool_create_conns(chas);
         evtimer_set(&chas->auto_create_conns_event, check_and_create_conns_func, chas);
         struct timeval check_interval = {10, 0};

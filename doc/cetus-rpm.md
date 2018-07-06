@@ -44,7 +44,7 @@ Release:        release%{?dist}
 
 在安装好依赖库之后，便可以进行打包流程。
 
-###2.1 打包前准备
+### 2.1 打包前准备
 安装打包需要的依赖库。
 > yum install rpm-build
 > 

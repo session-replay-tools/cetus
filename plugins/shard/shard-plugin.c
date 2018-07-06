@@ -199,6 +199,13 @@ check_backends_attr_changed(network_mysqld_con *con)
     return server_attr_changed;
 }
 
+static void
+network_mysqld_con_purify_sharding_plan(struct sharding_plan_t *sharding_plan)
+{
+    sharding_plan->modified_sql = NULL;
+    sharding_plan->is_modified = 0;
+}
+
 NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
 {
     GQueue *chunks = con->client->recv_queue->chunks;
@@ -214,6 +221,9 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
 
     p.offset = 0;
     network_mysqld_con_reset_command_response_state(con);
+    if (con->sharding_plan) {
+        network_mysqld_con_purify_sharding_plan(con->sharding_plan);
+    }
     g_debug("%s: call network_mysqld_con_command_states_init", G_STRLOC);
     if (network_mysqld_con_command_states_init(con, &p)) {
         g_warning("%s: tracking mysql proto states failed", G_STRLOC);
@@ -772,6 +782,15 @@ remove_ro_servers(network_mysqld_con *con)
     } else {
         con->servers = NULL;
     }
+}
+
+static void
+network_mysqld_con_set_sharding_plan(network_mysqld_con *con, sharding_plan_t *plan)
+{
+    if (con->sharding_plan) {
+        sharding_plan_free(con->sharding_plan);
+    }
+    con->sharding_plan = plan;
 }
 
 static int

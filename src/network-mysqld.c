@@ -5026,11 +5026,4 @@ check_and_create_conns_func(int fd, short what, void *arg)
     chassis_event_add_with_timeout(chas, &chas->auto_create_conns_event, &check_interval);
 }
 
-void
-network_mysqld_con_set_sharding_plan(network_mysqld_con *con, sharding_plan_t *plan)
-{
-    if (con->sharding_plan) {
-        sharding_plan_free(con->sharding_plan);
-    }
-    con->sharding_plan = plan;
-}
+

@@ -729,11 +729,6 @@ NETWORK_API void network_mysqld_con_reset_command_response_state(network_mysqld_
 NETWORK_API void network_mysqld_con_reset_query_state(network_mysqld_con *con);
 
 /**
- * set groups, delete if already exists
- */
-void network_mysqld_con_set_sharding_plan(network_mysqld_con *con, struct sharding_plan_t *);
-
-/**
  * should be socket 
  */
 NETWORK_API network_socket_retval_t network_mysqld_read(chassis *srv, network_socket *con);

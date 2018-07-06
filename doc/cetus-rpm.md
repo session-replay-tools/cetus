@@ -60,15 +60,16 @@ Release:        release%{?dist}
 >
 > chmod +x ./build_cetus_rpm.sh
 > 
-> ./build_cetus_rpm.sh
+> ./build_cetus_rpm.sh -v 1 -r 1 -s 0
 > 
+build_cetus_rpm.sh脚本接受3个参数： -v 指定version信息；-r 指定release信息；-s指定编译的是读写分离版本还是分库版本，1表示读写分离版本，0表示分库版本，默认为1。
 
-注意，打的RPM包会被拷贝到./build_cetus_rpm.sh所在目录。可以进行安等。
+注意，打的RPM包会被拷贝到执行./build_cetus_rpm.sh的目录。
 
 ## 3 安装
 
 安装命令如下：
 
 ```
-rpm -ivh --prefix=/home/user/cetus_install cetus-version-release.el7.x86_64.rpm
+rpm -ivh --prefix=/home/user/cetus_install cetus-version-release.el6.x86_64.rpm
 ```

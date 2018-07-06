@@ -80,6 +80,7 @@ CHASSIS_API gchar* show_slave_delay_down(gpointer param);
 CHASSIS_API gchar* show_slave_delay_recover(gpointer param);
 CHASSIS_API gchar* show_default_query_cache_timeout(gpointer param);
 CHASSIS_API gchar* show_default_client_idle_timeout(gpointer param);
+CHASSIS_API gchar* show_default_maintained_client_idle_timeout(gpointer param);
 CHASSIS_API gchar* show_long_query_time(gpointer param);
 CHASSIS_API gchar* show_enable_client_found_rows(gpointer param);
 CHASSIS_API gchar* show_reduce_connections(gpointer param);
@@ -107,6 +108,7 @@ CHASSIS_API gint assign_slave_delay_recover(const gchar *newval, gpointer param)
 CHASSIS_API gint assign_slave_delay_down(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_default_query_cache_timeout(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_default_client_idle_timeout(const gchar *newval, gpointer param);
+CHASSIS_API gint assign_default_maintained_client_idle_timeout(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_long_query_time(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_max_allowed_packet(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_group_replication(const gchar *newval, gpointer param);

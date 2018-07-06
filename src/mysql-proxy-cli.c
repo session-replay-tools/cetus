@@ -111,6 +111,7 @@ struct chassis_frontend_t {
     int cetus_max_allowed_packet;
     int default_query_cache_timeout;
     int client_idle_timeout;
+    int maintained_client_idle_timeout;
     int query_cache_enabled;
     int disable_dns_cache;
     double slave_delay_down_threshold_sec;
@@ -174,6 +175,7 @@ chassis_frontend_new(void)
     frontend->slave_delay_down_threshold_sec = 60.0;
     frontend->default_query_cache_timeout = 100;
     frontend->client_idle_timeout = 8 * HOURS;
+    frontend->maintained_client_idle_timeout = 30;
     frontend->long_query_time = MAX_QUERY_TIME;
     frontend->cetus_max_allowed_packet = MAX_ALLOWED_PACKET_DEFAULT;
     frontend->disable_dns_cache = 0;
@@ -406,8 +408,15 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
     chassis_options_add(opts,
                         "default-client-idle-timeout",
                         0, 0, OPTION_ARG_INT, &(frontend->client_idle_timeout),
-                        "default client idle timeout in seconds", "<integer>",
+                        "set client idle timeout in seconds(default 28800 seconds)", "<integer>",
                         assign_default_client_idle_timeout, show_default_client_idle_timeout, ALL_OPTS_PROPERTY);
+
+    chassis_options_add(opts,
+                        "default-maintained-client-idle-timeout",
+                        0, 0, OPTION_ARG_INT, &(frontend->maintained_client_idle_timeout),
+                        "set maintained client idle timeout in seconds(default 30 seconds)", "<integer>",
+                        assign_default_maintained_client_idle_timeout, 
+                        show_default_maintained_client_idle_timeout, ALL_OPTS_PROPERTY);
 
     chassis_options_add(opts,
                         "long-query-time",

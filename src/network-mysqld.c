@@ -2346,9 +2346,15 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
                     con->client->is_need_q_peek_exec = 0;
                     g_debug("%s: set a short timeout:%p", G_STRLOC, con);
                 } else {
-                    timeout.tv_sec = con->srv->client_idle_timeout;
-                    timeout.tv_usec = 0;
-                    g_debug("%s: set a long timeout:%p", G_STRLOC, con);
+                    if (con->srv->maintain_close_mode) {
+                        timeout.tv_sec = con->srv->maintained_client_idle_timeout;
+                        timeout.tv_usec = 0;
+                        g_debug("%s: set a maintained client timeout:%p", G_STRLOC, con);
+                    } else {
+                        timeout.tv_sec = con->srv->client_idle_timeout;
+                        timeout.tv_usec = 0;
+                        g_debug("%s: set a long timeout:%p", G_STRLOC, con);
+                    }
                 }
 
                 WAIT_FOR_EVENT(con->client, EV_READ, &timeout);

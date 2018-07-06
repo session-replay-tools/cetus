@@ -1682,7 +1682,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
 
     if (con->server_to_be_closed) {
         if (con->servers != NULL) {
-            if (con->srv->maintain_close_mode || con->is_client_to_be_closed) {
+            if (con->is_client_to_be_closed) {
                 con->state = ST_CLOSE_CLIENT;
                 g_debug("%s:client needs to closed for con:%p", G_STRLOC, con);
             } else {
@@ -1731,12 +1731,6 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
 
         con->state = ST_READ_QUERY;
 
-        if (con->srv->maintain_close_mode) {
-            if (!con->is_in_transaction && !con->is_in_sess_context) {
-                con->state = ST_CLOSE_CLIENT;
-                g_debug("%s:client needs to closed for con:%p", G_STRLOC, con);
-            }
-        }
         return NETWORK_SOCKET_SUCCESS;
     }
 

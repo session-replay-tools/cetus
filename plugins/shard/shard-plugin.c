@@ -1912,12 +1912,8 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
             g_debug("%s:call proxy_put_shard_conn_to_pool for con:%p", G_STRLOC, con);
             proxy_put_shard_conn_to_pool(con);
 
-            if (con->srv->maintain_close_mode) {
-                con->state = ST_CLOSE_CLIENT;
-                g_debug("%s:client needs to closed for con:%p", G_STRLOC, con);
-            } else {
-                con->state = ST_READ_QUERY;
-            }
+            con->state = ST_READ_QUERY;
+
             return NETWORK_SOCKET_SUCCESS;
         }
     }
@@ -1930,12 +1926,6 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
 
     con->state = ST_READ_QUERY;
 
-    if (con->srv->maintain_close_mode) {
-        if (!con->is_in_transaction) {
-            con->state = ST_CLOSE_CLIENT;
-            g_debug("%s:client needs to closed for con:%p", G_STRLOC, con);
-        }
-    }
     return NETWORK_SOCKET_SUCCESS;
 }
 

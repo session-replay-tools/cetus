@@ -1124,8 +1124,6 @@ static int
 process_query_or_stmt_prepare(network_mysqld_con *con, proxy_plugin_con_t *st,
                               network_packet *packet, mysqld_query_attr_t *query_attr, int command, int *disp_flag)
 {
-    network_mysqld_con_reset_query_state(con);
-
     gsize sql_len = packet->data->len - packet->offset;
     network_mysqld_proto_get_gstr_len(packet, sql_len, con->orig_sql);
     g_string_append_c(con->orig_sql, '\0'); /* 2 more NULL for lexer EOB */
@@ -1434,6 +1432,8 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
     network_mysqld_stmt_ret ret;
 
     con->resp_too_long = 0;
+
+    network_mysqld_con_reset_query_state(con);
 
     if (st == NULL)
         return NETWORK_SOCKET_ERROR;

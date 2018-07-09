@@ -1275,6 +1275,10 @@ network_mysqld_con_reset_query_state(network_mysqld_con *con)
     }
 
     if (con->modified_sql) {
+        if (con->sharding_plan) {
+            con->sharding_plan->modified_sql = NULL;
+            con->sharding_plan->is_modified = 0;
+        }
         g_string_free(con->modified_sql, TRUE);
         con->modified_sql = NULL;
     }

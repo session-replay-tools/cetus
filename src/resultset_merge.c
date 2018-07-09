@@ -1550,6 +1550,12 @@ cetus_result_find_fielddef(cetus_result_t *res, const char *table, const char *f
 static gboolean
 cetus_result_parse_fielddefs(cetus_result_t *res_merge, GQueue *input)
 {
+    if (res_merge->field_count >= input->length) {
+        g_critical("%s: res_merge->field_count:%d, queue length:%d",
+                G_STRLOC, res_merge->field_count, input->length);
+        return FALSE;
+    }
+
     network_packet packet = { 0 };
 
     res_merge->fielddefs = network_mysqld_proto_fielddefs_new();

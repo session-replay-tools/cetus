@@ -232,10 +232,17 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
     }
 
     p.offset = 0;
+
     network_mysqld_con_reset_command_response_state(con);
+    network_mysqld_con_reset_query_state(con);
+
     if (con->sharding_plan) {
-        network_mysqld_con_purify_sharding_plan(con->sharding_plan);
+        if (con->sharding_plan->is_modified) {
+            g_critical("%s: sharding_plan's sql is modified for con:%p", G_STRLOC, con);
+            network_mysqld_con_purify_sharding_plan(con->sharding_plan);
+        }
     }
+
     g_debug("%s: call network_mysqld_con_command_states_init", G_STRLOC);
     if (network_mysqld_con_command_states_init(con, &p)) {
         g_warning("%s: tracking mysql proto states failed", G_STRLOC);
@@ -637,8 +644,6 @@ proxy_parse_query(network_mysqld_con *con)
         g_debug("%s:command:%d", G_STRLOC, command);
         switch (command) {
         case COM_QUERY:{
-            network_mysqld_con_reset_query_state(con);
-
             gsize sql_len = packet.data->len - packet.offset;
             network_mysqld_proto_get_gstr_len(&packet, sql_len, con->orig_sql);
             g_string_append_c(con->orig_sql, '\0'); /* 2 more NULL for lexer EOB */

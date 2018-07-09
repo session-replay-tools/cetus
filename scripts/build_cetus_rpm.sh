@@ -66,3 +66,8 @@ cd $basedir
 mv ~/rpmbuild/RPMS/x86_64/cetus-${version_no}-${release_no}.el6.x86_64.rpm ./
 mv ~/rpmbuild/RPMS/x86_64/cetus-debuginfo-${version_no}-${release_no}.el6.x86_64.rpm ./
 mv ~/rpmbuild/SRPMS/cetus-${version_no}-${release_no}.el6.src.rpm ./
+
+rm -rf ~/rpmbuild/SOURCES/cetus-${version_no}
+rm -rf ~/rpmbuild/SOURCES/cetus-${version_no}.tar.gz
+rm -rf ~/rpmbuild/BUILD/cetus-${version_no}
+rm -rf ~/rpmbuild/SPECS/cetus-${version_no}.spec

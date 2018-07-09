@@ -399,6 +399,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_query) {
 
     gettimeofday(&(con->req_recv_time), NULL);
 
+    con->is_admin_client = 1;
     recv_sock = con->client;
 
     if (recv_sock->recv_queue->chunks->length != 1) {

@@ -2350,7 +2350,7 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
                     con->client->is_need_q_peek_exec = 0;
                     g_debug("%s: set a short timeout:%p", G_STRLOC, con);
                 } else {
-                    if (con->srv->maintain_close_mode) {
+                    if (con->srv->maintain_close_mode && con->is_admin_client == 0) {
                         timeout.tv_sec = con->srv->maintained_client_idle_timeout;
                         timeout.tv_usec = 0;
                         g_debug("%s: set a maintained client timeout:%p", G_STRLOC, con);
@@ -5032,13 +5032,15 @@ check_and_create_conns_func(int fd, short what, void *arg)
 {
     chassis *chas = arg;
 
-    if (chas->is_need_to_create_conns) {
-        network_connection_pool_create_conns(chas);
-        chas->is_need_to_create_conns = 0;
-    } else {
-        if (chas->complement_conn_flag) {
+    if (!chas->maintain_close_mode) {
+        if (chas->is_need_to_create_conns) {
             network_connection_pool_create_conns(chas);
-            chas->complement_conn_flag = 0;
+            chas->is_need_to_create_conns = 0;
+        } else {
+            if (chas->complement_conn_flag) {
+                network_connection_pool_create_conns(chas);
+                chas->complement_conn_flag = 0;
+            }
         }
     }
 

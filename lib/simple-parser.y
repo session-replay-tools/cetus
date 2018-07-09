@@ -542,7 +542,8 @@ selcollist(A) ::= sclp(A) nm(B) DOT STAR(C). {
 //
 %type as {sql_token_t}
 as(X) ::= AS nm(Y).    {X = Y;}
-as(X) ::= ids(X).
+as(X) ::= AS STRING(Y). {X = Y;}
+as(X) ::= ID(X).
 as(X) ::= .            {X.z = 0; X.n = 0;}
 
 // A complete FROM clause.

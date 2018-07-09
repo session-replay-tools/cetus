@@ -1640,6 +1640,11 @@ check_user_consistant(network_mysqld_con *con)
             chuser.username = con->client->response->username;
             chuser.auth_plugin_data = ss->server->challenge->auth_plugin_data;
             chuser.hashed_pwd = hashed_password;
+
+            if (strcmp(con->client->default_db->str, "") == 0) {
+                g_string_assign_len(con->client->default_db,
+                        con->srv->default_db, strlen(con->srv->default_db));
+            }
             chuser.database = con->client->default_db;
             chuser.charset = con->client->charset_code;
 

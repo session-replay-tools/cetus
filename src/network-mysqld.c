@@ -4762,6 +4762,11 @@ void
 network_connection_pool_create_conn(network_mysqld_con *con)
 {
     chassis *srv = con->srv;
+
+    if (srv->maintain_close_mode) {
+        return;
+    }
+
     chassis_private *g = srv->priv;
 
     int i;

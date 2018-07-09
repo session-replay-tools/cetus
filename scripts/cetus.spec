@@ -46,10 +46,7 @@ cd bld
 %{__make} DESTDIR=%{buildroot} install
 
 %clean
-%{__rm} -rfv %_sourcedir/*
-%{__rm} -rfv %_builddir/*
-%{__rm} -rfv %_buildrootdir/*
-%{__rm} -rfv %_specdir/*
+%{__rm} -rfv %{buildroot}
 
 %post
 

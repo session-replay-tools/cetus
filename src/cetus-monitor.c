@@ -579,7 +579,7 @@ check_slave_timestamp(int fd, short what, void *arg)
                 gettimeofday(&tv, NULL);
                 double ts_now = tv.tv_sec + ((double)tv.tv_usec) / 1000000;
                 delay_secs = ts_now - ts_slave;
-                backend->slave_delay_msec = (int)delay_secs *1000;
+                backend->slave_delay_msec = (int)(delay_secs *1000);
             } else {
                 backend->slave_delay_msec = G_MAXINT32;
             }

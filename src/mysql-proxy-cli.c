@@ -172,7 +172,8 @@ chassis_frontend_new(void)
     frontend->max_header_size = 65536;
     frontend->config_port = 3306;
 
-    frontend->slave_delay_down_threshold_sec = 60.0;
+    frontend->check_slave_delay = 1;
+    frontend->slave_delay_down_threshold_sec = 10.0;
     frontend->default_query_cache_timeout = 100;
     frontend->client_idle_timeout = 8 * HOURS;
     frontend->maintained_client_idle_timeout = 30;
@@ -621,7 +622,7 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
             g_warning("Set slave-delay-recover=%.3f", srv->slave_delay_down_threshold_sec);
         }
     } else {
-        srv->slave_delay_recover_threshold_sec = srv->slave_delay_down_threshold_sec / 2;
+        srv->slave_delay_recover_threshold_sec = 1.0;
     }
 
     srv->default_query_cache_timeout = MAX(frontend->default_query_cache_timeout, 1);

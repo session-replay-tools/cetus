@@ -148,7 +148,7 @@ void admin_select_all_backends(network_mysqld_con* admin_con)
         g_ptr_array_add(row, g_strdup(types[(int) (backend->type)]));
 
         sprintf(buffer, "%d", backend->slave_delay_msec);
-        g_ptr_array_add(row, g_strdup(buffer));
+        g_ptr_array_add(row, (backend->type == BACKEND_TYPE_RO && chas->check_slave_delay == 1) ? g_strdup(buffer) : NULL);
 
         g_ptr_array_add(row, backend->uuid->len ? g_strdup(backend->uuid->str) : NULL);
 

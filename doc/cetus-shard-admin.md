@@ -26,7 +26,7 @@
 | set reduce_conns (true\|false)           | reduce idle connections if set to true   |
 | reduce memory                            | reduce memory occupied by system         |
 | set maintain (true\|false)               | close all client connections if set to true |
-| show maintain status                     | query whether cetus' status is maintain  |
+| show maintain status                     | query whether cetus status is maintain  |
 | reload shard                             | reload sharding config from remote db    |
 | show status [like '%\<pattern>%']        | show select/update/insert/delete statistics |
 | show variables [like '%\<pattern>%']     | show configuration variables             |
@@ -78,7 +78,7 @@ sharding版本管理端口提供了39条语句对cetus进行管理，具体用�
 * address: 后端地址，IP:PORT格式；
 * state: 后端状态(unknown|up|down|maintaining|deleted)；
 * type: 读写类型(rw|ro)；
-* slave delay: 主从延迟时间(单位：毫秒)；
+* slave delay: 主从延迟时间(单位：毫秒)，只有cetus配有从库并且监测主从延迟才会有slave delay的值；
 * uuid: 暂时无用；
 * idle_conns: 空闲连接数；
 * used_conns: 正在使用的连接数；

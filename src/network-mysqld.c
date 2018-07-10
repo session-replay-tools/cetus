@@ -1275,6 +1275,10 @@ network_mysqld_con_reset_query_state(network_mysqld_con *con)
     }
 
     if (con->modified_sql) {
+        if (con->sharding_plan) {
+            con->sharding_plan->modified_sql = NULL;
+            con->sharding_plan->is_modified = 0;
+        }
         g_string_free(con->modified_sql, TRUE);
         con->modified_sql = NULL;
     }
@@ -2346,9 +2350,15 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
                     con->client->is_need_q_peek_exec = 0;
                     g_debug("%s: set a short timeout:%p", G_STRLOC, con);
                 } else {
-                    timeout.tv_sec = con->srv->client_idle_timeout;
-                    timeout.tv_usec = 0;
-                    g_debug("%s: set a long timeout:%p", G_STRLOC, con);
+                    if (con->srv->maintain_close_mode && con->is_admin_client == 0) {
+                        timeout.tv_sec = con->srv->maintained_client_idle_timeout;
+                        timeout.tv_usec = 0;
+                        g_debug("%s: set a maintained client timeout:%p", G_STRLOC, con);
+                    } else {
+                        timeout.tv_sec = con->srv->client_idle_timeout;
+                        timeout.tv_usec = 0;
+                        g_debug("%s: set a long timeout:%p", G_STRLOC, con);
+                    }
                 }
 
                 WAIT_FOR_EVENT(con->client, EV_READ, &timeout);
@@ -3479,8 +3489,6 @@ send_result_to_client(network_mysqld_con *con, network_mysqld_con_state_t ostate
             con->client->cache_queue = NULL;
         }
     }
-
-    srv->current_time = time(0);
 
     if (con->resultset_is_finished) {
         con->client->update_time = srv->current_time;
@@ -4757,6 +4765,11 @@ void
 network_connection_pool_create_conn(network_mysqld_con *con)
 {
     chassis *srv = con->srv;
+
+    if (srv->maintain_close_mode) {
+        return;
+    }
+
     chassis_private *g = srv->priv;
 
     int i;
@@ -5010,17 +5023,32 @@ network_connection_pool_create_conns(chassis *srv)
 }
 
 void
-check_and_create_conns_func(int fd, short what, void *arg)
+update_time_func(int fd, short what, void *arg)
 {
     chassis* chas = arg;
 
-    if (chas->is_need_to_create_conns) {
-        network_connection_pool_create_conns(chas);
-        chas->is_need_to_create_conns = 0;
-    } else {
-        if (chas->complement_conn_flag) {
+    chas->current_time = time(0);
+
+    g_debug("%s: update time", G_STRLOC);
+    struct timeval update_time_interval = {1, 0};
+    chassis_event_add_with_timeout(chas, &chas->update_timer_event, &update_time_interval);
+}
+
+
+void
+check_and_create_conns_func(int fd, short what, void *arg)
+{
+    chassis *chas = arg;
+
+    if (!chas->maintain_close_mode) {
+        if (chas->is_need_to_create_conns) {
             network_connection_pool_create_conns(chas);
-            chas->complement_conn_flag = 0;
+            chas->is_need_to_create_conns = 0;
+        } else {
+            if (chas->complement_conn_flag) {
+                network_connection_pool_create_conns(chas);
+                chas->complement_conn_flag = 0;
+            }
         }
     }
 
@@ -5029,11 +5057,4 @@ check_and_create_conns_func(int fd, short what, void *arg)
     chassis_event_add_with_timeout(chas, &chas->auto_create_conns_event, &check_interval);
 }
 
-void
-network_mysqld_con_set_sharding_plan(network_mysqld_con *con, sharding_plan_t *plan)
-{
-    if (con->sharding_plan) {
-        sharding_plan_free(con->sharding_plan);
-    }
-    con->sharding_plan = plan;
-}
+

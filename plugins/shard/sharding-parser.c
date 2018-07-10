@@ -548,40 +548,39 @@ partitions_filter_BETWEEN_expr(GPtrArray *partitions, sql_expr_t *expr)
 static int
 partitions_collect_IN_expr(GPtrArray *partitions, sql_expr_t *expr)
 {
-    const sharding_partition_t *gp = NULL;
+    const sharding_partition_t *part = NULL;
     g_assert(partitions);
     if (partitions->len > 0) {
-        gp = g_ptr_array_index(partitions, 0);
+        part = g_ptr_array_index(partitions, 0);
     } else {
         return PARSE_OK;
     }
 
     struct condition_t cond = { 0 };
     if (expr->list && expr->list->len > 0) {
-        GPtrArray *partitions = g_ptr_array_new();
+        GPtrArray *collected = g_ptr_array_new();
 
         sql_expr_list_t *args = expr->list;
         int i;
         for (i = 0; i < args->len; ++i) {
             sql_expr_t *arg = g_ptr_array_index(args, i);
             cond.op = TK_EQ;
-            int rc = expr_parse_sharding_value(arg, gp->key_type, &cond);
+            int rc = expr_parse_sharding_value(arg, part->key_type, &cond);
             if (rc != PARSE_OK) {
-                g_ptr_array_free(partitions, TRUE);
+                g_ptr_array_free(collected, TRUE);
                 return rc;
             }
-            partitions_collect(partitions, cond, partitions);
+            partitions_collect(partitions, cond, collected);
         }
 
-        /* transfer partitions to partitions as output */
-        for (i = partitions->len - 1; i >= 0; --i) {
-            g_ptr_array_remove_index(partitions, i);
+        /* transfer collected to partitions as output */
+        g_ptr_array_remove_range(partitions, 0, partitions->len);
+
+        for (i = 0; i < collected->len; ++i) {
+            gpointer *grp = g_ptr_array_index(collected, i);
+            g_ptr_array_add(partitions, grp);
         }
-        for (i = 0; i < partitions->len; ++i) {
-            gpointer *gp = g_ptr_array_index(partitions, i);
-            g_ptr_array_add(partitions, gp);
-        }
-        g_ptr_array_free(partitions, TRUE);
+        g_ptr_array_free(collected, TRUE);
         return PARSE_OK;
 
     } else {

@@ -212,11 +212,11 @@ HEX_DIGIT [0-9a-fA-F]
 "UNCOMMITTED"         return TK_UNCOMMITTED;
 "SERIALIZABLE"        return TK_SERIALIZABLE;
 "REPEATABLE"          return TK_REPEATABLE;
-"TRIM"                return TK_TRIM;
+"TRIM("                return TK_TRIM; //special function
+"POSITION("            return TK_POSITION; //special function
 "BOTH"                return TK_TRIM_SPEC;
 "LEADING"             return TK_TRIM_SPEC;
 "TRAILING"            return TK_TRIM_SPEC;
-"POSITION"            return TK_POSITION;
 "TRUNCATE"            return TK_TRUNCATE;
 "XA"                  return TK_XA;
 "RECOVER"             return TK_RECOVER;

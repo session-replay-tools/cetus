@@ -308,27 +308,29 @@ Default: false
 
 ### check-slave-delay
 
-Default: false
+Default: true
 
 是否检查从库延迟
 
-> check-slave-delay = true
+> check-slave-delay = false
 
 ### slave-delay-down
 
-Default: 60 (seconds)
+Default: 10 (seconds)
 
 从库延迟超过该秒，状态将被设置为DOWN
 
-> slave-delay-down = 10
+> slave-delay-down = 15
 
 ### slave-delay-recover
 
-Default: slave-delay-down / 2  (seconds)
+Default: 1  (seconds)
 
 从库延迟少于该秒数，状态将恢复为UP
 
 > slave-delay-recover = 5
+
+**注：slave-delay-recover必须比slave-delay-down小，若用户配置的slave-delay-recover比slave-delay-down大则默认设置slave-delay-recover与slave-delay-down相等**
 
 ## MGR配置
 

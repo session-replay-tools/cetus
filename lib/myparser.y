@@ -336,6 +336,10 @@ cmd ::= ROLLBACK trans_opt TO savepoint_opt nm(X). {
     }
     return expr;
   }
+
+#define IS_PARSING_SELECT() (context->parsing_place >= SELECT_OPTION \
+               && context->parsing_place < SELECT_DONE)
+
 }
 
 // Define operator precedence early so that this is the first occurrence
@@ -473,6 +477,8 @@ oneselect(A) ::= SELECT select_options(D) selcollist(C) from(F) where_opt(W)
     A->limit = L.pLimit;
     A->offset = L.pOffset;
     A->lock_read = R;
+    context->parsing_place = SELECT_DONE;
+    context->is_parsing_subquery = 0; //since there are no nested subquery, good to set 0
 }
 
 oneselect(A) ::= values(A).
@@ -503,11 +509,17 @@ values(A) ::= values(A) COMMA LP exprlist(Y) RP. {
 %type select_option {int}
 select_options(A) ::= . {
     A = 0;
+    if (context->is_parsing_subquery) {
+      sql_context_set_error(context, PARSE_NOT_SUPPORT,
+           "(cetus) subquery nesting level too deep (1-level most)");
+    }
+    if (IS_PARSING_SELECT()) {
+      context->is_parsing_subquery = 1;
+    }
     context->parsing_place = SELECT_COLUMN;
 }
 select_options(A) ::= select_options(X) select_option(Y). {
     A = X|Y;
-    context->parsing_place = SELECT_COLUMN;
 }
 select_option(A) ::= DISTINCT.   {A = SF_DISTINCT;}
 select_option(A) ::= ALL. {A = SF_ALL;}
@@ -571,8 +583,14 @@ as(X) ::= .            {X.z = 0; X.n = 0;}
 
 // A complete FROM clause.
 //
-from(A) ::= . { A = 0; }
-from(A) ::= FROM seltablist(X). { A = X; }
+from(A) ::= . {
+  A = 0;
+  context->parsing_place = SELECT_WHERE;
+}
+from(A) ::= FROM seltablist(X). {
+  A = X;
+  context->parsing_place = SELECT_WHERE;
+}
 
 // "seltablist" is a "Select Table List" - the content of the FROM clause
 // in a SELECT statement.  "stl_prefix" is a prefix of this list.
@@ -1000,19 +1018,20 @@ func_expr(A) ::= INSERT(N) LP expr(X) COMMA expr(Y) COMMA expr(Z) COMMA expr(W) 
     sql_expr_list_append(args, W);
     A = function_expr_new(&N, args, &R);
 }
-func_expr(A) ::= TRIM(N) LP expr RP(R). {
+// TRIM, POSITION includes LP in itself, hack for special function
+func_expr(A) ::= TRIM(N) expr RP(R). {
     A = function_expr_new(&N, 0, &R);
 }
-func_expr(A) ::= TRIM(N) LP expr FROM expr RP(R). {
+func_expr(A) ::= TRIM(N) expr FROM expr RP(R). {
     A = function_expr_new(&N, 0, &R);
 }
-func_expr(A) ::= TRIM(N) LP TRIM_SPEC expr FROM expr RP(R). {
+func_expr(A) ::= TRIM(N) TRIM_SPEC expr FROM expr RP(R). {
     A = function_expr_new(&N, 0, &R);
 }
-func_expr(A) ::= TRIM(N) LP TRIM_SPEC FROM expr RP(R). {
+func_expr(A) ::= TRIM(N) TRIM_SPEC FROM expr RP(R). {
     A = function_expr_new(&N, 0, &R);
 }
-func_expr(A) ::= POSITION(N) LP STRING IN expr RP(R). {
+func_expr(A) ::= POSITION(N) STRING IN expr RP(R). {
     A = function_expr_new(&N, 0, &R);
 }
 func_expr(A) ::= CURRENT_DATE(N) opt_parentheses. {

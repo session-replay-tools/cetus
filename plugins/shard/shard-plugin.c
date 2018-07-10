@@ -106,7 +106,16 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
     if (st == NULL)
         return NETWORK_SOCKET_ERROR;
 
-    g_debug("%s, con:%p:call proxy_timeout, state:%d", G_STRLOC, con, con->state);
+    int idle_timeout = con->srv->client_idle_timeout;
+    if (con->srv->maintain_close_mode) {
+        idle_timeout = con->srv->maintained_client_idle_timeout;
+    }
+
+    diff = con->srv->current_time - con->client->update_time + 1;
+
+    g_debug("%s, con:%p:call proxy_timeout, state:%d, idle timeout:%d, diff:%d",
+            G_STRLOC, con, con->state, idle_timeout, diff);
+
     switch (con->state) {
     case ST_READ_M_QUERY_RESULT:
     case ST_READ_QUERY_RESULT:
@@ -120,10 +129,13 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
                            G_STRLOC, con, con->dist_tran_state, con->xid_str);
             }
         }
+
+        con->server_to_be_closed = 1;
+        con->prev_state = con->state;
+        con->state = ST_ERROR;
         break;
     default:
-        diff = con->srv->current_time - con->client->update_time;
-        if (diff < con->srv->client_idle_timeout) {
+        if (diff < idle_timeout) {
             if (!con->client->is_server_conn_reserved) {
                 g_debug("%s, is_server_conn_reserved is false", G_STRLOC);
                 if (con->servers && con->servers->len > 0) {
@@ -132,7 +144,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
                 }
             }
         } else {
-            g_message("%s, client timeout, closeing, diff:%d, con:%p", G_STRLOC, diff, con);
+            g_message("%s, client timeout, closing, diff:%d, con:%p", G_STRLOC, diff, con);
             con->prev_state = con->state;
             con->state = ST_ERROR;
         }
@@ -199,6 +211,13 @@ check_backends_attr_changed(network_mysqld_con *con)
     return server_attr_changed;
 }
 
+static void
+network_mysqld_con_purify_sharding_plan(struct sharding_plan_t *sharding_plan)
+{
+    sharding_plan->modified_sql = NULL;
+    sharding_plan->is_modified = 0;
+}
+
 NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
 {
     GQueue *chunks = con->client->recv_queue->chunks;
@@ -213,7 +232,17 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
     }
 
     p.offset = 0;
+
     network_mysqld_con_reset_command_response_state(con);
+    network_mysqld_con_reset_query_state(con);
+
+    if (con->sharding_plan) {
+        if (con->sharding_plan->is_modified) {
+            g_critical("%s: sharding_plan's sql is modified for con:%p", G_STRLOC, con);
+            network_mysqld_con_purify_sharding_plan(con->sharding_plan);
+        }
+    }
+
     g_debug("%s: call network_mysqld_con_command_states_init", G_STRLOC);
     if (network_mysqld_con_command_states_init(con, &p)) {
         g_warning("%s: tracking mysql proto states failed", G_STRLOC);
@@ -352,7 +381,7 @@ explain_shard_sql(network_mysqld_con *con, sharding_plan_t *plan)
 
     if (con->client->default_db->len == 0) {
         if (con->srv->default_db != NULL) {
-            g_string_assign_len(con->client->default_db, con->srv->default_db, strlen(con->srv->default_db));
+            g_string_assign(con->client->default_db, con->srv->default_db);
             g_debug("%s:set client default db:%s for con:%p", G_STRLOC, con->client->default_db->str, con);
         }
     }
@@ -615,8 +644,6 @@ proxy_parse_query(network_mysqld_con *con)
         g_debug("%s:command:%d", G_STRLOC, command);
         switch (command) {
         case COM_QUERY:{
-            network_mysqld_con_reset_query_state(con);
-
             gsize sql_len = packet.data->len - packet.offset;
             network_mysqld_proto_get_gstr_len(&packet, sql_len, con->orig_sql);
             g_string_append_c(con->orig_sql, '\0'); /* 2 more NULL for lexer EOB */
@@ -772,6 +799,15 @@ remove_ro_servers(network_mysqld_con *con)
     } else {
         con->servers = NULL;
     }
+}
+
+static void
+network_mysqld_con_set_sharding_plan(network_mysqld_con *con, sharding_plan_t *plan)
+{
+    if (con->sharding_plan) {
+        sharding_plan_free(con->sharding_plan);
+    }
+    con->sharding_plan = plan;
 }
 
 static int
@@ -1133,8 +1169,10 @@ proxy_get_server_list(network_mysqld_con *con)
     before_get_server_list(con);
 
     if (con->client->default_db->len == 0) {
-        g_string_assign(con->client->default_db, con->srv->default_db);
-        g_debug("%s:set default db:%s for con:%p", G_STRLOC, con->client->default_db->str, con);
+        if (con->srv->default_db != NULL) {
+            g_string_assign(con->client->default_db, con->srv->default_db);
+            g_debug("%s:set default db:%s for con:%p", G_STRLOC, con->client->default_db->str, con);
+        }
     }
 
     con->use_all_prev_servers = 0;
@@ -1604,6 +1642,12 @@ check_user_consistant(network_mysqld_con *con)
             chuser.username = con->client->response->username;
             chuser.auth_plugin_data = ss->server->challenge->auth_plugin_data;
             chuser.hashed_pwd = hashed_password;
+
+            if (strcmp(con->client->default_db->str, "") == 0) {
+                if (con->srv->default_db != NULL) {
+                    g_string_assign(con->client->default_db, con->srv->default_db);
+                }
+            }
             chuser.database = con->client->default_db;
             chuser.charset = con->client->charset_code;
 
@@ -1893,12 +1937,8 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
             g_debug("%s:call proxy_put_shard_conn_to_pool for con:%p", G_STRLOC, con);
             proxy_put_shard_conn_to_pool(con);
 
-            if (con->srv->maintain_close_mode) {
-                con->state = ST_CLOSE_CLIENT;
-                g_debug("%s:client needs to closed for con:%p", G_STRLOC, con);
-            } else {
-                con->state = ST_READ_QUERY;
-            }
+            con->state = ST_READ_QUERY;
+
             return NETWORK_SOCKET_SUCCESS;
         }
     }
@@ -1911,12 +1951,6 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
 
     con->state = ST_READ_QUERY;
 
-    if (con->srv->maintain_close_mode) {
-        if (!con->is_in_transaction) {
-            con->state = ST_CLOSE_CLIENT;
-            g_debug("%s:client needs to closed for con:%p", G_STRLOC, con);
-        }
-    }
     return NETWORK_SOCKET_SUCCESS;
 }
 
@@ -2560,6 +2594,10 @@ network_mysqld_shard_plugin_apply_config(chassis *chas, chassis_plugin_config *c
     g_debug("%s:listen sock, ev:%p", G_STRLOC, (&listen_sock->event));
 
     if (network_backends_load_config(g->backends, chas) != -1) {
+        evtimer_set(&chas->update_timer_event, update_time_func, chas);
+        struct timeval update_time_interval = {1, 0};
+        chassis_event_add_with_timeout(chas, &chas->update_timer_event, &update_time_interval);
+
         network_connection_pool_create_conns(chas);
         evtimer_set(&chas->auto_create_conns_event, check_and_create_conns_func, chas);
         struct timeval check_interval = {10, 0};

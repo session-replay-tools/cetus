@@ -381,7 +381,7 @@ explain_shard_sql(network_mysqld_con *con, sharding_plan_t *plan)
 
     if (con->client->default_db->len == 0) {
         if (con->srv->default_db != NULL) {
-            g_string_assign_len(con->client->default_db, con->srv->default_db, strlen(con->srv->default_db));
+            g_string_assign(con->client->default_db, con->srv->default_db);
             g_debug("%s:set client default db:%s for con:%p", G_STRLOC, con->client->default_db->str, con);
         }
     }
@@ -1169,8 +1169,10 @@ proxy_get_server_list(network_mysqld_con *con)
     before_get_server_list(con);
 
     if (con->client->default_db->len == 0) {
-        g_string_assign(con->client->default_db, con->srv->default_db);
-        g_debug("%s:set default db:%s for con:%p", G_STRLOC, con->client->default_db->str, con);
+        if (con->srv->default_db != NULL) {
+            g_string_assign(con->client->default_db, con->srv->default_db);
+            g_debug("%s:set default db:%s for con:%p", G_STRLOC, con->client->default_db->str, con);
+        }
     }
 
     con->use_all_prev_servers = 0;
@@ -1642,8 +1644,9 @@ check_user_consistant(network_mysqld_con *con)
             chuser.hashed_pwd = hashed_password;
 
             if (strcmp(con->client->default_db->str, "") == 0) {
-                g_string_assign_len(con->client->default_db,
-                        con->srv->default_db, strlen(con->srv->default_db));
+                if (con->srv->default_db != NULL) {
+                    g_string_assign(con->client->default_db, con->srv->default_db);
+                }
             }
             chuser.database = con->client->default_db;
             chuser.charset = con->client->charset_code;

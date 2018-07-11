@@ -282,11 +282,102 @@ Default: :4041
 
 ## 远端配置中心
 
-可选择配置远端db，通过配置中心获取分库模式的配置
+在同一Cetus集群，当Cetus实例数量较多时候，各个实例的本地配置文件的统一管理会变得复杂。Cetus除了提供通过本地配置文件的方式启动外，还提供了通过远程配置中心的方式启动。
+
+远程配置中心中可以配置与本地配置文件中相同的启动参数，各个Cetus实例启动时，指定远程配置中心的url获取配置信息启动。这样就保证了同一个Cetus集群中各个Cetus实例启动配置的一致性。
+
+目前Cetus的两个版本（读写分离版本和分库版本）均支持远程配置中心启动。
+
+远程配置中心涉及3张表`settings`、`objects`和`services`，当这些表不存在时，Cetus会自动创建，但是在启动的时候，需要配置合理的参数，否则Cetus可能启动不起来，需要查看Cetus日志来查看具体报错问题。下面依次介绍这些表的作用。
+
+- `settings`表
+
+该表主要存储启动时加载的配置信息，即对应本地配置文件`proxy.conf`。其表结构如下：
+
+> CREATE TABLE `settings` (
+> 
+>  `option_key` varchar(64) NOT NULL,
+> 
+>  `option_value` varchar(1024) NOT NULL,
+> 
+>  PRIMARY KEY (`option_key`)
+> 
+>)
+
+在该表中，可以配置各种启动配置参数，例如：
+
+```
+replace into `settings` values ("admin-address", "0.0.0.0:6003");
+replace into `settings` values ("admin-password", "admin");
+replace into `settings` values ("admin-username", "admin");
+replace into `settings` values ("basedir", "/home/ght/cetus_install");
+replace into `settings` values ("conf-dir", "/home/ght/cetus_install/conf");
+replace into `settings` values ("default-db", "test");
+replace into `settings` values ("default-username", "ght");
+replace into `settings` values ("log-file", "/home/ght/cetus_install/cetus.log");
+replace into `settings` values ("plugin-dir", "/home/ght/cetus_install/lib/cetus/plugins");
+replace into `settings` values ("plugins", "proxy,admin");
+replace into `settings` values ("proxy-backend-addresses", "192.0.0.1:3306@data1,192.0.0.2:3306@data2,192.0.0.3:3306@data3,192.0.0.4:3306@data4");
+```
+
+- `objects`表
+
+该表主要存储账号信息和分片信息，即对应本地配置文件的`users.json`文件和`sharding.json`文件。其表结构如下：
+
+>CREATE TABLE `objects` (
+>
+>  `object_name` varchar(64) NOT NULL,
+> 
+>  `object_value` text NOT NULL,
+> 
+>  `mtime` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+> 
+>  PRIMARY KEY (`object_name`)
+> 
+> )
+
+在该表中，可以配置账户信息和分表规则信息，其中`object_values`存储的其实是json格式，例如：
+
+```
+replace into `objects` values ("sharding", '{"vdb": [{"id": 1,"type": "int","method": "hash","num": 8,"partitions": {"data1": [0,1], "data2": [2,3], "data3": [4,5], "data4": [6,7]}},{ "id": 2,"type": "int","method": "range","num": 0,"partitions": {"data1": 124999, "data2": 249999, "data3": 374999,"data4": 499999}}],"table": [{"vdb": 1, "db": "employees_hash", "table": "dept_emp", "pkey": "emp_no"},{"vdb": 1, "db": "employees_hash", "table": "employees", "pkey": "emp_no"},{"vdb": 1, "db": "employees_hash", "table": "titles", "pkey": "emp_no"},{"vdb": 2, "db":"employees_range", "table": "dept_emp", "pkey": "emp_no"},{"vdb": 2, "db": "employees_range", "table": "employees", "pkey": "emp_no"},{"vdb": 2, "db":"employees_range", "table": "titles", "pkey": "emp_no"}],"single_tables": [{"table": "regioncode", "db": "employees_hash", "group": "data1"},{"table": "countries",  "db": "employees_range", "group": "data2"}]}', now());
+
+replace into `objects` values ("users", '{"users":[{"user": "ght","client_pwd":"Zxcvbnm,lp-1234","server_pwd":"Zxcvbnm,lp-1234"}, {"user": "tmp","client_pwd":"Zxcvbnm,lp-1234","server_pwd":"Zxcvbnm,lp-12345"}, {"user": "test2","client_pwd":"123456","server_pwd":   "Zxcvbnm,lp-1234"}, {"user": "dbtest","client_pwd":"Zxcvbnm,lp-1234","server_pwd":"Zxcvbnm,lp-1234"}]}', now());
+```
+
+- `services`表
+
+该表主要用于存储Cetus启动时间。该表是Cetus启动的时候由Cetus自己写入的，所以不需要用户配置。其表结构如下：
+
+>CREATE TABLE `services` (
+>
+>  `id` varchar(64) NOT NULL,
+> 
+>  `data` varchar(64) NOT NULL,
+> 
+>  `start_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+> 
+>  PRIMARY KEY (`id`)
+
+该表中的`id`字段记录了Cetus插件监听的IP/PORT，`data`字段记录了插件名称，`start_time`字段则记录了插件的启动时间。例如启动Cetus后，表中数据可能类似下面所示：
+
+```
+mysql> select * from services;
++--------------+-------+---------------------+
+| id           | data  | start_time          |
++--------------+-------+---------------------+
+| 0.0.0.0:6003 | admin | 2018-07-11 11:59:05 |
+| :4040        | proxy | 2018-07-11 11:59:06 |
++--------------+-------+---------------------+
+2 rows in set (0.00 sec)
+```
+
+
+在Cetus启动的时候，则不需要再指定`--defaults-file`，而是指定远端配置中心的url即可`remote-conf-url`。
+
 
 ### remote-conf-url
 
-远端配置中心信息
+- 远端配置中心信息书写格式如下：
 
 > remote-conf-url = mysql://dbuser:dbpassword@host:port/schema
 
@@ -295,6 +386,19 @@ Default: :4041
 > remote-conf-url = sqlite://dbuser:dbpassword@host:port/schema
 
 配置中心端口port可选填，默认3306
+
+- 启动命令类似如下：
+
+> /home/ght/cetus_install/libexec/cetus --remote-conf-url=mysql://ght:123456@172.17.0.1:3306/test
+ 
+### 重新load配置
+当配置中心的某些配置需要修改，而需要Cetus重新加载修改后的配置时候，并不需要重新启动Cetus，Cetus的admin端口提供了重新读取配置中心配置信息的功能。
+
+当修改表`settings`中的配置信息时，可以通过在Cetus的admin端口执行`config reload`命令，使Cetus重新从配置中心拉取配置信息，使得配置中心新修改的配置在Cetus上生效。
+
+当修改表`objects`中的账号信息时，可以通过在Cetus的admin端口执行`config reload user`命令，使Cetus重新从配置中心拉取账号信息，使得配置中心修改的账号信息在Cetus上生效。
+
+
 
 ## 辅助线程配置
 

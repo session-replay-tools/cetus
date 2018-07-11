@@ -90,6 +90,8 @@ struct chassis_plugin_config {
 
     gchar *deny_ip;
     GHashTable *deny_ip_table;
+
+    int allow_nested_subquery;
 };
 
 /**
@@ -1981,6 +1983,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_init)
     /* TODO: this should inside "st"_new, but now "st" shared by many plugins */
     st->sql_context = g_new0(sql_context_t, 1);
     sql_context_init(st->sql_context);
+    st->sql_context->allow_subquery_nesting = config->allow_nested_subquery;
     st->trx_read_write = TF_READ_WRITE;
     st->trx_isolation_level = TF_REPEATABLE_READ;
 
@@ -2232,6 +2235,15 @@ show_proxy_connect_timeout(gpointer param) {
     return NULL;
 }
 
+static gchar* show_allow_nested_subquery(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%d", config->allow_nested_subquery);
+    }
+    return NULL;
+}
+
 static gint
 assign_proxy_connect_timeout(const gchar *newval, gpointer param) {
     gint ret = ASSIGN_ERROR;
@@ -2452,6 +2464,11 @@ network_mysqld_shard_plugin_get_options(chassis_plugin_config *config)
                         0, 0, OPTION_ARG_DOUBLE, &(config->connect_timeout_dbl),
                         "connect timeout in seconds (default: 2.0 seconds)", NULL,
                         assign_proxy_connect_timeout, show_proxy_connect_timeout, ALL_OPTS_PROPERTY);
+
+    chassis_options_add(&opts, "allow-nested-subquery",
+                        0, 0, OPTION_ARG_NONE, &(config->allow_nested_subquery),
+                        "Use this on your own risk, data integrity is not guaranteed", NULL,
+                        NULL, show_allow_nested_subquery, SHOW_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-read-timeout",
                         0, 0, OPTION_ARG_DOUBLE, &(config->read_timeout_dbl),

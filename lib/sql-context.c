@@ -32,7 +32,22 @@ void yylex_restore_buffer(void *);
 void
 sql_context_init(sql_context_t *p)
 {
-    memset(p, 0, sizeof(sql_context_t));
+    p->rc = 0;
+    p->message = 0;
+    p->explain = 0;
+    p->user_data = 0;
+    p->sql_statement = 0;
+    p->stmt_type = 0;
+    p->stmt_count = 0;
+
+    p->rw_flag = 0;
+    p->clause_flags = 0;
+    p->where_flags = 0;
+    p->parsing_place = 0;
+
+    p->property = 0;
+    p->is_parsing_subquery = 0;
+    /* allow_subquery_nesting; //keep unchanged */
 }
 
 void

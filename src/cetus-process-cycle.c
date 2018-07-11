@@ -56,6 +56,36 @@ cetus_admin_process_cycle(cetus_cycle_t *cycle, void *data)
 {
     g_message("%s: call cetus_admin_process_cycle", G_STRLOC);
 
+    if (close(cetus_processes[cetus_process_slot].parent_child_channel[0]) == -1) {
+        g_critical("%s: close() channel failed, errno:%d", G_STRLOC, errno);
+    }
+
+    /* close all worker admin channel 1 */
+
+    for (n = 0; n < cetus_last_process; n++) {
+
+        if (cetus_processes[n].pid == -1) {
+            continue;
+        }
+
+        if (n == cetus_process_slot) {
+            continue;
+        }
+
+        if (cetus_processes[n].admin_worker_channel[1] == -1) {
+            continue;
+        }
+
+        g_debug("%s: close() channel one fd:%d, n:%d", 
+                G_STRLOC, cetus_processes[n].parent_child_channel[1], n);
+
+        
+        if (close(cetus_processes[n].admin_worker_channel[1]) == -1) {
+            g_critical("%s: close() channel failed, errno:%d", G_STRLOC, errno);
+        }
+
+    }
+
     cetus_process = CETUS_PROCESS_ADMIN;
 
     cetus_worker_process_init(cycle, -1);
@@ -120,8 +150,12 @@ cetus_start_admin_processes(cetus_cycle_t *cycle, int respawn)
 
     ch.basics.command = CETUS_CMD_OPEN_CHANNEL;
 
-    cetus_spawn_process(cycle, cetus_admin_process_cycle,
+    cetus_spawn_admin_process(cycle, cetus_admin_process_cycle,
             NULL, "admin process", CETUS_PROCESS_RESPAWN);
+
+    if (close(cetus_processes[cetus_process_slot].admin_worker_channel[0]) == -1) {
+        g_critical("%s: close() channel failed, errno:%d", G_STRLOC, errno);
+    }
 
     ch.basics.pid = cetus_processes[cetus_process_slot].pid;
     ch.basics.slot = cetus_process_slot;
@@ -168,6 +202,7 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
     for (i = 0; i < cetus_argc; i++) {
         size += strlen(cetus_argv[i]) + 1;
     }
+
 
     cetus_start_worker_processes(cycle, cycle->worker_processes,
                                CETUS_PROCESS_RESPAWN);
@@ -635,6 +670,11 @@ cetus_worker_process_init(cetus_cycle_t *cycle, int worker)
         if (close(cetus_processes[n].parent_child_channel[1]) == -1) {
             g_critical("%s: close() channel failed, errno:%d", G_STRLOC, errno);
         }
+        
+        if (close(cetus_processes[n].admin_worker_channel[1]) == -1) {
+            g_critical("%s: close() channel failed, errno:%d", G_STRLOC, errno);
+        }
+
     }
 
     g_debug("%s: close() channel zero fd:%d, n:%d", 
@@ -642,6 +682,10 @@ cetus_worker_process_init(cetus_cycle_t *cycle, int worker)
 
 
     if (close(cetus_processes[cetus_process_slot].parent_child_channel[0]) == -1) {
+        g_critical("%s: close() channel failed, errno:%d", G_STRLOC, errno);
+    }
+
+    if (close(cetus_processes[cetus_process_slot].admin_worker_channel[0]) == -1) {
         g_critical("%s: close() channel failed, errno:%d", G_STRLOC, errno);
     }
 

@@ -1450,6 +1450,7 @@ proxy_add_server_connection_array(network_mysqld_con *con, int *server_unavailab
             if (con->is_in_transaction) {
                 g_warning("%s:in single tran, but visit multi servers for con:%p, sql:%s",
                         G_STRLOC, con, con->orig_sql->str);
+                con->xa_tran_conflict = 1;
                 return FALSE;
             }
             GPtrArray *new_servers = g_ptr_array_new();
@@ -1939,7 +1940,11 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
             g_debug("%s:call proxy_put_shard_conn_to_pool for con:%p", G_STRLOC, con);
             proxy_put_shard_conn_to_pool(con);
 
-            con->state = ST_READ_QUERY;
+            if (con->is_client_to_be_closed) {
+                con->state = ST_CLOSE_CLIENT;
+            } else {
+                con->state = ST_READ_QUERY;
+            }
 
             return NETWORK_SOCKET_SUCCESS;
         }

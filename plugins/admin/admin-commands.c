@@ -1655,19 +1655,21 @@ void admin_save_settings(network_mysqld_con *con)
     GString *free_path = g_string_new(NULL);
 
     if(srv->default_file == NULL) {
-        free_path = g_string_append(free_path, get_current_dir_name());
+        gchar * current_dir =  g_get_current_dir();
+        free_path = g_string_append(free_path, current_dir);
         free_path = g_string_append(free_path, "/default.conf");
         srv->default_file = g_strdup(free_path->str);
+        g_free(current_dir);
     }
 
     if(!g_path_is_absolute(srv->default_file)) {
-        free_path = g_string_append(free_path, get_current_dir_name());
+        gchar * current_dir =  g_get_current_dir();
+        free_path = g_string_append(free_path, current_dir);
         free_path = g_string_append(free_path, "/");
         free_path = g_string_append(free_path, srv->default_file);
-        if(srv->default_file) {
-            g_free(srv->default_file);
-        }
+        g_free(srv->default_file);
         srv->default_file = g_strdup(free_path->str);
+        g_free(current_dir);
     }
     if(free_path) {
         g_string_free(free_path, TRUE);

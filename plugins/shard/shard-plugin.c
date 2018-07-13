@@ -1429,6 +1429,7 @@ proxy_add_server_connection_array(network_mysqld_con *con, int *server_unavailab
         int hit = 0;
         for (i = 0; i < con->servers->len; i++) {
             server_session_t *ss = g_ptr_array_index(con->servers, i);
+            ss->dist_tran_participated = 0;
             const GString *group = ss->server->group;
             if (sharding_plan_has_group(plan, group)) {
                 if (con->is_read_ro_server_allowed && !ss->server->is_read_only) {
@@ -1818,7 +1819,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
         for (i = 0; i < con->servers->len; i++) {
             server_session_t *ss = g_ptr_array_index(con->servers, i);
 
-            if (con->dist_tran && !ss->dist_tran_participated) {
+            if (!con->is_commit_or_rollback && !ss->participated) {
                 g_debug("%s: omit it for server:%p", G_STRLOC, ss->server);
                 continue;
             }

@@ -3343,6 +3343,27 @@ send_part_content_to_client(network_mysqld_con *con)
 }
 
 static void
+process_single_tran_confliction(network_mysqld_con *con)
+{
+
+    con->state = ST_SEND_QUERY_RESULT;
+    g_message("%s: single tran but visit multiple servers for con:%p", G_STRLOC, con);
+
+    if (con->servers != NULL) {
+        g_message("%s: server num :%d for con:%p", G_STRLOC, (int)con->servers->len, con);
+        con->server_to_be_closed = 1;
+    }
+
+    network_mysqld_con_send_error_full(con->client, 
+            C("not distributed tran but visit multiple servers"), ER_CETUS_NOT_SUPPORTED, "HY000");
+    con->is_wait_server = 0;
+    network_queue_clear(con->client->recv_queue);
+    network_mysqld_queue_reset(con->client);
+    con->is_client_to_be_closed = 1;
+}
+
+
+static void
 process_service_unavailable(network_mysqld_con *con)
 {
 
@@ -4002,7 +4023,12 @@ network_mysqld_con_handle(int event_fd, short events, void *user_data)
                 break;
 
             default:
-                process_service_unavailable(con);
+                if (con->xa_tran_conflict) {
+                    process_single_tran_confliction(con);
+                    con->xa_tran_conflict = 0;
+                } else {
+                    process_service_unavailable(con);
+                }
                 break;
             }
             break;

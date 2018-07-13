@@ -520,6 +520,7 @@ struct network_mysqld_con {
     unsigned int is_start_tran_command:1;
     unsigned int is_prepared:1;
     unsigned int is_in_transaction:1;
+    unsigned int xa_tran_conflict:1;
     unsigned int is_timeout:1;
     unsigned int is_in_sess_context:1;
     unsigned int is_changed_user_when_quit:1;

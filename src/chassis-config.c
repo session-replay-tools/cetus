@@ -549,6 +549,14 @@ chassis_config_parse_options(chassis_config_t *conf, GList *entries)
         if (entry_value) {
             switch (entry->arg) {
             case OPTION_ARG_NONE:
+                if (entry->arg_data == NULL)
+                    break;
+                if(strcasecmp(entry_value, "true") == 0) {
+                    *(int *)(entry->arg_data) = 1;
+                } else {
+                    *(int *)(entry->arg_data) = 0;
+                }
+                break;
             case OPTION_ARG_INT:
                 if (entry->arg_data == NULL)
                     break;

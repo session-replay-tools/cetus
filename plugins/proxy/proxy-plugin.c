@@ -285,10 +285,10 @@ proxy_c_read_query_result(network_mysqld_con *con)
             if (inj->id != INJ_ID_COM_STMT_PREPARE) {
                 if (res->qstat.server_status & SERVER_STATUS_IN_TRANS) {
                     con->is_in_transaction = 1;
-                    g_debug("%s: set is_in_transaction true", G_STRLOC);
+                    g_debug("%s: set is_in_transaction true for con:%p", G_STRLOC, con);
                 } else {
                     con->is_in_transaction = 0;
-                    g_debug("%s: set is_in_transaction false", G_STRLOC);
+                    g_debug("%s: set is_in_transaction false for con:%p", G_STRLOC, con);
                 }
 
                 if (!con->is_in_transaction) {
@@ -563,6 +563,11 @@ process_non_trans_query(network_mysqld_con *con, sql_context_t *context, mysqld_
             network_mysqld_con_handle_insert_id_response(con, last_insert_id_name, con->last_insert_id);
             return PROXY_SEND_RESULT;
         }
+
+        if (con->last_record_updated) {
+            need_to_visit_master = TRUE;
+        }
+
         break;
     }
     case STMT_SET_NAMES:{
@@ -1085,7 +1090,7 @@ process_rw_split(network_mysqld_con *con, proxy_plugin_con_t *st,
                  sql_context_t *context, mysqld_query_attr_t *query_attr,
                  int is_under_sess_scope, int command, int *disp_flag)
 {
-    if (!con->is_in_transaction && !is_under_sess_scope && command == COM_QUERY && (!con->last_record_updated)) {
+    if (!con->is_in_transaction && !is_under_sess_scope && command == COM_QUERY) {
         /* send all non-transactional SELECTs to a slave */
         int ret = process_non_trans_query(con, context, query_attr);
         switch (ret) {

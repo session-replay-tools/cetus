@@ -166,12 +166,6 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
         to_be_put_to_pool = FALSE;
     }
 
-    if (to_be_put_to_pool == TRUE && con->is_in_transaction) {
-        g_critical("%s: server in tran and put to pool:%p, client:%s",
-                G_STRLOC, con, con->client->src->name->str);
-        to_be_put_to_pool = FALSE;
-    }
-
     if (to_be_put_to_pool == TRUE && !is_swap && con->servers == NULL) {
         if (con->srv->is_reduce_conns) {
             if (network_conn_pool_do_reduce_conns_verdict(st->backend->pool, st->backend->connected_clients)) {

@@ -1341,10 +1341,11 @@ check_query_status(network_mysqld_con *con, network_socket *server, network_mysq
     if (com_query->server_status & SERVER_STATUS_IN_TRANS) {
         con->is_in_transaction = 1;
         server->is_in_tran_context = 1;
+        g_debug("%s: set is_in_transaction true for con:%p", G_STRLOC, con);
     } else {
         con->is_in_transaction = 0;
         server->is_in_tran_context = 0;
-        g_debug("%s: set is_in_transaction false", G_STRLOC);
+        g_debug("%s: set is_in_transaction false:%p", G_STRLOC, con);
     }
 
     if (!con->is_in_transaction) {
@@ -2307,6 +2308,55 @@ handle_query_wait_stats(network_mysqld_con *con)
     con->srv->query_stats.query_wait_table[diff]++;
 }
 
+static void
+process_service_unavailable(network_mysqld_con *con)
+{
+
+    con->state = ST_SEND_QUERY_RESULT;
+    g_message("%s: service unavailable for con:%p", G_STRLOC, con);
+
+    /*if (con->is_auto_commit) {
+        if (con->dist_tran) {
+            if (con->orig_sql) {
+                g_message("%s: global update/insert is not fullfiled for con:%p, sql:%s", 
+                        G_STRLOC, con, con->orig_sql->str);
+            } else {
+                g_message("%s: global update/insert is not fullfiled for con:%p", 
+                        G_STRLOC, con);
+            }
+            con->dist_tran = 0;
+        }
+    }*/
+
+    if (con->servers != NULL) {
+        g_debug("%s: server num :%d for con:%p", G_STRLOC, (int)con->servers->len, con);
+        size_t i;
+        for (i = 0; i < con->servers->len; i++) {
+            server_session_t *ss = g_ptr_array_index(con->servers, i);
+            if (ss->fresh) {
+                CHECK_PENDING_EVENT(&(ss->server->event));
+                network_pool_add_idle_conn(ss->backend->pool, con->srv, ss->server);
+                ss->backend->connected_clients--;
+                g_message("%s: connected_clients sub:%d, %d ndx for con:%p", G_STRLOC,
+                          ss->backend->connected_clients, (int)i, con);
+                g_ptr_array_remove(con->servers, ss);
+                ss->server = NULL;
+                server_session_free(ss);
+                i--;
+            }
+        }
+
+        if (con->servers->len == 0) {
+            con->server_to_be_closed = 1;
+        }
+    }
+
+    network_mysqld_con_send_error_full(con->client, C("service unavailable"), ER_TOO_MANY_USER_CONNECTIONS, "42000");
+    con->is_wait_server = 0;
+    network_queue_clear(con->client->recv_queue);
+    network_mysqld_queue_reset(con->client);
+}
+
 static int
 handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
 {
@@ -2419,11 +2469,7 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
                 G_STRLOC, con->client->response->username->str, ret);
 
         handle_query_wait_stats(con);
-        con->state = ST_SEND_QUERY_RESULT;
-        network_mysqld_con_send_error_full(con->client, C("service unavailable"), ER_SERVER_SHUTDOWN, "08S01");
-        con->is_wait_server = 0;
-        network_queue_clear(con->client->recv_queue);
-        network_mysqld_queue_reset(con->client);
+        process_service_unavailable(con);
         break;
     }
 
@@ -2998,11 +3044,8 @@ disp_no_workers(network_mysqld_con *con)
     }
 
     con->server_to_be_closed = 1;
-    con->state = ST_SEND_QUERY_RESULT;
-    g_message("%s: send dist trans error to client, dist state:%d", G_STRLOC, con->dist_tran_state);
-    network_mysqld_con_send_error_full(con->client, C("service unavailable"), ER_SERVER_SHUTDOWN, "08S01");
-    network_queue_clear(con->client->recv_queue);
-    network_mysqld_queue_reset(con->client);
+
+    process_service_unavailable(con);
 }
 
 static int
@@ -3046,12 +3089,9 @@ disp_resp_workers_not_matched(network_mysqld_con *con, int *disp_flag)
                 con->dist_tran = 0;
                 con->dist_tran_failed = 0;
 
-                network_mysqld_con_send_error_full(con->client, C("service unavailable"), ER_SERVER_SHUTDOWN, "08S01");
-
+                process_service_unavailable(con);
                 remove_mul_server_recv_packets(con);
                 network_queue_clear(con->client->send_queue);
-                network_queue_clear(con->client->recv_queue);
-                network_mysqld_queue_reset(con->client);
 
                 *disp_flag = DISP_CONTINUE;
                 result = 0;
@@ -3362,42 +3402,6 @@ process_single_tran_confliction(network_mysqld_con *con)
     con->is_client_to_be_closed = 1;
 }
 
-
-static void
-process_service_unavailable(network_mysqld_con *con)
-{
-
-    con->state = ST_SEND_QUERY_RESULT;
-    g_message("%s: service unavailable for con:%p", G_STRLOC, con);
-
-    if (con->servers != NULL) {
-        g_debug("%s: server num :%d for con:%p", G_STRLOC, (int)con->servers->len, con);
-        size_t i;
-        for (i = 0; i < con->servers->len; i++) {
-            server_session_t *ss = g_ptr_array_index(con->servers, i);
-            if (ss->fresh) {
-                CHECK_PENDING_EVENT(&(ss->server->event));
-                network_pool_add_idle_conn(ss->backend->pool, con->srv, ss->server);
-                ss->backend->connected_clients--;
-                g_message("%s: connected_clients sub:%d, %d ndx for con:%p", G_STRLOC,
-                          ss->backend->connected_clients, (int)i, con);
-                g_ptr_array_remove(con->servers, ss);
-                ss->server = NULL;
-                server_session_free(ss);
-                i--;
-            }
-        }
-
-        if (con->servers->len == 0) {
-            con->server_to_be_closed = 1;
-        }
-    }
-
-    network_mysqld_con_send_error_full(con->client, C("service unavailable"), ER_TOO_MANY_USER_CONNECTIONS, "42000");
-    con->is_wait_server = 0;
-    network_queue_clear(con->client->recv_queue);
-    network_mysqld_queue_reset(con->client);
-}
 
 static int
 send_result_to_client(network_mysqld_con *con, network_mysqld_con_state_t ostate)

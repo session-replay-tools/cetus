@@ -509,7 +509,7 @@ values(A) ::= values(A) COMMA LP exprlist(Y) RP. {
 %type select_option {int}
 select_options(A) ::= . {
     A = 0;
-    if (context->is_parsing_subquery) {
+    if (!context->allow_subquery_nesting && context->is_parsing_subquery) {
       sql_context_set_error(context, PARSE_NOT_SUPPORT,
            "(cetus) subquery nesting level too deep (1-level most)");
     }

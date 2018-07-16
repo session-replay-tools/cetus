@@ -90,6 +90,8 @@ struct chassis_plugin_config {
 
     gchar *deny_ip;
     GHashTable *deny_ip_table;
+
+    int allow_nested_subquery;
 };
 
 /**
@@ -1427,6 +1429,7 @@ proxy_add_server_connection_array(network_mysqld_con *con, int *server_unavailab
         int hit = 0;
         for (i = 0; i < con->servers->len; i++) {
             server_session_t *ss = g_ptr_array_index(con->servers, i);
+            ss->dist_tran_participated = 0;
             const GString *group = ss->server->group;
             if (sharding_plan_has_group(plan, group)) {
                 if (con->is_read_ro_server_allowed && !ss->server->is_read_only) {
@@ -1448,6 +1451,7 @@ proxy_add_server_connection_array(network_mysqld_con *con, int *server_unavailab
             if (con->is_in_transaction) {
                 g_warning("%s:in single tran, but visit multi servers for con:%p, sql:%s",
                         G_STRLOC, con, con->orig_sql->str);
+                con->xa_tran_conflict = 1;
                 return FALSE;
             }
             GPtrArray *new_servers = g_ptr_array_new();
@@ -1815,7 +1819,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
         for (i = 0; i < con->servers->len; i++) {
             server_session_t *ss = g_ptr_array_index(con->servers, i);
 
-            if (con->dist_tran && !ss->dist_tran_participated) {
+            if (!con->is_commit_or_rollback && !ss->participated) {
                 g_debug("%s: omit it for server:%p", G_STRLOC, ss->server);
                 continue;
             }
@@ -1937,7 +1941,11 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
             g_debug("%s:call proxy_put_shard_conn_to_pool for con:%p", G_STRLOC, con);
             proxy_put_shard_conn_to_pool(con);
 
-            con->state = ST_READ_QUERY;
+            if (con->is_client_to_be_closed) {
+                con->state = ST_CLOSE_CLIENT;
+            } else {
+                con->state = ST_READ_QUERY;
+            }
 
             return NETWORK_SOCKET_SUCCESS;
         }
@@ -1981,6 +1989,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_init)
     /* TODO: this should inside "st"_new, but now "st" shared by many plugins */
     st->sql_context = g_new0(sql_context_t, 1);
     sql_context_init(st->sql_context);
+    st->sql_context->allow_subquery_nesting = config->allow_nested_subquery;
     st->trx_read_write = TF_READ_WRITE;
     st->trx_isolation_level = TF_REPEATABLE_READ;
 
@@ -2232,6 +2241,15 @@ show_proxy_connect_timeout(gpointer param) {
     return NULL;
 }
 
+static gchar* show_allow_nested_subquery(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%d", config->allow_nested_subquery);
+    }
+    return NULL;
+}
+
 static gint
 assign_proxy_connect_timeout(const gchar *newval, gpointer param) {
     gint ret = ASSIGN_ERROR;
@@ -2452,6 +2470,11 @@ network_mysqld_shard_plugin_get_options(chassis_plugin_config *config)
                         0, 0, OPTION_ARG_DOUBLE, &(config->connect_timeout_dbl),
                         "connect timeout in seconds (default: 2.0 seconds)", NULL,
                         assign_proxy_connect_timeout, show_proxy_connect_timeout, ALL_OPTS_PROPERTY);
+
+    chassis_options_add(&opts, "allow-nested-subquery",
+                        0, 0, OPTION_ARG_NONE, &(config->allow_nested_subquery),
+                        "Use this on your own risk, data integrity is not guaranteed", NULL,
+                        NULL, show_allow_nested_subquery, SHOW_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-read-timeout",
                         0, 0, OPTION_ARG_DOUBLE, &(config->read_timeout_dbl),

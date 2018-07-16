@@ -60,6 +60,7 @@ typedef struct sql_context_t {
 
     struct sql_property_t *property;
     int is_parsing_subquery;
+    int allow_subquery_nesting;
 } sql_context_t;
 
 void sql_context_init(sql_context_t *);

@@ -830,7 +830,7 @@ void send_admin_resp(chassis *cycle, network_mysqld_con *con)
     ch->basics.command = CETUS_CMD_ADMIN_RESP;
     ch->basics.pid = cetus_processes[cetus_process_slot].pid;
     ch->basics.slot = cetus_process_slot;
-    ch->basics.fd = cetus_processes[cetus_process_slot].parent_child_channel[0];
+    ch->basics.fd = cetus_processes[cetus_process_slot].admin_worker_channel[1];
 
     g_message("%s:send resp to admin:%d", G_STRLOC, cetus_last_process);
     int i;
@@ -839,7 +839,7 @@ void send_admin_resp(chassis *cycle, network_mysqld_con *con)
                 ch->basics.slot, ch->basics.pid, cetus_processes[i].pid);
 
         /* TODO: AGAIN */
-        cetus_write_channel(cetus_processes[i].parent_child_channel[0],
+        cetus_write_channel(cetus_processes[i].admin_worker_channel[1],
                 ch, sizeof(*ch));
     }
 }

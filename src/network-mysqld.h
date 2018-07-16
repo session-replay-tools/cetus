@@ -59,6 +59,7 @@ typedef enum {
     PROXY_NO_DECISION,
     PROXY_NO_CONNECTION,        /* TODO: this one shouldn't be here, it's not a dicsion */
     PROXY_SEND_QUERY,
+    PROXY_WAIT_QUERY_RESULT,
     PROXY_SEND_RESULT,
     PROXY_SEND_INJECTION,
     PROXY_SEND_NONE,

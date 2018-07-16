@@ -2443,6 +2443,8 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
     g_debug("%s:call read query", G_STRLOC);
     network_socket_retval_t ret = plugin_call(srv, con, con->state);
     switch (ret) {
+    case NETWORK_SOCKET_WAIT_FOR_EVENT:
+        return DISP_STOP;
     case NETWORK_SOCKET_SUCCESS:
         if (con->retry_serv_cnt > 0 && con->is_wait_server) {
             g_message("%s: wait successful:%d, con:%p", G_STRLOC, con->retry_serv_cnt, con);

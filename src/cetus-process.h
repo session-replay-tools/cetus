@@ -20,6 +20,8 @@ typedef struct {
     int                   parent_child_channel[2];
     int                   admin_worker_channel[2];
 
+    struct event          event;
+
     cetus_spawn_proc_pt   proc;
     void                 *data;
     char                 *name;

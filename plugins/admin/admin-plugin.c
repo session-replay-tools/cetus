@@ -327,6 +327,11 @@ void adminParserFree(void*, void (*freeProc)(void*));
 void adminParser(void*, int yymajor, token_t, void*);
 void adminParserTrace(FILE*, char*);
 
+static void
+network_read_sql_resp(int G_GNUC_UNUSED event_fd, short events, void *user_data)
+{
+}
+
 static 
 void construct_channel_info(chassis *cycle, char *sql)
 {
@@ -345,12 +350,15 @@ void construct_channel_info(chassis *cycle, char *sql)
         g_message("%s:ch admin sql:%s", G_STRLOC, ch.admin_sql);
         int i;
         for (i = 0; i < cetus_last_process; i++) {
-            g_message("%s: pass close channel s:%i pid:%d to:%d", G_STRLOC,
+            g_message("%s: pass sql info to s:%i pid:%d to:%d", G_STRLOC,
                     ch.basics.slot, ch.basics.pid, cetus_processes[i].pid);
 
             /* TODO: AGAIN */
             cetus_write_channel(cetus_processes[i].admin_worker_channel[0],
                     &ch, sizeof(cetus_channel_t));
+            int fd = cetus_processes[i].admin_worker_channel[0];
+            event_set(&(cetus_processes[i].event), fd, EV_READ, network_read_sql_resp, cycle);
+            chassis_event_add_with_timeout(cycle, &(cetus_processes[i].event), NULL);
         }
     }
 }
@@ -428,9 +436,7 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
     g_message("%s:admin sql:%s", G_STRLOC, con->orig_sql->str);
     construct_channel_info(con->srv, con->orig_sql->str);
 
-    admin_clear_error(con);
-
-    return PROXY_SEND_RESULT;
+    return PROXY_WAIT_QUERY_RESULT;
 }
 
 /**
@@ -454,6 +460,8 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_query) {
     ret = admin_process_query(con);
 
     switch (ret) {
+    case PROXY_WAIT_QUERY_RESULT:
+        return NETWORK_SOCKET_WAIT_FOR_EVENT;
     case PROXY_NO_DECISION:
         network_mysqld_con_send_error(con->client,
             C("request error, \"select * from help\" for usage"));

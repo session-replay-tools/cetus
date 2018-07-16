@@ -95,6 +95,13 @@ typedef struct {
 #define CLIENT_PLUGIN_AUTH (1UL << 19)
 #endif
 
+#ifndef CLIENT_BASIC_FLAGS /* for mariadb version 10^ */
+#define CLIENT_BASIC_FLAGS CLIENT_DEFAULT_FLAGS
+#endif
+#ifndef SERVER_MORE_RESULTS_EXISTS /* for mariadb version 10^ */
+#define SERVER_MORE_RESULTS_EXISTS SERVER_MORE_RESULTS_EXIST
+#endif
+
 #if MYSQL_VERSION_ID < 50606
 #define COMPATIBLE_BASIC_FLAGS (CLIENT_BASIC_FLAGS                      \
                                 |CLIENT_PLUGIN_AUTH_LENENC_CLIENT_DATA  \

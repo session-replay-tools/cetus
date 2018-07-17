@@ -2523,7 +2523,7 @@ merge_for_modify(sql_context_t *context, network_queue *send_queue, GPtrArray *r
         con->last_record_updated = 1;
     }
 
-    if (con->sharding_plan->table_type == GLOBAL_TABLE && recv_queues->len) {
+    if (con->sharding_plan && con->sharding_plan->table_type == GLOBAL_TABLE && recv_queues->len) {
         total_affected_rows /= recv_queues->len;
     }
 
@@ -2918,12 +2918,7 @@ admin_resultset_merge(network_mysqld_con *con, network_queue *send_queue, GPtrAr
 
     cetus_result_t res_merge = { 0 };
 
-    if (!send_queue || !recv_queues || recv_queues->len <= 0 || !context) {
-        g_warning("%s: packet->str[NET_HEADER_SIZE] != MYSQLD_PACKET_EOF", G_STRLOC);
-        merged_result->status = RM_FAIL;
-        return;
-    }
-
+    g_debug("%s: context->stmt_type:%d", G_STRLOC, context->stmt_type);
     switch (context->stmt_type) {
     case STMT_SELECT:
         if (!merge_for_admin(context, send_queue, recv_queues, con, &res_merge, merged_result)) {
@@ -2936,6 +2931,7 @@ admin_resultset_merge(network_mysqld_con *con, network_queue *send_queue, GPtrAr
     case STMT_DELETE:
     case STMT_SET:
     default:
+        g_debug("%s: call merge_for_modify:%d", G_STRLOC, context->stmt_type);
         if (!merge_for_modify(context, send_queue, recv_queues, con, &res_merge, merged_result)) {
             cetus_result_destroy(&res_merge);
             return;

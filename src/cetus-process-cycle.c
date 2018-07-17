@@ -799,21 +799,18 @@ cetus_channel_t *retrieve_admin_resp(network_mysqld_con *con)
     cetus_channel_t *ch = NULL;
 
     g_message("%s:call retrieve_admin_resp", G_STRLOC);
-    if (con->client) {
-        g_message("%s:con client is not nil", G_STRLOC);
-        if (con->client->send_queue) {
-            g_message("%s:con client send queue is not nil", G_STRLOC);
-        }
-    }
     for (chunk = con->client->send_queue->chunks->head; chunk; chunk = chunk->next) {
-        g_message("%s:call call send_admin_resp", G_STRLOC);
         GString *s = chunk->data;
+        g_debug_hexdump(G_STRLOC, S(s));
         resp_len = s->len;
+        g_message("%s:s->len:%d", G_STRLOC, (int) s->len);
         if (chunk->next == NULL) {
             int total = sizeof(cetus_channel_t) + resp_len; 
             ch = (cetus_channel_t *) g_new0(char, total);
             ch->admin_sql_resp_len = resp_len;
-            strncpy(ch->admin_sql_resp, s->str, resp_len);
+            memcpy(ch->admin_sql_resp, s->str, resp_len);
+            g_message("%s:total:%d, resp_len:%d", G_STRLOC, total, resp_len);
+            g_debug_hexdump(G_STRLOC, ch->admin_sql_resp, resp_len);
         }
     }
     g_message("%s:call retrieve_admin_resp end", G_STRLOC);
@@ -825,7 +822,7 @@ cetus_channel_t *retrieve_admin_resp(network_mysqld_con *con)
 static 
 void send_admin_resp(chassis *cycle, network_mysqld_con *con)
 {
-    g_message("%s:call send_admin_resp", G_STRLOC);
+    g_message("%s:call send_admin_resp, cetus_process_slot:%d", G_STRLOC, cetus_process_slot);
     cetus_channel_t  *ch = retrieve_admin_resp(con); 
     ch->basics.command = CETUS_CMD_ADMIN_RESP;
     ch->basics.pid = cetus_processes[cetus_process_slot].pid;
@@ -840,7 +837,7 @@ void send_admin_resp(chassis *cycle, network_mysqld_con *con)
 
         /* TODO: AGAIN */
         cetus_write_channel(cetus_processes[i].admin_worker_channel[1],
-                ch, sizeof(*ch));
+                ch, sizeof(*ch) + ch->admin_sql_resp_len);
     }
 }
 
@@ -867,8 +864,6 @@ process_admin_sql(cetus_cycle_t *cycle, cetus_channel_t *ch)
         g_debug("%s: call admin", G_STRLOC);
         send_admin_resp(cycle, con);
     }
-
-
 }
 
 static void

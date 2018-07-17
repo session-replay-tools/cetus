@@ -45,6 +45,7 @@
 #include "chassis-options-utils.h"
 #include "cetus-channel.h"
 #include "cetus-process-cycle.h"
+#include "resultset_merge.h"
 
 #include "admin-lexer.l.h"
 #include "admin-parser.y.h"
@@ -328,13 +329,101 @@ void adminParser(void*, int yymajor, token_t, void*);
 void adminParserTrace(FILE*, char*);
 
 static void
-network_read_sql_resp(int G_GNUC_UNUSED event_fd, short events, void *user_data)
+network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
 {
+    network_mysqld_con *con = user_data;
+
+    cetus_channel_t    ch;
+
+    g_debug("%s: network_read_sql_resp, fd:%d", G_STRLOC, fd);
+
+    /* read header first */
+    int ret = cetus_read_channel(fd, &ch, sizeof(cetus_channel_t));
+
+    g_debug("%s: cetus_read_channel channel, fd:%d", G_STRLOC, fd);
+
+    if (ret == NETWORK_SOCKET_ERROR) {
+        return;
+    }
+
+    if (ret == NETWORK_SOCKET_WAIT_FOR_EVENT) {
+        return;
+    }
+
+    g_debug("%s: channel command: %u, need to read servers:%d",
+            G_STRLOC, ch.basics.command, con->num_read_pending);
+
+    if (ch.basics.command == CETUS_CMD_ADMIN_RESP) {
+        con->num_read_pending--;
+        int  resp_len = ch.admin_sql_resp_len;
+        GString *packet = g_string_sized_new(resp_len);
+        int len = recv(fd, packet->str, resp_len, 0);
+
+        g_debug("%s: resp_len:%d, len:%d, fd:%d", G_STRLOC, resp_len, len, fd);
+
+        network_socket *sock = network_socket_new();
+        g_queue_push_tail(sock->recv_queue_raw->chunks, packet);
+
+        sock->recv_queue_raw->len += resp_len;
+        packet->len = resp_len;
+
+        g_debug_hexdump(G_STRLOC, S(packet));
+
+        network_socket_retval_t ret = network_mysqld_con_get_packet(con->srv, sock);
+
+        while (ret == NETWORK_SOCKET_SUCCESS) {
+            network_packet packet;
+            GList *chunk;
+
+            chunk = sock->recv_queue->chunks->tail;
+            packet.data = chunk->data;
+            packet.offset = 0;
+
+            int is_finished = network_mysqld_proto_get_query_result(&packet, con);
+            if (is_finished == 1) {
+                g_debug("%s: read finished", G_STRLOC);
+                break;
+            }
+
+            ret = network_mysqld_con_get_packet(con->srv, sock);
+        }
+
+        if (con->servers == NULL) {
+            con->servers = g_ptr_array_new();
+        }
+
+        g_ptr_array_add(con->servers, sock);
+
+    } else {
+    }
+
+    if (con->num_read_pending == 0) {
+        int len = con->servers->len;
+        GPtrArray *recv_queues = g_ptr_array_sized_new(len);
+
+        /* get all participants' receive queues */
+        int i;
+        for (i = 0; i < len; i++) {
+            network_socket *worker = g_ptr_array_index(con->servers, i);
+            g_ptr_array_add(recv_queues, worker->recv_queue);
+        }
+        /*TODO free all servers here */
+        con->servers = NULL;
+        result_merge_t result;
+        result.status = RM_SUCCESS;
+        result.detail = NULL;
+        g_debug("%s: call admin_resultset_merge", G_STRLOC);
+        admin_resultset_merge(con, con->client->send_queue, recv_queues, &result);
+
+        con->state = ST_SEND_QUERY_RESULT;
+        network_mysqld_con_handle(-1, 0, con);
+    }
 }
 
 static 
-void construct_channel_info(chassis *cycle, char *sql)
+void construct_channel_info(network_mysqld_con *con, char *sql)
 {
+    chassis *cycle = con->srv;
     g_message("%s:call construct_channel_info", G_STRLOC);
     cetus_channel_t  ch; 
     memset(&ch, 0, sizeof(cetus_channel_t));
@@ -342,6 +431,8 @@ void construct_channel_info(chassis *cycle, char *sql)
     ch.basics.pid = cetus_processes[cetus_process_slot].pid;
     ch.basics.slot = cetus_process_slot;
     ch.basics.fd = cetus_processes[cetus_process_slot].admin_worker_channel[0];
+
+    con->num_read_pending = 0;
 
     int len = strlen(sql);
     if (len >= MAX_ADMIN_SQL_LEN) {
@@ -357,8 +448,10 @@ void construct_channel_info(chassis *cycle, char *sql)
             cetus_write_channel(cetus_processes[i].admin_worker_channel[0],
                     &ch, sizeof(cetus_channel_t));
             int fd = cetus_processes[i].admin_worker_channel[0];
-            event_set(&(cetus_processes[i].event), fd, EV_READ, network_read_sql_resp, cycle);
+            event_set(&(cetus_processes[i].event), fd, EV_READ, network_read_sql_resp, con);
             chassis_event_add_with_timeout(cycle, &(cetus_processes[i].event), NULL);
+            con->num_read_pending++;
+            g_debug("%s:con num_read_pending:%d", G_STRLOC, con->num_read_pending);
         }
     }
 }
@@ -434,7 +527,7 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
                         packet->len - (NET_HEADER_SIZE + 1));
 
     g_message("%s:admin sql:%s", G_STRLOC, con->orig_sql->str);
-    construct_channel_info(con->srv, con->orig_sql->str);
+    construct_channel_info(con, con->orig_sql->str);
 
     return PROXY_WAIT_QUERY_RESULT;
 }

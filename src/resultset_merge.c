@@ -2811,6 +2811,23 @@ static int
 merge_for_admin(sql_context_t *context, network_queue *send_queue, GPtrArray *recv_queues,
                         network_mysqld_con *con, cetus_result_t *res_merge, result_merge_t *merged_result)
 {
+    int p;
+    char *orig_sql = con->orig_sql->str;
+    for (p = 0; p < recv_queues->len; p++) {
+        network_queue *recv_q = g_ptr_array_index(recv_queues, p);
+        GString *pkt = g_queue_peek_head(recv_q->chunks);
+        /* only check the first packet in each recv_queue */
+        if (pkt != NULL && pkt->len > NET_HEADER_SIZE) {
+            guchar pkt_type = get_pkt_type(pkt);
+            if (pkt_type == MYSQLD_PACKET_ERR || pkt_type == MYSQLD_PACKET_EOF) {
+                network_queue_append(send_queue, pkt);
+                network_mysqld_proto_set_packet_id(pkt, 1);
+                g_queue_pop_head(recv_q->chunks);
+                return 0;
+            }
+        }
+    }
+
     guint64 field_count = 0;
     if (!check_field_count_consistant(recv_queues, merged_result, &field_count)) {
         return 0;
@@ -2918,25 +2935,18 @@ admin_resultset_merge(network_mysqld_con *con, network_queue *send_queue, GPtrAr
 
     cetus_result_t res_merge = { 0 };
 
-    g_debug("%s: context->stmt_type:%d", G_STRLOC, context->stmt_type);
-    switch (context->stmt_type) {
-    case STMT_SELECT:
+    g_debug("%s: sql:%s", G_STRLOC, con->orig_sql->str);
+    if (strcasestr(con->orig_sql->str, "select") != NULL) {
         if (!merge_for_admin(context, send_queue, recv_queues, con, &res_merge, merged_result)) {
             cetus_result_destroy(&res_merge);
             return;
         }
-        break;
-    case STMT_INSERT:
-    case STMT_UPDATE:
-    case STMT_DELETE:
-    case STMT_SET:
-    default:
+    } else {
         g_debug("%s: call merge_for_modify:%d", G_STRLOC, context->stmt_type);
         if (!merge_for_modify(context, send_queue, recv_queues, con, &res_merge, merged_result)) {
             cetus_result_destroy(&res_merge);
             return;
         }
-        break;
     }
 
     cetus_result_destroy(&res_merge);

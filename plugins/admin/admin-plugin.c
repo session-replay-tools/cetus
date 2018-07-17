@@ -416,6 +416,9 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
         admin_resultset_merge(con, con->client->send_queue, recv_queues, &result);
 
         con->state = ST_SEND_QUERY_RESULT;
+        network_mysqld_queue_reset(con->client);
+        network_queue_clear(con->client->recv_queue);
+
         network_mysqld_con_handle(-1, 0, con);
     }
 }
@@ -525,7 +528,6 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
 
     g_string_assign_len(con->orig_sql, packet->str + (NET_HEADER_SIZE + 1),
                         packet->len - (NET_HEADER_SIZE + 1));
-
     g_message("%s:admin sql:%s", G_STRLOC, con->orig_sql->str);
     construct_channel_info(con, con->orig_sql->str);
 

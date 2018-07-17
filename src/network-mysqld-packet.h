@@ -1,3 +1,4 @@
+
 /* $%BEGINLICENSE%$
  Copyright (c) 2007, 2012, Oracle and/or its affiliates. All rights reserved.
 
@@ -102,6 +103,9 @@ typedef struct {
 #ifndef SERVER_MORE_RESULTS_EXISTS /* for mariadb version 10^ */
 #define SERVER_MORE_RESULTS_EXISTS SERVER_MORE_RESULTS_EXIST
 #endif
+#ifndef CLIENT_PROGRESS /* mariadb progress reporting */
+#define CLIENT_PROGRESS (1UL << 29)
+#endif
 
 #if MYSQL_VERSION_ID < 50606
 #define COMPATIBLE_BASIC_FLAGS (CLIENT_BASIC_FLAGS                      \
@@ -118,6 +122,7 @@ typedef struct {
                              & ~CLIENT_IGNORE_SPACE                     \
                              & ~CLIENT_DEPRECATE_EOF                    \
                              & ~CLIENT_LOCAL_FILES                      \
+                             & ~CLIENT_PROGRESS                         \
                              & ~CLIENT_CONNECT_ATTRS)
 
 NETWORK_API network_mysqld_com_query_result_t *network_mysqld_com_query_result_new(void);

@@ -64,6 +64,7 @@ typedef struct {
     guint64 insert_id;
 
     gboolean was_resultset;
+    gboolean is_last_more_resultset;
     gboolean binary_encoded;
 
     guint64 rows;

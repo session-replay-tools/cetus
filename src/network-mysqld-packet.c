@@ -84,9 +84,7 @@ network_mysqld_proto_get_com_query_result(network_packet *packet,
             g_debug("%s: status error, query state:%d, status:%d, packet offset:%d",
                     G_STRLOC, query->state, status, (int)packet->offset);
             query->query_status = MYSQLD_PACKET_ERR;
-            if (!query->is_last_more_resultset) {
-                is_finished = 1;
-            }
+            is_finished = 1;
             break;
         }
         case MYSQLD_PACKET_OK: /* e.g. DELETE FROM tbl */
@@ -99,9 +97,6 @@ network_mysqld_proto_get_com_query_result(network_packet *packet,
             if (!err) {
                 if (!(ok_packet->server_status & SERVER_MORE_RESULTS_EXISTS)) {
                     is_finished = 1;
-                    query->is_last_more_resultset = 0;
-                } else {
-                    query->is_last_more_resultset = 1;
                 }
 
                 query->server_status = ok_packet->server_status;

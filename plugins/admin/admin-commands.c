@@ -1259,8 +1259,13 @@ void admin_set_config(network_mysqld_con* con, char* key, char* value)
 static void admin_reload_settings(network_mysqld_con* con)
 {
     GList *options = admin_get_all_options(con->srv);
-
-    if (!chassis_config_reload_options(con->srv->config_manager)) {
+    gint ret = chassis_config_reload_options(con->srv->config_manager);
+    if (ret == -1) {
+        network_mysqld_con_send_error(con->client,
+                    C("Can't connect to remote or can't get config"));
+                return;
+    }
+    if (ret == -2) {
         network_mysqld_con_send_error(con->client,
             C("Can't load options, only support remote config"));
         return;

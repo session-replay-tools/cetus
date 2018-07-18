@@ -320,14 +320,18 @@ chassis_config_load_options_mysql(chassis_config_t *conf)
     return FALSE;
 }
 
-gboolean chassis_config_reload_options(chassis_config_t *conf)
+gint chassis_config_reload_options(chassis_config_t *conf)
 {
     switch (conf->type) {
     case CHASSIS_CONF_MYSQL:
-        return chassis_config_load_options_mysql(conf);
+        if(chassis_config_load_options_mysql(conf)) {
+            return 0;
+        } else {
+            return -1;
+        }
     default:
         /* TODO g_critical(G_STRLOC " not implemented"); */
-        return FALSE;
+        return -2;
     }
 }
 

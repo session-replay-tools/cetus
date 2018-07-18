@@ -866,6 +866,10 @@ process_admin_sql(cetus_cycle_t *cycle, cetus_channel_t *ch)
         network_socket_retval_t retval = NETWORK_SOCKET_SUCCESS;
         NETWORK_MYSQLD_PLUGIN_FUNC(func) = NULL;
         network_mysqld_hooks *plugin = cycle->admin_plugin;
+
+        con->client->last_packet_id = 0;
+        con->client->packet_id_is_reset = FALSE;
+
         func = plugin->con_exectute_sql;
         retval = (*func) (cycle, con);
         g_debug("%s: call admin", G_STRLOC);

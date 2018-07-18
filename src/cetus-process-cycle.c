@@ -794,25 +794,32 @@ cetus_worker_process_exit(cetus_cycle_t *cycle)
 static
 cetus_channel_t *retrieve_admin_resp(network_mysqld_con *con)
 {
-    int resp_len = 0;
     GList *chunk;
     cetus_channel_t *ch = NULL;
-
     g_message("%s:call retrieve_admin_resp", G_STRLOC);
+    int total = sizeof(cetus_channel_t); 
+    int resp_len = 0;
     for (chunk = con->client->send_queue->chunks->head; chunk; chunk = chunk->next) {
         GString *s = chunk->data;
         g_debug_hexdump(G_STRLOC, S(s));
-        resp_len = s->len;
-        g_message("%s:s->len:%d", G_STRLOC, (int) s->len);
-        if (chunk->next == NULL) {
-            int total = sizeof(cetus_channel_t) + resp_len; 
-            ch = (cetus_channel_t *) g_new0(char, total);
-            ch->admin_sql_resp_len = resp_len;
-            memcpy(ch->admin_sql_resp, s->str, resp_len);
-            g_message("%s:total:%d, resp_len:%d", G_STRLOC, total, resp_len);
-            g_debug_hexdump(G_STRLOC, ch->admin_sql_resp, resp_len);
-        }
+        resp_len += s->len; 
+        g_message("%s:s->len:%d, resp len:%d", G_STRLOC, (int) s->len, resp_len);
     }
+
+    total = total + resp_len;
+
+    ch = (cetus_channel_t *) g_new0(char, total);
+    ch->admin_sql_resp_len = resp_len;
+
+    unsigned char *p = ch->admin_sql_resp;
+    for (chunk = con->client->send_queue->chunks->head; chunk; chunk = chunk->next) {
+        GString *s = chunk->data;
+        memcpy(p, s->str, s->len);
+        p = p + s->len;
+    }
+
+    g_debug_hexdump(G_STRLOC, ch->admin_sql_resp, resp_len);
+
     g_message("%s:call retrieve_admin_resp end", G_STRLOC);
     
     return ch;

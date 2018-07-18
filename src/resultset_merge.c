@@ -1581,6 +1581,7 @@ cetus_result_parse_fielddefs(cetus_result_t *res_merge, GQueue *input)
 static gboolean
 cetus_result_retrieve_field_count(GQueue *input, guint64 *p_field_count)
 {
+    g_debug("%s:call cetus_result_retrieve_field_count", G_STRLOC);
     int packet_count = g_queue_get_length(input);
     network_packet packet = { 0 };
     packet.data = g_queue_peek_head(input); /* Number-of-Field packet */
@@ -2008,8 +2009,6 @@ do_simple_merge(network_mysqld_con *con, merge_parameters_t *data, int is_finish
     for (iter = 0; iter < recv_queues->len; iter++) {
         candidate = candidates[iter];
         network_queue *recv_queue = recv_queues->pdata[iter];
-
-        g_debug("%s: analysis packets:%d", G_STRLOC, (int)iter);
 
         while (candidate != NULL) {
             if (candidate->data == NULL) {
@@ -2838,8 +2837,8 @@ merge_for_admin(sql_context_t *context, network_queue *send_queue, GPtrArray *re
     /* field-count-packet + eof-packet */
     guint pkt_count = res_merge->field_count + 2;
 
-    if (!check_network_packet_err(con, candidates, recv_queues, send_queue, res_merge, merged_result)) {
-        g_warning("%s:packet err is met", G_STRLOC);
+    if (!prepare_for_row_process(candidates, recv_queues, send_queue, pkt_count, merged_result)) {
+        g_warning("%s:prepare_for_row_process failed", G_STRLOC);
         g_free(candidates);
         return 0;
     }
@@ -2937,6 +2936,7 @@ admin_resultset_merge(network_mysqld_con *con, network_queue *send_queue, GPtrAr
 
     g_debug("%s: sql:%s", G_STRLOC, con->orig_sql->str);
     if (strcasestr(con->orig_sql->str, "select") != NULL) {
+        g_debug("%s: call merge_for_admin", G_STRLOC);
         if (!merge_for_admin(context, send_queue, recv_queues, con, &res_merge, merged_result)) {
             cetus_result_destroy(&res_merge);
             return;

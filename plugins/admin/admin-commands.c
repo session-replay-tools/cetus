@@ -24,6 +24,7 @@
 #include "sharding-config.h"
 #include "chassis-options-utils.h"
 
+extern chassis_plugin_config *admin_config;
 static const char *get_conn_xa_state_name(network_mysqld_con_dist_tran_state_t state) {
     switch (state) {
     case NEXT_ST_XA_START: return "XS";
@@ -68,6 +69,11 @@ void admin_select_all_backends(network_mysqld_con* admin_con)
     chassis *chas = admin_con->srv;
     chassis_private *priv = chas->priv;
     chassis_plugin_config *config = admin_con->config;
+
+    if (config == NULL) {
+        config = admin_config;
+    }
+
     GPtrArray *fields = g_ptr_array_new_with_free_func(
         (GDestroyNotify)network_mysqld_proto_fielddef_free);
 

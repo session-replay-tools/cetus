@@ -37,7 +37,7 @@ cetus_write_channel(int s, cetus_channel_t *ch, size_t size)
         cmsg.cm.cmsg_level = SOL_SOCKET;
         cmsg.cm.cmsg_type = SCM_RIGHTS;
 
-        memcpy(CMSG_DATA(&cmsg.cm), &ch->basics.fd, sizeof(int));
+        /* memcpy(CMSG_DATA(&cmsg.cm), &ch->basics.fd, sizeof(int)); */
     }
 
     msg.msg_flags = 0;

@@ -52,6 +52,8 @@
 #include "admin-commands.h"
 #include "admin-stats.h"
 
+chassis_plugin_config *admin_config = NULL;
+
 /* get config->has_shard_plugin */
 static gboolean
 has_shard_plugin(GPtrArray *modules)
@@ -882,6 +884,9 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
 
     chassis_config_register_service(chas->config_manager, config->address, "admin");
     config->admin_stats = admin_stats_init(chas);
+
+    admin_config = config;
+
     return 0;
 }
 

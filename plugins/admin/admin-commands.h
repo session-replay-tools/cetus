@@ -54,4 +54,7 @@ void admin_select_sharded_table(network_mysqld_con* con);
 void admin_save_settings(network_mysqld_con* con);
 void admin_compatible_cmd(network_mysqld_con* con);
 void admin_show_databases(network_mysqld_con* con);
+void admin_create_single_table(network_mysqld_con*, const char* schema, const char* table,
+                               const char* group);
+void admin_select_single_table(network_mysqld_con*);
 #endif // ADMIN_COMMANDS_H

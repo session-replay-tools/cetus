@@ -394,12 +394,6 @@ shard_conf_get_fixed_group(GPtrArray *groups, guint32 fixture)
     return groups;
 }
 
-struct single_table_t {         /* single table only resides on 1 group */
-    GString *name;
-    GString *schema;
-    GString *group;
-};
-
 void
 single_table_free(struct single_table_t *t)
 {
@@ -449,6 +443,11 @@ GList* shard_conf_get_tables()
     GList* tables = g_hash_table_get_values(shard_conf_tables);
     tables = g_list_sort(tables, sharding_table_equal);
     return tables;
+}
+
+GList* shard_conf_get_single_tables()
+{
+    return shard_conf_single_tables;
 }
 
 static void
@@ -1055,5 +1054,33 @@ gboolean shard_conf_write_json(chassis_config_t* conf_manager)
     chassis_config_write_object(conf_manager, "sharding-new", json_str);
     cJSON_Delete(root);
     g_free(json_str);
+    return TRUE;
+}
+
+gboolean shard_conf_add_single_table(const char* schema,
+                                     const char* table, const char* group)
+{
+    g_assert(schema && table && group);
+    if (shard_conf_is_single_table(schema, table)) {
+        g_critical("try adding duplicate single table %s.%s", schema, table);
+        return FALSE;
+    }
+    gboolean found = FALSE;
+    GList* l;
+    for (l = shard_conf_all_groups; l; l = l->next) {
+        GString* gp = l->data;
+        if (strcmp(gp->str, group) == 0) {
+            found = TRUE;
+        }
+    }
+    if (!found) {
+        g_critical("try adding single table to non-existed group: %s", group);
+        return FALSE;
+    }
+    struct single_table_t *st = g_new0(struct single_table_t, 1);
+    st->group = g_string_new(group);
+    st->schema = g_string_new(schema);
+    st->name = g_string_new(table);
+    shard_conf_single_tables = g_list_append(shard_conf_single_tables, st);
     return TRUE;
 }

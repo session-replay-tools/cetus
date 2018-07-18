@@ -464,6 +464,9 @@ void construct_channel_info(network_mysqld_con *con, char *sql)
 
 NETWORK_MYSQLD_PLUGIN_PROTO(execute_admin_query)
 {
+    if (con->config == NULL) {
+        con->config = admin_config;
+    }
     g_message("%s:call execute_admin_query", G_STRLOC);
     char *sql = con->orig_sql->str;
 

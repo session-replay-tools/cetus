@@ -70,10 +70,6 @@ void admin_select_all_backends(network_mysqld_con* admin_con)
     chassis_private *priv = chas->priv;
     chassis_plugin_config *config = admin_con->config;
 
-    if (config == NULL) {
-        config = admin_config;
-    }
-
     GPtrArray *fields = g_ptr_array_new_with_free_func(
         (GDestroyNotify)network_mysqld_proto_fielddef_free);
 

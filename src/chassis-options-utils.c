@@ -449,7 +449,7 @@ show_max_pool_size(gpointer param) {
         if (srv->mid_idle_connections * 2 == srv->max_idle_connections) {
             return NULL;
         }
-            return g_strdup_printf("%d", srv->max_idle_connections);
+        return g_strdup_printf("%d", srv->max_idle_connections);
     }
     return NULL;
 }
@@ -468,6 +468,48 @@ assign_max_pool_size(const gchar *newval, gpointer param) {
                     srv->max_idle_connections = value;
                 } else {
                     srv->max_idle_connections = srv->mid_idle_connections << 1;
+                }
+                ret = ASSIGN_OK;
+            } else {
+                ret = ASSIGN_VALUE_INVALID;
+            }
+        } else {
+            ret = ASSIGN_VALUE_INVALID;
+        }
+    }
+    return ret;
+}
+
+gchar*
+show_worker_processes(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%d", srv->worker_processes);
+    }
+    if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%d", srv->worker_processes);
+    }
+    return NULL;
+}
+
+gint
+assign_worker_processes(const gchar *newval, gpointer param) {
+    gint ret = ASSIGN_ERROR;
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
+        if (NULL != newval) {
+            gint value = 0;
+            if (try_get_int_value(newval, &value)) {
+                if (value <= 0) {
+                    srv->worker_processes = 1;
+                } else if (value > 64) {
+                    srv->worker_processes = 64;
+                } else {
+                    srv->worker_processes = value;
                 }
                 ret = ASSIGN_OK;
             } else {

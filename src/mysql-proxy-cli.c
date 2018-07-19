@@ -95,6 +95,7 @@ struct chassis_frontend_t {
     int set_client_found_rows;
     int default_pool_size;
     int max_pool_size;
+    int worker_processes;
     int merged_output_size;
     int max_header_size;
     int max_resp_len;
@@ -332,6 +333,12 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                         assign_max_pool_size, show_max_pool_size, ALL_OPTS_PROPERTY);
 
     chassis_options_add(opts,
+                        "worker-processes",
+                        0, 0, OPTION_ARG_INT, &(frontend->worker_processes),
+                        "Set worker processes for processing client requests", "<integer>",
+                        assign_worker_processes, show_worker_processes, ALL_OPTS_PROPERTY);
+
+    chassis_options_add(opts,
                         "max-resp-size",
                         0, 0, OPTION_ARG_INT, &(frontend->max_resp_len),
                         "Set the max response size for one backend", "<integer>",
@@ -559,7 +566,15 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->default_charset = DUP_STRING(frontend->default_charset, NULL);
     srv->default_db = DUP_STRING(frontend->default_db, NULL);
 
-    srv->worker_processes = 2;
+    if (frontend->worker_processes < 1) {
+        srv->worker_processes = 1;
+    } else if (frontend->worker_processes > 64) {
+        srv->worker_processes = 64;
+    } else {
+        srv->worker_processes = frontend->worker_processes;
+    }
+    g_message("set worker processes:%d", srv->worker_processes);
+
     srv->mid_idle_connections = frontend->default_pool_size;
     g_message("set default pool size:%d", srv->mid_idle_connections);
 

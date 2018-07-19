@@ -443,7 +443,8 @@ void construct_channel_info(network_mysqld_con *con, char *sql)
     if (len >= MAX_ADMIN_SQL_LEN) {
     } else {
         strncpy(ch.admin_sql, sql, len);
-        g_message("%s:ch admin sql:%s", G_STRLOC, ch.admin_sql);
+        g_message("%s:cetus_last_process:%d, ch admin sql:%s", 
+                G_STRLOC, cetus_last_process, ch.admin_sql);
         int i;
         for (i = 0; i < cetus_last_process; i++) {
             g_message("%s: pass sql info to s:%i pid:%d to:%d", G_STRLOC,

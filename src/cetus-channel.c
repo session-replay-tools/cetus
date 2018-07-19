@@ -162,11 +162,11 @@ void
 cetus_close_channel(int *fd)
 {
     if (close(fd[0]) == -1) {
-        g_critical("%s:close() channel failed, errno:%d", G_STRLOC, errno);
+        g_critical("%s:close() channel failed, err:%s", G_STRLOC, strerror(errno));
     }
 
     if (close(fd[1]) == -1) {
-        g_critical("%s:close() channel failed, errno:%d", G_STRLOC, errno);
+        g_critical("%s:close() channel failed, err:%s", G_STRLOC, strerror(errno));
     }
 }
 

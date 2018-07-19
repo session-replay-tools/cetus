@@ -2935,7 +2935,7 @@ admin_resultset_merge(network_mysqld_con *con, network_queue *send_queue, GPtrAr
     cetus_result_t res_merge = { 0 };
 
     g_debug("%s: sql:%s", G_STRLOC, con->orig_sql->str);
-    if (strcasestr(con->orig_sql->str, "select") != NULL) {
+    if (con->admin_read_merge) {
         g_debug("%s: call merge_for_admin", G_STRLOC);
         if (!merge_for_admin(context, send_queue, recv_queues, con, &res_merge, merged_result)) {
             cetus_result_destroy(&res_merge);

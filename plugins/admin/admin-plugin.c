@@ -445,8 +445,12 @@ void construct_channel_info(network_mysqld_con *con, char *sql)
         strncpy(ch.admin_sql, sql, len);
         g_message("%s:cetus_last_process:%d, ch admin sql:%s", 
                 G_STRLOC, cetus_last_process, ch.admin_sql);
+        int num = cetus_last_process;
+        if (con->ask_one_worker) {
+            num = 1;
+        }
         int i;
-        for (i = 0; i < cetus_last_process; i++) {
+        for (i = 0; i < num; i++) {
             g_message("%s: pass sql info to s:%i pid:%d to:%d", G_STRLOC,
                     ch.basics.slot, ch.basics.pid, cetus_processes[i].pid);
 
@@ -462,16 +466,9 @@ void construct_channel_info(network_mysqld_con *con, char *sql)
     }
 }
 
-
-NETWORK_MYSQLD_PLUGIN_PROTO(execute_admin_query)
+static void visit_parser(network_mysqld_con *con, const char *sql) 
 {
-    if (con->config == NULL) {
-        con->config = admin_config;
-    }
-    g_message("%s:call execute_admin_query", G_STRLOC);
-    char *sql = con->orig_sql->str;
-
-    g_message("%s:call execute_admin_query:%s", G_STRLOC, sql);
+    admin_clear_error(con);
 
     /* init lexer & parser */
     yyscan_t scanner;
@@ -506,12 +503,30 @@ NETWORK_MYSQLD_PLUGIN_PROTO(execute_admin_query)
         g_message("%s:syntax error", G_STRLOC);
         network_mysqld_con_send_error(con->client,
            C("syntax error, 'select help' for usage"));
+        if (con->is_admin_client) {
+            con->direct_answer = 1;
+        }
     }
 
     /* free lexer & parser */
     adminParserFree(parser, free);
     adminyy_delete_buffer(buf_state, scanner);
     adminyylex_destroy(scanner);
+
+}
+
+NETWORK_MYSQLD_PLUGIN_PROTO(execute_admin_query)
+{
+    if (con->config == NULL) {
+        con->config = admin_config;
+    }
+    g_message("%s:call execute_admin_query", G_STRLOC);
+    char *sql = con->orig_sql->str;
+
+    g_message("%s:call execute_admin_query:%s", G_STRLOC, sql);
+
+    visit_parser(con, sql);
+
 }
 
 static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
@@ -535,9 +550,18 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
     g_string_assign_len(con->orig_sql, packet->str + (NET_HEADER_SIZE + 1),
                         packet->len - (NET_HEADER_SIZE + 1));
     g_message("%s:admin sql:%s", G_STRLOC, con->orig_sql->str);
-    construct_channel_info(con, con->orig_sql->str);
+    
+    con->direct_answer = 0;
+    con->ask_one_worker = 0;
+    con->admin_read_merge = 0;
 
-    return PROXY_WAIT_QUERY_RESULT;
+    visit_parser(con, con->orig_sql->str);
+    if (con->direct_answer) {
+        return PROXY_SEND_RESULT;
+    } else {
+        construct_channel_info(con, con->orig_sql->str);
+        return PROXY_WAIT_QUERY_RESULT;
+    }
 }
 
 /**

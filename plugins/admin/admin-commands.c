@@ -66,6 +66,10 @@ void admin_clear_error(network_mysqld_con* con)
 }
 void admin_select_all_backends(network_mysqld_con* admin_con)
 {
+    if (admin_con->is_admin_client) {
+        admin_con->admin_read_merge = 1;
+        return;
+    }
     chassis *chas = admin_con->srv;
     chassis_private *priv = chas->priv;
     chassis_plugin_config *config = admin_con->config;
@@ -177,6 +181,11 @@ void admin_select_all_backends(network_mysqld_con* admin_con)
 
 void admin_select_conn_details(network_mysqld_con *admin_con)
 {
+    if (admin_con->is_admin_client) {
+        admin_con->admin_read_merge = 1;
+        return;
+    }
+
     chassis *chas = admin_con->srv;
     chassis_private *priv = chas->priv;
 
@@ -370,6 +379,11 @@ void admin_select_conn_details(network_mysqld_con *admin_con)
 
 void admin_show_connectionlist(network_mysqld_con *admin_con, int show_count)
 {
+    if (admin_con->is_admin_client) {
+        admin_con->admin_read_merge = 1;
+        return;
+    }
+
     int number = show_count==-1 ? 65536 : show_count;
 
     chassis *chas = admin_con->srv;
@@ -556,6 +570,12 @@ void admin_show_connectionlist(network_mysqld_con *admin_con, int show_count)
 
 void admin_show_allow_ip(network_mysqld_con *con, const char* module_name)
 {
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
+        con->ask_one_worker = 1;
+        return;
+    }
+
     if (strcmp(module_name, "admin") != 0
         && strcmp(module_name, "proxy") != 0
         && strcmp(module_name, "shard") != 0) {
@@ -605,6 +625,10 @@ void admin_show_allow_ip(network_mysqld_con *con, const char* module_name)
 
 void admin_add_allow_ip(network_mysqld_con *con, char *module_name, char *addr)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     if (strcmp(module_name, "admin") != 0
         && strcmp(module_name, "proxy") != 0
         && strcmp(module_name, "shard") != 0) {
@@ -628,6 +652,10 @@ void admin_add_allow_ip(network_mysqld_con *con, char *module_name, char *addr)
 
 void admin_delete_allow_ip(network_mysqld_con *con, char *module_name, char *addr)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     if (strcmp(module_name, "admin") != 0
         && strcmp(module_name, "proxy") != 0
         && strcmp(module_name, "shard") != 0) {
@@ -736,6 +764,12 @@ static GList* admin_get_all_options(chassis* chas)
 
 void admin_show_variables(network_mysqld_con* con, const char* like)
 {
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
+        con->ask_one_worker = 1; 
+        return;
+    }
+
     const char* pattern = like ? like : "%";
     GList *options = admin_get_all_options(con->srv);
 
@@ -771,6 +805,11 @@ void admin_show_variables(network_mysqld_con* con, const char* like)
 
 void admin_show_status(network_mysqld_con* con, const char* like)
 {
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
+        return;
+    }
+
     const char* pattern = like ? like : "%";
     cetus_variable_t* variables = con->srv->priv->stats_variables;
 
@@ -798,6 +837,10 @@ void admin_show_status(network_mysqld_con* con, const char* like)
 
 void admin_set_reduce_conns(network_mysqld_con* con, int mode)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     int affected = 0;
     if (con->srv->is_reduce_conns != mode) {
         con->srv->is_reduce_conns = mode;
@@ -808,6 +851,10 @@ void admin_set_reduce_conns(network_mysqld_con* con, int mode)
 
 void admin_set_maintain(network_mysqld_con* con, int mode)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     int affected = 0;
     if (con->srv->maintain_close_mode != mode) {
         con->srv->maintain_close_mode = mode;
@@ -818,6 +865,11 @@ void admin_set_maintain(network_mysqld_con* con, int mode)
 
 void admin_show_maintain(network_mysqld_con* con)
 {
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
+        return;
+    }
+
     GPtrArray *fields = network_mysqld_proto_fielddefs_new();
     GPtrArray *rows = g_ptr_array_new_with_free_func((void *)network_mysqld_mysql_field_row_free);
     MAKE_FIELD_DEF_1_COL(fields, "Cetus maintain status");
@@ -833,6 +885,8 @@ void admin_show_maintain(network_mysqld_con* con)
 
 void admin_select_version(network_mysqld_con* con)
 {
+    con->direct_answer = 1;
+
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();
 
     MAKE_FIELD_DEF_1_COL(fields, "cetus version");
@@ -850,6 +904,12 @@ void admin_select_version(network_mysqld_con* con)
 
 void admin_select_connection_stat(network_mysqld_con* con, int backend_ndx, char *user)
 {
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
+        return;
+    }
+
+
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();
 
     MAKE_FIELD_DEF_1_COL(fields, "connection_num");
@@ -909,6 +969,11 @@ static enum cetus_pwd_type password_type(char* table)
 
 void admin_select_user_password(network_mysqld_con* con, char* from_table, char *user)
 {
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
+        return;
+    }
+
     chassis_private *g = con->srv->priv;
     enum cetus_pwd_type pwd_type = password_type(from_table);
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();
@@ -963,6 +1028,10 @@ void admin_select_user_password(network_mysqld_con* con, char* from_table, char 
 void admin_update_user_password(network_mysqld_con* con, char *from_table,
                                       char *user, char *password)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     chassis_private *g = con->srv->priv;
     enum cetus_pwd_type pwd_type = password_type(from_table);
     gboolean affected = cetus_users_update_record(g->users, user, password, pwd_type);
@@ -974,6 +1043,10 @@ void admin_update_user_password(network_mysqld_con* con, char *from_table,
 
 void admin_delete_user_password(network_mysqld_con* con, char* user)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     chassis_private *g = con->srv->priv;
     gboolean affected = cetus_users_delete_record(g->users, user);
     if (affected)
@@ -1012,6 +1085,10 @@ static backend_state_t backend_state(const char* str)
 
 void admin_insert_backend(network_mysqld_con* con, char *addr, char *type, char *state)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     chassis_private *g = con->srv->priv;
     int affected = network_backends_add(g->backends, addr,
                                         backend_type(type),
@@ -1023,6 +1100,10 @@ void admin_insert_backend(network_mysqld_con* con, char *addr, char *type, char 
 void admin_update_backend(network_mysqld_con* con, GList* equations,
                           char *cond_key, char *cond_val)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     char* type_str = NULL;
     char* state_str = NULL;
 
@@ -1071,6 +1152,10 @@ void admin_update_backend(network_mysqld_con* con, GList* equations,
 
 void admin_delete_backend(network_mysqld_con* con, char *key, char *val)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     chassis_private *g = con->srv->priv;
     int affected_rows = 0;
     int backend_ndx = -1;
@@ -1113,6 +1198,11 @@ static void admin_supported_stats(network_mysqld_con* con)
 
 void admin_get_stats(network_mysqld_con* con, char* p)
 {
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
+        return;
+    }
+
     if (!p) { /* just "stats get", no argument */
         admin_supported_stats(con);
         return;
@@ -1190,6 +1280,11 @@ static void admin_supported_config(network_mysqld_con* con)
 
 void admin_get_config(network_mysqld_con* con, char* p)
 {
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
+        return;
+    }
+
     if (!p) { /* just "config get", no argument */
         admin_supported_config(con);
         return;
@@ -1230,6 +1325,10 @@ void admin_get_config(network_mysqld_con* con, char* p)
 
 void admin_set_config(network_mysqld_con* con, char* key, char* value)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     char msg[128] = {0};
     GList *options = admin_get_all_options(con->srv);
     chassis_option_t* opt = chassis_options_get(options, key);
@@ -1295,6 +1394,10 @@ static void admin_reload_settings(network_mysqld_con* con)
 
 void admin_config_reload(network_mysqld_con* con, char* object)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     if (object == NULL) {
         return admin_reload_settings(con);
     } else if (strcasecmp(object, "user")==0) {
@@ -1314,6 +1417,10 @@ void admin_config_reload(network_mysqld_con* con, char* object)
 
 void admin_reset_stats(network_mysqld_con* con)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     query_stats_t* stats = &con->srv->query_stats;
     memset(stats, 0, sizeof(*stats));
     network_mysqld_con_send_ok_full(con->client, 1, 0,
@@ -1322,6 +1429,12 @@ void admin_reset_stats(network_mysqld_con* con)
 
 void admin_select_all_groups(network_mysqld_con* con)
 {
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
+        con->ask_one_worker = 1;
+        return;
+    }
+
     GPtrArray *fields = network_mysqld_proto_fielddefs_new();
 
     MYSQL_FIELD *field = network_mysqld_proto_fielddef_new();
@@ -1421,6 +1534,9 @@ static struct sql_help_entry_t {
 
 void admin_select_help(network_mysqld_con* con)
 {
+    g_debug("%s:call admin_select_help", G_STRLOC);
+    con->direct_answer = 1;
+
     int needed_type = con->config->has_shard_plugin ? SHARD_HELP : RW_HELP;
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();
     MAKE_FIELD_DEF_2_COL(fields, "Command", "Description");
@@ -1453,6 +1569,11 @@ static void get_module_names(chassis* chas, GString* plugin_names)
 
 void admin_send_overview(network_mysqld_con* con)
 {
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
+        return;
+    }
+
     chassis_private* g = con->srv->priv;
     chassis_plugin_config *config = con->config;
     GPtrArray *fields = network_mysqld_proto_fielddefs_new();
@@ -1537,6 +1658,10 @@ static gboolean convert_datetime_partitions(GPtrArray *partitions, sharding_vdb_
 void admin_create_vdb(network_mysqld_con* con, int id, GPtrArray* partitions,
                       enum sharding_method_t method, int key_type, int shard_num)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     sharding_vdb_t* vdb = sharding_vdb_new();
     vdb->id = id;
     vdb->method = method;
@@ -1581,6 +1706,10 @@ void admin_create_vdb(network_mysqld_con* con, int id, GPtrArray* partitions,
 void admin_create_sharded_table(network_mysqld_con* con, const char* schema,
                                 const char* table, const char* key, int vdb_id)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     sharding_table_t* t = g_new0(sharding_table_t, 1);
     t->vdb_id = vdb_id;
     t->schema = g_string_new(schema);
@@ -1597,6 +1726,12 @@ void admin_create_sharded_table(network_mysqld_con* con, const char* schema,
 
 void admin_select_vdb(network_mysqld_con* con)
 {
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
+        con->ask_one_worker = 1;
+        return;
+    }
+
     GList* vdb_list = shard_conf_get_vdb_list();
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();
     MAKE_FIELD_DEF_3_COL(fields, "VDB id", "Method", "Partitions");
@@ -1626,6 +1761,12 @@ void admin_select_vdb(network_mysqld_con* con)
 
 void admin_select_sharded_table(network_mysqld_con* con)
 {
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
+        con->ask_one_worker = 1;
+        return;
+    }
+
     GList* tables = shard_conf_get_tables();
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();
     MAKE_FIELD_DEF_3_COL(fields, "Table", "VDB id", "Key");
@@ -1648,6 +1789,11 @@ void admin_select_sharded_table(network_mysqld_con* con)
 
 void admin_save_settings(network_mysqld_con *con)
 {
+    if (con->is_admin_client) {
+        con->ask_one_worker = 1;
+        return;
+    }
+
     chassis *srv = con->srv;
     GKeyFile *keyfile = g_key_file_new();
     g_key_file_set_list_separator(keyfile, ',');
@@ -1727,10 +1873,13 @@ void admin_save_settings(network_mysqld_con *con)
 }
 void admin_compatible_cmd(network_mysqld_con* con)
 {
+    con->direct_answer = 1;
     network_mysqld_con_send_ok(con->client);
 }
 void admin_show_databases(network_mysqld_con* con)
 {
+    g_debug("%s:call admin_show_databases", G_STRLOC);
+    con->direct_answer = 1;
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();
 
     MAKE_FIELD_DEF_1_COL(fields, "Database");

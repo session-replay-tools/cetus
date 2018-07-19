@@ -568,6 +568,9 @@ struct network_mysqld_con {
     unsigned int query_cache_judged:1;
     unsigned int is_client_compressed:1;
     unsigned int is_admin_client:1;
+    unsigned int direct_answer:1;
+    unsigned int admin_read_merge:1;
+    unsigned int ask_one_worker:1;
     unsigned int is_client_to_be_closed:1;
     unsigned int last_backend_type:2;
     unsigned int all_participate_num:8;

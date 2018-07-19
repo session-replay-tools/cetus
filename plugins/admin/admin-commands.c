@@ -208,7 +208,7 @@ void admin_select_conn_details(network_mysqld_con *admin_con)
             continue;
         }
 
-#ifndef SIMPLE_PARSE
+#ifndef SIMPLE_PARSER
         if (con->servers == NULL) {
             continue;
         }

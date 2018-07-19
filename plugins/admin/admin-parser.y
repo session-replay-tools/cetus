@@ -112,7 +112,7 @@ input ::= cmd.
 %fallback ID
   CONN_DETAILS BACKENDS AT_SIGN REDUCE_CONNS ADD MAINTAIN STATUS
   CONN_NUM BACKEND_NDX RESET CETUS VDB HASH RANGE SHARDKEY RELOAD
-  SAVE SETTINGS.
+  SAVE SETTINGS SINGLE.
 
 %wildcard ANY.
 
@@ -435,4 +435,17 @@ cmd ::= SELECT STAR FROM VDB SEMI. {
 
 cmd ::= SELECT SHARDED TABLE SEMI. {
   admin_select_sharded_table(con);
+}
+
+cmd ::= CREATE SINGLE TABLE ids(X) DOT ids(Y) ON ids(Z) SEMI. {
+  char* schema = token_strdup(X);
+  char* table = token_strdup(Y);
+  char* group = token_strdup(Z);
+  admin_create_single_table(con, schema, table, group);
+  g_free(schema);
+  g_free(table);
+  g_free(group);
+}
+cmd ::= SELECT SINGLE TABLE SEMI. {
+  admin_select_single_table(con);
 }

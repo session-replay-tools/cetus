@@ -78,6 +78,12 @@ void admin_select_all_backends(network_mysqld_con* admin_con)
         (GDestroyNotify)network_mysqld_proto_fielddef_free);
 
     MYSQL_FIELD *field;
+    
+    field = network_mysqld_proto_fielddef_new();
+    field->name = g_strdup("PID");
+    field->type = MYSQL_TYPE_STRING;
+    g_ptr_array_add(fields, field);
+
     field = network_mysqld_proto_fielddef_new();
     field->name = g_strdup("backend_ndx");
     field->type = MYSQL_TYPE_STRING;
@@ -140,12 +146,16 @@ void admin_select_all_backends(network_mysqld_con* admin_con)
     static char *states[] = {"unknown", "up", "down", "maintaining", "deleted"};
     static char *types[] = {"unknown", "rw", "ro"};
 
+    cetus_pid_t process_id = getpid();
+
     for (i = 0; i < len; i++) {
         network_backend_t *backend = bs->backends->pdata[i];
         GPtrArray *row = g_ptr_array_new_with_free_func(g_free);
 
-        sprintf(buffer, "%d", i); 
+        sprintf(buffer, "%d", process_id);
+        g_ptr_array_add(row, g_strdup(buffer));
 
+        sprintf(buffer, "%d", i);
         g_ptr_array_add(row, g_strdup(buffer));
 
         g_ptr_array_add(row, g_strdup(backend->addr->name->str));
@@ -294,6 +304,12 @@ void admin_select_conn_details(network_mysqld_con *admin_con)
     fields = g_ptr_array_new_with_free_func((void *) network_mysqld_proto_fielddef_free);
 
     field = network_mysqld_proto_fielddef_new();
+    field->name = g_strdup("PID");
+    field->type = MYSQL_TYPE_STRING;
+    g_ptr_array_add(fields, field);
+
+
+    field = network_mysqld_proto_fielddef_new();
     field->name = g_strdup("backend_ndx");
     field->type = MYSQL_TYPE_STRING;
     g_ptr_array_add(fields, field);
@@ -321,6 +337,9 @@ void admin_select_conn_details(network_mysqld_con *admin_con)
     rows = g_ptr_array_new_with_free_func((void *) network_mysqld_mysql_field_row_free);
 
     len = bs->backends->len;
+
+    cetus_pid_t process_id = getpid();
+    
     for (i = 0; i < len; i++) {
         network_backend_t *backend = bs->backends->pdata[i];
         
@@ -341,6 +360,9 @@ void admin_select_conn_details(network_mysqld_con *admin_con)
             /* count all users' pooled connections */
             while (g_hash_table_iter_next(&iter, (void **)&key, (void **)&queue)) {
                 row = g_ptr_array_new_with_free_func(g_free);
+
+                sprintf(buffer, "%d", process_id);
+                g_ptr_array_add(row, g_strdup(buffer));
 
                 sprintf(buffer, "%d", i); 
                 g_ptr_array_add(row, g_strdup(buffer));

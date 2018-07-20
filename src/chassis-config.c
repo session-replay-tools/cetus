@@ -27,6 +27,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <glib/gstdio.h>        /* for g_stat */
 
 enum chassis_config_type_t {
@@ -555,10 +556,12 @@ chassis_config_parse_options(chassis_config_t *conf, GList *entries)
             case OPTION_ARG_NONE:
                 if (entry->arg_data == NULL)
                     break;
-                if(strcasecmp(entry_value, "true") == 0) {
+                if (strcasecmp(entry_value, "false")==0 || strncmp(entry_value, "0", 1)==0) {
+                    *(int *)(entry->arg_data) = 0;
+                } else if (strcasecmp(entry_value, "true")==0 || isdigit(entry_value[0])) {
                     *(int *)(entry->arg_data) = 1;
                 } else {
-                    *(int *)(entry->arg_data) = 0;
+                    g_warning("error boolean value: %s", entry_value);
                 }
                 break;
             case OPTION_ARG_INT:

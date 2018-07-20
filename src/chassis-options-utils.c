@@ -721,7 +721,7 @@ show_check_slave_delay(gpointer param) {
         return g_strdup_printf("%s", srv->check_slave_delay ? "true" : "false");
     }
     if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        return srv->check_slave_delay ? g_strdup("true") : NULL;
+        return (srv->check_slave_delay == 0) ? g_strdup("false") : NULL;
     }
     return NULL;
 }

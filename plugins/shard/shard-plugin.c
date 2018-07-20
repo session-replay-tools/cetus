@@ -1731,10 +1731,14 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
         int server_unavailable = 0;
         if (!proxy_add_server_connection_array(con, &server_unavailable)) {
             record_last_backends_type(con);
-            if (!server_unavailable) {
-                return NETWORK_SOCKET_WAIT_FOR_EVENT;
-            } else {
+            if (con->xa_tran_conflict) {
                 return NETWORK_SOCKET_ERROR;
+            } else {
+                if (!server_unavailable) {
+                    return NETWORK_SOCKET_WAIT_FOR_EVENT;
+                } else {
+                    return NETWORK_SOCKET_ERROR;
+                }
             }
         } else {
             record_last_backends_type(con);

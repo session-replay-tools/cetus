@@ -611,7 +611,9 @@ proxy_parse_query(network_mysqld_con *con)
         }
         if (con->dist_tran_state >= NEXT_ST_XA_START && con->dist_tran_state != NEXT_ST_XA_OVER) {
             g_warning("%s: xa is not over yet:%p, xa state:%d", G_STRLOC, con, con->dist_tran_state);
-            con->server_to_be_closed = 1;
+            if (con->server && con->servers->len > 0) {
+                con->server_to_be_closed = 1;
+            }
         } else if (con->dist_tran_xa_start_generated && !con->dist_tran_decided) {
             if (con->servers && con->servers->len > 0) {
                 con->server_to_be_closed = 1;
@@ -925,7 +927,9 @@ process_rv_use_same(network_mysqld_con *con, sharding_plan_t *plan, int *disp_fl
 {
     /* SET AUTOCOMMIT = 1 */
     con->is_auto_commit = 1;
-    if (con->dist_tran && con->dist_tran_state < NEXT_ST_XA_END) {
+    if (con->dist_tran && con->servers && con->servers->len > 0 &&
+            con->dist_tran_state < NEXT_ST_XA_END)
+    {
         con->client->is_server_conn_reserved = 0;
         con->is_commit_or_rollback = 1;
         g_message("%s: no commit when set autocommit = 1:%p", G_STRLOC, con);
@@ -936,6 +940,7 @@ process_rv_use_same(network_mysqld_con *con, sharding_plan_t *plan, int *disp_fl
         GString *packet = g_queue_pop_head(con->client->recv_queue->chunks);
         g_string_free(packet, TRUE);
         con->is_in_transaction = 0;
+        con->dist_tran = 0;
         con->client->is_server_conn_reserved = 0;
         network_mysqld_con_send_ok_full(con->client, 0, 0, 0, 0);
         *disp_flag = PROXY_SEND_RESULT;
@@ -1000,6 +1005,7 @@ process_rv_use_previous_tran_conns(network_mysqld_con *con, sharding_plan_t *pla
 static int
 process_rv_default(network_mysqld_con *con, sharding_plan_t *plan, int *rv, int *disp_flag)
 {
+    g_debug("%s: process_rv_default is called", G_STRLOC);
     if (con->is_tran_not_distributed_by_comment) {
         g_debug("%s: default prcessing here for conn:%p", G_STRLOC, con);
 
@@ -1047,6 +1053,7 @@ process_rv_default(network_mysqld_con *con, sharding_plan_t *plan, int *rv, int 
             }
         } else {
             if (con->dist_tran) {
+                g_debug("%s: xa transaction", G_STRLOC);
                 if (plan->groups->len == 0 && *rv != ERROR_UNPARSABLE) {
                     network_mysqld_con_send_error_full(con->client,
                                                        C("Cannot find backend groups"), ER_CETUS_NO_GROUP, "HY000");
@@ -1056,6 +1063,7 @@ process_rv_default(network_mysqld_con *con, sharding_plan_t *plan, int *rv, int 
                     return 0;
                 }
             } else {
+                g_debug("%s: check if it is a xa transaction", G_STRLOC);
                 if (plan->groups->len == 1 && (!con->is_auto_commit)) {
                     con->delay_send_auto_commit = 0;
                     *rv = USE_DIS_TRAN;
@@ -1731,10 +1739,14 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
         int server_unavailable = 0;
         if (!proxy_add_server_connection_array(con, &server_unavailable)) {
             record_last_backends_type(con);
-            if (!server_unavailable) {
-                return NETWORK_SOCKET_WAIT_FOR_EVENT;
-            } else {
+            if (con->xa_tran_conflict) {
                 return NETWORK_SOCKET_ERROR;
+            } else {
+                if (!server_unavailable) {
+                    return NETWORK_SOCKET_WAIT_FOR_EVENT;
+                } else {
+                    return NETWORK_SOCKET_ERROR;
+                }
             }
         } else {
             record_last_backends_type(con);

@@ -2325,9 +2325,11 @@ process_service_unavailable(network_mysqld_con *con)
                         G_STRLOC, con);
             }
             con->dist_tran = 0;
+            con->server_to_be_closed = 1;
         }
     }
 
+#ifndef SIMPLE_PARSER
     if (con->servers != NULL) {
         g_debug("%s: server num :%d for con:%p", G_STRLOC, (int)con->servers->len, con);
         size_t i;
@@ -2345,11 +2347,8 @@ process_service_unavailable(network_mysqld_con *con)
                 i--;
             }
         }
-
-        if (con->servers->len == 0) {
-            con->server_to_be_closed = 1;
-        }
     }
+#endif
 
     network_mysqld_con_send_error_full(con->client, C("service unavailable"), ER_TOO_MANY_USER_CONNECTIONS, "42000");
     con->is_wait_server = 0;

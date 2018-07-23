@@ -168,7 +168,7 @@ chassis_frontend_new(void)
     frontend->is_client_compress_support = 0;
     frontend->xa_log_detailed = 0;
 
-    frontend->default_pool_size = 100;
+    frontend->default_pool_size = 10;
     frontend->max_resp_len = 10 * 1024 * 1024;  /* 10M */
     frontend->max_alive_time = DEFAULT_LIVE_TIME;
     frontend->merged_output_size = 8192;
@@ -574,6 +574,10 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
         srv->worker_processes = frontend->worker_processes;
     }
     g_message("set worker processes:%d", srv->worker_processes);
+
+    if (frontend->default_pool_size < 10) {
+        frontend->default_pool_size = 10;
+    }
 
     srv->mid_idle_connections = frontend->default_pool_size;
     g_message("set default pool size:%d", srv->mid_idle_connections);

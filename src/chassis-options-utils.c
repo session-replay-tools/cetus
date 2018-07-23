@@ -422,6 +422,9 @@ assign_default_pool_size(const gchar *newval, gpointer param) {
             gint value = 0;
                 if (try_get_int_value(newval, &value)) {
                     if (value >= 0) {
+                        if (value < 10) {
+                            value = 10;
+                        }
                         srv->mid_idle_connections = value;
                         ret = ASSIGN_OK;
                     } else {

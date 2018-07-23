@@ -105,7 +105,7 @@ network_connection_pool_new(void)
 
     pool->max_idle_connections = 20;
     pool->mid_idle_connections = 10;
-    pool->min_idle_connections = 2;
+    pool->min_idle_connections = 1;
     pool->cur_idle_connections = 0;
     pool->users = g_hash_table_new_full(g_hash_table_string_hash,
                                         g_hash_table_string_equal, g_hash_table_string_free, g_queue_free_all);

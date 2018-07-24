@@ -167,7 +167,7 @@ cetus_start_admin_processes(cetus_cycle_t *cycle, int respawn)
         }
 
         if (cetus_processes[s].is_admin) {
-            g_debug("%s: is_admin true", G_STRLOC);
+            g_debug("%s: is_admin true for s:%d", G_STRLOC, s);
             continue;
         }
 
@@ -178,6 +178,8 @@ cetus_start_admin_processes(cetus_cycle_t *cycle, int respawn)
             g_critical("%s: close() channel failed, err:%s", G_STRLOC, strerror(errno));
         }
 
+        cetus_processes[s].admin_worker_channel[0] = -1;
+
         g_debug("%s: close() channel one fd:%d, n:%d", 
                 G_STRLOC, cetus_processes[s].admin_worker_channel[1], s);
 
@@ -185,6 +187,7 @@ cetus_start_admin_processes(cetus_cycle_t *cycle, int respawn)
         if (close(cetus_processes[s].admin_worker_channel[1]) == -1) {
             g_critical("%s: close() channel failed, err:%s", G_STRLOC, strerror(errno));
         }
+        cetus_processes[s].admin_worker_channel[1] = -1;
     }
 
     ch.basics.pid = cetus_processes[cetus_process_slot].pid;
@@ -358,6 +361,7 @@ cetus_start_worker_processes(cetus_cycle_t *cycle, int n, int type)
     ch.basics.command = CETUS_CMD_OPEN_CHANNEL;
 
     for (i = 0; i < n; i++) {
+        g_debug("%s: before call cetus_spawn_process", G_STRLOC);
         cetus_spawn_process(cycle, cetus_worker_process_cycle,
                           (void *) (intptr_t) i, "worker process", type);
 
@@ -375,6 +379,9 @@ static void
 cetus_pass_open_channel(cetus_cycle_t *cycle, cetus_channel_t *ch)
 {
     int  i;
+
+    g_debug("%s: call cetus_pass_open_channel, cetus_last_process:%d",
+            G_STRLOC, cetus_last_process);
 
     for (i = 0; i < cetus_last_process; i++) {
 
@@ -550,6 +557,9 @@ cetus_reap_children(cetus_cycle_t *cycle)
                 && !cetus_terminate
                 && !cetus_quit)
             {
+
+                usleep(1000 * 1000);
+                g_debug("%s: before call cetus_spawn_process", G_STRLOC);
                 if (cetus_spawn_process(cycle, cetus_processes[i].proc,
                                       cetus_processes[i].data,
                                       cetus_processes[i].name, i)
@@ -565,7 +575,7 @@ cetus_reap_children(cetus_cycle_t *cycle)
                 ch.basics.slot = cetus_process_slot;
                 ch.basics.fd = cetus_processes[cetus_process_slot].parent_child_channel[0];
 
-                g_debug("%s: call cetus_pass_open_channel", G_STRLOC);
+                g_debug("%s: call cetus_pass_open_channel, slot:%d", G_STRLOC, cetus_process_slot);
                 cetus_pass_open_channel(cycle, &ch);
 
                 live = 1;
@@ -720,6 +730,8 @@ cetus_worker_process_init(cetus_cycle_t *cycle, int worker)
         g_critical("%s: sigprocmask() failed, errno:%d", G_STRLOC, errno);
     }
 
+    g_debug("%s: cetus_last_process:%d", G_STRLOC, cetus_last_process);
+
     for (n = 0; n < cetus_last_process; n++) {
 
         if (cetus_processes[n].pid == -1) {
@@ -740,11 +752,17 @@ cetus_worker_process_init(cetus_cycle_t *cycle, int worker)
         if (close(cetus_processes[n].parent_child_channel[1]) == -1) {
             g_critical("%s: close() channel failed, err:%s", G_STRLOC, strerror(errno));
         }
-        
+
+        if (cetus_processes[n].admin_worker_channel[1] == -1) {
+            continue;
+        }
+
+        g_debug("%s: close() admin channel one fd:%d, n:%d", 
+                G_STRLOC, cetus_processes[n].admin_worker_channel[1], n);
+   
         if (close(cetus_processes[n].admin_worker_channel[1]) == -1) {
             g_critical("%s: close() channel failed, err:%s", G_STRLOC, strerror(errno));
         }
-
     }
 
     g_debug("%s: close() channel zero fd:%d, n:%d", 
@@ -874,7 +892,16 @@ cetus_channel_handler(int fd, short events, void *user_data)
 {
     cetus_channel_t    ch;
 
-    g_debug("%s: channel handler", G_STRLOC);
+    g_debug("%s: channel handler, cetus_last_process:%d", G_STRLOC, cetus_last_process);
+
+    int i;
+    for (i = 0; i < cetus_last_process; i++) {
+        g_message("%s: i:%d, pid:%d, fd1:%d, fd2:%d, admin fd1:%d, fd2:%d", G_STRLOC,
+                i, cetus_processes[i].pid, cetus_processes[i].parent_child_channel[0],
+                cetus_processes[i].parent_child_channel[1],
+                cetus_processes[i].admin_worker_channel[0],
+                cetus_processes[i].admin_worker_channel[1]);
+    }
 
     do {
 

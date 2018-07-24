@@ -377,6 +377,7 @@ cetus_spawn_process(cetus_cycle_t *cycle, cetus_spawn_proc_pt proc, void *data,
 pid_t
 cetus_execute(cetus_cycle_t *cycle, cetus_exec_ctx_t *ctx)
 {
+    g_debug("%s: before call cetus_spawn_process", G_STRLOC);
     return cetus_spawn_process(cycle, cetus_execute_proc, ctx, ctx->name,
                              CETUS_PROCESS_DETACHED);
 }
@@ -442,7 +443,7 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
         }
     }
 
-    g_debug("%s: cetus_signal_handler is called:%d, errno:%d", G_STRLOC, signo, errno);
+    g_debug("%s: cetus_signal_handler is called:%d, err:%s", G_STRLOC, signo, strerror(errno));
     action = "";
 
     switch (cetus_process) {

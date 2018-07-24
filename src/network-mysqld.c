@@ -2528,6 +2528,8 @@ process_write_to_server(network_mysqld_con *con, server_session_t *ss, int *writ
         char *msg = "write error";
         con->state = ST_SEND_QUERY_RESULT;
         con->server_to_be_closed = 1;
+        con->dist_tran = 0;
+        con->is_client_to_be_closed = 0;
         g_warning("%s:write error for con:%p, ret:%d", G_STRLOC, con, ret);
         network_mysqld_con_send_error_full(con->client, L(msg), ER_NET_ERROR_ON_WRITE, "08S01");
         break;

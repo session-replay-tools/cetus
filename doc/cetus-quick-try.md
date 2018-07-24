@@ -81,3 +81,15 @@ print "maintain status: %s" % data
 具体使用说明根据版本情况详见[Cetus 读写分离版管理手册](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-rw-admin.md)、[Cetus 分库(sharding)版管理手册](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-shard-admin.md)
 
 **注：Cetus读写分离和分库两个版本的使用约束详见[Cetus 使用约束说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-constraint.md)**
+
+## MySQL8 支持
+
+由于MySQL8.0用户权限认证插件新增了caching\_sha2\_password，并且默认创建的用户权限认证插件为该插件，MySQL55/56/57不支持该认证方式。因此在使用MySQL55/56/57库编译的Cetus时，配置default\-username账号，应该在MySQL上创建时指定插件为mysql|_native|_password，否则Cetus的监控线程无法工作，影响Cetus的正常使用。
+
+配置方法示例如下：
+
+```
+create user 'default-user'@'%' identified with mysql_native_password by 'my_password';
+grant all privileges on *.* to 'default-user'@'%';
+```
+

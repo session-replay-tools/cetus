@@ -429,7 +429,7 @@ static
 void construct_channel_info(network_mysqld_con *con, char *sql)
 {
     chassis *cycle = con->srv;
-    g_message("%s:call construct_channel_info", G_STRLOC);
+    g_message("%s:call construct_channel_info, cetus_process_slot:%d", G_STRLOC, cetus_process_slot);
     cetus_channel_t  ch; 
     memset(&ch, 0, sizeof(cetus_channel_t));
     ch.basics.command = CETUS_CMD_ADMIN;
@@ -461,8 +461,8 @@ void construct_channel_info(network_mysqld_con *con, char *sql)
             event_set(&(cetus_processes[i].event), fd, EV_READ, network_read_sql_resp, con);
             chassis_event_add_with_timeout(cycle, &(cetus_processes[i].event), NULL);
             con->num_read_pending++;
-            g_debug("%s:con num_read_pending:%d", G_STRLOC, con->num_read_pending);
         }
+        g_debug("%s:con num_read_pending:%d", G_STRLOC, con->num_read_pending);
     }
 }
 

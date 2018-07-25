@@ -351,6 +351,7 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
         case SIGINT:
             cetus_terminate = 1;
             action = ", exiting";
+            g_message("%s: master received SIGINT:%d", G_STRLOC, signo);
             break;
 
         case cetus_signal_value(CETUS_NOACCEPT_SIGNAL):
@@ -402,7 +403,7 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
 
         case cetus_signal_value(CETUS_TERMINATE_SIGNAL):
         case SIGINT:
-            g_message("%s: call here:%d", G_STRLOC, signo);
+            g_message("%s: worker received SIGINT:%d", G_STRLOC, signo);
             cetus_terminate = 1;
             action = ", exiting";
             break;

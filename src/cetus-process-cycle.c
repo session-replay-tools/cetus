@@ -90,30 +90,6 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
         size += strlen(cetus_argv[i]) + 1;
     }
 
-    sigset_t           set;
-
-    sigemptyset(&set);
-
-    sigaddset(&set, SIGCHLD);
-    sigaddset(&set, SIGALRM);
-    sigaddset(&set, SIGIO);
-    sigaddset(&set, SIGINT);
-
-    sigaddset(&set, cetus_signal_value(CETUS_RECONFIGURE_SIGNAL));
-    sigaddset(&set, cetus_signal_value(CETUS_REOPEN_SIGNAL));
-    sigaddset(&set, cetus_signal_value(CETUS_NOACCEPT_SIGNAL));
-    sigaddset(&set, cetus_signal_value(CETUS_TERMINATE_SIGNAL));
-    sigaddset(&set, cetus_signal_value(CETUS_SHUTDOWN_SIGNAL));
-    sigaddset(&set, cetus_signal_value(CETUS_CHANGEBIN_SIGNAL));
-
-    if (sigprocmask(SIG_BLOCK, &set, NULL) == -1) {
-        g_critical("%s: sigprocmask() failed, errno:%d", G_STRLOC, errno);
-    }
-
-    sigemptyset(&set);
-
-
-
     cetus_start_worker_processes(cycle, cycle->worker_processes,
                                CETUS_PROCESS_RESPAWN);
 
@@ -143,10 +119,10 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
             }
         }
 
-        sigsuspend(&set);
-        /*chassis_event_loop_t *loop = cycle->event_base;
-        chassis_event_loop(loop);
-        */
+        if (!cetus_terminate) {
+            chassis_event_loop_t *loop = cycle->event_base;
+            chassis_event_loop(loop);
+        }
 
         if (cetus_reap) {
             g_message("%s: cetus_reap is true", G_STRLOC);

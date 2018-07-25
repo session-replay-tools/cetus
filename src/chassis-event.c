@@ -98,6 +98,7 @@ chassis_event_loop(chassis_event_loop_t *loop)
         struct timeval timeout;
         int r;
 
+        g_debug("%s: enter event_base_loopexit", G_STRLOC);
         timeout.tv_sec = 1;
         timeout.tv_usec = 0;
 
@@ -109,19 +110,20 @@ chassis_event_loop(chassis_event_loop_t *loop)
 
         r = event_base_dispatch(loop);
 
-        g_debug("%s: after event_base_dispatch:%d, errno:%d, str:%s",
-                G_STRLOC, r, errno, strerror(errno));
-
         if (r == -1) {
+            g_debug("%s: after event_base_dispatch:%d, errno:%d, str:%s",
+                    G_STRLOC, r, errno, strerror(errno));
             if (errno == EINTR) {
                 g_message("%s: EINTR is met", G_STRLOC);
                 continue;
             }
             g_critical("%s: leaving chassis_event_loop early, errno != EINTR was: %s (%d)",
-                       G_STRLOC, g_strerror(errno), errno);
+                    G_STRLOC, g_strerror(errno), errno);
             break;
         }
     }
+        
+    g_debug("%s: leave chassis_event_loop", G_STRLOC);
 
     return NULL;
 }

@@ -184,7 +184,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_auth) {
         gsize auth_data_len = packet.data->len - 4;
         GString *auth_data = g_string_sized_new(auth_data_len);
         network_mysqld_proto_get_gstr_len(&packet, auth_data_len, auth_data);
-        g_string_append_len(con->client->response->auth_plugin_data, S(auth_data));
+        g_string_assign_len(con->client->response->auth_plugin_data, S(auth_data));
         g_string_free(auth_data, TRUE);
         auth = con->client->response;
     }

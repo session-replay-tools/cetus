@@ -119,6 +119,8 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
             }
         }
 
+        usleep(100 * 1000);
+
         if (!cetus_terminate) {
             chassis_event_loop_t *loop = cycle->event_base;
             chassis_event_loop(loop);

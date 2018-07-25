@@ -53,6 +53,8 @@
 #define E_NET_WOULDBLOCK EWOULDBLOCK
 #endif
 
+extern sig_atomic_t    cetus_reap;
+
 void
 chassis_event_add_with_timeout(chassis *chas, struct event *ev, struct timeval *tv)
 {
@@ -95,6 +97,10 @@ chassis_event_loop(chassis_event_loop_t *loop)
      * check once a second if we shall shutdown the proxy
      */
     while (!chassis_is_shutdown()) {
+        if (cetus_reap) {
+            break;
+        }
+
         struct timeval timeout;
         int r;
 

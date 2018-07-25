@@ -372,6 +372,7 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
             break;
 
         case SIGALRM:
+            g_message("%s: master received SIGALRM:%d", G_STRLOC, signo);
             cetus_sigalrm = 1;
             break;
 

@@ -422,6 +422,9 @@ assign_default_pool_size(const gchar *newval, gpointer param) {
             gint value = 0;
                 if (try_get_int_value(newval, &value)) {
                     if (value >= 0) {
+                        if (value < 10) {
+                            value = 10;
+                        }
                         srv->mid_idle_connections = value;
                         ret = ASSIGN_OK;
                     } else {
@@ -721,7 +724,7 @@ show_check_slave_delay(gpointer param) {
         return g_strdup_printf("%s", srv->check_slave_delay ? "true" : "false");
     }
     if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        return srv->check_slave_delay ? g_strdup("true") : NULL;
+        return (srv->check_slave_delay == 0) ? g_strdup("false") : NULL;
     }
     return NULL;
 }

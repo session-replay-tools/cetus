@@ -196,7 +196,7 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
         GString *auth_data = g_string_sized_new(auth_data_len);
         network_mysqld_proto_get_gstr_len(&packet, auth_data_len, auth_data);
 
-        g_string_append_len(con->client->response->auth_plugin_data, S(auth_data));
+        g_string_assign_len(con->client->response->auth_plugin_data, S(auth_data));
 
         g_string_free(auth_data, TRUE);
 

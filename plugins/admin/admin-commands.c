@@ -208,7 +208,7 @@ void admin_select_conn_details(network_mysqld_con *admin_con)
             continue;
         }
 
-#ifndef SIMPLE_PARSE
+#ifndef SIMPLE_PARSER
         if (con->servers == NULL) {
             continue;
         }
@@ -1259,8 +1259,13 @@ void admin_set_config(network_mysqld_con* con, char* key, char* value)
 static void admin_reload_settings(network_mysqld_con* con)
 {
     GList *options = admin_get_all_options(con->srv);
-
-    if (!chassis_config_reload_options(con->srv->config_manager)) {
+    gint ret = chassis_config_reload_options(con->srv->config_manager);
+    if (ret == -1) {
+        network_mysqld_con_send_error(con->client,
+                    C("Can't connect to remote or can't get config"));
+                return;
+    }
+    if (ret == -2) {
         network_mysqld_con_send_error(con->client,
             C("Can't load options, only support remote config"));
         return;
@@ -1411,10 +1416,12 @@ static struct sql_help_entry_t {
     {"select * from help", "show this help", ALL_HELP},
     {"select help", "show this help", ALL_HELP},
     {"cetus", "Show overall status of Cetus", ALL_HELP},
-    {"create vdb <id> (groupA:xx, groupB:xx) using <method>", "method example: hash(int,4) range(str)", SHARD_HELP},
-    {"create sharded table <schema>.<table> vdb <id> shardkey <key>", "create sharded table", SHARD_HELP},
-    {"select * from vdb", "show all vdb", SHARD_HELP},
-    {"select sharded table", "show all sharded table", SHARD_HELP},
+    {"create vdb <id> (groupA:xx, groupB:xx) using <method>", "Method example: hash(int,4) range(str)", SHARD_HELP},
+    {"create sharded table <schema>.<table> vdb <id> shardkey <key>", "Create sharded table", SHARD_HELP},
+    {"select * from vdb", "Show all vdb", SHARD_HELP},
+    {"select sharded table", "Show all sharded table", SHARD_HELP},
+    {"create single table <schema>.<table> on <group>", "Create single-node table", SHARD_HELP},
+    {"select single table", "Show single tables", SHARD_HELP},
     {NULL, NULL, 0}
 };
 
@@ -1643,6 +1650,7 @@ void admin_select_sharded_table(network_mysqld_con* con)
     network_mysqld_proto_fielddefs_free(fields);
     g_ptr_array_free(rows, TRUE);
     g_list_free_full(freelist, g_free);
+    g_list_free(tables);
 }
 
 void admin_save_settings(network_mysqld_con *con)
@@ -1743,4 +1751,36 @@ void admin_show_databases(network_mysqld_con* con)
 
     network_mysqld_proto_fielddefs_free(fields);
     g_ptr_array_free(rows, TRUE);
+}
+
+void admin_create_single_table(network_mysqld_con* con, const char* schema,
+                               const char* table, const char* group)
+{
+    gboolean ok = shard_conf_add_single_table(schema, table, group);
+    if (ok) {
+        shard_conf_write_json(con->srv->config_manager);
+        network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+    } else {
+        network_mysqld_con_send_error(con->client, C("failed to add single table"));
+    }
+}
+
+void admin_select_single_table(network_mysqld_con* con)
+{
+    GList* tables = shard_conf_get_single_tables();
+    GPtrArray* fields = network_mysqld_proto_fielddefs_new();
+    MAKE_FIELD_DEF_2_COL(fields, "Table", "Group");
+    GPtrArray *rows = g_ptr_array_new_with_free_func((void *)network_mysqld_mysql_field_row_free);
+    GList* freelist = NULL;
+    GList* l = NULL;
+    for (l = tables; l; l = l->next) {
+        struct single_table_t* t = l->data;
+        char* name = g_strdup_printf("%s.%s", t->schema->str, t->name->str);
+        freelist = g_list_append(freelist, name);
+        APPEND_ROW_2_COL(rows, name, t->group->str);
+    }
+    network_mysqld_con_send_resultset(con->client, fields, rows);
+    network_mysqld_proto_fielddefs_free(fields);
+    g_ptr_array_free(rows, TRUE);
+    g_list_free_full(freelist, g_free);
 }

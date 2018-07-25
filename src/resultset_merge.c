@@ -3013,6 +3013,9 @@ check_fail_met(sql_context_t *context, network_queue *send_queue, GPtrArray *rec
                 server_session_t *ss = g_ptr_array_index(con->servers, p);
                 if (pkt_type == MYSQLD_PACKET_ERR) {
                     g_warning("%s: failed query:%s, server:%s", G_STRLOC, orig_sql, ss->server->dst->name->str);
+                    if (con->num_pending_servers > 0) {
+                        con->server_to_be_closed = 1;
+                    }
                 }
                 if (context->stmt_type == STMT_CALL) {
                     if (!(*call_fail_met)) {

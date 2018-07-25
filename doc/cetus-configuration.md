@@ -406,7 +406,7 @@ mysql> select * from services;
 
 Default: false
 
-禁用辅助线程，包括: 配置变更检测、后端存活检测和只读库延迟检测等
+禁用辅助线程，包括: 后端存活检测、只读库延迟检测、MGR节点状态和角色检测等
 
 > disable-threads = true
 

@@ -85,6 +85,13 @@ struct sharding_table_t {
     int vdb_id;
     struct sharding_vdb_t *vdb_ref;
 };
+
+struct single_table_t {         /* single table only resides on 1 group */
+    GString *name;
+    GString *schema;
+    GString *group;
+};
+
 int sharding_key_type(const char *str);
 const char* sharding_key_type_str(int type);
 GPtrArray *shard_conf_get_any_group(GPtrArray *groups, const char *db, const char *table);
@@ -130,8 +137,11 @@ void sharding_vdb_free(sharding_vdb_t *vdb);
 gboolean shard_conf_add_sharded_table(sharding_table_t* t);
 
 GList* shard_conf_get_vdb_list();
-GList* shard_conf_get_tables();
-
+GList* shard_conf_get_tables(); /* ! g_list_free() after use */
+GList* shard_conf_get_single_tables();
 gboolean shard_conf_write_json(chassis_config_t* conf_manager);
+
+gboolean shard_conf_add_single_table(const char* schema,
+                                     const char* table, const char* group);
 
 #endif /* __SHARDING_CONFIG_H__ */

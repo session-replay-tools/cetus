@@ -93,6 +93,8 @@
 "settings" return TK_SETTINGS;
 "NAMES" return TK_NAMES;
 "DATABASES" return TK_DATABASES;
+"SINGLE" return TK_SINGLE;
+"ON" return TK_ON;
 
 [0-9]+                 return TK_INTEGER; /*sign symbol is handled in parser*/
 

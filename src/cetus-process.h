@@ -18,7 +18,6 @@ typedef struct {
     cetus_pid_t           pid;
     int                   status;
     int                   parent_child_channel[2];
-    int                   admin_worker_channel[2];
 
     struct event          event;
 
@@ -64,10 +63,6 @@ typedef struct {
 #define cetus_value_helper(n)   #n
 #define cetus_value(n)          cetus_value_helper(n)
 
-cetus_pid_t
-cetus_spawn_admin_process(cetus_cycle_t *cycle, cetus_spawn_proc_pt proc, void *data,
-    char *name, int respawn);
-
 cetus_pid_t cetus_spawn_process(cetus_cycle_t *cycle,
     cetus_spawn_proc_pt proc, void *data, char *name, int respawn);
 cetus_pid_t cetus_execute(cetus_cycle_t *cycle, cetus_exec_ctx_t *ctx);
@@ -81,11 +76,9 @@ extern char           **cetus_os_argv;
 extern pid_t    cetus_pid;
 extern pid_t    cetus_parent;
 extern int      cetus_channel;
-extern int      cetus_admin_channel;
 extern int      cetus_process_slot;
 extern int      cetus_last_process;
 extern struct event cetus_channel_event;
-extern struct event cetus_admin_channel_event;
 extern cetus_process_t  cetus_processes[CETUS_MAX_PROCESSES];
 
 

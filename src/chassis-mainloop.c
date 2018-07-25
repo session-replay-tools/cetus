@@ -252,6 +252,7 @@ chassis_set_shutdown_location(const gchar *location)
         g_message("Initiating shutdown, requested from %s", (location != NULL ? location : "signal handler"));
     }
     signal_shutdown = 1;
+    cetus_terminate = 1;
 }
 
 gboolean
@@ -263,6 +264,7 @@ chassis_is_shutdown()
 static void
 sigterm_handler(int G_GNUC_UNUSED fd, short G_GNUC_UNUSED event_type, void G_GNUC_UNUSED *_data)
 {
+    g_message("%s:event type:%d", G_STRLOC, event_type);
     chassis_set_shutdown_location(NULL);
 }
 
@@ -378,11 +380,55 @@ chassis_mainloop(void *_chas)
         return 1;
     }
 
-    /**
-     * block until we are asked to shutdown
-     */
+    /*
+    sigset_t           set;
+
+    sigemptyset(&set);
+
+    sigaddset(&set, SIGCHLD);
+    sigaddset(&set, SIGALRM);
+    sigaddset(&set, SIGIO);
+    sigaddset(&set, SIGINT);
+
+    sigaddset(&set, cetus_signal_value(CETUS_RECONFIGURE_SIGNAL));
+    sigaddset(&set, cetus_signal_value(CETUS_REOPEN_SIGNAL));
+    sigaddset(&set, cetus_signal_value(CETUS_NOACCEPT_SIGNAL));
+    sigaddset(&set, cetus_signal_value(CETUS_TERMINATE_SIGNAL));
+    sigaddset(&set, cetus_signal_value(CETUS_SHUTDOWN_SIGNAL));
+    sigaddset(&set, cetus_signal_value(CETUS_CHANGEBIN_SIGNAL));
+
+    if (sigprocmask(SIG_BLOCK, &set, NULL) == -1) {
+        g_critical("%s: sigprocmask() failed, errno:%d", G_STRLOC, errno);
+    }
+
+    sigemptyset(&set);
+    */
+
+    /*
+    signal_set(&ev_sigterm, SIGTERM, sigterm_handler, NULL);
+    event_base_set(chas->event_base, &ev_sigterm);
+    signal_add(&ev_sigterm, NULL);
+
+    signal_set(&ev_sigint, SIGINT, sigterm_handler, NULL);
+    event_base_set(chas->event_base, &ev_sigint);
+    signal_add(&ev_sigint, NULL);
+
+#ifdef SIGHUP
+    signal_set(&ev_sighup, SIGHUP, sighup_handler, chas);
+    event_base_set(chas->event_base, &ev_sighup);
+    if (signal_add(&ev_sighup, NULL)) {
+        g_critical("%s: signal_add(SIGHUP) failed", G_STRLOC);
+    }
+#endif
+*/
+
     cetus_master_process_cycle(chas);
-    /* chassis_event_loop(mainloop);*/
+
+    signal_del(&ev_sigterm);
+    signal_del(&ev_sigint);
+#ifdef SIGHUP
+    signal_del(&ev_sighup);
+#endif
 
     return 0;
 }

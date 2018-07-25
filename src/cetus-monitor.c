@@ -721,6 +721,7 @@ void
 cetus_monitor_start_thread(cetus_monitor_t *monitor, chassis *chas)
 {
     monitor->chas = chas;
+    chas->disable_threads = 1;
     if (chas->disable_threads) {
         g_message("monitor thread is disabled");
         return;

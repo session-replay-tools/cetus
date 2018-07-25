@@ -335,9 +335,8 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
 {
     network_mysqld_con *con = user_data;
 
-    cetus_channel_t    ch;
-
     g_debug("%s: network_read_sql_resp, fd:%d", G_STRLOC, fd);
+    cetus_channel_t  ch;
 
     /* read header first */
     int ret = cetus_read_channel(fd, &ch, sizeof(cetus_channel_t));
@@ -358,18 +357,18 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
     if (ch.basics.command == CETUS_CMD_ADMIN_RESP) {
         con->num_read_pending--;
         int  resp_len = ch.admin_sql_resp_len;
-        GString *packet = g_string_sized_new(resp_len);
-        int len = recv(fd, packet->str, resp_len, 0);
+        GString *raw_packet = g_string_sized_new(resp_len);
+        int len = recv(fd, raw_packet->str, resp_len, 0);
 
         g_debug("%s: resp_len:%d, len:%d, fd:%d", G_STRLOC, resp_len, len, fd);
 
         network_socket *sock = network_socket_new();
-        g_queue_push_tail(sock->recv_queue_raw->chunks, packet);
+        g_queue_push_tail(sock->recv_queue_raw->chunks, raw_packet);
 
         sock->recv_queue_raw->len += resp_len;
-        packet->len = resp_len;
+        raw_packet->len = resp_len;
 
-        g_debug_hexdump(G_STRLOC, S(packet));
+        //g_debug_hexdump(G_STRLOC, S(raw_packet));
 
         network_socket_retval_t ret = network_mysqld_con_get_packet(con->srv, sock);
 
@@ -435,7 +434,7 @@ void construct_channel_info(network_mysqld_con *con, char *sql)
     ch.basics.command = CETUS_CMD_ADMIN;
     ch.basics.pid = cetus_processes[cetus_process_slot].pid;
     ch.basics.slot = cetus_process_slot;
-    ch.basics.fd = cetus_processes[cetus_process_slot].admin_worker_channel[0];
+    ch.basics.fd = cetus_processes[cetus_process_slot].parent_child_channel[0];
 
     con->num_read_pending = 0;
 
@@ -455,10 +454,12 @@ void construct_channel_info(network_mysqld_con *con, char *sql)
                     ch.basics.slot, ch.basics.pid, cetus_processes[i].pid);
 
             /* TODO: AGAIN */
-            cetus_write_channel(cetus_processes[i].admin_worker_channel[0],
+            cetus_write_channel(cetus_processes[i].parent_child_channel[0],
                     &ch, sizeof(cetus_channel_t));
-            int fd = cetus_processes[i].admin_worker_channel[0];
+            int fd = cetus_processes[i].parent_child_channel[0];
+            g_debug("%s:fd:%d for network_read_sql_resp", G_STRLOC, fd);
             event_set(&(cetus_processes[i].event), fd, EV_READ, network_read_sql_resp, con);
+            //event_set(&(cetus_processes[i].event), fd, EV_READ | EV_PERSIST, network_read_sql_resp, con);
             chassis_event_add_with_timeout(cycle, &(cetus_processes[i].event), NULL);
             con->num_read_pending++;
         }

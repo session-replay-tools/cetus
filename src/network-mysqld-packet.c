@@ -778,8 +778,6 @@ network_mysqld_proto_get_query_result(network_packet *packet, network_mysqld_con
         is_finished = 1;
         break;
     default:
-        g_debug_hexdump(G_STRLOC, S(packet->data));
-        g_debug("%s: COM_(0x%02x) is not handled", G_STRLOC, con->parse.command);
         err = 1;
         break;
     }

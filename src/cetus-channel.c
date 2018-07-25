@@ -111,7 +111,7 @@ cetus_read_channel(int s, cetus_channel_t *ch, size_t size)
             return NETWORK_SOCKET_WAIT_FOR_EVENT;
         }
 
-        g_critical("%s:recvmsg() failed, errno:%d", G_STRLOC, errno);
+        g_critical("%s:recvmsg() failed, err:%s", G_STRLOC, strerror(errno));
         return NETWORK_SOCKET_ERROR;
     }
 

@@ -59,9 +59,9 @@ void
 chassis_event_add_with_timeout(chassis *chas, struct event *ev, struct timeval *tv)
 {
     event_base_set(chas->event_base, ev);
-//#if NETWORK_DEBUG_TRACE_EVENT
+#if NETWORK_DEBUG_TRACE_EVENT
     CHECK_PENDING_EVENT(ev);
-//#endif
+#endif
     event_add(ev, tv);
     g_debug("%s:event add ev:%p", G_STRLOC, ev);
 }
@@ -114,7 +114,9 @@ chassis_event_loop(chassis_event_loop_t *loop)
             break;
         }
 
+        g_debug("%s: enter event_base_dispatch", G_STRLOC);
         r = event_base_dispatch(loop);
+        g_debug("%s: after event_base_dispatch:%d", G_STRLOC, r);
 
         if (r == -1) {
             g_debug("%s: after event_base_dispatch:%d, errno:%d, str:%s",

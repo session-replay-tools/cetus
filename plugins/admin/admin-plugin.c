@@ -821,6 +821,14 @@ static int
 network_mysqld_admin_plugin_apply_config(chassis *chas,
         chassis_plugin_config *config)
 {
+    if (config->listen_con) {
+        g_message("%s:close listen socket", G_STRLOC);
+        config->listen_con->server->event.ev_base = NULL;
+        network_socket_free(config->listen_con->server);
+        config->listen_con = NULL;
+        return 0;
+    }
+
     g_message("%s:call network_mysqld_admin_plugin_apply_config", G_STRLOC);
     network_mysqld_con *con;
     network_socket *listen_sock;

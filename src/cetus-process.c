@@ -70,7 +70,7 @@ cetus_signal_t  signals[] = {
 
     { SIGINT, "SIGINT", "", cetus_signal_handler },
 
-    { SIGIO, "SIGIO", "", cetus_signal_handler },
+    { SIGIO, "SIGIO", "", NULL},
 
     { SIGCHLD, "SIGCHLD", "", cetus_signal_handler },
 

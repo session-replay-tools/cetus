@@ -78,10 +78,9 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
     u_char            *p;
     size_t             size;
     int                i;
-    unsigned int       n, sigio;
+    unsigned int       n;
     struct itimerval   itv;
     unsigned int       live;
-    unsigned int       delay;
 
 
     size = sizeof(master_process);
@@ -95,30 +94,9 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
 
     open_admin(cycle, 0);
 
-    delay = 0;
-    sigio = 0;
     live = 1;
 
     for ( ;; ) {
-        if (delay) {
-            if (cetus_sigalrm) {
-                sigio = 0;
-                delay *= 2;
-                cetus_sigalrm = 0;
-            }
-
-            g_debug("%s: termination cycle: %d", G_STRLOC, delay);
-
-            itv.it_interval.tv_sec = 0;
-            itv.it_interval.tv_usec = 0;
-            itv.it_value.tv_sec = delay / 1000;
-            itv.it_value.tv_usec = (delay % 1000 ) * 1000;
-
-            if (setitimer(ITIMER_REAL, &itv, NULL) == -1) {
-                g_critical("%s: setitimer() failed, errno:%d", G_STRLOC, errno);
-            }
-        }
-
         usleep(100 * 1000);
 
         if (!cetus_terminate) {
@@ -137,25 +115,8 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
         }
 
         if (cetus_terminate) {
-            if (delay == 0) {
-                delay = 50;
-            }
-
-            if (sigio) {
-                sigio--;
-                continue;
-            }
-
-            sigio = cycle->worker_processes;
-
-            if (delay > 1000) {
-                g_message("%s: send kill sig to workers", G_STRLOC);
-                cetus_signal_worker_processes(cycle, SIGKILL);
-            } else {
-                cetus_signal_worker_processes(cycle,
-                                       cetus_signal_value(CETUS_TERMINATE_SIGNAL));
-            }
-
+            cetus_signal_worker_processes(cycle,
+                    cetus_signal_value(CETUS_TERMINATE_SIGNAL));
             continue;
         }
 

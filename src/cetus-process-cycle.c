@@ -78,7 +78,7 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
 {
     u_char            *p;
     size_t             size;
-    int                i;
+    int                i, try_cnt;
     unsigned int       n;
     struct itimerval   itv;
     unsigned int       live;
@@ -96,6 +96,7 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
     open_admin(cycle, 0);
 
     live = 1;
+    try_cnt = 0;
 
     for ( ;; ) {
 
@@ -108,6 +109,7 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
             g_message("%s: call cetus_check_children", G_STRLOC);
             live = cetus_check_children(cycle);
             usleep(10 * 1000);
+            try_cnt++;
         } else {
             if (cetus_reap) {
                 g_message("%s: cetus_reap is true", G_STRLOC);
@@ -121,6 +123,11 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
         }
 
         if (cetus_terminate) {
+            if (live && try_cnt >= 10) {
+                try_cnt = 0;
+                cetus_signal_worker_processes(cycle,
+                        cetus_signal_value(CETUS_TERMINATE_SIGNAL));
+            }
             continue;
         }
 

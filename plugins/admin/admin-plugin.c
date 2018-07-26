@@ -356,19 +356,33 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
 
     if (ch.basics.command == CETUS_CMD_ADMIN_RESP) {
         con->num_read_pending--;
-        int  resp_len = ch.admin_sql_resp_len;
-        GString *raw_packet = g_string_sized_new(resp_len);
-        int len = recv(fd, raw_packet->str, resp_len, 0);
+        int  unread_len = ch.admin_sql_resp_len;
+        GString *raw_packet = g_string_sized_new(unread_len);
+        unsigned char *p = raw_packet->str;
+        int len;
 
-        g_debug("%s: resp_len:%d, len:%d, fd:%d", G_STRLOC, resp_len, len, fd);
+        do {
+            len = recv(fd, p, unread_len, 0);
+            if (len > 0) {
+                g_debug("%s: resp_len:%d, len:%d, fd:%d",
+                        G_STRLOC, unread_len, len, fd);
+                unread_len = unread_len - len;
+                p = p + len;
+            } else if (len == 0) {
+                g_critical("%s: broken socketpair, resp_len:%d, len:%d, fd:%d",
+                        G_STRLOC, unread_len, len, fd);
+                break;
+            } else {
+                g_message("%s: resp_len:%d, len:%d, fd:%d",
+                        G_STRLOC, unread_len, len, fd);
+            }
+        } while (unread_len > 0);
 
         network_socket *sock = network_socket_new();
         g_queue_push_tail(sock->recv_queue_raw->chunks, raw_packet);
 
-        sock->recv_queue_raw->len += resp_len;
-        raw_packet->len = resp_len;
-
-        //g_debug_hexdump(G_STRLOC, S(raw_packet));
+        sock->recv_queue_raw->len += ch.admin_sql_resp_len;
+        raw_packet->len = ch.admin_sql_resp_len;
 
         network_socket_retval_t ret = network_mysqld_con_get_packet(con->srv, sock);
 
@@ -396,6 +410,8 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
         g_ptr_array_add(con->servers, sock);
 
     } else {
+        g_critical("%s: not admin sql response command", G_STRLOC);
+        return;
     }
 
     if (con->num_read_pending == 0) {
@@ -409,6 +425,8 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
             g_ptr_array_add(recv_queues, worker->recv_queue);
         }
         /*TODO free all servers here */
+
+        GPtrArray *servers = con->servers;
         con->servers = NULL;
         result_merge_t result;
         result.status = RM_SUCCESS;
@@ -419,6 +437,12 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
         con->state = ST_SEND_QUERY_RESULT;
         network_mysqld_queue_reset(con->client);
         network_queue_clear(con->client->recv_queue);
+
+        for (i = 0; i < len; i++) {
+            network_socket *worker = g_ptr_array_index(servers, i);
+            network_socket_free(worker);
+        }
+        g_ptr_array_free(servers, TRUE);
 
         network_mysqld_con_handle(-1, 0, con);
     }
@@ -459,7 +483,6 @@ void construct_channel_info(network_mysqld_con *con, char *sql)
             int fd = cetus_processes[i].parent_child_channel[0];
             g_debug("%s:fd:%d for network_read_sql_resp", G_STRLOC, fd);
             event_set(&(cetus_processes[i].event), fd, EV_READ, network_read_sql_resp, con);
-            //event_set(&(cetus_processes[i].event), fd, EV_READ | EV_PERSIST, network_read_sql_resp, con);
             chassis_event_add_with_timeout(cycle, &(cetus_processes[i].event), NULL);
             con->num_read_pending++;
         }

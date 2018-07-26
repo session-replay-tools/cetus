@@ -2059,14 +2059,19 @@ do_simple_merge(network_mysqld_con *con, merge_parameters_t *data, int is_finish
         }
 
         if (candidate == NULL || candidate->data == NULL) {
-            server_session_t *ss = g_ptr_array_index(con->servers, iter);
-            if (ss->server->is_waiting) {
-                g_debug("%s: is_waiting true:%d", G_STRLOC, (int)iter);
-                continue;
+            if (con->servers) {
+                server_session_t *ss = g_ptr_array_index(con->servers, iter);
+                if (ss->server->is_waiting) {
+                    g_debug("%s: is_waiting true:%d", G_STRLOC, (int)iter);
+                    continue;
+                }
+                candidates[iter] = NULL;
+                g_debug("%s: candidate is nil for i:%d, recv_queues:%p",
+                        G_STRLOC, (int)iter, recv_queues);
+                shortaged = TRUE;
+            } else {
+                g_warning("%s: return part of responses", G_STRLOC);
             }
-            candidates[iter] = NULL;
-            g_debug("%s: candidate is nil for i:%d, recv_queues:%p", G_STRLOC, (int)iter, recv_queues);
-            shortaged = TRUE;
         }
     }
 

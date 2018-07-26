@@ -573,7 +573,6 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     } else {
         srv->worker_processes = frontend->worker_processes;
     }
-    srv->worker_processes = 1;
     g_message("set worker processes:%d", srv->worker_processes);
 
     if (frontend->default_pool_size < 10) {

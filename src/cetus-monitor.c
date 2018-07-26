@@ -230,8 +230,10 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
 
         if(old_master[0] != '\0' && strcasecmp(old_master, master_addr) != 0) {
             g_warning("exists more than one masters.");
+            mysql_free_result(rs_set);
             return ;
         } else if (old_master[0] != '\0' && strcasecmp(old_master, master_addr) == 0) {
+            mysql_free_result(rs_set);
             continue;
         }
 

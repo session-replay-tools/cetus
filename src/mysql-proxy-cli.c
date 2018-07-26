@@ -122,7 +122,6 @@ struct chassis_frontend_t {
 
     guint invoke_dbg_on_crash;
     /* the --keepalive option isn't available on Unix */
-    guint auto_restart;
     gint max_files_number;
 
     gchar *user;
@@ -289,12 +288,6 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                         0, 0, OPTION_ARG_NONE, &(frontend->invoke_dbg_on_crash),
                         "Try to invoke debugger on crash", NULL,
                         NULL, show_log_backtrace_on_crash, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
-
-    chassis_options_add(opts,
-                        "keepalive",
-                        0, 0, OPTION_ARG_NONE, &(frontend->auto_restart),
-                        "Try to restart the proxy if it crashed", NULL,
-                        NULL, show_keepalive, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts,
                         "max-open-files",
@@ -1006,22 +999,6 @@ main_cmdline(int argc, char **argv)
         chassis_unix_daemonize();
     }
 
-    srv->auto_restart = frontend->auto_restart;
-    if (srv->auto_restart) {
-        int child_exit_status = EXIT_SUCCESS;   /* forward the exit-status of the child */
-        int ret = chassis_unix_proc_keepalive(&child_exit_status);
-
-        if (ret > 0) {
-            /* the agent stopped */
-
-            exit_code = child_exit_status;
-            goto exit_nicely;
-        } else if (ret < 0) {
-            GOTO_EXIT(EXIT_FAILURE);
-        } else {
-            /* we are the child, go on */
-        }
-    }
     if (srv->pid_file) {
         if (0 != chassis_frontend_write_pidfile(srv->pid_file, &gerr)) {
             g_critical("%s", gerr->message);

@@ -17,6 +17,7 @@ static void cetus_start_worker_processes(cetus_cycle_t *cycle, int n, int type);
 static void cetus_pass_open_channel(cetus_cycle_t *cycle, cetus_channel_t *ch);
 static void cetus_signal_worker_processes(cetus_cycle_t *cycle, int signo);
 static unsigned int cetus_reap_children(cetus_cycle_t *cycle);
+static unsigned int cetus_check_children(cetus_cycle_t *cycle);
 static void cetus_master_process_exit(cetus_cycle_t *cycle);
 static void cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data);
 static void cetus_worker_process_init(cetus_cycle_t *cycle, int worker);
@@ -97,17 +98,22 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
     live = 1;
 
     for ( ;; ) {
-        usleep(100 * 1000);
 
         if (!cetus_terminate) {
             chassis_event_loop_t *loop = cycle->event_base;
             chassis_event_loop(loop);
         }
 
-        if (cetus_reap) {
-            g_message("%s: cetus_reap is true", G_STRLOC);
-            cetus_reap = 0;
-            live = cetus_reap_children(cycle);
+        if (cetus_terminate) {
+            g_message("%s: call cetus_check_children", G_STRLOC);
+            live = cetus_check_children(cycle);
+            usleep(10 * 1000);
+        } else {
+            if (cetus_reap) {
+                g_message("%s: cetus_reap is true", G_STRLOC);
+                cetus_reap = 0;
+                live = cetus_reap_children(cycle);
+            }
         }
 
         if (!live && (cetus_terminate || cetus_quit)) {
@@ -115,8 +121,6 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
         }
 
         if (cetus_terminate) {
-            cetus_signal_worker_processes(cycle,
-                    cetus_signal_value(CETUS_TERMINATE_SIGNAL));
             continue;
         }
 
@@ -317,6 +321,40 @@ cetus_signal_worker_processes(cetus_cycle_t *cycle, int signo)
             cetus_processes[i].exiting = 1;
         }
     }
+}
+
+static unsigned int
+cetus_check_children(cetus_cycle_t *cycle)
+{
+    int           i;
+    unsigned int  live;
+
+    live = 0;
+    for (i = 0; i < cetus_last_process; i++) {
+
+        g_debug("%s: child: %i %d e:%d t:%d d:%d r:%d j:%d", G_STRLOC,
+                       i,
+                       cetus_processes[i].pid,
+                       cetus_processes[i].exiting,
+                       cetus_processes[i].exited,
+                       cetus_processes[i].detached,
+                       cetus_processes[i].respawn,
+                       cetus_processes[i].just_spawn);
+
+        if (cetus_processes[i].pid == -1) {
+            continue;
+        }
+
+        if (cetus_processes[i].exited) {
+            continue;
+        }
+
+        if (cetus_processes[i].exiting || !cetus_processes[i].detached) {
+            live = 1;
+        }
+    }
+
+    return live;
 }
 
 

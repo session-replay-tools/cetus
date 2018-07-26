@@ -193,7 +193,6 @@ struct chassis {
     gchar **plugin_names;
     gchar *log_xa_filename;
     guint invoke_dbg_on_crash;
-    guint auto_restart;
     gint max_files_number;
     char *remote_config_url;
     gchar *default_file;

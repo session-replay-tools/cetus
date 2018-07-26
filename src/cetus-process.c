@@ -351,7 +351,6 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
         case SIGINT:
             cetus_terminate = 1;
             action = ", exiting";
-            g_message("%s: master received SIGINT:%d", G_STRLOC, signo);
             break;
 
         case cetus_signal_value(CETUS_NOACCEPT_SIGNAL):
@@ -372,7 +371,6 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
             break;
 
         case SIGALRM:
-            g_message("%s: master received SIGALRM:%d", G_STRLOC, signo);
             cetus_sigalrm = 1;
             break;
 
@@ -404,7 +402,6 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
 
         case cetus_signal_value(CETUS_TERMINATE_SIGNAL):
         case SIGINT:
-            g_message("%s: worker received SIGINT:%d", G_STRLOC, signo);
             cetus_terminate = 1;
             action = ", exiting";
             break;
@@ -422,19 +419,6 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
         }
 
         break;
-    }
-
-    if (siginfo && siginfo->si_pid) {
-        g_message("%s: signal %d (%s) received from %d %s", G_STRLOC,
-                signo, sig->signame, siginfo->si_pid, action);
-    } else {
-        g_message("%s: signal %d (%s) received %s, err:%d", G_STRLOC,
-                signo, sig->signame, action, err);
-    }
-
-    if (ignore) {
-        g_critical("%s: the changing binary signal is ignored: you should shutdown or terminate\
-                before either old or new binary's process", G_STRLOC);
     }
 
     if (signo == SIGCHLD) {
@@ -468,7 +452,6 @@ cetus_process_get_status(void)
             err = errno;
 
             if (err == EINTR) {
-                g_message("%s: EINTR met when waitpid:%d", G_STRLOC, err);
                 continue;
             }
 
@@ -477,11 +460,9 @@ cetus_process_get_status(void)
             }
 
             if (err == ECHILD) {
-                g_message("%s: waitpid() failed:%d", G_STRLOC, err);
                 return;
             }
 
-            g_critical("%s: waitpid() failed:%d", G_STRLOC, err);
             return;
         }
 
@@ -498,20 +479,9 @@ cetus_process_get_status(void)
             }
         }
 
-        if (WTERMSIG(status)) {
-            g_critical("%s: %s exited on signal %d",
-                    G_STRLOC, process, WTERMSIG(status));
-        } else {
-            g_message("%s: %s exited on code %d",
-                    G_STRLOC, process, WEXITSTATUS(status));
-        }
-
         if (WEXITSTATUS(status) == 2 && cetus_processes[i].respawn) {
-            g_critical("%s: cannot be respawned and %P exited with fatal code %d",
-                    G_STRLOC, process, pid, WEXITSTATUS(status));
             cetus_processes[i].respawn = 0;
         }
-
     }
 }
 

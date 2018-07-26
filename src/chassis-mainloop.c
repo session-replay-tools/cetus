@@ -262,13 +262,6 @@ chassis_is_shutdown()
 }
 
 static void
-sigterm_handler(int G_GNUC_UNUSED fd, short G_GNUC_UNUSED event_type, void G_GNUC_UNUSED *_data)
-{
-    g_message("%s:event type:%d", G_STRLOC, event_type);
-    chassis_set_shutdown_location(NULL);
-}
-
-static void
 sighup_handler(int G_GNUC_UNUSED fd, short G_GNUC_UNUSED event_type, void *_data)
 {
     chassis *chas = _data;

@@ -255,19 +255,6 @@ show_log_backtrace_on_crash(gpointer param) {
     return NULL;
 }
 
-gchar*
-show_keepalive(gpointer param) {
-    struct external_param *opt_param = (struct external_param *)param;
-    chassis *srv = opt_param->chas;
-    gint opt_type = opt_param->opt_type;
-    if (CAN_SHOW_OPTS_PROPERTY(opt_type)) {
-        return g_strdup_printf("%s", srv->auto_restart ? "true":"false");
-    }
-    if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        return srv->auto_restart ? g_strdup("true"):NULL;
-    }
-    return NULL;
-}
 
 gchar*
 show_max_open_files(gpointer param) {

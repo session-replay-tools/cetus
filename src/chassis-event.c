@@ -98,6 +98,7 @@ chassis_event_loop(chassis_event_loop_t *loop)
      */
     while (!chassis_is_shutdown()) {
         if (cetus_reap) {
+            g_debug("%s: break when cetus_reap is true", G_STRLOC);
             break;
         }
 

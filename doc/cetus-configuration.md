@@ -230,7 +230,7 @@ Proxy在读写分离时可以指定访问的库
 
 默认数据库字符标码方式
 
-> default-charset = gbk
+> default-charset = utf8
 
 ### enable-client-found-rows
 

@@ -1166,8 +1166,9 @@ void admin_update_backend(network_mysqld_con* con, GList* equations,
         network_mysqld_con_send_error(con->client, C("parameter error"));
         return;
     }
-    int ok = network_backends_modify(g->backends, backend_ndx, type, state, NO_PREVIOUS_STATE);
-    int affected_rows = ok ? 1 : 0;
+    int affected_rows = 0;
+    int ok = network_backends_modify(g->backends, backend_ndx, type, state,
+            NO_PREVIOUS_STATE, &affected_rows);
     network_mysqld_con_send_ok_full(con->client, affected_rows, 0,
                                     SERVER_STATUS_AUTOCOMMIT, 0);
 }

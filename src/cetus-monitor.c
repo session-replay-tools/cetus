@@ -301,22 +301,22 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
             has_master++;
             if(!strcasecmp(backend_addr, master_addr)) {
                 if(backend->state != BACKEND_STATE_UP) {
-                    network_backends_modify(bs, i, BACKEND_TYPE_RW, BACKEND_STATE_UP, NO_PREVIOUS_STATE);
+                    network_backends_modify(bs, i, BACKEND_TYPE_RW, BACKEND_STATE_UP, NO_PREVIOUS_STATE, NULL);
                 }
                 break;
             }
             GList *it = g_list_find_custom(slave_list, backend_addr, slave_list_compare);
             if(it) {
                 if(backend->state == BACKEND_STATE_DELETED || backend->state == BACKEND_STATE_MAINTAINING) {
-                    network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN, NO_PREVIOUS_STATE);
+                    network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN, NO_PREVIOUS_STATE, NULL);
                 } else {
-                    network_backends_modify(bs, i, BACKEND_TYPE_RO, backend->state, NO_PREVIOUS_STATE);
+                    network_backends_modify(bs, i, BACKEND_TYPE_RO, backend->state, NO_PREVIOUS_STATE, NULL);
                 }
                 slave_list = g_list_remove_link(slave_list, it);
                 g_free(it->data);
                 g_list_free(it);
             } else {
-                network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_DELETED, NO_PREVIOUS_STATE);
+                network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_DELETED, NO_PREVIOUS_STATE, NULL);
             }
             break;
         }
@@ -335,18 +335,18 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
             GList *it = g_list_find_custom(slave_list, backend_addr, slave_list_compare);
             if(it) {
                 if(backend->state == BACKEND_STATE_DELETED || backend->state == BACKEND_STATE_MAINTAINING) {
-                    network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN, NO_PREVIOUS_STATE);
+                    network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN, NO_PREVIOUS_STATE, NULL);
                 }
                 slave_list = g_list_remove_link(slave_list, it);
                 g_free(it->data);
                 g_list_free(it);
             } else {
                 if(master_addr[0] != '\0' && !strcasecmp(backend_addr, master_addr)) {
-                    network_backends_modify(bs, i, BACKEND_TYPE_RW, BACKEND_STATE_UP, NO_PREVIOUS_STATE);
+                    network_backends_modify(bs, i, BACKEND_TYPE_RW, BACKEND_STATE_UP, NO_PREVIOUS_STATE, NULL);
                     has_master++;
                 } else {
                     if(backend->type != BACKEND_TYPE_RO || backend->state != BACKEND_STATE_DELETED) {
-                        network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_DELETED, NO_PREVIOUS_STATE);
+                        network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_DELETED, NO_PREVIOUS_STATE, NULL);
                     }
                 }
             }
@@ -416,7 +416,7 @@ check_backend_alive(int fd, short what, void *arg)
         if (conn == NULL) {
             if (backend->state != BACKEND_STATE_DOWN) {
                 if (backend->type != BACKEND_TYPE_RW) {
-                    ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN, oldstate);
+                    ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN, oldstate, NULL);
                     if(ret == 0) {
                         g_critical("Backend %s is set to DOWN.", backend_addr);
                     } else {
@@ -429,7 +429,7 @@ check_backend_alive(int fd, short what, void *arg)
             g_debug("Backend %s is not ALIVE!", backend_addr);
         } else {
             if (backend->state != BACKEND_STATE_UP) {
-                ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP, oldstate);
+                ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP, oldstate, NULL);
                 if(ret == 0) {
                     g_message("Backend %s is set to UP.", backend_addr);
                 } else {
@@ -487,7 +487,7 @@ update_master_timestamp(int fd, short what, void *arg)
                 g_critical("Could not connect to Backend %s.", backend_addr);
             } else {
                 if (backend->state != BACKEND_STATE_UP) {
-                    ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP, oldstate);
+                    ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP, oldstate, NULL);
                     if(ret == 0) {
                         g_message("Backend %s is set to UP.", backend_addr);
                     } else {
@@ -536,7 +536,7 @@ check_slave_timestamp(int fd, short what, void *arg)
         if (conn == NULL) {
             g_critical("Connection error when read delay from RO backend: %s", backend_addr);
             if (backend->state != BACKEND_STATE_DOWN) {
-                ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN, oldstate);
+                ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN, oldstate, NULL);
                 if(ret == 0) {
                     g_critical("Backend %s is set to DOWN.", backend_addr);
                 } else {
@@ -586,14 +586,14 @@ check_slave_timestamp(int fd, short what, void *arg)
                 backend->slave_delay_msec = G_MAXINT32;
             }
             if (delay_secs > chas->slave_delay_down_threshold_sec && backend->state != BACKEND_STATE_DOWN) {
-                ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN, oldstate);
+                ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN, oldstate, NULL);
                 if(ret == 0) {
                     g_critical("Slave delay %.3f seconds. Set slave to DOWN.", delay_secs);
                 } else {
                     g_critical("Slave delay %.3f seconds. Set slave to DOWN failed.", delay_secs);
                 }
             } else if (delay_secs <= chas->slave_delay_recover_threshold_sec && backend->state != BACKEND_STATE_UP) {
-                ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP, oldstate);
+                ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP, oldstate, NULL);
                 if(ret == 0) {
                     g_message("Slave delay %.3f seconds. Recovered. Set slave to UP.", delay_secs);
                 } else {

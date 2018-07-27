@@ -256,7 +256,7 @@ network_backends_remove(network_backends_t *bs, guint index)
             bs->ro_server_num -= 1;
         }
 
-        return network_backends_modify(bs, index, BACKEND_TYPE_UNKNOWN, BACKEND_STATE_DELETED, NO_PREVIOUS_STATE);
+        return network_backends_modify(bs, index, BACKEND_TYPE_UNKNOWN, BACKEND_STATE_DELETED, NO_PREVIOUS_STATE, NULL);
     }
     return 0;
 }
@@ -320,7 +320,7 @@ network_backends_check(network_backends_t *bs)
 
 int
 network_backends_modify(network_backends_t *bs, guint ndx,
-        backend_type_t type, backend_state_t state, backend_state_t oldstate)
+        backend_type_t type, backend_state_t state, backend_state_t oldstate, int *affected)
 {
     GTimeVal now;
     g_get_current_time(&now);
@@ -337,6 +337,9 @@ network_backends_modify(network_backends_t *bs, guint ndx,
     }
     if(cur->state != state) {
         if(__sync_bool_compare_and_swap(&(cur->state), oldstate, state)) {
+            if (affected) {
+                *affected = 1;
+            }
             cur->state_since = now;
             if (state == BACKEND_STATE_UP || state == BACKEND_TYPE_UNKNOWN) {
                 if (cur->pool->srv) {
@@ -352,6 +355,10 @@ network_backends_modify(network_backends_t *bs, guint ndx,
 
     if (cur->type != type) {
         cur->type = type;
+        if (affected) {
+            *affected = 1;
+        }
+
         if (type == BACKEND_TYPE_RO) {
             bs->ro_server_num += 1;
         } else {

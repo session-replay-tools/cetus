@@ -737,6 +737,7 @@ cetus_monitor_start_thread(cetus_monitor_t *monitor, chassis *chas)
     new_thread = g_thread_create(cetus_monitor_mainloop, monitor, TRUE, &error);
     if (new_thread == NULL && error != NULL) {
         g_critical("Create thread error: %s", error->message);
+        g_clear_error(&error);
     }
 #else
     new_thread = g_thread_new("monitor-thread", cetus_monitor_mainloop, monitor);

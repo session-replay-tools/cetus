@@ -2690,15 +2690,14 @@ network_mysqld_proxy_plugin_apply_config(chassis *chas, chassis_plugin_config *c
     chassis_config_register_service(chas->config_manager, config->address, "proxy");
 
     sql_filter_vars_load_default_rules();
-    char *variable_conf = g_build_filename(chas->conf_dir, "variables.json", NULL);
-    if (g_file_test(variable_conf, G_FILE_TEST_IS_REGULAR)) {
-        g_message("reading variable rules from %s", variable_conf);
-        gboolean ok = sql_filter_vars_load_rules(variable_conf);
-        if (!ok)
+    char* var_json = NULL;
+    if (chassis_config_query_object(chas->config_manager, "variables", &var_json)) {
+        g_message("reading variable rules");
+        if (sql_filter_vars_load_str_rules(var_json) == FALSE) {
             g_warning("variable rule load error");
+        }
+        g_free(var_json);
     }
-    g_free(variable_conf);
-
     return 0;
 }
 

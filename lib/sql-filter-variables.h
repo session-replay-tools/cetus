@@ -23,8 +23,6 @@
 
 #include <glib.h>
 
-gboolean sql_filter_vars_load_rules(char *filename);
-
 gboolean sql_filter_vars_load_str_rules(const char *json_str);
 
 void sql_filter_vars_load_default_rules();

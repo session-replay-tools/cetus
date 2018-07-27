@@ -2509,7 +2509,7 @@ merge_for_modify(sql_context_t *context, network_queue *send_queue, GPtrArray *r
         case MYSQLD_PACKET_ERR:
             network_queue_append(send_queue, pkt);
             g_queue_remove(recv_q->chunks, pkt);
-            if (context->stmt_type == STMT_CALL) {
+            if (context && context->stmt_type == STMT_CALL) {
                 g_message("%s: stored procedure failed", G_STRLOC);
                 cetus_result_destroy(res_merge);
                 merged_result->status = RM_CALL_FAIL;
@@ -2812,8 +2812,8 @@ merge_for_show_warnings(network_queue *send_queue, GPtrArray *recv_queues,
 }
 
 static int
-merge_for_admin(sql_context_t *context, network_queue *send_queue, GPtrArray *recv_queues,
-                        network_mysqld_con *con, cetus_result_t *res_merge, result_merge_t *merged_result)
+merge_for_admin(network_queue *send_queue, GPtrArray *recv_queues,
+        network_mysqld_con *con, cetus_result_t *res_merge, result_merge_t *merged_result)
 {
     int p;
     char *orig_sql = con->orig_sql->str;
@@ -2934,21 +2934,18 @@ void
 admin_resultset_merge(network_mysqld_con *con, network_queue *send_queue, GPtrArray *recv_queues,
         result_merge_t *merged_result)
 {
-    shard_plugin_con_t *st = con->plugin_con_state;
-    sql_context_t *context = st->sql_context;
-
     cetus_result_t res_merge = { 0 };
 
     g_debug("%s: sql:%s", G_STRLOC, con->orig_sql->str);
     if (con->admin_read_merge) {
         g_debug("%s: call merge_for_admin", G_STRLOC);
-        if (!merge_for_admin(context, send_queue, recv_queues, con, &res_merge, merged_result)) {
+        if (!merge_for_admin(send_queue, recv_queues, con, &res_merge, merged_result)) {
             cetus_result_destroy(&res_merge);
             return;
         }
     } else {
-        g_debug("%s: call merge_for_modify:%d", G_STRLOC, context->stmt_type);
-        if (!merge_for_modify(context, send_queue, recv_queues, con, &res_merge, merged_result)) {
+        g_debug("%s: call merge_for_modify", G_STRLOC);
+        if (!merge_for_modify(NULL, send_queue, recv_queues, con, &res_merge, merged_result)) {
             cetus_result_destroy(&res_merge);
             return;
         }

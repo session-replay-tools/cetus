@@ -1710,6 +1710,7 @@ void admin_save_settings(network_mysqld_con *con)
         GError *gerr = NULL;
         if (FALSE == g_file_set_contents(srv->default_file, file_buf, file_size, &gerr)) {
             ret = SAVE_ERROR;
+            g_clear_error(&gerr);
         } else {
             if((ret = chmod(srv->default_file, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP))) {
                 g_debug("remove operate failed, filename:%s, errno:%d",

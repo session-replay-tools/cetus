@@ -264,6 +264,8 @@ process_write_event(network_mysqld_con *con, server_session_t *ss)
         char *msg = "write error";
         con->state = ST_SEND_QUERY_RESULT;
         con->server_to_be_closed = 1;
+        con->dist_tran = 0;
+        con->is_client_to_be_closed = 1;
         g_warning("%s:write error for con:%p", G_STRLOC, con);
         network_mysqld_con_send_error_full(con->client, L(msg), ER_NET_ERROR_ON_WRITE, "08S01");
         network_mysqld_con_handle(-1, 0, con);

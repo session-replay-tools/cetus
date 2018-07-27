@@ -1146,6 +1146,7 @@ make_decisions(network_mysqld_con *con, int rv, int *disp_flag)
     case USE_DIS_TRAN:
         if (!con->dist_tran) {
             con->dist_tran_state = NEXT_ST_XA_START;
+            con->dist_tran_xa_start_generated = 0;
             stats->xa_count += 1;
         }
         con->dist_tran = 1;

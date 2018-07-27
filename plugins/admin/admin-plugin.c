@@ -503,7 +503,7 @@ static void visit_parser(network_mysqld_con *con, const char *sql)
     adminParserTrace(stdout, "---ParserTrace: ");
 #endif
     int code;
-    int last_parsed_token;
+    int last_parsed_token = 0;
     token_t token;
     while ((code = adminyylex(scanner)) > 0) {
         token.z = adminyyget_text(scanner);

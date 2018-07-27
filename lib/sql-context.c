@@ -175,7 +175,7 @@ sql_context_parse_len(sql_context_t *context, GString *sql)
     sql_property_parser_reset(&comment_parser);
 
     int code;
-    int last_parsed_token;
+    int last_parsed_token = 0;
     sql_token_t token;
     while ((code = yylex(scanner)) > 0) {   /* 0 on EOF */
         token.z = yyget_text(scanner);

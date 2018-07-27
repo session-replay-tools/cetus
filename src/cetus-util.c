@@ -65,45 +65,6 @@ cetus_string_dequote(char *z)
 }
 
 gboolean
-read_file_to_buffer(const char *filename, char **buffer)
-{
-    FILE *fp = fopen(filename, "r");
-    if (!fp) {
-        g_critical(G_STRLOC ":cannot open user conf: %s", filename);
-        return FALSE;
-    }
-    const int MAX_FILE_SIZE = 1024 * 1024;  /* 1M */
-    fseek(fp, 0, SEEK_END);
-    int len = ftell(fp);
-    if (len < 0) {
-        g_warning(G_STRLOC ":%s", g_strerror(errno));
-        fclose(fp);
-        return FALSE;
-    }
-
-    if (len > MAX_FILE_SIZE) {
-        g_warning(G_STRLOC ":file too large");
-        fclose(fp);
-        return FALSE;
-    }
-
-    rewind(fp);
-
-    *buffer = g_new(char, len + 1);
-    if (fread((*buffer), 1, len, fp) != len) {
-        g_warning(G_STRLOC ":len is not consistant");
-        fclose(fp);
-        return FALSE;
-    }
-
-    (*buffer)[len] = 0;
-
-    fclose(fp);
-
-    return TRUE;
-}
-
-gboolean
 try_get_int_value(const gchar *option_value, gint *return_value)
 {
     gint ret = sscanf(option_value, "%d", return_value);

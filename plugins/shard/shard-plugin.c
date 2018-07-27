@@ -1146,6 +1146,7 @@ make_decisions(network_mysqld_con *con, int rv, int *disp_flag)
     case USE_DIS_TRAN:
         if (!con->dist_tran) {
             con->dist_tran_state = NEXT_ST_XA_START;
+            con->dist_tran_xa_start_generated = 0;
             stats->xa_count += 1;
         }
         con->dist_tran = 1;
@@ -2641,15 +2642,14 @@ network_mysqld_shard_plugin_apply_config(chassis *chas, chassis_plugin_config *c
     chassis_config_register_service(chas->config_manager, config->address, "shard");
 
     sql_filter_vars_shard_load_default_rules();
-    char *variable_conf = g_build_filename(chas->conf_dir, "variables.json", NULL);
-    if (g_file_test(variable_conf, G_FILE_TEST_IS_REGULAR)) {
-        g_message("reading variable rules from %s", variable_conf);
-        gboolean ok = sql_filter_vars_load_rules(variable_conf);
-        if (!ok)
+    char* var_json = NULL;
+    if (chassis_config_query_object(chas->config_manager, "variables", &var_json)) {
+        g_message("reading variable rules");
+        if (sql_filter_vars_load_str_rules(var_json) == FALSE) {
             g_warning("variable rule load error");
+        }
+        g_free(var_json);
     }
-    g_free(variable_conf);
-
     return 0;
 }
 

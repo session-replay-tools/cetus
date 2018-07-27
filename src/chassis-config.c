@@ -427,10 +427,13 @@ chassis_config_local_query_object(chassis_config_t *conf,
     snprintf(basename, sizeof(basename), "%s.%s", name, "json");
     char *object_file = g_build_filename(conf->schema, basename, NULL);
     char *buffer = NULL;
-
-    if (read_file_to_buffer(object_file, &buffer) == FALSE) {
+    GError *err = NULL;
+    if (!g_file_get_contents(object_file, &buffer, NULL, &err)) {
+        if (!g_error_matches(err, G_FILE_ERROR, G_FILE_ERROR_NOENT)) {
+            g_critical(G_STRLOC " %s", err->message);
+        }
+        g_clear_error(&err);
         g_free(object_file);
-        g_free(buffer);
         return FALSE;
     }
 

@@ -12,6 +12,9 @@
 #define CETUS_PROCESS_ADMIN      4
 #define CETUS_PROCESS_HELPER     5
 
+#define cetus_rename_file(o, n)    rename((const char *) o, (const char *) n)
+#define CETUS_OLDPID_EXT     ".oldbin"
+
 
 void cetus_master_process_cycle(cetus_cycle_t *cycle);
 
@@ -27,11 +30,11 @@ extern sig_atomic_t    cetus_reap;
 extern sig_atomic_t    cetus_sigio;
 extern sig_atomic_t    cetus_sigalrm;
 extern sig_atomic_t    cetus_quit;
-extern sig_atomic_t    cetus_debug_quit;
 extern sig_atomic_t    cetus_terminate;
 extern sig_atomic_t    cetus_noaccept;
 extern sig_atomic_t    cetus_reconfigure;
 extern sig_atomic_t    cetus_reopen;
+extern sig_atomic_t    cetus_change_binary;
 
 
 #endif /* _CETUS_PROCESS_CYCLE_H_INCLUDED_ */

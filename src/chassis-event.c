@@ -54,6 +54,7 @@
 #endif
 
 extern sig_atomic_t    cetus_reap;
+extern sig_atomic_t    cetus_change_binary;
 
 void
 chassis_event_add_with_timeout(chassis *chas, struct event *ev, struct timeval *tv)
@@ -97,8 +98,14 @@ chassis_event_loop(chassis_event_loop_t *loop)
      * check once a second if we shall shutdown the proxy
      */
     while (!chassis_is_shutdown()) {
-        if (cetus_reap) {
-            g_debug("%s: break when cetus_reap is true", G_STRLOC);
+        if (cetus_reap || cetus_change_binary) {
+            if (cetus_reap) {
+                g_debug("%s: break when cetus_reap is true", G_STRLOC);
+            }
+
+            if (cetus_change_binary) {
+                g_debug("%s: break when cetus_change_binary is true", G_STRLOC);
+            }
             break;
         }
 

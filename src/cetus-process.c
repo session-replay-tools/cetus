@@ -277,9 +277,13 @@ cetus_execute(cetus_cycle_t *cycle, cetus_exec_ctx_t *ctx)
 static void
 cetus_execute_proc(cetus_cycle_t *cycle, void *data)
 {
+    printf("execve in cetus_execute_proc\n");
     cetus_exec_ctx_t  *ctx = data;
 
-    if (execve(ctx->path, ctx->argv, ctx->envp) == -1) {
+    putenv("LD_LIBRARY_PATH=/home/wangbin/github/cetus_install/lib/");
+    printf("execve, argv[0]:%s\n", ctx->argv[0]);
+    printf("execve, argv[1]:%s\n", ctx->argv[1]);
+    if (execve(ctx->path, ctx->argv, (char * const*) ctx->envp) == -1) {
         g_critical("%s: execve() failed while executing %s \"%s\"",
                 G_STRLOC, ctx->name, ctx->path);
     }
@@ -360,6 +364,17 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
             }
             break;
 
+        case cetus_signal_value(CETUS_CHANGEBIN_SIGNAL):
+            if (getppid() == cetus_parent || cetus_new_binary > 0) {
+                action = ", ignoring";
+                ignore = 1;
+                break;
+            }
+
+            cetus_change_binary = 1;
+            action = ", changing binary";
+            break;
+
         case cetus_signal_value(CETUS_RECONFIGURE_SIGNAL):
             cetus_reconfigure = 1;
             action = ", reconfiguring";
@@ -393,7 +408,6 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
             if (!cetus_daemonized) {
                 break;
             }
-            cetus_debug_quit = 1;
             /* fall through */
         case cetus_signal_value(CETUS_SHUTDOWN_SIGNAL):
             cetus_quit = 1;

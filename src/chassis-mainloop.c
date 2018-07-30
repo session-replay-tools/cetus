@@ -222,6 +222,10 @@ chassis_free(chassis *chas)
         g_free(chas->pid_file);
     }
 
+    if (chas->old_pid_file) {
+        g_free(chas->old_pid_file);
+    }
+
     if(chas->log_level) {
         g_free(chas->log_level);
     }

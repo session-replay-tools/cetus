@@ -188,7 +188,10 @@ struct chassis {
 
     gint verbose_shutdown;
     gint daemon_mode;
+    char **argv;
+    int    argc;
     gchar *pid_file;
+    gchar *old_pid_file;
     gchar *log_level;
     gchar **plugin_names;
     gchar *log_xa_filename;

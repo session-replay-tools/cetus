@@ -39,7 +39,7 @@ typedef struct {
     char         *path;
     char         *name;
     char *const  *argv;
-    char *const  *envp;
+    char         *envp;
 } cetus_exec_ctx_t;
 
 

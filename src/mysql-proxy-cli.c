@@ -818,19 +818,11 @@ main_cmdline(int argc, char **argv)
     srv->options = opts;
     srv->argv = argv;
     srv->argc = argc;
-    printf("first, execve, argv[0]:%s, argc:%d\n", srv->argv[0], argc);
-    printf("first execve, argv[1]:%s\n", srv->argv[1]);
-    printf("execve, argv[0]:%s\n", srv->argv[0]);
-    printf("execve, argv[1]:%s\n", srv->argv[1]);
-    printf("execve, argv[2]:%s\n", srv->argv[2]);
-    printf("execve, argv[3]:%s\n", srv->argv[3]);
-    printf("execve, argv[4]:%s\n", srv->argv[4]);
 
-    srv->argv = g_new0(char *, argc);
+    srv->argv = g_new0(char *, argc + 1);
     int i;
     for (i = 0; i < argc; i++) {
         srv->argv[i] = g_strdup(argv[i]);
-        printf("argv[%d]:%s\n", i, srv->argv[i]);
     }
 
     chassis_frontend_set_chassis_options(frontend, opts, srv);
@@ -937,10 +929,6 @@ main_cmdline(int argc, char **argv)
     g_message("libevent version: %s", event_get_version());
     g_message("config dir: %s", frontend->conf_dir);
 
-    printf("third, aaa, execve, argv[0]:%s\n", srv->argv[0]);
-    printf("third execve, argv[1]:%s\n", srv->argv[1]);
-
-
     if (network_mysqld_init(srv) == -1) {
         g_print("network_mysqld_init failed\n");
         GOTO_EXIT(EXIT_FAILURE);
@@ -956,15 +944,10 @@ main_cmdline(int argc, char **argv)
         frontend->plugin_names[1] = NULL;
     }
 
-    printf("here, third, execve, argv[0]:%s\n", srv->argv[0]);
-    printf("third execve, argv[1]:%s\n", srv->argv[1]);
-
-
     if (chassis_frontend_load_plugins(srv->modules, frontend->plugin_dir, frontend->plugin_names)) {
         GOTO_EXIT(EXIT_FAILURE);
     }
 
-    //gint i = 0;
     srv->plugin_names = g_new(char *, (srv->modules->len + 1));
     for (i = 0; frontend->plugin_names[i]; i++) {
         if (!g_strcmp0("", frontend->plugin_names[i])) {
@@ -974,9 +957,6 @@ main_cmdline(int argc, char **argv)
         srv->plugin_names[i] = g_strdup(frontend->plugin_names[i]);
     }
     srv->plugin_names[i] = NULL;
-    printf("jydddd, third, execve, argv[0]:%s\n", srv->argv[0]);
-    printf("third execve, argv[1]:%s\n", srv->argv[1]);
-
 
     if (chassis_frontend_init_plugins(srv->modules,
                                       opts, srv->config_manager, &argc, &argv, frontend->keyfile, "cetus", &gerr)) {
@@ -985,26 +965,16 @@ main_cmdline(int argc, char **argv)
 
         GOTO_EXIT(EXIT_FAILURE);
     }
-    printf("dfdsdd, third, execve, argv[0]:%s\n", srv->argv[0]);
-    printf("third execve, argv[1]:%s\n", srv->argv[1]);
-
 
     /* if we only print the version numbers, exit and don't do any more work */
     if (frontend->print_version) {
         chassis_frontend_print_plugin_versions(srv->modules);
         GOTO_EXIT(EXIT_SUCCESS);
     }
-    printf("dddfdsdd, third, execve, argv[0]:%s\n", srv->argv[0]);
-    printf("third execve, argv[1]:%s\n", srv->argv[1]);
-
 
     /* we know about the options now, lets parse them */
     opts->ignore_unknown = FALSE;
     opts->help_enabled = TRUE;
-
-    printf("sss, third, execve, argv[0]:%s\n", srv->argv[0]);
-    printf("third execve, argv[1]:%s\n", srv->argv[1]);
-
 
     /* handle unknown options */
     if (FALSE == chassis_options_parse_cmdline(opts, &argc, &argv, &gerr)) {
@@ -1030,17 +1000,9 @@ main_cmdline(int argc, char **argv)
 
     srv->daemon_mode = frontend->daemon_mode;
 
-    printf("sss, third, execve, argv[0]:%s\n", srv->argv[0]);
-    printf("third execve, argv[1]:%s\n", srv->argv[1]);
-
-
     if (srv->daemon_mode) {
         chassis_unix_daemonize();
     }
-
-    printf("this, third, execve, argv[0]:%s\n", srv->argv[0]);
-    printf("third execve, argv[1]:%s\n", srv->argv[1]);
-
 
     if (srv->pid_file) {
         if (0 != chassis_frontend_write_pidfile(srv->pid_file, &gerr)) {
@@ -1056,10 +1018,6 @@ main_cmdline(int argc, char **argv)
         GOTO_EXIT(EXIT_FAILURE);
     }
     srv->group_replication_mode = frontend->group_replication_mode;
-
-    printf("dwihere, third, execve, argv[0]:%s\n", srv->argv[0]);
-    printf("third execve, argv[1]:%s\n", srv->argv[1]);
-
 
     /*
      * log the versions of all loaded plugins
@@ -1084,11 +1042,6 @@ main_cmdline(int argc, char **argv)
         g_critical("proxy needs default username");
         GOTO_EXIT(EXIT_FAILURE);
     }
-
-    printf("baba ,second, execve, argv[0]:%s\n", srv->argv[0]);
-    printf("second execve, argv[1]:%s\n", srv->argv[1]);
-
-
 
     init_parameters(frontend, srv);
 
@@ -1125,10 +1078,6 @@ main_cmdline(int argc, char **argv)
         }
     }
     g_debug("max open file-descriptors = %" G_GINT64_FORMAT, chassis_fdlimit_get());
-
-    printf("third, execve, argv[0]:%s\n", srv->argv[0]);
-    printf("third execve, argv[1]:%s\n", srv->argv[1]);
-
 
     cetus_monitor_start_thread(srv->priv->monitor, srv);
 

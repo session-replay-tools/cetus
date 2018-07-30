@@ -268,7 +268,6 @@ cetus_spawn_process(cetus_cycle_t *cycle, cetus_spawn_proc_pt proc, void *data,
 pid_t
 cetus_execute(cetus_cycle_t *cycle, cetus_exec_ctx_t *ctx)
 {
-    g_debug("%s: before call cetus_spawn_process", G_STRLOC);
     return cetus_spawn_process(cycle, cetus_execute_proc, ctx, ctx->name,
                              CETUS_PROCESS_DETACHED);
 }
@@ -277,16 +276,14 @@ cetus_execute(cetus_cycle_t *cycle, cetus_exec_ctx_t *ctx)
 static void
 cetus_execute_proc(cetus_cycle_t *cycle, void *data)
 {
-    printf("execve in cetus_execute_proc\n");
     cetus_exec_ctx_t  *ctx = data;
 
-    putenv("LD_LIBRARY_PATH=/home/wangbin/github/cetus_install/lib/");
-    printf("execve, argv[0]:%s\n", ctx->argv[0]);
-    printf("execve, argv[1]:%s\n", ctx->argv[1]);
-    if (execve(ctx->path, ctx->argv, (char * const*) ctx->envp) == -1) {
+    if (execve(ctx->path, (char * const*) ctx->argv, (char * const*) ctx->envp) == -1) {
         g_critical("%s: execve() failed while executing %s \"%s\"",
                 G_STRLOC, ctx->name, ctx->path);
     }
+
+    free(ctx->envp[0]);
 
     exit(1);
 }

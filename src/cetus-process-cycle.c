@@ -73,48 +73,22 @@ open_admin(cetus_cycle_t *cycle, int respawn)
     }
 }
 
-static void
-cetus_execute_proc(cetus_cycle_t *cycle, void *data)
-{   
-    cetus_exec_ctx_t  *ctx = data;
-
-    printf("execve in cetus_execute_proc\n");
-
-    putenv("LD_LIBRARY_PATH=/home/wangbin/github/cetus_install/lib/");
-    strcpy(ctx->path, "/home/wangbin/github/cetus_install/bin/cetus");
-    strcpy(ctx->argv[0], "/home/wangbin/github/cetus_install/bin/cetus");
-    printf("execve, path:%s\n", ctx->path);;
-    printf("execve, argv[0]:%s\n", ctx->argv[0]);
-    printf("execve, argv[1]:%s\n", ctx->argv[1]);
-    printf("execve, argv[2]:%s\n", ctx->argv[2]);
-    printf("execve, argv[3]:%s\n", ctx->argv[3]);
-    printf("execve, argv[4]:%s\n", ctx->argv[4]);
-
-    if (execve(ctx->path, ctx->argv, NULL) == -1) {
-        g_critical("%s: execve %s, path %s failed:%s", G_STRLOC,
-                ctx->name, ctx->path, strerror(errno));
-    }
-
-    exit(1);
-}
 
 cetus_pid_t
-cetus_exec_new_binary(cetus_cycle_t *cycle, char *const *argv)
+cetus_exec_new_binary(cetus_cycle_t *cycle, char **argv)
 {
     cetus_exec_ctx_t     ctx;
 
-    printf("cetus_exec_new_binary 0\n");
     ctx.path = argv[0];
     ctx.name = "new binary process";
     ctx.argv = argv;
-    ctx.envp = getenv("LD_LIBRARY_PATH");
 
     const char *env = getenv("LD_LIBRARY_PATH");
-    ctx.envp = g_new0(char, strlen(env) + sizeof("LD_LIBRARY_PATH=") + 1);
-    sprintf(ctx.envp, "LD_LIBRARY_PATH=%s", env);
-
-
-    printf("cetus_exec_new_binary, env:%s\n", ctx.envp);
+    ctx.envp = g_new0(char *, 2);
+    char *new_env = g_new0(char, strlen(env) + 32);
+    sprintf(new_env, "LD_LIBRARY_PATH=%s", env);
+    ctx.envp[0] = (char *) new_env;
+    ctx.envp[1] = NULL;
 
     if (cycle->old_pid_file == NULL) {
         int pid_file_len = strlen(cycle->pid_file);
@@ -125,17 +99,13 @@ cetus_exec_new_binary(cetus_cycle_t *cycle, char *const *argv)
         strncpy(p, CETUS_OLDPID_EXT, sizeof(CETUS_OLDPID_EXT));
     }
 
-    printf("cetus_exec_new_binary 2\n");
-
     if (cetus_rename_file(cycle->pid_file, cycle->old_pid_file) == -1) {
         g_critical("%s: rename file from %s to %s failed", G_STRLOC,
                 cycle->pid_file, cycle->old_pid_file);
         return -1;
     }
 
-    printf("cetus_exec_new_binary 3\n");
-    return cetus_spawn_process(cycle, cetus_execute_proc, &ctx, "new master",
-            CETUS_PROCESS_DETACHED);
+    return cetus_execute(cycle, &ctx);
 }
 
 void
@@ -235,7 +205,6 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
         }
 
         if (cetus_change_binary) {
-            printf("changing binary\n");
             g_message("%s: changing binary", G_STRLOC);
             cetus_new_binary = cetus_exec_new_binary(cycle, cycle->argv);
             cetus_change_binary = 0;

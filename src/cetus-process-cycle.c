@@ -46,7 +46,6 @@ unsigned int  cetus_inherited;
 unsigned int  cetus_daemonized;
 
 sig_atomic_t  cetus_noaccept;
-unsigned int  cetus_noaccepting;
 unsigned int  cetus_restart;
 
 
@@ -56,7 +55,7 @@ static cetus_cycle_t      cetus_exit_cycle;
 
 
 static void
-open_admin(cetus_cycle_t *cycle, int respawn)
+open_admin(cetus_cycle_t *cycle)
 {
     int      i;
 
@@ -126,7 +125,7 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
     cetus_start_worker_processes(cycle, cycle->worker_processes,
                                CETUS_PROCESS_RESPAWN);
 
-    open_admin(cycle, 0);
+    open_admin(cycle);
 
     live = 1;
     try_cnt = 0;
@@ -178,7 +177,7 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
             /* init cycle */
             cetus_start_worker_processes(cycle, cycle->worker_processes,
                                        CETUS_PROCESS_JUST_RESPAWN);
-            open_admin(cycle, 1);
+            open_admin(cycle);
 
             /* allow new processes to start */
             usleep(100 * 1000);
@@ -192,7 +191,7 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
             cetus_restart = 0;
             cetus_start_worker_processes(cycle, cycle->worker_processes,
                                        CETUS_PROCESS_RESPAWN);
-            open_admin(cycle, 0);
+            open_admin(cycle);
     
             live = 1;
         }
@@ -211,10 +210,14 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
         }
 
         if (cetus_noaccept) {
+            g_message("%s: cetus_noaccept is set true", G_STRLOC);
             cetus_noaccept = 0;
-            cetus_noaccepting = 1;
-            cetus_signal_worker_processes(cycle,
-                                        cetus_signal_value(CETUS_SHUTDOWN_SIGNAL));
+
+            int i;
+            for (i = 0; i < cycle->modules->len; i++) {
+                chassis_plugin *p = cycle->modules->pdata[i];
+                p->stop_listening(cycle, p->config);
+            }
         }
     }
 }
@@ -556,6 +559,17 @@ cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
         if (cetus_terminate) {
             g_message("%s: exiting", G_STRLOC);
             cetus_worker_process_exit(cycle);
+        }
+
+        if (cetus_noaccept) {
+            g_message("%s: cetus_noaccept is set true", G_STRLOC);
+            cetus_noaccept = 0;
+            for (i = 0; i < cycle->modules->len; i++) {
+                chassis_plugin *p = cycle->modules->pdata[i];
+                p->stop_listening(cycle, p->config);
+            }
+
+            cycle->maintain_close_mode = 1;
         }
 
         if (cetus_quit) {

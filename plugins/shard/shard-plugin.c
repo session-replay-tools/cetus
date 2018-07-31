@@ -2653,6 +2653,18 @@ network_mysqld_shard_plugin_apply_config(chassis *chas, chassis_plugin_config *c
     return 0;
 }
 
+static void 
+network_mysqld_shard_plugin_stop_listening(chassis *chas,
+        chassis_plugin_config *config)
+{
+    if (config->listen_con) {
+        g_message("%s:close listen socket", G_STRLOC);
+        network_socket_free(config->listen_con->server);
+        config->listen_con = NULL;
+    }
+}
+
+
 GList *
 network_mysqld_shard_plugin_allow_ip_get(chassis_plugin_config *config)
 {
@@ -2729,6 +2741,7 @@ plugin_init(chassis_plugin *p)
     p->init = network_mysqld_shard_plugin_new;
     p->get_options = network_mysqld_shard_plugin_get_options;
     p->apply_config = network_mysqld_shard_plugin_apply_config;
+    p->stop_listening = network_mysqld_shard_plugin_stop_listening;
     p->destroy = network_mysqld_shard_plugin_free;
 
     /* For allow_ip configs */

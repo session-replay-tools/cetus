@@ -355,10 +355,8 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
             break;
 
         case cetus_signal_value(CETUS_NOACCEPT_SIGNAL):
-            if (cetus_daemonized) {
-                cetus_noaccept = 1;
-                action = ", stop accepting connections";
-            }
+            cetus_noaccept = 1;
+            action = ", stop accepting connections";
             break;
 
         case cetus_signal_value(CETUS_CHANGEBIN_SIGNAL):
@@ -402,10 +400,8 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
         switch (signo) {
 
         case cetus_signal_value(CETUS_NOACCEPT_SIGNAL):
-            if (!cetus_daemonized) {
-                break;
-            }
-            /* fall through */
+            cetus_noaccept = 1;
+            break;
         case cetus_signal_value(CETUS_SHUTDOWN_SIGNAL):
             cetus_quit = 1;
             action = ", shutting down";

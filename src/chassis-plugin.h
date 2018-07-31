@@ -81,6 +81,8 @@ typedef struct chassis_plugin {
     /**< handler function to set the argument values in the plugin's config */
     int (*apply_config) (chassis *chas, chassis_plugin_config *user_data);
 
+    void (*stop_listening) (chassis *chas, chassis_plugin_config *user_data);
+
     /**< handler function to retrieve the plugin's global state */
     void *(*get_global_state) (chassis_plugin_config *user_data, const char *member);
 

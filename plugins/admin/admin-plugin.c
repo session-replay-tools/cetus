@@ -950,6 +950,18 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
     return 0;
 }
 
+static void 
+network_mysqld_admin_plugin_stop_listening(chassis *chas,
+        chassis_plugin_config *config)
+{
+    if (config->listen_con) {
+        g_message("%s:close listen socket", G_STRLOC);
+        network_socket_free(config->listen_con->server);
+        config->listen_con = NULL;
+    }
+}
+
+
 G_MODULE_EXPORT int plugin_init(chassis_plugin *p) {
     p->magic        = CHASSIS_PLUGIN_MAGIC;
     p->name         = g_strdup("admin");
@@ -958,6 +970,7 @@ G_MODULE_EXPORT int plugin_init(chassis_plugin *p) {
     p->init         = network_mysqld_admin_plugin_new;
     p->get_options  = network_mysqld_admin_plugin_get_options;
     p->apply_config = network_mysqld_admin_plugin_apply_config;
+    p->stop_listening = network_mysqld_admin_plugin_stop_listening;
     p->destroy      = network_mysqld_admin_plugin_free;
 
     /* For allow_ip configs */

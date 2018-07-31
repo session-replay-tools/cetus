@@ -33,17 +33,10 @@ cetus_pid_t     cetus_parent;
 cetus_pid_t     cetus_new_binary;
 
 sig_atomic_t  cetus_reap;
-sig_atomic_t  cetus_sigio;
-sig_atomic_t  cetus_sigalrm;
 sig_atomic_t  cetus_terminate;
 sig_atomic_t  cetus_quit;
 unsigned int  cetus_exiting;
-sig_atomic_t  cetus_reconfigure;
-sig_atomic_t  cetus_reopen;
 sig_atomic_t  cetus_change_binary;
-
-unsigned int  cetus_inherited;
-unsigned int  cetus_daemonized;
 
 sig_atomic_t  cetus_noaccept;
 unsigned int  cetus_restart;
@@ -116,12 +109,6 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
     struct itimerval   itv;
     unsigned int       live;
 
-
-    if (cycle->daemon_mode) {
-        cetus_daemonized = 1;
-    }
-
-
     cetus_start_worker_processes(cycle, cycle->worker_processes,
                                CETUS_PROCESS_RESPAWN);
 
@@ -169,24 +156,6 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
             continue;
         }
 
-        if (cetus_reconfigure) {
-            cetus_reconfigure = 0;
-
-            g_message("%s: reconfiguring", G_STRLOC);
-
-            /* init cycle */
-            cetus_start_worker_processes(cycle, cycle->worker_processes,
-                                       CETUS_PROCESS_JUST_RESPAWN);
-            open_admin(cycle);
-
-            /* allow new processes to start */
-            usleep(100 * 1000);
-
-            live = 1;
-            cetus_signal_worker_processes(cycle,
-                                        cetus_signal_value(CETUS_SHUTDOWN_SIGNAL));
-        }
-
         if (cetus_restart) {
             cetus_restart = 0;
             cetus_start_worker_processes(cycle, cycle->worker_processes,
@@ -196,12 +165,6 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
             live = 1;
         }
 
-        if (cetus_reopen) {
-            cetus_reopen = 0;
-            g_message("%s: reopening logs", G_STRLOC);
-            cetus_signal_worker_processes(cycle,
-                                        cetus_signal_value(CETUS_REOPEN_SIGNAL));
-        }
 
         if (cetus_change_binary) {
             g_message("%s: changing binary", G_STRLOC);
@@ -581,11 +544,6 @@ cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
                 /* Call cetus shut down */
             }
         }
-
-        if (cetus_reopen) {
-            cetus_reopen = 0;
-            g_message("%s: reopening logs", G_STRLOC);
-        }
     }
 }
 
@@ -798,7 +756,6 @@ cetus_channel_handler(int fd, short events, void *user_data)
             break;
 
         case CETUS_CMD_REOPEN:
-            cetus_reopen = 1;
             break;
 
         case CETUS_CMD_OPEN_CHANNEL:

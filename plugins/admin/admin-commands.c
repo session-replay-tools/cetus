@@ -406,8 +406,13 @@ void admin_show_connectionlist(network_mysqld_con *admin_con, int show_count)
         return;
     }
 
-    int number = show_count==-1 ? 65536 : show_count;
+    int number = 256;
 
+    if (show_count > 0) {
+        if (show_count < 256) {
+            number = show_count;
+        }
+    }
     chassis *chas = admin_con->srv;
     chassis_private *priv = chas->priv;
     chassis_plugin_config *config = admin_con->config;

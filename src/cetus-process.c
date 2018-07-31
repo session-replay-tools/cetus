@@ -371,21 +371,15 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
             break;
 
         case cetus_signal_value(CETUS_RECONFIGURE_SIGNAL):
-            cetus_reconfigure = 1;
-            action = ", reconfiguring";
             break;
 
         case cetus_signal_value(CETUS_REOPEN_SIGNAL):
-            cetus_reopen = 1;
-            action = ", reopening logs";
             break;
 
         case SIGALRM:
-            cetus_sigalrm = 1;
             break;
 
         case SIGIO:
-            cetus_sigio = 1;
             break;
 
         case SIGCHLD:
@@ -414,8 +408,6 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
             break;
 
         case cetus_signal_value(CETUS_REOPEN_SIGNAL):
-            cetus_reopen = 1;
-            action = ", reopening logs";
             break;
 
         case cetus_signal_value(CETUS_RECONFIGURE_SIGNAL):

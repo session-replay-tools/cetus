@@ -22,18 +22,12 @@ extern unsigned int cetus_process;
 extern unsigned int cetus_worker;
 extern pid_t       cetus_pid;
 extern pid_t       cetus_new_binary;
-extern unsigned int cetus_inherited;
-extern unsigned int cetus_daemonized;
 extern unsigned int cetus_exiting;
 
 extern sig_atomic_t    cetus_reap;
-extern sig_atomic_t    cetus_sigio;
-extern sig_atomic_t    cetus_sigalrm;
 extern sig_atomic_t    cetus_quit;
 extern sig_atomic_t    cetus_terminate;
 extern sig_atomic_t    cetus_noaccept;
-extern sig_atomic_t    cetus_reconfigure;
-extern sig_atomic_t    cetus_reopen;
 extern sig_atomic_t    cetus_change_binary;
 
 

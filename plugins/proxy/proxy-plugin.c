@@ -1156,7 +1156,7 @@ process_query_or_stmt_prepare(network_mysqld_con *con, proxy_plugin_con_t *st,
         *disp_flag = PROXY_SEND_RESULT;
         return 0;
     } else if (context->rc == PARSE_UNRECOGNIZED) {
-        g_message("%s SQL unrecognized: %s", G_STRLOC, con->orig_sql->str);
+        g_debug("%s SQL unrecognized: %s", G_STRLOC, con->orig_sql->str);
     }
 
     /* forbid force write on slave */

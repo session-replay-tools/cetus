@@ -481,8 +481,6 @@ oneselect(A) ::= SELECT select_options(D) selcollist(C) from(F) where_opt(W)
     context->is_parsing_subquery = 0; //since there are no nested subquery, good to set 0
 }
 
-oneselect(A) ::= values(A).
-
 %type values {sql_select_t*}
 %destructor values { sql_select_free($$); }
 values(A) ::= VALUES LP nexprlist(X) RP. {
@@ -845,6 +843,17 @@ index_list ::= ID|PRIMARY.
 
 ////////////////////////// The INSERT command /////////////////////////////////
 //
+insert_stmt ::= insert_cmd(R) INTO fullname(X) idlist_opt(F) values(S) opt_insert_update_list(U). {
+  sql_insert_t* p = sql_insert_new();
+  p->is_replace = R;
+  p->table = X;
+  p->columns = F.list;
+  p->columns_start = F.span_start;
+  p->columns_end = F.span_end;
+  p->sel_val = S;
+  p->update_list = U;
+  sql_insert(context, p);
+}
 insert_stmt ::= insert_cmd(R) INTO fullname(X) idlist_opt(F) select(S). {
   sql_insert_t* p = sql_insert_new();
   p->is_replace = R;
@@ -865,17 +874,10 @@ insert_stmt ::= insert_cmd(R) INTO fullname(X) idlist_opt(F) DEFAULT VALUES. {
   p->sel_val = 0;
   sql_insert(context, p);
 }
-insert_stmt ::= insert_cmd(R) INTO fullname(X) idlist_opt(F) values(S)
-        ON DUPLICATE KEY UPDATE exprlist. {
-  sql_insert_t* p = sql_insert_new();
-  p->is_replace = R;
-  p->table = X;
-  p->columns = F.list;
-  p->columns_start = F.span_start;
-  p->columns_end = F.span_end;
-  p->sel_val = S;
-  sql_insert(context, p);
-}
+%type opt_insert_update_list {sql_expr_list_t*}
+%destructor opt_insert_update_list {sql_expr_list_free($$);}
+opt_insert_update_list(A) ::= . { A = NULL; }
+opt_insert_update_list(A) ::= ON DUPLICATE KEY UPDATE update_list(X). { A = X; }
 
 %type insert_cmd {int}
 insert_cmd(A) ::= INSERT. {A=0;}
@@ -1009,6 +1011,10 @@ func_expr(A) ::= ID(X) LP STAR RP(R). {
 func_expr(A) ::= JOIN_KW(N) LP expr(X) COMMA expr(Y) RP(R). {
     sql_expr_list_t *args = sql_expr_list_append(0, X);
     sql_expr_list_append(args, Y);
+    A = function_expr_new(&N, args, &R);
+}
+func_expr(A) ::= VALUES(N) LP simple_ident_nospvar(X) RP(R). {
+    sql_expr_list_t *args = sql_expr_list_append(0, X);
     A = function_expr_new(&N, args, &R);
 }
 func_expr(A) ::= INSERT(N) LP expr(X) COMMA expr(Y) COMMA expr(Z) COMMA expr(W) RP(R). {

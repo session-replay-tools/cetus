@@ -218,6 +218,7 @@ struct sql_insert_t {
     sql_src_list_t *table;
     sql_select_t *sel_val;      /* [1] select...  [2] values(...) */
     sql_id_list_t *columns;
+    sql_expr_list_t *update_list; /* ON DUPLICATE KEY UPDATE ... */
     const char *columns_start; /* [start, end) span of columns */
     const char *columns_end;
 };

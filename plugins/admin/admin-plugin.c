@@ -449,7 +449,7 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
 }
 
 static 
-void construct_channel_info(network_mysqld_con *con, char *sql)
+int construct_channel_info(network_mysqld_con *con, char *sql)
 {
     chassis *cycle = con->srv;
     g_message("%s:call construct_channel_info, cetus_process_slot:%d", G_STRLOC, cetus_process_slot);
@@ -464,6 +464,9 @@ void construct_channel_info(network_mysqld_con *con, char *sql)
 
     int len = strlen(sql);
     if (len >= MAX_ADMIN_SQL_LEN) {
+        g_message("%s:admin sql is too long:%d, sql:%s", G_STRLOC, len, sql);
+        network_mysqld_con_send_error(con->client, C("admin sql is too long"));
+        return -1;
     } else {
         strncpy(ch.admin_sql, sql, len);
         g_message("%s:cetus_last_process:%d, ch admin sql:%s", 
@@ -487,6 +490,8 @@ void construct_channel_info(network_mysqld_con *con, char *sql)
             con->num_read_pending++;
         }
         g_debug("%s:con num_read_pending:%d", G_STRLOC, con->num_read_pending);
+        
+        return 0;
     }
 }
 
@@ -583,8 +588,11 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
     if (con->direct_answer) {
         return PROXY_SEND_RESULT;
     } else {
-        construct_channel_info(con, con->orig_sql->str);
-        return PROXY_WAIT_QUERY_RESULT;
+        if (construct_channel_info(con, con->orig_sql->str) == -1) {
+            return PROXY_SEND_RESULT;
+        } else {
+            return PROXY_WAIT_QUERY_RESULT;
+        }
     }
 }
 

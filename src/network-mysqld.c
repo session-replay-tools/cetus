@@ -4210,11 +4210,10 @@ network_mysqld_con_accept(int G_GNUC_UNUSED event_fd, short events, void *user_d
     client_con = network_mysqld_con_new();
     client_con->client = client;
 
-    g_debug("%s: add a new client connection: %p", G_STRLOC, client_con);
-
     network_mysqld_add_connection(listen_con->srv, client_con, FALSE);
 
     client_con->key = client_con->srv->sess_key++;
+    g_message("%s: accept a new client connection, sess key:%d", G_STRLOC, client_con->key);
 
     /**
      * inherit the config to the new connection 

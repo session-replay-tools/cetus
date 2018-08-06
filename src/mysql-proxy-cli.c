@@ -560,7 +560,7 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->default_db = DUP_STRING(frontend->default_db, NULL);
 
     if (frontend->worker_processes < 1) {
-        srv->worker_processes = 1;
+        srv->worker_processes = 4;
     } else if (frontend->worker_processes > 64) {
         srv->worker_processes = 64;
     } else {

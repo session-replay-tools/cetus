@@ -611,6 +611,8 @@ sql_insert_free(sql_insert_t *p)
         sql_select_free(p->sel_val);
     if (p->columns)
         sql_id_list_free(p->columns);
+    if (p->update_list)
+        sql_expr_list_free(p->update_list);
     g_free(p);
 }
 

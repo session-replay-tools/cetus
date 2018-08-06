@@ -453,4 +453,8 @@ sql_construct_insert(GString *s, sql_insert_t *p)
             s->str[s->len - 1] = ' ';   /* no comma at the end */
         }
     }
+    if (p->update_list) {
+        g_string_append(s, " ON DUPLICATE KEY UPDATE ");
+        sql_append_expr_list(s, p->update_list);
+    }
 }

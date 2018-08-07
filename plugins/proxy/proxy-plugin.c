@@ -1142,6 +1142,9 @@ process_query_or_stmt_prepare(network_mysqld_con *con, proxy_plugin_con_t *st,
 
     sql_context_t *context = st->sql_context;
     sql_context_parse_len(context, con->orig_sql);
+        
+    g_debug("%s process query:%s", G_STRLOC, con->orig_sql->str);
+
     if (context->rc == PARSE_SYNTAX_ERR) {
         char *msg = context->message;
         g_message("%s SQL syntax error: %s. while parsing: %s", G_STRLOC, msg, con->orig_sql->str);

@@ -9,9 +9,8 @@
 #define CETUS_CMD_CLOSE_CHANNEL  2
 #define CETUS_CMD_QUIT           3
 #define CETUS_CMD_TERMINATE      4
-#define CETUS_CMD_REOPEN         5
-#define CETUS_CMD_ADMIN          6
-#define CETUS_CMD_ADMIN_RESP     7
+#define CETUS_CMD_ADMIN          5
+#define CETUS_CMD_ADMIN_RESP     6
 
 #define MAX_ADMIN_SQL_LEN 512
 typedef struct {

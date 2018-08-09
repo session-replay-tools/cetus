@@ -36,16 +36,6 @@ cetus_process_t  cetus_processes[CETUS_MAX_PROCESSES];
 
 
 cetus_signal_t  signals[] = {
-    { cetus_signal_value(CETUS_RECONFIGURE_SIGNAL),
-      "SIG" cetus_value(CETUS_RECONFIGURE_SIGNAL),
-      "reload",
-      cetus_signal_handler },
-
-    { cetus_signal_value(CETUS_REOPEN_SIGNAL),
-      "SIG" cetus_value(CETUS_REOPEN_SIGNAL),
-      "reopen",
-      cetus_signal_handler },
-
     { cetus_signal_value(CETUS_NOACCEPT_SIGNAL),
       "SIG" cetus_value(CETUS_NOACCEPT_SIGNAL),
       "",
@@ -370,12 +360,6 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
             action = ", changing binary";
             break;
 
-        case cetus_signal_value(CETUS_RECONFIGURE_SIGNAL):
-            break;
-
-        case cetus_signal_value(CETUS_REOPEN_SIGNAL):
-            break;
-
         case SIGALRM:
             break;
 
@@ -407,10 +391,6 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
             action = ", exiting";
             break;
 
-        case cetus_signal_value(CETUS_REOPEN_SIGNAL):
-            break;
-
-        case cetus_signal_value(CETUS_RECONFIGURE_SIGNAL):
         case cetus_signal_value(CETUS_CHANGEBIN_SIGNAL):
         case SIGIO:
             action = ", ignoring";

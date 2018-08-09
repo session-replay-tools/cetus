@@ -263,10 +263,6 @@ cetus_signal_worker_processes(cetus_cycle_t *cycle, int signo)
         ch.basics.command = CETUS_CMD_TERMINATE;
         break;
 
-    case cetus_signal_value(CETUS_REOPEN_SIGNAL):
-        ch.basics.command = CETUS_CMD_REOPEN;
-        break;
-
     default:
         ch.basics.command = 0;
     }
@@ -306,10 +302,7 @@ cetus_signal_worker_processes(cetus_cycle_t *cycle, int signo)
                                   &ch, sizeof(cetus_channel_mininum_t))
                 == NETWORK_SOCKET_SUCCESS)
             {
-                if (signo != cetus_signal_value(CETUS_REOPEN_SIGNAL)) {
-                    cetus_processes[i].exiting = 1;
-                }
-
+                cetus_processes[i].exiting = 1;
                 continue;
             }
         }
@@ -753,9 +746,6 @@ cetus_channel_handler(int fd, short events, void *user_data)
 
         case CETUS_CMD_TERMINATE:
             cetus_terminate = 1;
-            break;
-
-        case CETUS_CMD_REOPEN:
             break;
 
         case CETUS_CMD_OPEN_CHANNEL:

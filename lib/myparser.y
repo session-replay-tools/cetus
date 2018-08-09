@@ -907,6 +907,9 @@ idlist(A) ::= nm(Y).
 concat_str(A) ::= STRING(A).
 concat_str(A) ::= concat_str(A) STRING. // TODO: collect all
 
+%type text_literal {sql_token_t}
+text_literal(A) ::= UNDERSCORE_CHARSET STRING(X). { A = X; }
+
 /////////////////////////// sql_expression Processing /////////////////////////////
 //
 %include {
@@ -966,6 +969,7 @@ expr(A) ::= nm(X) DOT nm(Y) DOT nm(Z). {
 }
 term(A) ::= INTEGER|FLOAT|BIN_NUM|HEX_NUM|BLOB(X). {A = sql_expr_new(@X, &X);}
 term(A) ::= concat_str(X).         {A = sql_expr_new(TK_STRING, &X);} //TODO: span error
+term(A) ::= text_literal(X).    {A = sql_expr_new(TK_NOT_HANDLED, &X);}
 expr(A) ::= VARIABLE(X).          {A = sql_expr_new(@X, &X);}
 expr(A) ::= expr(A) COLLATE ID|STRING(X).  {
     sql_expr_t* coll = sql_expr_new(@X, &X);

@@ -231,6 +231,9 @@ HEX_DIGIT [0-9a-fA-F]
 "CETUS_SEQUENCE"      return TK_CETUS_SEQUENCE;
 "CETUS_VERSION"       return TK_CETUS_VERSION;
 "WARNINGS"            return TK_WARNINGS;
+"_binary"             return TK_UNDERSCORE_CHARSET;
+"_latin1"             return TK_UNDERSCORE_CHARSET;
+"_utf8"               return TK_UNDERSCORE_CHARSET;
 
 [0-9]+                 return TK_INTEGER; /*sign symbol is handled in parser*/
 0[xX]{HEX_DIGIT}+      return TK_INTEGER;

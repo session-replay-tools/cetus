@@ -329,7 +329,7 @@ columnname ::= nm typetoken.
   DUPLICATE INTERVAL TIME_UNIT SHARD_EXPLAIN
   COLUMNS FIELDS COMMENT_KW SHARE MODE TABLES LOCAL
   ISOLATION LEVEL COMMITTED UNCOMMITTED SERIALIZABLE REPEATABLE
-  XA RECOVER WARNINGS
+  XA RECOVER WARNINGS UNDERSCORE_CHARSET
 // all terminals in the full parser should be here, so that the
 // generated header is compatible
 // these keywords are recognized but not parsed as is

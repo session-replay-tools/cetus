@@ -24,6 +24,7 @@
 #include <time.h>
 #include <errno.h>
 #include <glib.h>
+#include <sys/time.h>
 
 #include "glib-ext.h"
 #include "cetus-util.h"

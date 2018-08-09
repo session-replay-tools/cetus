@@ -70,6 +70,7 @@ typedef int socklen_t;
 #include "chassis-options.h"
 #include "plugin-common.h"
 #include "network-ssl.h"
+#include "chassis-sql-log.h"
 
 #define MAX_CACHED_ITEMS 65536
 

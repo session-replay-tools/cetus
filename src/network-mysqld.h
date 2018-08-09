@@ -693,6 +693,10 @@ typedef struct server_session_t {
     network_mysqld_con_dist_tran_state_t dist_tran_state;
     read_write_state state;
     session_attr_flags_t attr_diff;
+
+    guint64 ts_read_query;
+    guint64 ts_read_query_result_last;
+    guint8 query_status;
 } server_session_t;
 
 typedef struct {

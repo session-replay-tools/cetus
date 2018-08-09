@@ -66,6 +66,7 @@ typedef int socklen_t;
 #include "plugin-common.h"
 #include "chassis-options.h"
 #include "chassis-options-utils.h"
+#include "chassis-sql-log.h"
 
 #ifndef PLUGIN_VERSION
 #ifdef CHASSIS_BUILD_TAG
@@ -682,6 +683,9 @@ proxy_inject_packet(network_mysqld_con *con, int type, int resp_type, GString *p
     proxy_plugin_con_t *st = con->plugin_con_state;
     GQueue *q = st->injected.queries;
     injection *inj = injection_new(resp_type, payload);
+    if (con->srv->sql_mgr && con->srv->sql_mgr->sql_log_switch == ON) {
+        inj->ts_read_query = get_timer_microseconds();
+    }
     inj->resultset_is_needed = resultset_is_needed;
 
     switch (type) {
@@ -1309,7 +1313,7 @@ network_read_query(network_mysqld_con *con, proxy_plugin_con_t *st)
     }                           /* end switch */
 
     gboolean last_resort = FALSE;
-
+    log_sql_client(con);
     if (con->server == NULL) {
         last_resort = TRUE;
     } else {
@@ -1914,6 +1918,10 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query_result)
                 break;
             default:
                 g_debug("%s: no chance to get server status", G_STRLOC);
+            }
+            if (con->srv->sql_mgr && con->srv->sql_mgr->sql_log_switch == ON) {
+                inj->ts_read_query_result_last = get_timer_microseconds();
+                log_sql_backend(con, inj);
             }
         }
 

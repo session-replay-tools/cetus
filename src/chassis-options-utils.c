@@ -22,6 +22,7 @@
 #include "chassis-options-utils.h"
 #include "chassis-plugin.h"
 #include "cetus-util.h"
+#include "chassis-sql-log.h"
 #include <glib-ext.h>
 #include <errno.h>
 
@@ -1211,4 +1212,212 @@ chassis_options_save(GKeyFile *keyfile, chassis_options_t *opts, chassis  *chas)
         }
     }
     return effected_rows;
+}
+
+gchar*
+show_sql_log_bufsize(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_SHOW_OPTS_PROPERTY(opt_type) || CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%u", srv->sql_mgr->sql_log_bufsize);
+    }
+    return NULL;
+}
+
+gchar*
+show_sql_log_switch(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_SHOW_OPTS_PROPERTY(opt_type) || CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if (srv->sql_mgr->sql_log_switch == ON) {
+            return g_strdup("ON");
+        } else if (srv->sql_mgr->sql_log_switch == REALTIME) {
+            return g_strdup("REALTIME");
+        } else {
+            return g_strdup("OFF");
+        }
+    }
+    return NULL;
+}
+
+gint
+assign_sql_log_switch(const gchar *newval, gpointer param) {
+    gint ret = ASSIGN_VALUE_INVALID;
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
+        if (strcasecmp(newval, "ON") == 0) {
+            srv->sql_mgr->sql_log_switch = ON;
+            ret = ASSIGN_OK;
+        } else if (strcasecmp(newval, "REALTIME") == 0) {
+            srv->sql_mgr->sql_log_switch = REALTIME;
+            ret = ASSIGN_OK;
+        } else if (strcasecmp(newval, "OFF") == 0) {
+            srv->sql_mgr->sql_log_switch = OFF;
+            ret = ASSIGN_OK;
+        }
+    }
+    return ret;
+}
+
+gchar* show_sql_log_filename(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_SHOW_OPTS_PROPERTY(opt_type) || CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if (srv->sql_mgr->sql_log_filename == NULL) {
+            return g_strdup("NULL");
+        } else {
+            return g_strdup_printf("%s", srv->sql_mgr->sql_log_filename);
+        }
+    }
+    return NULL;
+}
+
+CHASSIS_API gchar* show_sql_log_path(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_SHOW_OPTS_PROPERTY(opt_type) || CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if (srv->sql_mgr->sql_log_path == NULL) {
+            return g_strdup("NULL");
+        } else {
+            return g_strdup_printf("%s", srv->sql_mgr->sql_log_path);
+        }
+    }
+    return NULL;
+}
+
+gchar* show_sql_log_maxsize(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_SHOW_OPTS_PROPERTY(opt_type) || CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%u", srv->sql_mgr->sql_log_maxsize);
+    }
+    return NULL;
+}
+
+gchar* show_sql_log_mode(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_SHOW_OPTS_PROPERTY(opt_type) || CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if (srv->sql_mgr->sql_log_mode == CLIENT) {
+            return g_strdup("CLIENT");
+        } else if(srv->sql_mgr->sql_log_mode == BACKEND) {
+            return g_strdup("BACKEND");
+        } else if(srv->sql_mgr->sql_log_mode == ALL){
+            return g_strdup("ALL");
+        } else if(srv->sql_mgr->sql_log_mode == CONNECT) {
+            return g_strdup("CONNECT");
+        } else if(srv->sql_mgr->sql_log_mode == FRONT) {
+            return g_strdup("FRONT");
+        }
+    }
+    return NULL;
+}
+
+gint
+assign_sql_log_mode(const gchar *newval, gpointer param) {
+    gint ret = ASSIGN_VALUE_INVALID;
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
+        if (strcasecmp(newval, "CLIENT") == 0) {
+            srv->sql_mgr->sql_log_mode = CLIENT;
+            ret = ASSIGN_OK;
+        } else if (strcasecmp(newval, "BACKEND") == 0) {
+            srv->sql_mgr->sql_log_mode = BACKEND;
+            ret = ASSIGN_OK;
+        } else if (strcasecmp(newval, "ALL") == 0) {
+            srv->sql_mgr->sql_log_mode = ALL;
+            ret = ASSIGN_OK;
+        } else if (strcasecmp(newval, "CONNECT") == 0) {
+            srv->sql_mgr->sql_log_mode = CONNECT;
+            return ASSIGN_OK;
+        } else if (strcasecmp(newval, "FRONT") == 0) {
+            srv->sql_mgr->sql_log_mode = FRONT;
+            return ASSIGN_OK;
+        }
+    }
+    return ret;
+}
+
+gchar*
+show_sql_log_idletime(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%u (ms)", srv->sql_mgr->sql_log_idletime);
+    }
+    if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if (srv->sql_mgr->sql_log_idletime == SQL_LOG_DEF_IDLETIME) return NULL;
+        return g_strdup_printf("%u", srv->sql_mgr->sql_log_idletime);
+    }
+    return NULL;
+}
+
+gint
+assign_sql_log_idletime(const gchar *newval, gpointer param) {
+    gint ret = ASSIGN_ERROR;
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
+        if (NULL != newval) {
+            guint value = 0;
+            if (try_get_int_value(newval, &value)) {
+                srv->sql_mgr->sql_log_idletime = value;
+                ret = ASSIGN_OK;
+            } else {
+                ret = ASSIGN_VALUE_INVALID;
+            }
+        } else {
+            ret = ASSIGN_VALUE_INVALID;
+        }
+    }
+    return ret;
+}
+
+gchar*
+show_sql_log_maxnum(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%u", srv->sql_mgr->sql_log_maxnum);
+    }
+    if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if (srv->sql_mgr->sql_log_idletime == 0) return NULL;
+        return g_strdup_printf("%u", srv->sql_mgr->sql_log_maxnum);
+    }
+    return NULL;
+}
+
+gint
+assign_sql_log_maxnum(const gchar *newval, gpointer param) {
+    gint ret = ASSIGN_ERROR;
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
+        if (NULL != newval) {
+            guint value = 0;
+            if (try_get_int_value(newval, &value)) {
+                srv->sql_mgr->sql_log_maxnum = value;
+                ret = ASSIGN_OK;
+            } else {
+                ret = ASSIGN_VALUE_INVALID;
+            }
+        } else {
+            ret = ASSIGN_VALUE_INVALID;
+        }
+    }
+    return ret;
 }

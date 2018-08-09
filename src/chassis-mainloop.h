@@ -199,6 +199,8 @@ struct chassis {
 
     struct event auto_create_conns_event;
     struct event update_timer_event;
+
+    struct sql_log_mgr *sql_mgr;
 };
 
 CHASSIS_API chassis *chassis_new(void);

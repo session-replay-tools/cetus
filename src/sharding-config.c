@@ -232,12 +232,12 @@ void sharding_vdb_free(sharding_vdb_t *vdb)
 
 gboolean sharding_vdb_is_valid(sharding_vdb_t *vdb, int num_groups)
 {
+    if (vdb->partitions->len != num_groups) {
+        g_critical("vdb-%d partition count not equal to number of groups", vdb->id);
+        return FALSE;
+    }
     if (vdb->method == SHARD_METHOD_HASH) {
         if (vdb->logic_shard_num <= 0 || vdb->logic_shard_num > MAX_HASH_VALUE_COUNT) {
-            return FALSE;
-        }
-        if (vdb->partitions->len != num_groups) {
-            g_critical("vdb partition count not equal to number of groups");
             return FALSE;
         }
         /* make sure all hash values fall into a partition */

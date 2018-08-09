@@ -43,6 +43,8 @@ injection_new(int id, GString *query)
     i->id = id;
     i->query = query;
     i->resultset_is_needed = FALSE; /* don't buffer the resultset */
+    i->ts_read_query = 0;
+    i->ts_read_query_result_last = 0;
 
     return i;
 }

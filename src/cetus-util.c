@@ -120,3 +120,14 @@ int make_iso8601_timestamp(char *buf, uint64_t utime)
                      tzinfo);
     return len;
 }
+
+guint64 get_timer_microseconds() {
+    static guint64 last_value = 0;
+    struct timeval tv;
+    if (gettimeofday(&tv, NULL) == 0) {
+        last_value = (guint64) tv.tv_sec * 1000000 + (guint64)tv.tv_usec;
+    } else {
+        last_value++;
+    }
+    return last_value;
+}

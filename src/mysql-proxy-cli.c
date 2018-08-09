@@ -79,6 +79,7 @@
 #include "chassis-frontend.h"
 #include "chassis-options.h"
 #include "cetus-monitor.h"
+#include "chassis-sql-log.h"
 
 #define GETTEXT_PACKAGE "cetus"
 
@@ -148,6 +149,15 @@ struct chassis_frontend_t {
     char *remote_config_url;
 
     gint group_replication_mode;
+
+    guint sql_log_bufsize;
+    gchar *sql_log_switch;
+    gchar *sql_log_filename;
+    gchar *sql_log_path;
+    guint sql_log_maxsize;
+    gchar *sql_log_mode;
+    guint sql_log_idletime;
+    guint sql_log_maxnum;
 };
 
 /**
@@ -182,6 +192,13 @@ chassis_frontend_new(void)
     frontend->disable_dns_cache = 0;
 
     frontend->group_replication_mode = 0;
+    frontend->sql_log_bufsize = 0;
+    frontend->sql_log_switch = NULL;
+    frontend->sql_log_filename = NULL;
+    frontend->sql_log_path = NULL;
+    frontend->sql_log_maxsize = 0;
+    frontend->sql_log_mode = NULL;
+    frontend->sql_log_idletime = 0;
     return frontend;
 }
 
@@ -215,6 +232,10 @@ chassis_frontend_free(struct chassis_frontend_t *frontend)
     }
 
     g_free(frontend->remote_config_url);
+    g_free(frontend->sql_log_switch);
+    g_free(frontend->sql_log_filename);
+    g_free(frontend->sql_log_path);
+    g_free(frontend->sql_log_mode);
 
     g_slice_free(struct chassis_frontend_t, frontend);
 }
@@ -471,6 +492,46 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                         0, 0, OPTION_ARG_INT, &(frontend->group_replication_mode),
                         "mysql group replication mode, 0:not support(defaults) 1:support single primary mode 2:support multi primary mode(not implement yet)", "<int>",
                         assign_group_replication, show_group_replication_mode, ALL_OPTS_PROPERTY);
+    chassis_options_add(opts,
+                        "sql-log-bufsize",
+                        0, 0, OPTION_ARG_INT, &(frontend->sql_log_bufsize),
+                        "the buffer size of the log","<int>",
+                        NULL, show_sql_log_bufsize, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
+    chassis_options_add(opts,
+                        "sql-log-switch",
+                        0, 0, OPTION_ARG_STRING, &(frontend->sql_log_switch),
+                        "the log switch, ON/OFF/REALTIME","<string>",
+                        assign_sql_log_switch, show_sql_log_switch, ALL_OPTS_PROPERTY);
+    chassis_options_add(opts,
+                        "sql-log-filename",
+                         0, 0, OPTION_ARG_STRING, &(frontend->sql_log_filename),
+                         "the log filename","<string>",
+                         NULL, show_sql_log_filename, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
+    chassis_options_add(opts,
+                         "sql-log-path",
+                          0, 0, OPTION_ARG_STRING, &(frontend->sql_log_path),
+                          "the log path","<string>",
+                          NULL, show_sql_log_path, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
+    chassis_options_add(opts,
+                         "sql-log-maxsize",
+                          0, 0, OPTION_ARG_INT, &(frontend->sql_log_maxsize),
+                          "the maxsize of sql file","<int>",
+                          NULL, show_sql_log_maxsize, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
+    chassis_options_add(opts,
+                         "sql-log-mode",
+                          0, 0, OPTION_ARG_STRING, &(frontend->sql_log_mode),
+                          "the mode of sql file","<string>",
+                          assign_sql_log_mode, show_sql_log_mode, ALL_OPTS_PROPERTY);
+    chassis_options_add(opts,
+                         "sql-log-idletime",
+                          0, 0, OPTION_ARG_INT, &(frontend->sql_log_idletime),
+                          "sql log idle time when no log flush to disk","<int>",
+                          assign_sql_log_idletime, show_sql_log_idletime, ALL_OPTS_PROPERTY);
+    chassis_options_add(opts,
+                          "sql-log-maxnum",
+                          0, 0, OPTION_ARG_INT, &(frontend->sql_log_maxnum),
+                          "aximum number of sql log files","<int>",
+                          assign_sql_log_maxnum, show_sql_log_maxnum, ALL_OPTS_PROPERTY);
 
     return 0;
 }
@@ -1077,7 +1138,58 @@ main_cmdline(int argc, char **argv)
     }
     g_debug("max open file-descriptors = %" G_GINT64_FORMAT, chassis_fdlimit_get());
 
+
+    if (srv->sql_mgr) {
+        if (frontend->sql_log_bufsize) {
+            srv->sql_mgr->sql_log_bufsize = frontend->sql_log_bufsize;
+        }
+        if (frontend->sql_log_switch) {
+            if (strcasecmp(frontend->sql_log_switch, "ON") == 0) {
+                srv->sql_mgr->sql_log_switch = ON;
+            } else if (strcasecmp(frontend->sql_log_switch, "REALTIME") == 0) {
+                srv->sql_mgr->sql_log_switch = REALTIME;
+            } else if (strcasecmp(frontend->sql_log_switch, "OFF") == 0) {
+                srv->sql_mgr->sql_log_switch = OFF;
+            } else {
+                g_critical("sql-log-switch is invalid, current value is %s", frontend->sql_log_switch);
+                GOTO_EXIT(EXIT_FAILURE);
+            }
+        }
+        if (frontend->sql_log_filename) {
+            srv->sql_mgr->sql_log_filename = g_strdup(frontend->sql_log_filename);
+        }
+        if (frontend->sql_log_path) {
+            srv->sql_mgr->sql_log_path = g_strdup(frontend->sql_log_path);
+        } else if(frontend->base_dir) {
+            srv->sql_mgr->sql_log_path = g_strdup(frontend->base_dir);
+        }
+        srv->sql_mgr->sql_log_maxsize = frontend->sql_log_maxsize;
+        if (frontend->sql_log_mode) {
+            if (strcasecmp(frontend->sql_log_mode, "CLIENT") == 0) {
+                srv->sql_mgr->sql_log_mode = CLIENT;
+            } else if(strcasecmp(frontend->sql_log_mode, "BACKEND") == 0) {
+                srv->sql_mgr->sql_log_mode = BACKEND;
+            } else if(strcasecmp(frontend->sql_log_mode, "ALL") == 0) {
+                srv->sql_mgr->sql_log_mode = ALL;
+            } else if (strcasecmp(frontend->sql_log_mode, "CONNECT") == 0) {
+                srv->sql_mgr->sql_log_mode = CONNECT;
+            } else if (strcasecmp(frontend->sql_log_mode, "FRONT") == 0) {
+                srv->sql_mgr->sql_log_mode = FRONT;
+            } else {
+                g_critical("sql-log-mode is invalid, current value is %s", frontend->sql_log_mode);
+                GOTO_EXIT(EXIT_FAILURE);
+            }
+        }
+        if (frontend->sql_log_idletime) {
+            srv->sql_mgr->sql_log_idletime = frontend->sql_log_idletime;
+        }
+        if (frontend->sql_log_maxnum) {
+            srv->sql_mgr->sql_log_maxnum = frontend->sql_log_maxnum;
+        }
+    }
+
     cetus_monitor_start_thread(srv->priv->monitor, srv);
+    cetus_sql_log_start_thread_once(srv->sql_mgr);
 
     if (chassis_mainloop(srv)) {
         /* looks like we failed */

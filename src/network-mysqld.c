@@ -78,6 +78,7 @@
 
 #include "network-compress.h"
 #include "network-ssl.h"
+#include "chassis-sql-log.h"
 
 #ifdef HAVE_WRITEV
 #define USE_BUFFERED_NETIO
@@ -2727,6 +2728,7 @@ shard_read_response(network_mysqld_con *con, server_session_t *ss)
                 } else {
                     server_sess_wait_for_event(ss, EV_READ, &con->read_timeout);
                 }
+
                 return DISP_CONTINUE;
             }
             break;
@@ -2744,7 +2746,6 @@ shard_read_response(network_mysqld_con *con, server_session_t *ss)
             }
         }
     }
-
     int is_finished = 0;
     switch (network_mysqld_read_mul_packets(con->srv, con, ss->server, &is_finished)) {
     case NETWORK_SOCKET_SUCCESS:
@@ -2759,6 +2760,14 @@ shard_read_response(network_mysqld_con *con, server_session_t *ss)
             ss->state = NET_RW_STATE_FINISHED;
             ss->server->is_read_finished = 1;
             ss->server->is_waiting = 0;
+            if (con->srv->sql_mgr && con->srv->sql_mgr->sql_log_switch == ON) {
+                ss->ts_read_query_result_last = get_timer_microseconds();
+                network_mysqld_com_query_result_t *query = con->parse.data;
+                if (query && query->query_status == MYSQLD_PACKET_ERR) {
+                    ss->query_status = MYSQLD_PACKET_ERR;
+                }
+                log_sql_backend_sharding(con, ss);
+            }
             break;
         } else {
             ss->state = NET_RW_STATE_READ;
@@ -2905,7 +2914,6 @@ static int
 read_server_resp(network_mysqld_con *con, int *disp_flag)
 {
     int i;
-
     for (i = 0; i < con->servers->len; i++) {
         server_session_t *ss = g_ptr_array_index(con->servers, i);
 

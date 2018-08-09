@@ -95,6 +95,10 @@
 "DATABASES" return TK_DATABASES;
 "SINGLE" return TK_SINGLE;
 "ON" return TK_ON;
+"SQL" return TK_SQL;
+"LOG" return TK_LOG;
+"START" return TK_START;
+"STOP" return TK_STOP;
 
 [0-9]+                 return TK_INTEGER; /*sign symbol is handled in parser*/
 

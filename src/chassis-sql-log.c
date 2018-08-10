@@ -2,6 +2,7 @@
 #include "network-mysqld-packet.h"
 #include <sys/stat.h>
 #include <sys/types.h>
+#include<unistd.h>
 
 const COM_STRING com_command_name[]={
     { C("Sleep") },
@@ -162,13 +163,13 @@ struct sql_log_mgr *sql_log_alloc() {
     mgr->sql_log_mode = BACKEND;
     mgr->sql_log_switch = OFF;
     mgr->sql_log_cursize = 0;
-    mgr->sql_log_maxsize = 0;
+    mgr->sql_log_maxsize = 1024;
     mgr->sql_log_fullname = NULL;
     mgr->sql_log_idletime = SQL_LOG_DEF_IDLETIME;
     mgr->sql_log_action = SQL_LOG_STOP;
     mgr->fifo = NULL;
     mgr->sql_log_filelist = NULL;
-    mgr->sql_log_maxnum = 0;
+    mgr->sql_log_maxnum = 3;
     return mgr;
 }
 
@@ -236,7 +237,7 @@ static void sql_log_check_filenum(struct sql_log_mgr *mgr, gchar *filename) {
 static void sql_log_check_rotate(struct sql_log_mgr *mgr) {
     if (!mgr) return ;
     if (mgr->sql_log_maxsize == 0) return;
-    if (mgr->sql_log_cursize < mgr->sql_log_maxsize) return ;
+    if (mgr->sql_log_cursize < mgr->sql_log_maxsize * MEGABYTES) return ;
 
     time_t t = time(NULL);
     struct tm cur_tm;
@@ -340,6 +341,14 @@ sql_log_thread_start(struct sql_log_mgr *mgr) {
      }
      if (mgr->sql_log_path == NULL) {
          mgr->sql_log_path = g_strdup(SQL_LOG_DEF_PATH);
+     }
+     int result = access(mgr->sql_log_path, F_OK);
+     if (result != 0) {
+         g_message("sql log path is not exist, try to mkdir");
+         result = mkdir(mgr->sql_log_path, 0660);
+         if (result != 0) {
+             g_message("mkdir(%s) failed", mgr->sql_log_path);
+         }
      }
      if (mgr->sql_log_fullname == NULL) {
          mgr->sql_log_fullname = g_strdup_printf("%s/%s.%s", mgr->sql_log_path, mgr->sql_log_filename, SQL_LOG_DEF_SUFFIX);

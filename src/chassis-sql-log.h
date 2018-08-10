@@ -12,6 +12,7 @@
 #define SQL_LOG_DEF_SUFFIX "sql"
 #define SQL_LOG_DEF_PATH "/var/log/"
 #define SQL_LOG_DEF_IDLETIME 500
+#define MEGABYTES 1024*1024
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
@@ -57,13 +58,13 @@ struct sql_log_mgr {
     SQL_LOG_SWITCH sql_log_switch;
     SQL_LOG_MODE sql_log_mode;
     gchar *sql_log_path;
-    guint sql_log_maxsize;
+    gulong sql_log_maxsize;
     volatile SQL_LOG_ACTION sql_log_idletime;
     volatile guint sql_log_maxnum;
 
     GThread *thread;
     FILE *sql_log_fp;
-    guint sql_log_cursize;
+    gulong sql_log_cursize;
     gchar *sql_log_fullname;
     volatile guint sql_log_action;
     struct rfifo *fifo;

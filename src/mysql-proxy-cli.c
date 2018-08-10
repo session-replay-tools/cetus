@@ -154,7 +154,7 @@ struct chassis_frontend_t {
     gchar *sql_log_switch;
     gchar *sql_log_filename;
     gchar *sql_log_path;
-    guint sql_log_maxsize;
+    gint sql_log_maxsize;
     gchar *sql_log_mode;
     guint sql_log_idletime;
     gint sql_log_maxnum;
@@ -196,7 +196,7 @@ chassis_frontend_new(void)
     frontend->sql_log_switch = NULL;
     frontend->sql_log_filename = NULL;
     frontend->sql_log_path = NULL;
-    frontend->sql_log_maxsize = 0;
+    frontend->sql_log_maxsize = -1;
     frontend->sql_log_mode = NULL;
     frontend->sql_log_idletime = 0;
     frontend->sql_log_maxnum = -1;
@@ -516,7 +516,7 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
     chassis_options_add(opts,
                          "sql-log-maxsize",
                           0, 0, OPTION_ARG_INT, &(frontend->sql_log_maxsize),
-                          "the maxsize of sql file","<int>",
+                          "the maxsize of sql file, units is M","<int>",
                           NULL, show_sql_log_maxsize, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
     chassis_options_add(opts,
                          "sql-log-mode",
@@ -1164,7 +1164,10 @@ main_cmdline(int argc, char **argv)
         } else if(frontend->base_dir) {
             srv->sql_mgr->sql_log_path = g_strdup(frontend->base_dir);
         }
-        srv->sql_mgr->sql_log_maxsize = frontend->sql_log_maxsize;
+        if (frontend->sql_log_maxsize >= 0) {
+            srv->sql_mgr->sql_log_maxsize = frontend->sql_log_maxsize;
+        }
+
         if (frontend->sql_log_mode) {
             if (strcasecmp(frontend->sql_log_mode, "CLIENT") == 0) {
                 srv->sql_mgr->sql_log_mode = CLIENT;

@@ -449,3 +449,12 @@ cmd ::= CREATE SINGLE TABLE ids(X) DOT ids(Y) ON ids(Z) SEMI. {
 cmd ::= SELECT SINGLE TABLE SEMI. {
   admin_select_single_table(con);
 }
+cmd ::= SQL LOG STATUS SEMI. {
+  admin_sql_log_status(con);
+}
+cmd ::= SQL LOG START SEMI. {
+  admin_sql_log_start(con);
+}
+cmd ::= SQL LOG STOP SEMI. {
+  admin_sql_log_stop(con);
+}

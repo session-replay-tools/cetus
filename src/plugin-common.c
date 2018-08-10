@@ -70,6 +70,7 @@ typedef int socklen_t;
 #include "chassis-options.h"
 #include "plugin-common.h"
 #include "network-ssl.h"
+#include "chassis-sql-log.h"
 
 #define MAX_CACHED_ITEMS 65536
 
@@ -203,7 +204,7 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
         auth = con->client->response;
         g_debug("sock:%p, 2nd round auth", con);
     }
-
+    log_sql_connect(con);
     /* Check allow and deny IP */
     gboolean check_ip;
     if (allow_ip_table || deny_ip_table) {

@@ -31,6 +31,8 @@
 #include "network-mysqld-proto.h"
 #include "resultset_merge.h"
 #include "plugin-common.h"
+#include "network-mysqld-packet.h"
+#include "chassis-sql-log.h"
 
 void
 server_session_free(server_session_t *ss)
@@ -282,7 +284,6 @@ process_read_server(network_mysqld_con *con, server_session_t *ss)
     int ret = 0;
 
     network_socket *sock = ss->server;
-
     if (sock->to_read == 0) {
         sock->is_closed = 1;
         is_finished = 1;
@@ -302,6 +303,14 @@ process_read_server(network_mysqld_con *con, server_session_t *ss)
             ss->state = NET_RW_STATE_FINISHED;
             ss->server->is_read_finished = 1;
             ss->server->is_waiting = 0;
+            if (con->srv->sql_mgr && con->srv->sql_mgr->sql_log_switch == ON) {
+                ss->ts_read_query_result_last = get_timer_microseconds();
+                network_mysqld_com_query_result_t *query = con->parse.data;
+                if (query && query->query_status == MYSQLD_PACKET_ERR) {
+                    ss->query_status = MYSQLD_PACKET_ERR;
+                }
+                log_sql_backend_sharding(con, ss);
+            }
         } else {
             if (con->candidate_tcp_streamed && con->num_servers_visited > 1) {
                 set_conn_attr(con, ss->server);

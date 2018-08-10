@@ -57,4 +57,8 @@ void admin_show_databases(network_mysqld_con* con);
 void admin_create_single_table(network_mysqld_con*, const char* schema, const char* table,
                                const char* group);
 void admin_select_single_table(network_mysqld_con*);
+
+void admin_sql_log_start(network_mysqld_con* con);
+void admin_sql_log_stop(network_mysqld_con* con);
+void admin_sql_log_status(network_mysqld_con* con);
 #endif // ADMIN_COMMANDS_H

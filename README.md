@@ -94,6 +94,8 @@ Cetus分为读写分离和分库两个版本。
 
 10. [Cetus 分库(sharding)版管理手册](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-shard-admin.md)
 
+11. [Cetus 全量日志使用手册](./doc/cetus-sqllog-usage.md)
+
 ### Cetus架构与设计
 
 [Cetus 架构和实现](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-architecture.md)

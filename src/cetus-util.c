@@ -24,6 +24,7 @@
 #include <time.h>
 #include <errno.h>
 #include <glib.h>
+#include <sys/time.h>
 
 #include "glib-ext.h"
 #include "cetus-util.h"
@@ -119,4 +120,15 @@ int make_iso8601_timestamp(char *buf, uint64_t utime)
                      (unsigned long) utime,
                      tzinfo);
     return len;
+}
+
+guint64 get_timer_microseconds() {
+    static guint64 last_value = 0;
+    struct timeval tv;
+    if (gettimeofday(&tv, NULL) == 0) {
+        last_value = (guint64) tv.tv_sec * 1000000 + (guint64)tv.tv_usec;
+    } else {
+        last_value++;
+    }
+    return last_value;
 }

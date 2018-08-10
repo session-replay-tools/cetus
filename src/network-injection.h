@@ -68,6 +68,9 @@ typedef struct {
 
     /**< flag to announce if we have to buffer the result for later processing */
     gboolean resultset_is_needed;
+
+    guint64 ts_read_query;
+    guint64 ts_read_query_result_last;
 } injection;
 
 /**

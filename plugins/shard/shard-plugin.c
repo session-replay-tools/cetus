@@ -49,6 +49,7 @@
 #include "sql-filter-variables.h"
 #include "cetus-log.h"
 #include "chassis-options-utils.h"
+#include "chassis-sql-log.h"
 
 #ifdef NETWORK_DEBUG_TRACE_STATE_CHANGES
 #include "cetus-query-queue.h"
@@ -277,6 +278,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
 
     if (!is_process_stopped) {
         rc = proxy_parse_query(con);
+        log_sql_client(con);
     }
 
     switch (rc) {
@@ -1410,6 +1412,9 @@ proxy_add_server_connection(network_mysqld_con *con, GString *group, int *server
             ss->is_in_xa = 0;
         }
         ss->server->is_robbed = is_robbed;
+        if (con->srv->sql_mgr && con->srv->sql_mgr->sql_log_switch == ON) {
+            ss->ts_read_query = get_timer_microseconds();
+        }
 
         g_ptr_array_add(con->servers, ss); /* TODO: CHANGE SQL */
     }

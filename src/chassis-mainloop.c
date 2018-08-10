@@ -49,6 +49,7 @@
 #include "chassis-log.h"
 #include "chassis-timings.h"
 #include "cetus-process-cycle.h"
+#include "chassis-sql-log.h"
 
 static volatile sig_atomic_t signal_shutdown;
 
@@ -112,6 +113,8 @@ chassis_new()
     chas->default_file = NULL;
 
     chas->group_replication_mode = 0;
+
+    chas->sql_mgr = sql_log_alloc();
 
     return chas;
 }
@@ -244,6 +247,10 @@ chassis_free(chassis *chas)
 
     if(chas->default_file) {
         g_free(chas->default_file);
+    }
+
+    if(chas->sql_mgr) {
+        sql_log_free(chas->sql_mgr);
     }
 
     g_free(chas);

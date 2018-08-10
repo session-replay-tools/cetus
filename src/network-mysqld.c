@@ -1876,8 +1876,8 @@ disp_xa_abnormal_resultset(network_mysqld_con *con, server_session_t *ss,
 
     } else if (con->dist_tran_state <= NEXT_ST_XA_ROLLBACK) {
         if (ss->dist_tran_state < con->dist_tran_state) {
-            ss->dist_tran_state = con->dist_tran_state;
             g_message("%s:adjust ss dist state:%d to %d", G_STRLOC, ss->dist_tran_state, con->dist_tran_state);
+            ss->dist_tran_state = con->dist_tran_state;
         }
 
         if (*is_xa_cmd_met) {
@@ -2825,7 +2825,7 @@ shard_read_response(network_mysqld_con *con, server_session_t *ss)
         break;
     case NETWORK_SOCKET_ERROR:
     default:
-        g_critical("%s:network_mysqld_read_mul_packets error", G_STRLOC);
+        g_critical("%s:network_mysqld_read_mul_packets error for con:%p", G_STRLOC, con);
         con->num_read_pending--;
         con->state = ST_ERROR;
         return DISP_CONTINUE;

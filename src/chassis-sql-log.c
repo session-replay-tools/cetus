@@ -168,7 +168,7 @@ struct sql_log_mgr *sql_log_alloc() {
     mgr->sql_log_action = SQL_LOG_STOP;
     mgr->fifo = NULL;
     mgr->sql_log_filelist = NULL;
-    mgr->sql_log_maxnum = 0;
+    mgr->sql_log_maxnum = 3;
     return mgr;
 }
 

@@ -1394,7 +1394,7 @@ show_sql_log_maxnum(gpointer param) {
         return g_strdup_printf("%u", srv->sql_mgr->sql_log_maxnum);
     }
     if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        if (srv->sql_mgr->sql_log_idletime == 0) return NULL;
+        if (srv->sql_mgr->sql_log_maxnum == 3) return NULL;
         return g_strdup_printf("%u", srv->sql_mgr->sql_log_maxnum);
     }
     return NULL;
@@ -1408,10 +1408,14 @@ assign_sql_log_maxnum(const gchar *newval, gpointer param) {
     gint opt_type = opt_param->opt_type;
     if (CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
         if (NULL != newval) {
-            guint value = 0;
+            gint value = 0;
             if (try_get_int_value(newval, &value)) {
-                srv->sql_mgr->sql_log_maxnum = value;
-                ret = ASSIGN_OK;
+                if (value < 0) {
+                    ret = ASSIGN_VALUE_INVALID;
+                } else {
+                    srv->sql_mgr->sql_log_maxnum = value;
+                    ret = ASSIGN_OK;
+                }
             } else {
                 ret = ASSIGN_VALUE_INVALID;
             }

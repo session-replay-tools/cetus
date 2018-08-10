@@ -157,7 +157,7 @@ struct chassis_frontend_t {
     guint sql_log_maxsize;
     gchar *sql_log_mode;
     guint sql_log_idletime;
-    guint sql_log_maxnum;
+    gint sql_log_maxnum;
 };
 
 /**
@@ -199,6 +199,7 @@ chassis_frontend_new(void)
     frontend->sql_log_maxsize = 0;
     frontend->sql_log_mode = NULL;
     frontend->sql_log_idletime = 0;
+    frontend->sql_log_maxnum = -1;
     return frontend;
 }
 
@@ -1183,7 +1184,7 @@ main_cmdline(int argc, char **argv)
         if (frontend->sql_log_idletime) {
             srv->sql_mgr->sql_log_idletime = frontend->sql_log_idletime;
         }
-        if (frontend->sql_log_maxnum) {
+        if (frontend->sql_log_maxnum >= 0) {
             srv->sql_mgr->sql_log_maxnum = frontend->sql_log_maxnum;
         }
     }

@@ -421,7 +421,7 @@ log_sql_backend(network_mysqld_con *con, injection *inj)
                                               inj->id, inj->bytes, inj->rows,
                                               latency_ms, inj->qstat.query_status == MYSQLD_PACKET_OK ? "OK" : "ERR",
                                               GET_COM_NAME(con->parse.command),//type
-                                              inj->query != NULL ? GET_COM_STRING(inj->query) : "");//sql
+                                              con->parse.command == 23 ? "" : (inj->query != NULL ? GET_COM_STRING(inj->query) : ""));//sql
 
      rfifo_write(mgr->fifo, message->str, message->len);
      g_string_free(message, TRUE);
@@ -477,7 +477,7 @@ log_sql_backend_sharding(network_mysqld_con *con, server_session_t *session)
                                               session->is_in_xa ==1 ? "true" : "false", com_dis_tras_state[xa_state],
                                               latency_ms, session->query_status == MYSQLD_PACKET_OK ? "OK" : "ERR",
                                               GET_COM_NAME(con->parse.command),//type
-                                              session->sql != NULL ? session->sql->str : "");//sql
+                                              con->parse.command == 23 ? "" : (session->sql != NULL ? session->sql->str : ""));//sql
      }
      rfifo_write(mgr->fifo, message->str, message->len);
      g_string_free(message, TRUE);

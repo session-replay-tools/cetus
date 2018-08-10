@@ -2,6 +2,7 @@
 #include "network-mysqld-packet.h"
 #include <sys/stat.h>
 #include <sys/types.h>
+#include<unistd.h>
 
 const COM_STRING com_command_name[]={
     { C("Sleep") },
@@ -340,6 +341,14 @@ sql_log_thread_start(struct sql_log_mgr *mgr) {
      }
      if (mgr->sql_log_path == NULL) {
          mgr->sql_log_path = g_strdup(SQL_LOG_DEF_PATH);
+     }
+     int result = access(mgr->sql_log_path, F_OK);
+     if (result != 0) {
+         g_message("sql log path is not exist, try to mkdir");
+         result = mkdir(mgr->sql_log_path, 0660);
+         if (result != 0) {
+             g_message("mkdir(%s) failed", mgr->sql_log_path);
+         }
      }
      if (mgr->sql_log_fullname == NULL) {
          mgr->sql_log_fullname = g_strdup_printf("%s/%s.%s", mgr->sql_log_path, mgr->sql_log_filename, SQL_LOG_DEF_SUFFIX);

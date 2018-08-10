@@ -1162,7 +1162,7 @@ main_cmdline(int argc, char **argv)
         if (frontend->sql_log_path) {
             srv->sql_mgr->sql_log_path = g_strdup(frontend->sql_log_path);
         } else if(frontend->base_dir) {
-            srv->sql_mgr->sql_log_path = g_strdup(frontend->base_dir);
+            srv->sql_mgr->sql_log_path = g_strdup_printf("%s/logs", frontend->base_dir);
         }
         if (frontend->sql_log_maxsize >= 0) {
             srv->sql_mgr->sql_log_maxsize = frontend->sql_log_maxsize;

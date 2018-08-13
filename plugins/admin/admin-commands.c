@@ -1858,7 +1858,7 @@ void admin_sql_log_status(network_mysqld_con* con) {
         cached = g_strdup("NULL");
     }
     APPEND_ROW_3_COL(rows, "sql-log-cached", cached, "Internal");
-    gchar *cursize = g_strdup_printf("%d", con->srv->sql_mgr->sql_log_cursize);
+    gchar *cursize = g_strdup_printf("%lu", con->srv->sql_mgr->sql_log_cursize);
     APPEND_ROW_3_COL(rows, "sql-log-cursize", cursize, "Internal");
 
     network_mysqld_con_send_resultset(con->client, fields, rows);

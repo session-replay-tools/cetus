@@ -237,7 +237,7 @@ static void sql_log_check_filenum(struct sql_log_mgr *mgr, gchar *filename) {
 static void sql_log_check_rotate(struct sql_log_mgr *mgr) {
     if (!mgr) return ;
     if (mgr->sql_log_maxsize == 0) return;
-    if (mgr->sql_log_cursize < mgr->sql_log_maxsize * MEGABYTES) return ;
+    if (mgr->sql_log_cursize < ((gulong)mgr->sql_log_maxsize) * MEGABYTES) return ;
 
     time_t t = time(NULL);
     struct tm cur_tm;

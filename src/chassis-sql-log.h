@@ -56,8 +56,8 @@ struct sql_log_mgr {
     guint sql_log_bufsize;
     SQL_LOG_SWITCH sql_log_switch;
     SQL_LOG_MODE sql_log_mode;
-    gint sql_log_maxsize;
-    gint sql_log_cursize;
+    guint sql_log_maxsize;
+    gulong sql_log_cursize;
     volatile guint sql_log_action;
 
     volatile SQL_LOG_ACTION sql_log_idletime;

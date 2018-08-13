@@ -53,20 +53,21 @@ struct rfifo {
 };
 
 struct sql_log_mgr {
-    gchar *sql_log_filename;
     guint sql_log_bufsize;
     SQL_LOG_SWITCH sql_log_switch;
     SQL_LOG_MODE sql_log_mode;
-    gchar *sql_log_path;
-    gulong sql_log_maxsize;
+    gint sql_log_maxsize;
+    gint sql_log_cursize;
+    volatile guint sql_log_action;
+
     volatile SQL_LOG_ACTION sql_log_idletime;
     volatile guint sql_log_maxnum;
 
+    gchar *sql_log_filename;
+    gchar *sql_log_path;
     GThread *thread;
     FILE *sql_log_fp;
-    gulong sql_log_cursize;
     gchar *sql_log_fullname;
-    volatile guint sql_log_action;
     struct rfifo *fifo;
     GQueue *sql_log_filelist;
 };

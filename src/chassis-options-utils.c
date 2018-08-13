@@ -23,6 +23,7 @@
 #include "chassis-plugin.h"
 #include "cetus-util.h"
 #include "chassis-sql-log.h"
+#include "network-backend.h"
 #include <glib-ext.h>
 #include <errno.h>
 
@@ -427,6 +428,15 @@ assign_default_pool_size(const gchar *newval, gpointer param) {
                             value = 10;
                         }
                         srv->mid_idle_connections = value;
+
+                        network_backends_t *bs = srv->priv->backends;
+                        int back_num = network_backends_count(srv->priv->backends);
+                        int loop = 0;
+                        for (loop = 0; loop < back_num; loop++) {
+                            network_backend_t *backend = network_backends_get(bs, loop);
+                            network_connection_pool *pool = backend->pool;
+                            pool->mid_idle_connections = srv->mid_idle_connections;
+                        }
                         ret = ASSIGN_OK;
                     } else {
                         ret = ASSIGN_VALUE_INVALID;
@@ -472,6 +482,15 @@ assign_max_pool_size(const gchar *newval, gpointer param) {
                     srv->max_idle_connections = value;
                 } else {
                     srv->max_idle_connections = srv->mid_idle_connections << 1;
+                }
+
+                network_backends_t *bs = srv->priv->backends;
+                int back_num = network_backends_count(srv->priv->backends);
+                int loop = 0;
+                for (loop = 0; loop < back_num; loop++) {
+                    network_backend_t *backend = network_backends_get(bs, loop);
+                    network_connection_pool *pool = backend->pool;
+                    pool->max_idle_connections = srv->max_idle_connections;
                 }
                 ret = ASSIGN_OK;
             } else {

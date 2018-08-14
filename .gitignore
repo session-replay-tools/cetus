@@ -8,6 +8,7 @@ tests/
 TAGS
 edeProject.el
 core
+.cquery_cached_index/
 
 # gtags file
 GTAGS

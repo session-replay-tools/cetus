@@ -1670,6 +1670,9 @@ select_check_HAVING_column(sql_select_t *select)
     gboolean found = FALSE;     /* found having cond in columns */
     int num_aggregate = 0;
     const char *having_func = having->left->token_text;
+    if (!having_func) {
+        return FALSE;
+    }
     sql_expr_list_t *columns = select->columns;
     int i;
     for (i = 0; columns && i < columns->len; ++i) {

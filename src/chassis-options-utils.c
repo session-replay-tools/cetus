@@ -23,6 +23,7 @@
 #include "chassis-plugin.h"
 #include "cetus-util.h"
 #include "chassis-sql-log.h"
+#include "network-backend.h"
 #include <glib-ext.h>
 #include <errno.h>
 
@@ -414,6 +415,15 @@ assign_default_pool_size(const gchar *newval, gpointer param) {
                             value = 10;
                         }
                         srv->mid_idle_connections = value;
+
+                        network_backends_t *bs = srv->priv->backends;
+                        int back_num = network_backends_count(srv->priv->backends);
+                        int loop = 0;
+                        for (loop = 0; loop < back_num; loop++) {
+                            network_backend_t *backend = network_backends_get(bs, loop);
+                            network_connection_pool *pool = backend->pool;
+                            pool->mid_idle_connections = srv->mid_idle_connections;
+                        }
                         ret = ASSIGN_OK;
                     } else {
                         ret = ASSIGN_VALUE_INVALID;
@@ -459,6 +469,15 @@ assign_max_pool_size(const gchar *newval, gpointer param) {
                     srv->max_idle_connections = value;
                 } else {
                     srv->max_idle_connections = srv->mid_idle_connections << 1;
+                }
+
+                network_backends_t *bs = srv->priv->backends;
+                int back_num = network_backends_count(srv->priv->backends);
+                int loop = 0;
+                for (loop = 0; loop < back_num; loop++) {
+                    network_backend_t *backend = network_backends_get(bs, loop);
+                    network_connection_pool *pool = backend->pool;
+                    pool->max_idle_connections = srv->max_idle_connections;
                 }
                 ret = ASSIGN_OK;
             } else {
@@ -1325,7 +1344,7 @@ gchar* show_sql_log_maxsize(gpointer param) {
     chassis *srv = opt_param->chas;
     gint opt_type = opt_param->opt_type;
     if (CAN_SHOW_OPTS_PROPERTY(opt_type) || CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        return g_strdup_printf("%u", srv->sql_mgr->sql_log_maxsize);
+        return g_strdup_printf("%u M", srv->sql_mgr->sql_log_maxsize);
     }
     return NULL;
 }
@@ -1423,7 +1442,7 @@ show_sql_log_maxnum(gpointer param) {
         return g_strdup_printf("%u", srv->sql_mgr->sql_log_maxnum);
     }
     if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        if (srv->sql_mgr->sql_log_idletime == 0) return NULL;
+        if (srv->sql_mgr->sql_log_maxnum == 3) return NULL;
         return g_strdup_printf("%u", srv->sql_mgr->sql_log_maxnum);
     }
     return NULL;
@@ -1437,10 +1456,14 @@ assign_sql_log_maxnum(const gchar *newval, gpointer param) {
     gint opt_type = opt_param->opt_type;
     if (CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
         if (NULL != newval) {
-            guint value = 0;
+            gint value = 0;
             if (try_get_int_value(newval, &value)) {
-                srv->sql_mgr->sql_log_maxnum = value;
-                ret = ASSIGN_OK;
+                if (value < 0) {
+                    ret = ASSIGN_VALUE_INVALID;
+                } else {
+                    srv->sql_mgr->sql_log_maxnum = value;
+                    ret = ASSIGN_OK;
+                }
             } else {
                 ret = ASSIGN_VALUE_INVALID;
             }

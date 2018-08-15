@@ -133,6 +133,7 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
     if (con->client->response == NULL) {
 
         if (con->client->challenge == NULL) {
+            log_sql_connect(con, "client's challenge is NULL");
             return NETWORK_SOCKET_ERROR;
         }
 
@@ -142,6 +143,7 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
         int err = network_mysqld_proto_get_auth_response(&packet, auth);
         if (err) {
             network_mysqld_auth_response_free(auth);
+            log_sql_connect(con, "get auth response failed");
             return NETWORK_SOCKET_ERROR;
         }
 
@@ -161,6 +163,7 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
             network_mysqld_queue_append(con->client, con->client->send_queue,
                                         C("\xff\xd7\x07" "4.0 protocol is not supported"));
             network_mysqld_auth_response_free(auth);
+            log_sql_connect(con, "4.0 protocol is not supported");
             return NETWORK_SOCKET_ERROR;
         }
 
@@ -204,7 +207,6 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
         auth = con->client->response;
         g_debug("sock:%p, 2nd round auth", con);
     }
-    log_sql_connect(con);
     /* Check allow and deny IP */
     gboolean check_ip;
     if (allow_ip_table || deny_ip_table) {
@@ -227,6 +229,7 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
         g_strfreev(client_addr_arr);
         if (check_ip) {
             network_mysqld_con_send_error_full(recv_sock, L(ip_err_msg), 1045, "28000");
+            log_sql_connect(con, ip_err_msg);
             g_free(ip_err_msg);
             con->state = ST_SEND_ERROR;
             return NETWORK_SOCKET_SUCCESS;
@@ -250,7 +253,8 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
     network_mysqld_auth_response *response = con->client->response;
     if (cetus_users_authenticate_client(users, challenge, response)) {
         con->state = ST_SEND_AUTH_RESULT;
-        network_mysqld_con_send_ok(recv_sock);
+        network_mysqld_con_send_ok(recv_sock);\
+        log_sql_connect(con, NULL);
     } else {
         char msg[256] = { 0 };
         snprintf(msg, sizeof(msg),
@@ -258,6 +262,7 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
                  response->username->str, con->client->src->name->str);
         network_mysqld_con_send_error_full(con->client, L(msg), ER_ACCESS_DENIED_ERROR, "28000");
         g_message("%s", msg);
+        log_sql_connect(con, msg);
         con->state = ST_SEND_ERROR;
     }
 
@@ -265,7 +270,6 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
     if (recv_sock->recv_queue->chunks->length > 0) {
         g_warning("%s: client-recv-queue-len = %d", G_STRLOC, recv_sock->recv_queue->chunks->length);
     }
-
     return NETWORK_SOCKET_SUCCESS;
 }
 

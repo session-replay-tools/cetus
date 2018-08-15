@@ -52,7 +52,6 @@ network_backend_new()
     b = g_new0(network_backend_t, 1);
 
     b->pool = network_connection_pool_new();
-    b->uuid = g_string_new(NULL);
     b->addr = network_address_new();
     b->server_group = g_string_new(NULL);
     b->address = g_string_new(NULL);
@@ -70,7 +69,6 @@ network_backend_free(network_backend_t *b)
     network_connection_pool_free(b->pool);
 
     network_address_free(b->addr);
-    g_string_free(b->uuid, TRUE);
     g_string_free(b->server_version, TRUE);
     g_string_free(b->server_group, TRUE);
 

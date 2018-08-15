@@ -31,6 +31,7 @@ char           **cetus_os_argv;
 int              cetus_process_slot;
 int              cetus_channel;
 int              cetus_last_process;
+int              cetus_process_id;
 struct event     cetus_channel_event;
 cetus_process_t  cetus_processes[CETUS_MAX_PROCESSES];
 
@@ -249,6 +250,8 @@ cetus_spawn_process(cetus_cycle_t *cycle, cetus_spawn_proc_pt proc, void *data,
         g_message("%s: cetus_last_process add,orig:%d, cetus_processes[s].parent_child_channel[0]:%d",
                 G_STRLOC, cetus_last_process, cetus_processes[s].parent_child_channel[0]);
         cetus_last_process++;
+        /* TODO may have potential problems when having too many crashes */
+        cetus_process_id = (cetus_process_id + 1) % MAX_WORK_PROCESSES;
     }
 
     return pid;

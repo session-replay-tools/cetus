@@ -74,9 +74,6 @@ typedef struct {
     /**< number of open connections to this backend for SQF */
     int connected_clients;
 
-    /**< the UUID of the backend */
-    GString *uuid;
-
     backend_config *config;
 
     time_t last_check_time;

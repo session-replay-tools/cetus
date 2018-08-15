@@ -111,11 +111,6 @@ void admin_select_all_backends(network_mysqld_con* admin_con)
     g_ptr_array_add(fields, field);
 
     field = network_mysqld_proto_fielddef_new();
-    field->name = g_strdup("uuid");
-    field->type = MYSQL_TYPE_STRING;
-    g_ptr_array_add(fields, field);
-
-    field = network_mysqld_proto_fielddef_new();
     field->name = g_strdup("idle_conns");
     field->type = MYSQL_TYPE_STRING;
     g_ptr_array_add(fields, field);
@@ -165,8 +160,6 @@ void admin_select_all_backends(network_mysqld_con* admin_con)
 
         sprintf(buffer, "%d", backend->slave_delay_msec);
         g_ptr_array_add(row, (backend->type == BACKEND_TYPE_RO && chas->check_slave_delay == 1) ? g_strdup(buffer) : NULL);
-
-        g_ptr_array_add(row, backend->uuid->len ? g_strdup(backend->uuid->str) : NULL);
 
         sprintf(buffer, "%d", backend->pool->cur_idle_connections); 
         g_ptr_array_add(row, g_strdup(buffer));

@@ -52,6 +52,7 @@
 #include "chassis-sql-log.h"
 
 static volatile sig_atomic_t signal_shutdown;
+extern int cetus_process_id;
 
 /**
  * check if the libevent headers we built against match the
@@ -101,8 +102,6 @@ chassis_new()
     chas->event_hdr_version = g_strdup(_EVENT_VERSION);
 
     chas->shutdown_hooks = chassis_shutdown_hooks_new();
-
-    incremental_guid_init(&(chas->guid_state));
 
     chas->startup_time = time(0);
 
@@ -322,18 +321,6 @@ chassis_mainloop(void *_chas)
     chas->event_base = mainloop;
     g_assert(chas->event_base);
 
-#ifndef SIMPLE_PARSER
-    chas->dist_tran_id = g_random_int_range(0, 100000000);
-    int srv_id = g_random_int_range(0, 10000);
-    if (chas->proxy_address) {
-        snprintf(chas->dist_tran_prefix, MAX_DIST_TRAN_PREFIX, "clt-%s-%d", chas->proxy_address, srv_id);
-    } else {
-        snprintf(chas->dist_tran_prefix, MAX_DIST_TRAN_PREFIX, "clt-%d", srv_id);
-    }
-    g_message("Initial dist_tran_id:%llu", chas->dist_tran_id);
-    g_message("dist_tran_prefix:%s", chas->dist_tran_prefix);
-#endif
-
     /*
      * drop root privileges if requested
      */
@@ -386,29 +373,33 @@ chassis_mainloop(void *_chas)
     return 0;
 }
 
+#ifndef SIMPLE_PARSER
 uint64_t
 incremental_guid_get_next(struct incremental_guid_state_t *s)
 {
     uint64_t uniq_id = 0;
-    uint64_t cur_time = time(0);
-    static uint64_t SEQ_MASK = (-1L ^ (-1L << 16L));
+    static uint64_t SEQ_MASK = (-1L ^ (-1L << 10L));
+
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    unsigned int msec = tp.tv_usec / 1000;
+    uint64_t cur_time = tp.tv_sec;
 
     uniq_id = cur_time << 32;
-    uniq_id |= (s->worker_id & 0xff) << 24;
+    uniq_id |= (msec << 22);
+    uniq_id |= (s->worker_id & 0xfff) << 10;
 
-    if (cur_time == s->last_sec) {
+    if (cur_time == s->last_sec && msec == s->last_msec) {
         s->seq_id = (s->seq_id + 1) & SEQ_MASK;
         if (s->seq_id == 0) {
-            s->rand_id = (s->rand_id + 1) & 0x3ff;
-            g_message("%s:rand id changed:%llu", G_STRLOC, (unsigned long long)s->rand_id);
+            g_critical("%s:too many calls in one millisecond", G_STRLOC);
         }
     } else {
         s->seq_id = 0;
-        s->rand_id = s->init_rand_id;
     }
 
     s->last_sec = cur_time;
-    uniq_id |= s->rand_id << 16;
+    s->last_msec = msec;
     uniq_id |= s->seq_id;
 
     return uniq_id;
@@ -419,14 +410,12 @@ incremental_guid_init(struct incremental_guid_state_t *s)
 {
     struct timeval tp;
     gettimeofday(&tp, NULL);
-    unsigned int seed = tp.tv_usec;
 
-    if (s->worker_id == 0) {
-        s->worker_id = (int)((rand_r(&seed) / (RAND_MAX + 1.0)) * 64);
-    }
-
-    s->rand_id = (int)((rand_r(&seed) / (RAND_MAX + 1.0)) * 1024);
-    s->init_rand_id = s->rand_id;
-    s->last_sec = time(0);
+    s->worker_id = (s->worker_id << MAX_WORK_PROCESSES_SHIFT) + cetus_process_id;
+    g_message("internal worker id:%d", s->worker_id);
+    s->last_sec = tp.tv_sec;
+    s->last_msec = tp.tv_usec;
     s->seq_id = 0;
 }
+#endif
+

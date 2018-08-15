@@ -2172,12 +2172,6 @@ normal_result_merge(network_mysqld_con *con)
             network_mysqld_con_send_error_full(con->client, C("merge failed"), ER_CETUS_RESULT_MERGE, "HY000");
         }
         break;
-    case RM_CALL_FAIL:{
-        char msg[128] = { 0 };
-        snprintf(msg, sizeof(msg), "id:%lu '%s' failed", uniq_id, con->orig_sql->str);
-        network_mysqld_con_send_error_full(con->client, msg, strlen(msg), ER_CETUS_RESULT_MERGE, "HY000");
-        break;
-    }
     default:
         break;
     }

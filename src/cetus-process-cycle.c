@@ -603,6 +603,15 @@ cetus_worker_process_init(cetus_cycle_t *cycle, int worker)
     chassis_event_add(cycle, &cetus_channel_event);
     g_debug("%s: cetus_channel:%d is waiting for read, event base:%p, ev:%p",
             G_STRLOC, cetus_channel, cycle->event_base, &cetus_channel_event);
+
+#ifndef SIMPLE_PARSER
+    cycle->dist_tran_id = g_random_int_range(0, 100000000);
+    int master_id = cycle->guid_state.worker_id;
+    snprintf(cycle->dist_tran_prefix, MAX_DIST_TRAN_PREFIX, "clt-%d-%d", master_id, getpid());
+    g_message("Initial dist_tran_id:%llu", cycle->dist_tran_id);
+    g_message("dist_tran_prefix:%s, process id:%d", cycle->dist_tran_prefix, cetus_process_id);
+    incremental_guid_init(&(cycle->guid_state));
+#endif
 }
 
 

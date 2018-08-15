@@ -2509,12 +2509,6 @@ merge_for_modify(sql_context_t *context, network_queue *send_queue, GPtrArray *r
         case MYSQLD_PACKET_ERR:
             network_queue_append(send_queue, pkt);
             g_queue_remove(recv_q->chunks, pkt);
-            if (context && context->stmt_type == STMT_CALL) {
-                g_message("%s: stored procedure failed", G_STRLOC);
-                cetus_result_destroy(res_merge);
-                merged_result->status = RM_CALL_FAIL;
-                return 0;
-            }
             cetus_result_destroy(res_merge);
             merged_result->status = RM_FAIL;
             return 0;
@@ -2886,7 +2880,7 @@ merge_for_admin(network_queue *send_queue, GPtrArray *recv_queues,
 
 static int
 check_fail_met(sql_context_t *context, network_queue *send_queue, GPtrArray *recv_queues,
-               network_mysqld_con *con, uint64_t *uniq_id, int *call_fail_met, result_merge_t *merged_result)
+               network_mysqld_con *con, uint64_t *uniq_id, result_merge_t *merged_result)
 {
     int p;
     char *orig_sql = con->orig_sql->str;
@@ -2901,23 +2895,14 @@ check_fail_met(sql_context_t *context, network_queue *send_queue, GPtrArray *rec
                 if (pkt_type == MYSQLD_PACKET_ERR) {
                     g_warning("%s: failed query:%s, server:%s", G_STRLOC, orig_sql, ss->server->dst->name->str);
                 }
-                if (context->stmt_type == STMT_CALL) {
-                    if (!(*call_fail_met)) {
-                        *call_fail_met = 1;
-                        chassis *srv = con->srv;
-                        *uniq_id = incremental_guid_get_next(&(srv->guid_state));
-                    }
-                    log_packet_error_info(con->client, ss->server, orig_sql, pkt, *uniq_id);
-                    continue;
-                } else {
-                    network_queue_append(send_queue, pkt);
-                    g_queue_pop_head(recv_q->chunks);
-                    if (context->rw_flag & CF_DDL) {
-                        g_warning("%s: failed ddl query:%s, server:%s",
-                                  G_STRLOC, orig_sql, ss->server->dst->name->str);
-                    }
-                    return 0;
+
+                network_queue_append(send_queue, pkt);
+                g_queue_pop_head(recv_q->chunks);
+                if (context->rw_flag & CF_DDL) {
+                    g_warning("%s: failed ddl query:%s, server:%s",
+                            G_STRLOC, orig_sql, ss->server->dst->name->str);
                 }
+                return 0;
             }
         } else {
             g_warning("%s: merge failed for con:%p", G_STRLOC, con);
@@ -3160,15 +3145,7 @@ resultset_merge(network_queue *send_queue, GPtrArray *recv_queues,
         return;
     }
 
-    int call_fail_met = 0;
-
-    if (!check_fail_met(context, send_queue, recv_queues, con, uniq_id, &call_fail_met, merged_result)) {
-        return;
-    }
-
-    if (call_fail_met) {
-        g_warning("%s: call failed for con:%p", G_STRLOC, con);
-        merged_result->status = RM_CALL_FAIL;
+    if (!check_fail_met(context, send_queue, recv_queues, con, uniq_id, merged_result)) {
         return;
     }
 
@@ -3199,7 +3176,6 @@ resultset_merge(network_queue *send_queue, GPtrArray *recv_queues,
     case STMT_INSERT:
     case STMT_UPDATE:
     case STMT_DELETE:
-    case STMT_CALL:            /* Response should have no records */
     case STMT_SET:
     case STMT_START:
     case STMT_COMMIT:

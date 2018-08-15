@@ -355,7 +355,6 @@ typedef enum {
 typedef enum {
     RM_SUCCESS,
     RM_FAIL,
-    RM_CALL_FAIL
 } result_merge_status_t;
 
 typedef struct result_merge_t {

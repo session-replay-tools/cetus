@@ -53,6 +53,8 @@ typedef struct chassis chassis;
 
 #define MAX_SERVER_NUM 64
 #define MAX_SERVER_NUM_FOR_PREPARE 32
+#define MAX_WORK_PROCESSES 64
+#define MAX_WORK_PROCESSES_SHIFT 6
 #define MAX_QUERY_TIME 1000
 #define MAX_WAIT_TIME 1024
 #define MAX_TRY_NUM 6
@@ -88,17 +90,18 @@ typedef struct query_stats_t {
     rw_op_t server_query_details[MAX_SERVER_NUM];
 } query_stats_t;
 
+#ifndef SIMPLE_PARSER
 /* For generating unique global ids for MySQL */
 struct incremental_guid_state_t {
     unsigned int last_sec;
+    unsigned int last_msec;
     int worker_id;
-    int rand_id;
-    int init_rand_id;
     int seq_id;
 };
 
 void incremental_guid_init(struct incremental_guid_state_t *s);
 uint64_t incremental_guid_get_next(struct incremental_guid_state_t *s);
+#endif
 
 struct chassis {
     struct event_base *event_base;
@@ -176,7 +179,10 @@ struct chassis {
 
     query_stats_t query_stats;
 
+
+#ifndef SIMPLE_PARSER
     struct incremental_guid_state_t guid_state;
+#endif
     time_t startup_time;
     time_t current_time;
     struct chassis_options_t *options;

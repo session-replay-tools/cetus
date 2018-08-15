@@ -516,8 +516,8 @@ assign_worker_processes(const gchar *newval, gpointer param) {
             if (try_get_int_value(newval, &value)) {
                 if (value <= 0) {
                     srv->worker_processes = 1;
-                } else if (value > 64) {
-                    srv->worker_processes = 64;
+                } else if (value > MAX_WORK_PROCESSES) {
+                    srv->worker_processes = MAX_WORK_PROCESSES;
                 } else {
                     srv->worker_processes = value;
                 }
@@ -708,6 +708,7 @@ assign_max_header_size(const gchar *newval, gpointer param) {
     return ret;
 }
 
+#ifndef SIMPLE_PARSER
 gchar*
 show_worker_id(gpointer param) {
     struct external_param *opt_param = (struct external_param *)param;
@@ -721,6 +722,7 @@ show_worker_id(gpointer param) {
     }
     return NULL;
 }
+#endif
 
 gchar*
 show_disable_threads(gpointer param) {

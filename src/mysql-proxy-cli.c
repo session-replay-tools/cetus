@@ -102,7 +102,9 @@ struct chassis_frontend_t {
     int max_resp_len;
     int max_alive_time;
     int master_preferred;
+#ifndef SIMPLE_PARSER
     int worker_id;
+#endif
     int config_port;
     int disable_threads;
     int is_tcp_stream_enabled;
@@ -377,11 +379,13 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                         "set the max header size for tcp streaming", "<integer>",
                         assign_max_header_size, show_max_header_size, ALL_OPTS_PROPERTY);
 
+#ifndef SIMPLE_PARSER
     chassis_options_add(opts,
                         "worker-id",
                         0, 0, OPTION_ARG_INT, &(frontend->worker_id),
                         "Set the worker id and the maximum value allowed is 63 and the min value is 1", "<integer>",
                         NULL, show_worker_id, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
+#endif
 
     chassis_options_add(opts,
                         "disable-threads",
@@ -621,10 +625,11 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->default_charset = DUP_STRING(frontend->default_charset, NULL);
     srv->default_db = DUP_STRING(frontend->default_db, NULL);
 
+    frontend->worker_processes = 1;
     if (frontend->worker_processes < 1) {
         srv->worker_processes = 4;
-    } else if (frontend->worker_processes > 64) {
-        srv->worker_processes = 64;
+    } else if (frontend->worker_processes > MAX_WORK_PROCESSES) {
+        srv->worker_processes = MAX_WORK_PROCESSES;
     } else {
         srv->worker_processes = frontend->worker_processes;
     }
@@ -662,9 +667,20 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->max_header_size = frontend->max_header_size;
     g_message("%s:set max header size:%d", G_STRLOC, srv->max_header_size);
 
+#ifndef SIMPLE_PARSER
     if (frontend->worker_id > 0) {
         srv->guid_state.worker_id = frontend->worker_id & 0x3f;
+    } else {
+        struct timeval tp;
+        gettimeofday(&tp, NULL);
+        unsigned int seed = tp.tv_usec;
+        srv->guid_state.worker_id = (int)((rand_r(&seed) / (RAND_MAX + 1.0)) * 64);
+        g_warning("%s:please set worker id first, different instances should have different worker ids", G_STRLOC);
+        g_message("%s: the system chooses worker id automatically although it may have potential conflicts:%d",
+                G_STRLOC, srv->guid_state.worker_id);
     }
+#endif
+
 #undef DUP_STRING
 
     srv->client_found_rows = frontend->set_client_found_rows;

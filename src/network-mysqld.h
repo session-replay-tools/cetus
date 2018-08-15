@@ -52,7 +52,7 @@
 #include "network-backend.h"
 #include "cetus-error.h"
 
-#define XID_LEN 64
+#define XID_LEN 128
 #define COMPRESS_BUF_SIZE 1048576
 
 typedef enum {

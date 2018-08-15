@@ -149,6 +149,7 @@ struct chassis_frontend_t {
     char *default_username;
     char *default_charset;
     char *default_db;
+    char *ifname;
 
     char *remote_config_url;
 
@@ -230,6 +231,7 @@ chassis_frontend_free(struct chassis_frontend_t *frontend)
     g_free(frontend->plugin_dir);
     g_free(frontend->default_username);
     g_free(frontend->default_db);
+    g_free(frontend->ifname);
     g_free(frontend->default_charset);
 
     if (frontend->plugin_names) {
@@ -336,6 +338,12 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                         0, 0, OPTION_ARG_STRING, &(frontend->default_db),
                         "Set the default db for visiting backends", "<string>",
                         assign_default_db, show_default_db, ALL_OPTS_PROPERTY);
+
+    chassis_options_add(opts,
+                        "ifname",
+                        0, 0, OPTION_ARG_STRING, &(frontend->ifname),
+                        "Set the network interface for distinguishing cetus instances", "<string>",
+                        assign_ifname, show_ifname, ALL_OPTS_PROPERTY);
 
     chassis_options_add(opts,
                         "default-pool-size",
@@ -624,8 +632,8 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->default_username = DUP_STRING(frontend->default_username, NULL);
     srv->default_charset = DUP_STRING(frontend->default_charset, NULL);
     srv->default_db = DUP_STRING(frontend->default_db, NULL);
+    srv->ifname = DUP_STRING(frontend->ifname, "eth0");
 
-    frontend->worker_processes = 1;
     if (frontend->worker_processes < 1) {
         srv->worker_processes = 4;
     } else if (frontend->worker_processes > MAX_WORK_PROCESSES) {

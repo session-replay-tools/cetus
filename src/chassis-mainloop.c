@@ -184,6 +184,8 @@ chassis_free(chassis *chas)
         g_free(chas->user);
     if (chas->default_db)
         g_free(chas->default_db);
+    if (chas->ifname)
+        g_free(chas->ifname);
     if (chas->default_username)
         g_free(chas->default_username);
     if (chas->default_hashed_pwd)

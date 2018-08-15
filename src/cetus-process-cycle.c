@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <net/if.h>
+#include <sys/ioctl.h>
 
 #include "network-mysqld.h"
 #include "cetus-channel.h"
@@ -499,6 +501,39 @@ cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
         }
     }
 
+#ifndef SIMPLE_PARSER
+    cycle->dist_tran_id = g_random_int_range(0, 100000000);
+    struct ifreq buffer;
+    int s = socket(PF_INET, SOCK_DGRAM, 0);
+    memset(&buffer, 0, sizeof(buffer));
+    strcpy(buffer.ifr_name, cycle->ifname);
+    ioctl(s, SIOCGIFHWADDR, &buffer);
+    close(s);
+
+    char mac[32];
+
+    sprintf(mac, "%02x:%02x:%02x:%02x:%02x:%02x",
+            (unsigned char) buffer.ifr_hwaddr.sa_data[0],
+            (unsigned char) buffer.ifr_hwaddr.sa_data[1],
+            (unsigned char) buffer.ifr_hwaddr.sa_data[2],
+            (unsigned char) buffer.ifr_hwaddr.sa_data[3],
+            (unsigned char) buffer.ifr_hwaddr.sa_data[4],
+            (unsigned char) buffer.ifr_hwaddr.sa_data[5]);
+
+    if (strcmp(mac, "00:00:00:00:00:00") == 0) {
+        snprintf(cycle->dist_tran_prefix, MAX_DIST_TRAN_PREFIX, "clt-%d-%s-%d",
+                cycle->guid_state.worker_id, cycle->proxy_address, getpid());
+        g_critical("wrong inferface name:%s", cycle->ifname);
+    } else {
+        snprintf(cycle->dist_tran_prefix, MAX_DIST_TRAN_PREFIX, "clt-%s-%s-%d",
+                mac, cycle->proxy_address, getpid());
+    }
+
+    g_message("Initial dist_tran_id:%llu", cycle->dist_tran_id);
+    g_message("dist_tran_prefix:%s, process id:%d", cycle->dist_tran_prefix, cetus_process_id);
+    incremental_guid_init(&(cycle->guid_state));
+#endif
+
     for ( ;; ) {
 
         if (cetus_exiting) {
@@ -604,14 +639,6 @@ cetus_worker_process_init(cetus_cycle_t *cycle, int worker)
     g_debug("%s: cetus_channel:%d is waiting for read, event base:%p, ev:%p",
             G_STRLOC, cetus_channel, cycle->event_base, &cetus_channel_event);
 
-#ifndef SIMPLE_PARSER
-    cycle->dist_tran_id = g_random_int_range(0, 100000000);
-    int master_id = cycle->guid_state.worker_id;
-    snprintf(cycle->dist_tran_prefix, MAX_DIST_TRAN_PREFIX, "clt-%d-%d", master_id, getpid());
-    g_message("Initial dist_tran_id:%llu", cycle->dist_tran_id);
-    g_message("dist_tran_prefix:%s, process id:%d", cycle->dist_tran_prefix, cetus_process_id);
-    incremental_guid_init(&(cycle->guid_state));
-#endif
 }
 
 

@@ -493,7 +493,7 @@ log_sql_backend_sharding(network_mysqld_con *con, server_session_t *session)
 }
 
  void
- log_sql_connect(network_mysqld_con *con)
+ log_sql_connect(network_mysqld_con *con, gchar *errmsg)
  {
      if (!con || !con->srv) {
          g_critical("con or con->srv is NULL when call log_sql_connect()");
@@ -511,9 +511,11 @@ log_sql_backend_sharding(network_mysqld_con *con, server_session_t *session)
      }
      GString *message = g_string_sized_new(sizeof("2004-01-01T00:00:00.000Z"));
      get_current_time_str(message);
-     g_string_append_printf(message, ": #connect# %s@%s Connect Cetus, C_id:%u C_db:%s C_charset:%u C_auth_plugin:%s C_ssl:%s C_cap:%x S_cap:%x\n",
+     g_string_append_printf(message, ": #connect# %s@%s Connect Cetus %s msg:%s, C_id:%u C_db:%s C_charset:%u C_auth_plugin:%s C_ssl:%s C_cap:%x S_cap:%x\n",
                                               con->client->response->username->str,//C_usr
                                               con->client->src->name->str,//C_ip
+                                              errmsg == NULL ? "success" : "failed",
+                                              errmsg == NULL ? "": errmsg,
                                               con->client->challenge->thread_id,//C_id
                                               con->client->response->database->str,//C_db
                                               con->client->response->charset,//C_charset

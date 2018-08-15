@@ -58,9 +58,9 @@ struct sql_log_mgr {
     SQL_LOG_MODE sql_log_mode;
     guint sql_log_maxsize;
     gulong sql_log_cursize;
-    volatile guint sql_log_action;
+    volatile SQL_LOG_ACTION sql_log_action;
 
-    volatile SQL_LOG_ACTION sql_log_idletime;
+    volatile guint sql_log_idletime;
     volatile guint sql_log_maxnum;
 
     gchar *sql_log_filename;
@@ -79,7 +79,7 @@ gpointer sql_log_mainloop(gpointer user_data);
 void cetus_sql_log_start_thread_once(struct sql_log_mgr *mgr);
 void sql_log_thread_start(struct sql_log_mgr *mgr);
 
-void log_sql_connect(network_mysqld_con *con);
+void log_sql_connect(network_mysqld_con *con, gchar *errmsg);
 void log_sql_client(network_mysqld_con *con);
 void log_sql_backend(network_mysqld_con *con, injection *inj);
 void log_sql_backend_sharding(network_mysqld_con *con, server_session_t *session);

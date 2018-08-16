@@ -65,15 +65,15 @@ void admin_clear_error(network_mysqld_con* con)
 {
     *(int*)(con->plugin_con_state) = 0;
 }
-void admin_select_all_backends(network_mysqld_con* admin_con)
+void admin_select_all_backends(network_mysqld_con* con)
 {
-    if (admin_con->is_admin_client) {
-        admin_con->admin_read_merge = 1;
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
         return;
     }
-    chassis *chas = admin_con->srv;
+    chassis *chas = con->srv;
     chassis_private *priv = chas->priv;
-    chassis_plugin_config *config = admin_con->config;
+    chassis_plugin_config *config = con->config;
 
     GPtrArray *fields = g_ptr_array_new_with_free_func(
         (GDestroyNotify)network_mysqld_proto_fielddef_free);
@@ -176,21 +176,21 @@ void admin_select_all_backends(network_mysqld_con* admin_con)
 
     }
 
-    network_mysqld_con_send_resultset(admin_con->client, fields, rows);
+    network_mysqld_con_send_resultset(con->client, fields, rows);
 
     /* Free data */
     g_ptr_array_free(rows, TRUE);
     g_ptr_array_free(fields, TRUE);
 }
 
-void admin_select_conn_details(network_mysqld_con *admin_con)
+void admin_select_conn_details(network_mysqld_con *con)
 {
-    if (admin_con->is_admin_client) {
-        admin_con->admin_read_merge = 1;
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
         return;
     }
 
-    chassis *chas = admin_con->srv;
+    chassis *chas = con->srv;
     chassis_private *priv = chas->priv;
 
     int i, j, len;
@@ -384,7 +384,7 @@ void admin_select_conn_details(network_mysqld_con *admin_con)
         }
     }
 
-    network_mysqld_con_send_resultset(admin_con->client, fields, rows);
+    network_mysqld_con_send_resultset(con->client, fields, rows);
 
     /* Free data */
     g_ptr_array_free(rows, TRUE);
@@ -393,10 +393,10 @@ void admin_select_conn_details(network_mysqld_con *admin_con)
     g_hash_table_destroy(back_user_conn_hash_table);
 }
 
-void admin_show_connectionlist(network_mysqld_con *admin_con, int show_count)
+void admin_show_connectionlist(network_mysqld_con *con, int show_count)
 {
-    if (admin_con->is_admin_client) {
-        admin_con->admin_read_merge = 1;
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
         return;
     }
 
@@ -407,9 +407,9 @@ void admin_show_connectionlist(network_mysqld_con *admin_con, int show_count)
             number = show_count;
         }
     }
-    chassis *chas = admin_con->srv;
+    chassis *chas = con->srv;
     chassis_private *priv = chas->priv;
-    chassis_plugin_config *config = admin_con->config;
+    chassis_plugin_config *config = con->config;
     int i, len;
     char buffer[32];
     GPtrArray *fields;
@@ -583,7 +583,7 @@ void admin_show_connectionlist(network_mysqld_con *admin_con, int show_count)
         g_ptr_array_add(rows, row);
     }
 
-    network_mysqld_con_send_resultset(admin_con->client, fields, rows);
+    network_mysqld_con_send_resultset(con->client, fields, rows);
 
     g_ptr_array_free(rows, TRUE);
     g_ptr_array_free(fields, TRUE);
@@ -1203,6 +1203,7 @@ void admin_delete_backend(network_mysqld_con* con, char *key, char *val)
 
 static void admin_supported_stats(network_mysqld_con* con)
 {
+    con->direct_answer = 1;
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();
     MAKE_FIELD_DEF_1_COL(fields, "name");
     GPtrArray *rows = g_ptr_array_new_with_free_func(
@@ -1289,6 +1290,7 @@ void admin_get_stats(network_mysqld_con* con, char* p)
 
 static void admin_supported_config(network_mysqld_con* con)
 {
+    con->direct_answer = 1;
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();
     MAKE_FIELD_DEF_1_COL(fields, "name");
     GPtrArray *rows = g_ptr_array_new_with_free_func(
@@ -1380,6 +1382,10 @@ void admin_set_config(network_mysqld_con* con, char* key, char* value)
 
 static void admin_reload_settings(network_mysqld_con* con)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     GList *options = admin_get_all_options(con->srv);
     gint ret = chassis_config_reload_options(con->srv->config_manager);
     if (ret == -1) {
@@ -1932,6 +1938,10 @@ void admin_show_databases(network_mysqld_con* con)
 void admin_create_single_table(network_mysqld_con* con, const char* schema,
                                const char* table, const char* group)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     gboolean ok = shard_conf_add_single_table(schema, table, group);
     if (ok) {
         shard_conf_write_json(con->srv->config_manager);
@@ -1943,6 +1953,11 @@ void admin_create_single_table(network_mysqld_con* con, const char* schema,
 
 void admin_select_single_table(network_mysqld_con* con)
 {
+    if (con->is_admin_client) {
+        con->ask_one_worker = 1;
+        return;
+    }
+
     GList* tables = shard_conf_get_single_tables();
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();
     MAKE_FIELD_DEF_2_COL(fields, "Table", "Group");
@@ -1962,6 +1977,9 @@ void admin_select_single_table(network_mysqld_con* con)
 }
 
 void admin_sql_log_start(network_mysqld_con* con) {
+    if (con->is_admin_client) {
+        return;
+    }
     if (!con || !con->srv || !con->srv->sql_mgr) {
         network_mysqld_con_send_error(con->client, C("Unexpected error"));
         return;
@@ -1979,6 +1997,9 @@ void admin_sql_log_start(network_mysqld_con* con) {
 }
 
 void admin_sql_log_stop(network_mysqld_con* con) {
+    if (con->is_admin_client) {
+        return;
+    }
     if (!con || !con->srv || !con->srv->sql_mgr) {
         network_mysqld_con_send_error(con->client, C("Unexpected error"));
         return;
@@ -1992,6 +2013,10 @@ void admin_sql_log_stop(network_mysqld_con* con) {
 }
 
 void admin_sql_log_status(network_mysqld_con* con) {
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
+        return;
+    }
     if (!con || !con->srv || !con->srv->sql_mgr) {
         network_mysqld_con_send_error(con->client, C("Unexpected error"));
         return;
@@ -2042,3 +2067,4 @@ void admin_sql_log_status(network_mysqld_con* con) {
     g_free(cached);
     g_free(cursize);
 }
+

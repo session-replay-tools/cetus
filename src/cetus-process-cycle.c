@@ -6,6 +6,8 @@
 #include <net/if.h>
 #include <sys/ioctl.h>
 
+#include "chassis-sql-log.h"
+#include "cetus-monitor.h"
 #include "network-mysqld.h"
 #include "cetus-channel.h"
 #include "cetus-process.h"
@@ -534,6 +536,10 @@ cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
     incremental_guid_init(&(cycle->guid_state));
 #endif
 
+    cetus_monitor_start_thread(cycle->priv->monitor, cycle);
+    cetus_sql_log_start_thread_once(cycle->sql_mgr);
+
+
     for ( ;; ) {
 
         if (cetus_exiting) {
@@ -646,6 +652,8 @@ static void
 cetus_worker_process_exit(cetus_cycle_t *cycle)
 {
     unsigned int         i;
+
+    cetus_monitor_stop_thread(cycle->priv->monitor);
 
     g_message("%s: exit", G_STRLOC);
 

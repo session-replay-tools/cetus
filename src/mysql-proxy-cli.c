@@ -634,7 +634,6 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->default_db = DUP_STRING(frontend->default_db, NULL);
     srv->ifname = DUP_STRING(frontend->ifname, "eth0");
 
-    frontend->worker_processes = 1;
     if (frontend->worker_processes < 1) {
         srv->worker_processes = 4;
     } else if (frontend->worker_processes > MAX_WORK_PROCESSES) {
@@ -1220,16 +1219,11 @@ main_cmdline(int argc, char **argv)
         }
     }
 
-    cetus_monitor_start_thread(srv->priv->monitor, srv);
-    cetus_sql_log_start_thread_once(srv->sql_mgr);
-
     if (chassis_mainloop(srv)) {
         /* looks like we failed */
         g_critical("%s: Failure from chassis_mainloop. Shutting down.", G_STRLOC);
         GOTO_EXIT(EXIT_FAILURE);
     }
-
-    cetus_monitor_stop_thread(srv->priv->monitor);
 
   exit_nicely:
     /* necessary to set the shutdown flag, because the monitor will continue

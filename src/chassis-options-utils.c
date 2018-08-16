@@ -1314,8 +1314,11 @@ gchar* show_sql_log_maxsize(gpointer param) {
     struct external_param *opt_param = (struct external_param *)param;
     chassis *srv = opt_param->chas;
     gint opt_type = opt_param->opt_type;
-    if (CAN_SHOW_OPTS_PROPERTY(opt_type) || CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+    if (CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         return g_strdup_printf("%u M", srv->sql_mgr->sql_log_maxsize);
+    }
+    if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%u", srv->sql_mgr->sql_log_maxsize);
     }
     return NULL;
 }

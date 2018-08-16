@@ -733,6 +733,27 @@ void admin_delete_allow_ip(network_mysqld_con *con, char *module_name, char *add
     g_ptr_array_add(fields, field);  \
     }while(0)
 
+#define MAKE_FIELD_DEF_4_COL(fields, col1_name, col2_name, col3_name, col4_name)   \
+    do {\
+    MYSQL_FIELD *field = network_mysqld_proto_fielddef_new();\
+    field->name = g_strdup((col1_name));                      \
+    field->type = FIELD_TYPE_VAR_STRING;\
+    g_ptr_array_add(fields, field);         \
+    field = network_mysqld_proto_fielddef_new();     \
+    field->name = g_strdup((col2_name));                      \
+    field->type = FIELD_TYPE_VAR_STRING;\
+    g_ptr_array_add(fields, field);         \
+    field = network_mysqld_proto_fielddef_new();     \
+    field->name = g_strdup((col3_name));                      \
+    field->type = FIELD_TYPE_VAR_STRING;\
+    g_ptr_array_add(fields, field);  \
+    field = network_mysqld_proto_fielddef_new();     \
+    field->name = g_strdup((col4_name));                      \
+    field->type = FIELD_TYPE_VAR_STRING;\
+    g_ptr_array_add(fields, field);  \
+    }while(0)
+
+
 #define APPEND_ROW_1_COL(rows, row_data) \
     do {\
     GPtrArray* row = g_ptr_array_new();\
@@ -757,6 +778,15 @@ void admin_delete_allow_ip(network_mysqld_con *con, char *module_name, char *add
     g_ptr_array_add(rows, row);\
     }while(0)
 
+#define APPEND_ROW_4_COL(rows, col1, col2, col3, col4)    \
+    do {\
+    GPtrArray *row = g_ptr_array_new();\
+    g_ptr_array_add(row, (col1));  \
+    g_ptr_array_add(row, (col2));  \
+    g_ptr_array_add(row, (col3));  \
+    g_ptr_array_add(row, (col4));  \
+    g_ptr_array_add(rows, row);\
+    }while(0)
 
 /* only match % wildcard, case insensitive */
 static gboolean sql_pattern_like(const char* pattern, const char* string)
@@ -2025,12 +2055,17 @@ void admin_sql_log_status(network_mysqld_con* con) {
     GList *options = admin_get_all_options(con->srv);
 
     GPtrArray *fields = network_mysqld_proto_fielddefs_new();
-    MAKE_FIELD_DEF_3_COL(fields, "Variable_name", "Value", "Property");
+    MAKE_FIELD_DEF_4_COL(fields, "PID", "Variable_name", "Value", "Property");
+
+    char buffer[32];
+    cetus_pid_t process_id = getpid();
+    sprintf(buffer, "%d", process_id);
 
     GPtrArray *rows = g_ptr_array_new_with_free_func((void *)network_mysqld_mysql_field_row_free);
 
     GList *freelist = NULL;
     GList *l = NULL;
+
     for (l = options; l; l = l->next) {
         chassis_option_t *opt = l->data;
         /* just support these for now */
@@ -2043,19 +2078,22 @@ void admin_sql_log_status(network_mysqld_con* con) {
                 continue;
             }
             freelist = g_list_append(freelist, value);
-            APPEND_ROW_3_COL(rows, (char *)opt->long_name, value, (CAN_ASSIGN_OPTS_PROPERTY(opt->opt_property)? "Dynamic" : "Static"));
+            APPEND_ROW_4_COL(rows, buffer, (char *)opt->long_name, value,
+                    (CAN_ASSIGN_OPTS_PROPERTY(opt->opt_property)? "Dynamic" : "Static"));
         }
     }
-    APPEND_ROW_3_COL(rows, "sql-log-state", con->srv->sql_mgr->sql_log_action == SQL_LOG_START ? "running": "stopped", "Internal");
+
+    APPEND_ROW_4_COL(rows, buffer, "sql-log-state", 
+            con->srv->sql_mgr->sql_log_action == SQL_LOG_START ? "running": "stopped", "Internal");
     gchar *cached = NULL;
     if (con->srv->sql_mgr->fifo && (con->srv->sql_mgr->sql_log_action == SQL_LOG_START)) {
         cached = g_strdup_printf("%u", con->srv->sql_mgr->fifo->in - con->srv->sql_mgr->fifo->in);
     } else {
         cached = g_strdup("NULL");
     }
-    APPEND_ROW_3_COL(rows, "sql-log-cached", cached, "Internal");
+    APPEND_ROW_4_COL(rows, buffer, "sql-log-cached", cached, "Internal");
     gchar *cursize = g_strdup_printf("%lu", con->srv->sql_mgr->sql_log_cursize);
-    APPEND_ROW_3_COL(rows, "sql-log-cursize", cursize, "Internal");
+    APPEND_ROW_4_COL(rows, buffer, "sql-log-cursize", cursize, "Internal");
 
     network_mysqld_con_send_resultset(con->client, fields, rows);
 

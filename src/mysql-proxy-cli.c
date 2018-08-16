@@ -158,7 +158,8 @@ struct chassis_frontend_t {
     gchar *sql_log_mode;
     guint sql_log_idletime;
     gint sql_log_maxnum;
-    gint check_dns;
+
+    int check_dns;
 };
 
 /**
@@ -201,7 +202,9 @@ chassis_frontend_new(void)
     frontend->sql_log_mode = NULL;
     frontend->sql_log_idletime = 0;
     frontend->sql_log_maxnum = -1;
+
     frontend->check_dns = 0;
+
     return frontend;
 }
 
@@ -537,8 +540,8 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                           assign_sql_log_maxnum, show_sql_log_maxnum, ALL_OPTS_PROPERTY);
     chassis_options_add(opts,
                           "check-dns",
-                          0, 0, OPTION_ARG_INT, &(frontend->check_dns),
-                          "check dns when hostname changed","<int>",
+                          0, 0, OPTION_ARG_NONE, &(frontend->check_dns),
+                          "check dns when hostname changed",NULL,
                           assign_check_dns, show_check_dns, ALL_OPTS_PROPERTY);
 
     return 0;

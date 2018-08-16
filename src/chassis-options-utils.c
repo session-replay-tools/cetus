@@ -1450,8 +1450,11 @@ show_check_dns(gpointer param) {
     struct external_param *opt_param = (struct external_param *)param;
     chassis *srv = opt_param->chas;
     gint opt_type = opt_param->opt_type;
-    if (CAN_SHOW_OPTS_PROPERTY(opt_type) || CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        return g_strdup_printf("%d", srv->check_dns);
+    if (CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%s", srv->check_dns ? "true" : "false");
+    }
+    if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return (srv->check_dns == 0) ? g_strdup("false") : NULL;
     }
     return NULL;
 }

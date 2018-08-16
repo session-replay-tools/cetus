@@ -214,6 +214,7 @@ struct chassis {
     struct event update_timer_event;
 
     struct sql_log_mgr *sql_mgr;
+    gint check_dns;
 };
 
 CHASSIS_API chassis *chassis_new(void);

@@ -11,7 +11,7 @@
 #define SQL_LOG_DEF_FILE_NAME "cetus_sql"
 #define SQL_LOG_DEF_SUFFIX "sql"
 #define SQL_LOG_DEF_PATH "/var/log/"
-#define SQL_LOG_DEF_IDLETIME 500
+#define SQL_LOG_DEF_IDLETIME 10000
 #define MEGABYTES 1024*1024
 
 #define min(a, b) ((a) < (b) ? (a) : (b))

@@ -42,6 +42,7 @@
 #include "sharding-config.h"
 
 #include <netdb.h>
+#include <arpa/inet.h>
 
 #define CHECK_ALIVE_INTERVAL 3
 #define CHECK_ALIVE_TIMES 2
@@ -384,6 +385,25 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
     event_base_set(monitor->evloop, &(monitor->ev_struct));\
     evtimer_add(&(monitor->ev_struct), &timeout);
 
+gint
+check_hostname(network_backend_t *backend)
+{
+     gint ret = 0;
+     gchar *p = NULL;
+     if (!backend) return ret;
+     gchar old_addr[INET_ADDRSTRLEN] = {""};
+     inet_ntop(AF_INET, &(backend->addr->addr.ipv4.sin_addr), old_addr, sizeof(old_addr));
+     if (0 != network_address_set_address(backend->addr, backend->address->str)) {
+         return ret;
+     }
+     char new_addr[INET_ADDRSTRLEN] = {""};
+     inet_ntop(AF_INET, &(backend->addr->addr.ipv4.sin_addr), new_addr, sizeof(new_addr));
+     if (strcmp (old_addr, new_addr) != 0) {
+         ret = 1;
+     }
+     return ret;
+ }
+
 static void
 check_backend_alive(int fd, short what, void *arg)
 {
@@ -407,6 +427,7 @@ check_backend_alive(int fd, short what, void *arg)
         char *backend_addr = backend->addr->name->str;
         int check_count = 0;
         MYSQL *conn = NULL;
+hostnameloop:
         while (++check_count <= CHECK_ALIVE_TIMES) {
             conn = get_mysql_connection(monitor, backend_addr);
             if (conn)
@@ -414,6 +435,11 @@ check_backend_alive(int fd, short what, void *arg)
         }
 
         if (conn == NULL) {
+            if (chas->check_dns) {
+                if (check_hostname(backend)) {
+                    goto hostnameloop;
+                }
+            }
             if (backend->state != BACKEND_STATE_DOWN) {
                 if (backend->type != BACKEND_TYPE_RW) {
                     ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN, oldstate, NULL);
@@ -482,8 +508,14 @@ update_master_timestamp(int fd, short what, void *arg)
                      HEARTBEAT_DB, monitor->config_id, cur_time_str, cur_time_str);
 
             char *backend_addr = backend->addr->name->str;
+hostnameloop:;
             MYSQL *conn = get_mysql_connection(monitor, backend_addr);
             if (conn == NULL) {
+                if (chas->check_dns) {
+                    if (check_hostname(backend)) {
+                        goto hostnameloop;
+                    }
+                }   
                 g_critical("Could not connect to Backend %s.", backend_addr);
             } else {
                 if (backend->state != BACKEND_STATE_UP) {
@@ -532,8 +564,14 @@ check_slave_timestamp(int fd, short what, void *arg)
             continue;
 
         char *backend_addr = backend->addr->name->str;
+hostnameloop:;
         MYSQL *conn = get_mysql_connection(monitor, backend_addr);
         if (conn == NULL) {
+            if (chas->check_dns) {
+                if (check_hostname(backend)) {
+                    goto hostnameloop;
+                }
+            }
             g_critical("Connection error when read delay from RO backend: %s", backend_addr);
             if (backend->state != BACKEND_STATE_DOWN) {
                 ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN, oldstate, NULL);

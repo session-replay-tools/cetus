@@ -140,7 +140,7 @@ void admin_select_all_backends(network_mysqld_con* admin_con)
         network_backend_t *backend = bs->backends->pdata[i];
         GPtrArray *row = g_ptr_array_new_with_free_func(g_free);
 
-        sprintf(buffer, "%d", i); 
+        sprintf(buffer, "%d", i + 1);
 
         g_ptr_array_add(row, g_strdup(buffer));
 

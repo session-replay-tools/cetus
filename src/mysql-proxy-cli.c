@@ -158,6 +158,7 @@ struct chassis_frontend_t {
     gchar *sql_log_mode;
     guint sql_log_idletime;
     gint sql_log_maxnum;
+    gint check_dns;
 };
 
 /**
@@ -200,6 +201,7 @@ chassis_frontend_new(void)
     frontend->sql_log_mode = NULL;
     frontend->sql_log_idletime = 0;
     frontend->sql_log_maxnum = -1;
+    frontend->check_dns = 0;
     return frontend;
 }
 
@@ -533,6 +535,11 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                           0, 0, OPTION_ARG_INT, &(frontend->sql_log_maxnum),
                           "aximum number of sql log files","<int>",
                           assign_sql_log_maxnum, show_sql_log_maxnum, ALL_OPTS_PROPERTY);
+    chassis_options_add(opts,
+                          "check-dns",
+                          0, 0, OPTION_ARG_INT, &(frontend->check_dns),
+                          "check dns when hostname changed","<int>",
+                          assign_check_dns, show_check_dns, ALL_OPTS_PROPERTY);
 
     return 0;
 }
@@ -696,6 +703,7 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->long_query_time = MIN(frontend->long_query_time, MAX_QUERY_TIME);
     srv->cetus_max_allowed_packet = CLAMP(frontend->cetus_max_allowed_packet,
                                           MAX_ALLOWED_PACKET_FLOOR, MAX_ALLOWED_PACKET_CEIL);
+    srv->check_dns = frontend->check_dns;
 }
 
 static void
@@ -1191,6 +1199,7 @@ main_cmdline(int argc, char **argv)
             srv->sql_mgr->sql_log_maxnum = frontend->sql_log_maxnum;
         }
     }
+    srv->check_dns = frontend->check_dns;
 
     cetus_monitor_start_thread(srv->priv->monitor, srv);
     cetus_sql_log_start_thread_once(srv->sql_mgr);

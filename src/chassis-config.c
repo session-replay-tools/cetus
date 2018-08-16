@@ -321,6 +321,26 @@ chassis_config_load_options_mysql(chassis_config_t *conf)
     return FALSE;
 }
 
+gboolean
+chassis_config_replace_options_mysql(chassis_config_t *conf, char* key, char* value)
+{
+    MYSQL *conn = chassis_config_get_mysql_connection(conf);
+    if (!conn) {
+        g_warning("Cannot connect to mysql server.");
+        return FALSE;
+    }
+    char sql[1024] = { 0 }, real_value[1024] = { 0 };
+    mysql_real_escape_string(conn, real_value, value, strlen(value));
+    snprintf(sql, sizeof(sql),
+    "REPLACE INTO %s.`settings`(option_key,option_value) VALUES ('%s', '%s')", conf->schema, key, real_value);
+    if (mysql_query(conn, sql)) {
+        g_warning("%s", mysql_error(conn));
+        g_warning("sql failed: %s", sql);
+        return FALSE;
+    }
+    return TRUE;
+}
+
 gint chassis_config_reload_options(chassis_config_t *conf)
 {
     switch (conf->type) {

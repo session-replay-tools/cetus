@@ -1692,7 +1692,7 @@ check_user_consistant(network_mysqld_con *con)
 static void
 build_xa_end_command(network_mysqld_con *con, server_session_t *ss, int first)
 {
-    char buffer[64];
+    char buffer[XA_CMD_BUF_LEN];
 
     snprintf(buffer, sizeof(buffer), "XA END %s", con->xid_str);
 

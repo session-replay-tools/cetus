@@ -1866,6 +1866,8 @@ void admin_sql_log_status(network_mysqld_con* con) {
     gchar *cursize = g_strdup_printf("%lu", con->srv->sql_mgr->sql_log_cursize);
     APPEND_ROW_3_COL(rows, "sql-log-cursize", cursize, "Internal");
 
+    APPEND_ROW_3_COL(rows, "sql-log-fullname", con->srv->sql_mgr->sql_log_fullname == NULL ? "NULL" : con->srv->sql_mgr->sql_log_fullname, "Internal");
+
     network_mysqld_con_send_resultset(con->client, fields, rows);
 
     network_mysqld_proto_fielddefs_free(fields);

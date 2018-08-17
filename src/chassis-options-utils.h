@@ -94,7 +94,7 @@ CHASSIS_API gchar* show_remote_conf_url(gpointer param);
 CHASSIS_API gchar* show_group_replication_mode(gpointer param);
 CHASSIS_API gchar* show_sql_log_bufsize(gpointer param);
 CHASSIS_API gchar* show_sql_log_switch(gpointer param);
-CHASSIS_API gchar* show_sql_log_filename(gpointer param);
+CHASSIS_API gchar* show_sql_log_prefix(gpointer param);
 CHASSIS_API gchar* show_sql_log_path(gpointer param);
 CHASSIS_API gchar* show_sql_log_maxsize(gpointer param);
 CHASSIS_API gchar* show_sql_log_mode(gpointer param);

@@ -1246,6 +1246,11 @@ void admin_set_config(network_mysqld_con* con, char* key, char* value)
 
     g_list_free(options);
 
+    if(0 == ret && !chassis_config_set_remote_options(con->srv->config_manager, key, value)) {
+        network_mysqld_con_send_error(con->client,C("Variable is set locally but cannot replace remote settings"));
+        return;
+    }
+
     if(0 == ret) {
         network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
     } else if(ASSIGN_NOT_SUPPORT == ret){

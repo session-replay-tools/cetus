@@ -1282,15 +1282,15 @@ assign_sql_log_switch(const gchar *newval, gpointer param) {
     return ret;
 }
 
-gchar* show_sql_log_filename(gpointer param) {
+gchar* show_sql_log_prefix(gpointer param) {
     struct external_param *opt_param = (struct external_param *)param;
     chassis *srv = opt_param->chas;
     gint opt_type = opt_param->opt_type;
     if (CAN_SHOW_OPTS_PROPERTY(opt_type) || CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        if (srv->sql_mgr->sql_log_filename == NULL) {
+        if (srv->sql_mgr->sql_log_prefix == NULL) {
             return g_strdup("NULL");
         } else {
-            return g_strdup_printf("%s", srv->sql_mgr->sql_log_filename);
+            return g_strdup_printf("%s", srv->sql_mgr->sql_log_prefix);
         }
     }
     return NULL;

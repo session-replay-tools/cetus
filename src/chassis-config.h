@@ -36,6 +36,8 @@ chassis_config_t *chassis_config_from_local_dir(char *dir, char *conf_file);
 
 void chassis_config_free(chassis_config_t *);
 
+gboolean chassis_config_replace_options_mysql(chassis_config_t *conf, char* key, char* value);
+
 gint chassis_config_reload_options(chassis_config_t *conf);
 
 GHashTable *chassis_config_get_options(chassis_config_t *);

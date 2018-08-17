@@ -1246,6 +1246,12 @@ void admin_set_config(network_mysqld_con* con, char* key, char* value)
 
     g_list_free(options);
 
+    if(chassis_config_reload_options(con->srv->config_manager) != -2
+    && !chassis_config_replace_options_mysql(con->srv->config_manager, key, value)) {
+        network_mysqld_con_send_error(con->client,C("Can't replace remote settings"));
+        return;
+    }
+
     if(0 == ret) {
         network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
     } else if(ASSIGN_NOT_SUPPORT == ret){

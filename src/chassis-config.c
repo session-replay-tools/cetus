@@ -330,7 +330,7 @@ chassis_config_set_remote_options(chassis_config_t *conf, gchar* key, gchar* val
             g_warning("Cannot connect to mysql server.");
             return FALSE;
         }
-        char sql[1024] = { 0 }, real_value[1024] = { 0 };
+        gchar sql[1024] = { 0 }, real_value[1024] = { 0 };
         mysql_real_escape_string(conn, real_value, value, strlen(value));
         snprintf(sql, sizeof(sql),
         "REPLACE INTO %s.`settings`(option_key,option_value) VALUES ('%s', '%s')", conf->schema, key, real_value);

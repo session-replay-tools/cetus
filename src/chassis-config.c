@@ -322,7 +322,7 @@ chassis_config_load_options_mysql(chassis_config_t *conf)
 }
 
 gboolean
-chassis_config_set_remote_options(chassis_config_t *conf, char* key, char* value)
+chassis_config_set_remote_options(chassis_config_t *conf, gchar* key, gchar* value)
 {
     if(conf->type == CHASSIS_CONF_MYSQL){
         MYSQL *conn = chassis_config_get_mysql_connection(conf);

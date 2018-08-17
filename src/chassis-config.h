@@ -38,7 +38,7 @@ void chassis_config_free(chassis_config_t *);
 
 gint chassis_config_reload_options(chassis_config_t *conf);
 
-gboolean chassis_config_set_remote_options(chassis_config_t *conf, char* key, char* value);
+gboolean chassis_config_set_remote_options(chassis_config_t *conf, gchar* key, gchar* value);
 
 GHashTable *chassis_config_get_options(chassis_config_t *);
 

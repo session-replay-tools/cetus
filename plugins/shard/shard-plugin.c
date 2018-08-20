@@ -1091,11 +1091,9 @@ make_first_decision(network_mysqld_con *con, sharding_plan_t *plan, int *rv, int
             con->use_all_prev_servers = 1;
             if (con->servers == NULL) {
                 con->client->is_server_conn_reserved = 0;
-                con->state = ST_SEND_QUERY_RESULT;
+                *disp_flag = PROXY_SEND_RESULT;
                 network_mysqld_con_send_ok_full(con->client, 0, 0, 0, 0);
                 g_warning("%s: show warnings has no servers yet", G_STRLOC);
-                network_queue_clear(con->client->recv_queue);
-                network_mysqld_queue_reset(con->client);
                 return 0;
             }
         }

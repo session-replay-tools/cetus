@@ -54,9 +54,9 @@ Cetus增加了全量日志的功能，即可以按需要输出经由Cetus的所�
 
 该参数控制全量日志功能是否可用，默认为OFF。该参数可配置的值有：OFF、ON和REALTIME。启动时若配置该参数为ON或是REALTIME，则启动后启动开启全量日志功能，该参数可以动态配置。ON和REALTIME的区别在于，REALTIME不仅将日志写入OS的缓存，同时调用fsync函数，将日志落盘。
 
-- sql-log-filename
+- sql-log-prefix
 
-该参数定义全量日志的文件名，但是不包括后缀，后缀默认均为.sql。该值默认为cetus_sql，该参数不能动态配置。
+该参数定义全量日志的文件名前缀，后缀默认均为.clg。该值默认为cetus，该参数不能动态配置。全量日志文件名组成为：前缀-进程号.后缀
 
 - sql-log-path
 

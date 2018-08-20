@@ -157,7 +157,7 @@ struct chassis_frontend_t {
 
     guint sql_log_bufsize;
     gchar *sql_log_switch;
-    gchar *sql_log_filename;
+    gchar *sql_log_prefix;
     gchar *sql_log_path;
     gint sql_log_maxsize;
     gchar *sql_log_mode;
@@ -201,7 +201,7 @@ chassis_frontend_new(void)
     frontend->group_replication_mode = 0;
     frontend->sql_log_bufsize = 0;
     frontend->sql_log_switch = NULL;
-    frontend->sql_log_filename = NULL;
+    frontend->sql_log_prefix = NULL;
     frontend->sql_log_path = NULL;
     frontend->sql_log_maxsize = -1;
     frontend->sql_log_mode = NULL;
@@ -245,7 +245,7 @@ chassis_frontend_free(struct chassis_frontend_t *frontend)
 
     g_free(frontend->remote_config_url);
     g_free(frontend->sql_log_switch);
-    g_free(frontend->sql_log_filename);
+    g_free(frontend->sql_log_prefix);
     g_free(frontend->sql_log_path);
     g_free(frontend->sql_log_mode);
 
@@ -523,10 +523,10 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                         "the log switch, ON/OFF/REALTIME","<string>",
                         assign_sql_log_switch, show_sql_log_switch, ALL_OPTS_PROPERTY);
     chassis_options_add(opts,
-                        "sql-log-filename",
-                         0, 0, OPTION_ARG_STRING, &(frontend->sql_log_filename),
+                        "sql-log-prefix",
+                         0, 0, OPTION_ARG_STRING, &(frontend->sql_log_prefix),
                          "the log filename","<string>",
-                         NULL, show_sql_log_filename, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
+                         NULL, show_sql_log_prefix, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
     chassis_options_add(opts,
                          "sql-log-path",
                           0, 0, OPTION_ARG_STRING, &(frontend->sql_log_path),
@@ -1194,8 +1194,8 @@ main_cmdline(int argc, char **argv)
                 GOTO_EXIT(EXIT_FAILURE);
             }
         }
-        if (frontend->sql_log_filename) {
-            srv->sql_mgr->sql_log_filename = g_strdup(frontend->sql_log_filename);
+        if (frontend->sql_log_prefix) {
+            srv->sql_mgr->sql_log_prefix = g_strdup(frontend->sql_log_prefix);
         }
         if (frontend->sql_log_path) {
             srv->sql_mgr->sql_log_path = g_strdup(frontend->sql_log_path);

@@ -1399,6 +1399,11 @@ void admin_set_config(network_mysqld_con* con, char* key, char* value)
 
     g_list_free(options);
 
+    if(0 == ret && !chassis_config_set_remote_options(con->srv->config_manager, key, value)) {
+        network_mysqld_con_send_error(con->client,C("Variable is set locally but cannot replace remote settings"));
+        return;
+    }
+
     if(0 == ret) {
         network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
     } else if(ASSIGN_NOT_SUPPORT == ret){
@@ -2094,6 +2099,8 @@ void admin_sql_log_status(network_mysqld_con* con) {
     APPEND_ROW_4_COL(rows, buffer, "sql-log-cached", cached, "Internal");
     gchar *cursize = g_strdup_printf("%lu", con->srv->sql_mgr->sql_log_cursize);
     APPEND_ROW_4_COL(rows, buffer, "sql-log-cursize", cursize, "Internal");
+
+    APPEND_ROW_3_COL(rows, "sql-log-fullname", con->srv->sql_mgr->sql_log_fullname == NULL ? "NULL" : con->srv->sql_mgr->sql_log_fullname, "Internal");
 
     network_mysqld_con_send_resultset(con->client, fields, rows);
 

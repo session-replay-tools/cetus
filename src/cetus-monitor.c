@@ -193,34 +193,34 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
         gchar old_master[ADDRESS_LEN] = {""};
 
         if(conn == NULL) {
-            g_debug("get connection failed. error: %d, text: %s, backend: %s",
+            g_message("get connection failed. error: %d, text: %s, backend: %s",
                                                                  mysql_errno(conn), mysql_error(conn), backend_addr);
             continue;
         }
 
         if(mysql_real_query(conn, L(sql1))) {
-            g_debug("select primary info failed for group_replication. error: %d, text: %s, backend: %s",
+            g_message("select primary info failed for group_replication. error: %d, text: %s, backend: %s",
                                            mysql_errno(conn), mysql_error(conn), backend_addr);
             continue;
         }
 
         rs_set = mysql_store_result(conn);
         if(rs_set == NULL) {
-            g_debug("get primary info result set failed for group_replication. error: %d, text: %s, backend: %s",
+            g_message("get primary info result set failed for group_replication. error: %d, text: %s, backend: %s",
                                                        mysql_errno(conn), mysql_error(conn), backend_addr);
             continue;
         }
 
         row = mysql_fetch_row(rs_set);
         if(row == NULL || row[0] == NULL || row[1] == NULL) {
-            g_debug("get primary info rows failed for group_replication. error: %d, text: %s, backend: %s",
+            g_message("get primary info rows failed for group_replication. error: %d, text: %s, backend: %s",
                                                                    mysql_errno(conn), mysql_error(conn), backend_addr);
             mysql_free_result(rs_set);
             continue;
         }
 
         if((get_ip_by_name(row[0], ip) != 0) || ip[0] == '\0') {
-            g_debug("get master ip by name failed. error: %d, text: %s, backend: %s",
+            g_message("get master ip by name failed. error: %d, text: %s, backend: %s",
                                                                    mysql_errno(conn), mysql_error(conn), backend_addr);
             mysql_free_result(rs_set);
             continue;
@@ -242,7 +242,7 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
         rs_set = NULL;
 
         if(master_addr[0] == '\0') {
-            g_debug("get master address failed. error: %d, text: %s, backend: %s",
+            g_message("get master address failed. error: %d, text: %s, backend: %s",
                                                                    mysql_errno(conn), mysql_error(conn), backend_addr);
             continue;
         }
@@ -250,28 +250,28 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
         if(strcasecmp(backend_addr, master_addr)) {
             conn = get_mysql_connection(monitor, master_addr);
             if(conn == NULL) {
-                g_debug("get connection failed. error: %d, text: %s, backend: %s",
+                g_message("get connection failed. error: %d, text: %s, backend: %s",
                                                                     mysql_errno(conn), mysql_error(conn), master_addr);
                 continue;
             }
         }
 
         if(mysql_real_query(conn, L(sql2))) {
-            g_debug("select slave info failed for group_replication. error: %d, text: %s, backend: %s",
+            g_message("select slave info failed for group_replication. error: %d, text: %s, backend: %s",
                                            mysql_errno(conn), mysql_error(conn), master_addr);
             continue;
         }
 
         rs_set = mysql_store_result(conn);
         if(rs_set == NULL) {
-            g_debug("get slave info result set failed for group_replication. error: %d, text: %s",
+            g_message("get slave info result set failed for group_replication. error: %d, text: %s",
                                                        mysql_errno(conn), mysql_error(conn));
             continue;
         }
         while(row=mysql_fetch_row(rs_set)) {
             memset(ip, 0, ADDRESS_LEN);
             if((get_ip_by_name(row[0], ip) != 0) || ip[0] == '\0') {
-                g_debug("get slave ip by name failed. error: %d, text: %s",
+                g_message("get slave ip by name failed. error: %d, text: %s",
                                                        mysql_errno(conn), mysql_error(conn));
                 mysql_free_result(rs_set);
                 continue;
@@ -280,9 +280,9 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
             snprintf(slave_addr, ADDRESS_LEN, "%s:%s", ip, row[1]);
             if(slave_addr[0] != '\0') {
                 slave_list = g_list_append(slave_list, strdup(slave_addr));
-                g_debug("add slave %s in list, %d", slave_addr, g_list_length(slave_list));
+                g_message("add slave %s in list, %d", slave_addr, g_list_length(slave_list));
             } else {
-                g_debug("get slave address failed. error: %d, text: %s",
+                g_message("get slave address failed. error: %d, text: %s",
                                                        mysql_errno(conn), mysql_error(conn));
             }
         }

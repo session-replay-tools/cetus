@@ -61,4 +61,5 @@ void admin_select_single_table(network_mysqld_con*);
 void admin_sql_log_start(network_mysqld_con* con);
 void admin_sql_log_stop(network_mysqld_con* con);
 void admin_sql_log_status(network_mysqld_con* con);
+void admin_kill_query(network_mysqld_con* con, int id);
 #endif // ADMIN_COMMANDS_H

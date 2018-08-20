@@ -308,6 +308,24 @@ network_mysqld_add_connection(chassis *srv, network_mysqld_con *con, gboolean li
     }
 }
 
+gboolean
+network_mysqld_kill_connection(chassis *srv, guint64 id)
+{
+    int i = 0;
+    for (i = 0; i < srv->priv->cons->len; ++i) {
+        network_mysqld_con* con = g_ptr_array_index(srv->priv->cons, i);
+        if (con->id == id) {
+            g_ptr_array_remove_index(srv->priv->cons, i);
+            con->server_to_be_closed = 1;
+            plugin_call_cleanup(srv, con);
+            g_message(G_STRLOC "kill query %lu", con->id);
+            network_mysqld_con_free(con);
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 static void
 cetus_clean_conn_data(network_mysqld_con *con)
 {
@@ -5099,5 +5117,4 @@ check_and_create_conns_func(int fd, short what, void *arg)
     struct timeval check_interval = {30, 0};
     chassis_event_add_with_timeout(chas, &chas->auto_create_conns_event, &check_interval);
 }
-
 

@@ -759,6 +759,7 @@ NETWORK_API void send_part_content_to_client(network_mysqld_con *con);
 NETWORK_API void set_conn_attr(network_mysqld_con *con, network_socket *server);
 NETWORK_API int network_mysqld_init(chassis *srv);
 NETWORK_API void network_mysqld_add_connection(chassis *srv, network_mysqld_con *con, gboolean listen);
+gboolean network_mysqld_kill_connection(chassis *srv, guint64 id);
 NETWORK_API void network_mysqld_con_handle(int event_fd, short events, void *user_data);
 NETWORK_API int network_mysqld_queue_append(network_socket *sock, network_queue *queue, const char *data, size_t len);
 NETWORK_API int network_mysqld_queue_append_raw(network_socket *sock, network_queue *queue, GString *data);

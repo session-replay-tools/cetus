@@ -458,3 +458,6 @@ cmd ::= SQL LOG START SEMI. {
 cmd ::= SQL LOG STOP SEMI. {
   admin_sql_log_stop(con);
 }
+cmd ::= KILL QUERY INTEGER(X) SEMI. {
+  admin_kill_query(con, token2int(X));
+}

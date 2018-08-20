@@ -1884,3 +1884,9 @@ void admin_sql_log_status(network_mysqld_con* con) {
     g_free(cached);
     g_free(cursize);
 }
+
+void admin_kill_query(network_mysqld_con* con, int id)
+{
+    gboolean ok = network_mysqld_kill_connection(con->srv, id);
+    network_mysqld_con_send_ok_full(con->client, ok ? 1 : 0, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+}

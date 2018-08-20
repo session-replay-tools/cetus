@@ -74,6 +74,8 @@ typedef int socklen_t;
 
 #define MAX_CACHED_ITEMS 65536
 
+extern int      cetus_last_process;
+
 /* judge if client_ip_with_username is in allow or deny ip_table*/
 static gboolean
 client_ip_table_lookup(GHashTable *ip_table, char *client_ip_with_username)
@@ -429,6 +431,11 @@ do_connect_cetus(network_mysqld_con *con, network_backend_t **backend, int *back
     challenge->server_version_str = version->str;
     g_string_free(version, FALSE);
     challenge->thread_id = g->thread_id++;
+
+    if (g->thread_id > g->max_thread_id) {
+        g->thread_id = 1 + (cetus_last_process << 24);
+        g_message("%s: rewind first thread id:%d", G_STRLOC, g->thread_id);
+    }
 
     GString *auth_packet = g_string_new(NULL);
     network_mysqld_proto_append_auth_challenge(auth_packet, challenge);

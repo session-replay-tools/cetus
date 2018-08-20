@@ -102,6 +102,8 @@
 #define E_NET_WOULDBLOCK EWOULDBLOCK
 #endif
 
+extern int      cetus_last_process;
+
 static void network_mysqld_self_con_handle(int event_fd, short events, void *user_data);
 
 /**
@@ -177,7 +179,7 @@ network_mysqld_priv_init(void)
     priv->backends = network_backends_new();
     priv->users = cetus_users_new();
     priv->monitor = cetus_monitor_new();
-    priv->thread_id = 1;
+
     return priv;
 }
 

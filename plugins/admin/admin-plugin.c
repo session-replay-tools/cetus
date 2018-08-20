@@ -471,10 +471,27 @@ int construct_channel_info(network_mysqld_con *con, char *sql)
         strncpy(ch.admin_sql, sql, len);
         g_message("%s:cetus_last_process:%d, ch admin sql:%s", 
                 G_STRLOC, cetus_last_process, ch.admin_sql);
+        if (con->ask_the_given_worker) {
+            int index = con->process_index;
+            g_message("%s: pass sql info to s:%i pid:%d to:%d", G_STRLOC,
+                    ch.basics.slot, ch.basics.pid, cetus_processes[index].pid);
+            /* TODO: AGAIN */
+            cetus_write_channel(cetus_processes[index].parent_child_channel[0],
+                    &ch, sizeof(cetus_channel_t));
+            int fd = cetus_processes[index].parent_child_channel[0];
+            g_debug("%s:fd:%d for network_read_sql_resp", G_STRLOC, fd);
+            event_set(&(cetus_processes[index].event), fd, EV_READ, network_read_sql_resp, con);
+            chassis_event_add_with_timeout(cycle, &(cetus_processes[index].event), NULL);
+            con->num_read_pending++;
+            g_debug("%s:con num_read_pending:%d", G_STRLOC, con->num_read_pending);
+            return 0;
+        }
+
         int num = cetus_last_process;
         if (con->ask_one_worker) {
             num = 1;
         }
+
         int i;
         for (i = 0; i < num; i++) {
             g_message("%s: pass sql info to s:%i pid:%d to:%d", G_STRLOC,
@@ -582,6 +599,7 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
     
     con->direct_answer = 0;
     con->ask_one_worker = 0;
+    con->ask_the_given_worker = 0;
     con->admin_read_merge = 0;
 
     visit_parser(con, con->orig_sql->str);

@@ -503,6 +503,11 @@ cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
         }
     }
 
+    cycle->priv->thread_id = 1 + (cetus_last_process << 24);
+    cycle->priv->max_thread_id = (cetus_last_process << 24) + (1 << 24) - 1;
+    g_message("%s: first thread id:%d, max thread id:%d", G_STRLOC,
+            cycle->priv->thread_id, cycle->priv->max_thread_id);
+
 #ifndef SIMPLE_PARSER
     cycle->dist_tran_id = g_random_int_range(0, 100000000);
     struct ifreq buffer;

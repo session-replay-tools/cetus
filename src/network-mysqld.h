@@ -570,8 +570,10 @@ struct network_mysqld_con {
     unsigned int direct_answer:1;
     unsigned int admin_read_merge:1;
     unsigned int ask_one_worker:1;
+    unsigned int ask_the_given_worker:1;
     unsigned int is_client_to_be_closed:1;
     unsigned int last_backend_type:2;
+    unsigned int process_index:6;
     unsigned int all_participate_num:8;
 
     unsigned long long xa_id;
@@ -754,6 +756,7 @@ struct chassis_private {
     struct cetus_variable_t *stats_variables;
     struct cetus_monitor_t *monitor;
     guint32 thread_id;
+    guint32 max_thread_id;
 };
 
 NETWORK_API network_socket_retval_t

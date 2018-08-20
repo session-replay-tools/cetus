@@ -420,6 +420,16 @@ void admin_show_connectionlist(network_mysqld_con *con, int show_count)
     fields = g_ptr_array_new_with_free_func((void *) network_mysqld_proto_fielddef_free);
 
     field = network_mysqld_proto_fielddef_new();
+    field->name = g_strdup("PID");
+    field->type = MYSQL_TYPE_STRING;
+    g_ptr_array_add(fields, field);
+
+    field = network_mysqld_proto_fielddef_new();
+    field->name = g_strdup("ThreadID");
+    field->type = MYSQL_TYPE_STRING;
+    g_ptr_array_add(fields, field);
+
+    field = network_mysqld_proto_fielddef_new();
     field->name = g_strdup("User");
     field->type = MYSQL_TYPE_STRING;
     g_ptr_array_add(fields, field);
@@ -488,6 +498,8 @@ void admin_show_connectionlist(network_mysqld_con *con, int show_count)
     len = priv->cons->len;
     int count = 0;
 
+    cetus_pid_t process_id = getpid();
+
     for (i = 0; i < len; i++) {
         network_mysqld_con *con = priv->cons->pdata[i];
 
@@ -502,6 +514,13 @@ void admin_show_connectionlist(network_mysqld_con *con, int show_count)
         count++;
 
         row = g_ptr_array_new_with_free_func(g_free);
+
+        sprintf(buffer, "%d", process_id);
+        g_ptr_array_add(row, g_strdup(buffer));
+
+        sprintf(buffer, "%d", con->client->challenge->thread_id);
+        g_ptr_array_add(row, g_strdup(buffer));
+
         if (con->client->response != NULL) {
             g_ptr_array_add(row, g_strdup(con->client->response->username->str));
         } else {
@@ -1483,6 +1502,23 @@ void admin_config_reload(network_mysqld_con* con, char* object)
     }
 }
 
+void admin_kill_query(network_mysqld_con* con, unsigned int thread_id)
+{
+    if (con->is_admin_client) {
+        con->process_index = thread_id >> 24;
+
+        if (con->process_index > cetus_last_process) {
+            con->direct_answer = 1;
+            network_mysqld_con_send_error(con->client, C("thread id is not correct"));
+        } else {
+            con->ask_the_given_worker = 1;
+        }
+
+        return;
+    }
+
+}
+
 void admin_reset_stats(network_mysqld_con* con)
 {
     if (con->is_admin_client) {
@@ -1946,11 +1982,13 @@ void admin_save_settings(network_mysqld_con *con)
         network_mysqld_con_send_error_full(con->client, L(msg), 1066, "28000");
     }
 }
+
 void admin_compatible_cmd(network_mysqld_con* con)
 {
     con->direct_answer = 1;
     network_mysqld_con_send_ok(con->client);
 }
+
 void admin_show_databases(network_mysqld_con* con)
 {
     g_debug("%s:call admin_show_databases", G_STRLOC);

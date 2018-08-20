@@ -573,6 +573,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(execute_admin_query)
 
     visit_parser(con, sql);
 
+    return NETWORK_SOCKET_SUCCESS;
 }
 
 static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)

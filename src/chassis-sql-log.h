@@ -17,7 +17,7 @@
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
 #define GET_COM_NAME(com_type) \
-     ((((gushort)com_type) >= 0 && ((gushort)com_type) <= 31) ? com_command_name[((gushort)com_type)].com_str : "UNKNOWN TYPE")
+     ((((gushort)com_type) <= 31) ? com_command_name[((gushort)com_type)].com_str : "UNKNOWN TYPE")
 #define GET_COM_STRING(query) GET_COM_NAME((query)->str[0]), ((query)->len > 1 ? ((query)->str + 1) : "")
 
 typedef struct com_string {

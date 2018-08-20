@@ -512,8 +512,12 @@ cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
     cycle->dist_tran_id = g_random_int_range(0, 100000000);
     struct ifreq buffer;
     int s = socket(PF_INET, SOCK_DGRAM, 0);
+    if (s == -1) {
+        g_message("%s: socket error:%s", G_STRLOC, strerror(errno));
+        exit(0);
+    }
     memset(&buffer, 0, sizeof(buffer));
-    strcpy(buffer.ifr_name, cycle->ifname);
+    strncpy(buffer.ifr_name, cycle->ifname, IFNAMSIZ - 1);
     ioctl(s, SIOCGIFHWADDR, &buffer);
     close(s);
 
@@ -593,14 +597,7 @@ cetus_worker_process_init(cetus_cycle_t *cycle, int worker)
     sigset_t           set;
     int                n;
     unsigned int       i;
-    cetus_cpuset_t    *cpu_affinity;
     struct rlimit      rlmt;
-
-    if (worker >= 0) {
-        if (cpu_affinity) {
-            cetus_setaffinity(cpu_affinity);
-        }
-    }
 
     sigemptyset(&set);
 

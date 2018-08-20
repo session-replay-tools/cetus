@@ -1303,7 +1303,7 @@ void admin_get_stats(network_mysqld_con* con, char* p)
         APPEND_ROW_2_COL(rows, "proxyed_query.rw", buf2);
     } else if (strcasecmp(p, "query_time_table") == 0) {
         int i = 0;
-        for (i; stats->query_time_table[i] && i < MAX_QUERY_TIME; ++i) {
+        for (i; i < MAX_QUERY_TIME && stats->query_time_table[i]; ++i) {
             GPtrArray* row = g_ptr_array_new_with_free_func(g_free);
             g_ptr_array_add(row, g_strdup_printf("query_time_table.%d", i+1));
             g_ptr_array_add(row, g_strdup_printf("%lu", stats->query_time_table[i]));
@@ -1311,7 +1311,7 @@ void admin_get_stats(network_mysqld_con* con, char* p)
         }
     } else if (strcasecmp(p, "query_wait_table") == 0) {
         int i = 0;
-        for (i; stats->query_wait_table[i] && i < MAX_WAIT_TIME; ++i) {
+        for (i; i < MAX_WAIT_TIME && stats->query_wait_table[i]; ++i) {
             GPtrArray* row = g_ptr_array_new_with_free_func(g_free);
             g_ptr_array_add(row, g_strdup_printf("query_wait_table.%d", i+1));
             g_ptr_array_add(row, g_strdup_printf("%lu", stats->query_wait_table[i]));
@@ -2057,13 +2057,15 @@ void admin_select_single_table(network_mysqld_con* con)
 }
 
 void admin_sql_log_start(network_mysqld_con* con) {
-    if (con->is_admin_client) {
-        return;
-    }
     if (!con || !con->srv || !con->srv->sql_mgr) {
         network_mysqld_con_send_error(con->client, C("Unexpected error"));
         return;
     }
+    
+    if (con->is_admin_client) {
+        return;
+    }
+
     if (con->srv->sql_mgr->sql_log_switch == OFF) {
         network_mysqld_con_send_error(con->client, C("can not start sql log thread, because sql-log-switch = OFF"));
         return;
@@ -2077,13 +2079,15 @@ void admin_sql_log_start(network_mysqld_con* con) {
 }
 
 void admin_sql_log_stop(network_mysqld_con* con) {
-    if (con->is_admin_client) {
-        return;
-    }
     if (!con || !con->srv || !con->srv->sql_mgr) {
         network_mysqld_con_send_error(con->client, C("Unexpected error"));
         return;
     }
+    
+    if (con->is_admin_client) {
+        return;
+    }
+
     if (con->srv->sql_mgr->sql_log_action == SQL_LOG_START) {
         con->srv->sql_mgr->sql_log_action = SQL_LOG_UNKNOWN;
         network_mysqld_con_send_ok(con->client);
@@ -2093,14 +2097,16 @@ void admin_sql_log_stop(network_mysqld_con* con) {
 }
 
 void admin_sql_log_status(network_mysqld_con* con) {
-    if (con->is_admin_client) {
-        con->admin_read_merge = 1;
-        return;
-    }
     if (!con || !con->srv || !con->srv->sql_mgr) {
         network_mysqld_con_send_error(con->client, C("Unexpected error"));
         return;
     }
+    
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
+        return;
+    }
+
     gchar* pattern = g_strdup("%sql-log-%");
     GList *options = admin_get_all_options(con->srv);
 

@@ -1,8 +1,9 @@
 #include "chassis-sql-log.h"
 #include "network-mysqld-packet.h"
+#include "cetus-process.h"
 #include <sys/stat.h>
 #include <sys/types.h>
-#include<unistd.h>
+#include <unistd.h>
 
 const COM_STRING com_command_name[]={
     { C("Sleep") },
@@ -244,7 +245,7 @@ static void sql_log_check_rotate(struct sql_log_mgr *mgr) {
     localtime_r(&t, &cur_tm);
 
     gchar *rotate_filename = g_strdup_printf("%s/%s-%d-%04d%02d%02d%02d%02d%02d.%s",
-            mgr->sql_log_path, mgr->sql_log_prefix, getpid(),
+            mgr->sql_log_path, mgr->sql_log_prefix, cetus_pid,
             cur_tm.tm_year + 1900, cur_tm.tm_mon + 1, cur_tm.tm_mday, cur_tm.tm_hour,
             cur_tm.tm_min, cur_tm.tm_sec, SQL_LOG_DEF_SUFFIX);
     if (!rotate_filename) {
@@ -351,7 +352,8 @@ sql_log_thread_start(struct sql_log_mgr *mgr) {
          }
      }
      if (mgr->sql_log_fullname == NULL) {
-         mgr->sql_log_fullname = g_strdup_printf("%s/%s-%d.%s", mgr->sql_log_path, mgr->sql_log_prefix, getpid(), SQL_LOG_DEF_SUFFIX);
+         mgr->sql_log_fullname = g_strdup_printf("%s/%s-%d.%s",
+                 mgr->sql_log_path, mgr->sql_log_prefix, cetus_pid, SQL_LOG_DEF_SUFFIX);
      }
      mgr->fifo = rfifo_alloc(mgr->sql_log_bufsize);
      mgr->sql_log_filelist = g_queue_new();

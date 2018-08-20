@@ -207,7 +207,7 @@ chassis_log_write(chassis_log *log, int log_level, GString *str)
     int log_fd = log->log_file_fd;
 
     if (log_fd == -1) {
-        return;
+        return -1;
     }
 
     p = buffer;

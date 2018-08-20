@@ -432,7 +432,7 @@ log_sql_backend(network_mysqld_con *con, injection *inj)
                                               inj->id, inj->bytes, inj->rows,
                                               latency_ms, inj->qstat.query_status == MYSQLD_PACKET_OK ? "OK" : "ERR",
                                               GET_COM_NAME(con->parse.command),//type
-                                              con->parse.command == 23 ? "" : (inj->query != NULL ? GET_COM_STRING(inj->query) : ""));//sql
+                                              con->parse.command == COM_STMT_EXECUTE ? "" : (inj->query != NULL ? GET_COM_STRING(inj->query) : ""));//sql
 
      rfifo_write(mgr->fifo, message->str, message->len);
      g_string_free(message, TRUE);

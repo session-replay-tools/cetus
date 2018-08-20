@@ -18,7 +18,8 @@
 
 #define GET_COM_NAME(com_type) \
      ((((gushort)com_type) <= 31) ? com_command_name[((gushort)com_type)].com_str : "UNKNOWN TYPE")
-#define GET_COM_STRING(query) GET_COM_NAME((query)->str[0]), ((query)->len > 1 ? ((query)->str + 1) : "")
+
+#define GET_COM_STRING(query) ((query)->len > 1 ? ((query)->str + 1) : "")
 
 typedef struct com_string {
     char *com_str;

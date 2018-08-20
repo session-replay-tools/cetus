@@ -2057,7 +2057,7 @@ void admin_select_single_table(network_mysqld_con* con)
 }
 
 void admin_sql_log_start(network_mysqld_con* con) {
-    if (!con || !con->srv || !con->srv->sql_mgr) {
+    if (!con->srv->sql_mgr) {
         network_mysqld_con_send_error(con->client, C("Unexpected error"));
         return;
     }
@@ -2079,7 +2079,7 @@ void admin_sql_log_start(network_mysqld_con* con) {
 }
 
 void admin_sql_log_stop(network_mysqld_con* con) {
-    if (!con || !con->srv || !con->srv->sql_mgr) {
+    if (!con->srv->sql_mgr) {
         network_mysqld_con_send_error(con->client, C("Unexpected error"));
         return;
     }
@@ -2097,7 +2097,7 @@ void admin_sql_log_stop(network_mysqld_con* con) {
 }
 
 void admin_sql_log_status(network_mysqld_con* con) {
-    if (!con || !con->srv || !con->srv->sql_mgr) {
+    if (!con->srv->sql_mgr) {
         network_mysqld_con_send_error(con->client, C("Unexpected error"));
         return;
     }

@@ -4225,7 +4225,7 @@ network_mysqld_con_accept(int G_GNUC_UNUSED event_fd, short events, void *user_d
 
     network_mysqld_add_connection(listen_con->srv, client_con, FALSE);
 
-    client_con->key = client_con->srv->sess_key++;
+    client_con->id = client_con->srv->sess_key++; /*TODO: duplicate check */
 
     /**
      * inherit the config to the new connection 

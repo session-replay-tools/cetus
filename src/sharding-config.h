@@ -99,7 +99,7 @@ GPtrArray *shard_conf_get_any_group(GPtrArray *groups, const char *db, const cha
 GPtrArray *shard_conf_get_all_groups(GPtrArray *groups);
 
 /* same fixture will get same group */
-GPtrArray *shard_conf_get_fixed_group(GPtrArray *groups, guint32 fixture);
+GPtrArray *shard_conf_get_fixed_group(GPtrArray *groups, guint64 fixture);
 
 GPtrArray *shard_conf_get_table_groups(GPtrArray *visited_groups,
                                        const char *db, const char *table);

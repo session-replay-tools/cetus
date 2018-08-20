@@ -392,7 +392,7 @@ explain_shard_sql(network_mysqld_con *con, sharding_plan_t *plan)
 
     shard_plugin_con_t *st = con->plugin_con_state;
 
-    rv = sharding_parse_groups(con->client->default_db, st->sql_context, &(con->srv->query_stats), con->key, plan);
+    rv = sharding_parse_groups(con->client->default_db, st->sql_context, &(con->srv->query_stats), con->id, plan);
 
     con->modified_sql = sharding_modify_sql(st->sql_context, &(con->hav_condi));
     if (con->modified_sql) {
@@ -832,7 +832,7 @@ process_init_db_when_get_server_list(network_mysqld_con *con, sharding_plan_t *p
     } else {
         name_len = name_len - 1;
         network_mysqld_proto_get_str_len(&packet, &db_name, name_len);
-        shard_conf_get_fixed_group(groups, con->key);
+        shard_conf_get_fixed_group(groups, con->id);
     }
 
     if (groups->len > 0) {      /* has database */
@@ -1201,7 +1201,8 @@ proxy_get_server_list(network_mysqld_con *con)
         }
         break;
     default:
-        rv = sharding_parse_groups(con->client->default_db, st->sql_context, stats, con->key, plan);
+        rv = sharding_parse_groups(con->client->default_db, st->sql_context,
+                                   stats, con->id, plan);
         break;
     }
 

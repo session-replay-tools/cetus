@@ -385,6 +385,11 @@ void admin_show_connectionlist(network_mysqld_con *admin_con, int show_count)
     fields = g_ptr_array_new_with_free_func((void *) network_mysqld_proto_fielddef_free);
 
     field = network_mysqld_proto_fielddef_new();
+    field->name = g_strdup("Id");
+    field->type = MYSQL_TYPE_STRING;
+    g_ptr_array_add(fields, field);
+
+    field = network_mysqld_proto_fielddef_new();
     field->name = g_strdup("User");
     field->type = MYSQL_TYPE_STRING;
     g_ptr_array_add(fields, field);
@@ -467,6 +472,7 @@ void admin_show_connectionlist(network_mysqld_con *admin_con, int show_count)
         count++;
 
         row = g_ptr_array_new_with_free_func(g_free);
+        g_ptr_array_add(row, g_strdup_printf("%lu", con->id));
         if (con->client->response != NULL) {
             g_ptr_array_add(row, g_strdup(con->client->response->username->str));
         } else {

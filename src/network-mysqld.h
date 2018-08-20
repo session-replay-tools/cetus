@@ -510,7 +510,7 @@ struct network_mysqld_con {
     int num_servers_visited;
     int num_write_pending;
     int num_read_pending;
-    unsigned int key;
+    guint64 id; /* session id */
 
     mysqld_query_attr_t query_attr;
 

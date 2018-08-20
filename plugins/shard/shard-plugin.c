@@ -1201,7 +1201,8 @@ proxy_get_server_list(network_mysqld_con *con)
         }
         break;
     default:
-        rv = sharding_parse_groups(con->client->default_db, st->sql_context, stats, con->key, plan);
+        rv = sharding_parse_groups(con->client->default_db, st->sql_context,
+                                   stats, con->key, plan);
         break;
     }
 

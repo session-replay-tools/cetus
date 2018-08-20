@@ -518,8 +518,12 @@ void admin_show_connectionlist(network_mysqld_con *con, int show_count)
         sprintf(buffer, "%d", process_id);
         g_ptr_array_add(row, g_strdup(buffer));
 
-        sprintf(buffer, "%d", con->client->challenge->thread_id);
-        g_ptr_array_add(row, g_strdup(buffer));
+        if (con->client->challenge)  {
+            sprintf(buffer, "%d", con->client->challenge->thread_id);
+            g_ptr_array_add(row, g_strdup(buffer));
+        } else {
+            g_ptr_array_add(row, NULL);
+        }
 
         if (con->client->response != NULL) {
             g_ptr_array_add(row, g_strdup(con->client->response->username->str));
@@ -1502,7 +1506,7 @@ void admin_config_reload(network_mysqld_con* con, char* object)
     }
 }
 
-void admin_kill_query(network_mysqld_con* con, unsigned int thread_id)
+void admin_kill_query(network_mysqld_con* con, guint32 thread_id)
 {
     if (con->is_admin_client) {
         con->process_index = thread_id >> 24;
@@ -1516,6 +1520,9 @@ void admin_kill_query(network_mysqld_con* con, unsigned int thread_id)
 
         return;
     }
+
+    gboolean ok = network_mysqld_kill_connection(con->srv, thread_id);
+    network_mysqld_con_send_ok_full(con->client, ok ? 1 : 0, 0, SERVER_STATUS_AUTOCOMMIT, 0);
 
 }
 

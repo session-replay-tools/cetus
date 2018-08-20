@@ -37,7 +37,7 @@
 #define USE_PREVIOUS_TRAN_CONNS 9
 #define ERROR_UNPARSABLE -1
 
-NETWORK_API int sharding_parse_groups(GString *, sql_context_t *, query_stats_t *, unsigned int, sharding_plan_t *);
+NETWORK_API int sharding_parse_groups(GString *, sql_context_t *, query_stats_t *, guint64, sharding_plan_t *);
 
 NETWORK_API GString *sharding_modify_sql(sql_context_t *, having_condition_t *);
 

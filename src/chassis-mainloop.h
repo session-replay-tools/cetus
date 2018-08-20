@@ -126,7 +126,7 @@ struct chassis {
     char *default_charset;
     char *default_hashed_pwd;
 
-    unsigned int sess_key;
+    guint64 sess_key;
     unsigned int maintain_close_mode;
     unsigned int disable_threads;
     int ssl;

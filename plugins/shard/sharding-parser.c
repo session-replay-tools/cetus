@@ -1484,7 +1484,7 @@ routing_by_property(sql_context_t *context, sql_property_t *property, char *defa
 
 int
 sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t *stats,
-                      guint32 fixture, sharding_plan_t *plan)
+                      guint64 fixture, sharding_plan_t *plan)
 {
     GPtrArray *groups = g_ptr_array_new();
     if (context == NULL) {

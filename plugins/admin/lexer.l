@@ -99,6 +99,8 @@
 "LOG" return TK_LOG;
 "START" return TK_START;
 "STOP" return TK_STOP;
+"KILL" return TK_KILL;
+"QUERY" return TK_QUERY;
 
 [0-9]+                 return TK_INTEGER; /*sign symbol is handled in parser*/
 

@@ -309,6 +309,31 @@ network_mysqld_add_connection(chassis *srv, network_mysqld_con *con, gboolean li
     }
 }
 
+gboolean
+network_mysqld_kill_connection(chassis *srv, guint32 id)
+{
+    int i;
+        
+    for (i = 0; i < srv->priv->cons->len; ++i) {
+        network_mysqld_con* con = g_ptr_array_index(srv->priv->cons, i);
+
+        if (!con->client || !con->client->challenge) {
+            continue;
+        }
+
+        if (con->client->challenge->thread_id == id) {
+            g_ptr_array_remove_index(srv->priv->cons, i);
+            con->server_to_be_closed = 1;
+            plugin_call_cleanup(srv, con);
+            g_message(G_STRLOC "kill query %u", (unsigned int) id);
+            network_mysqld_con_free(con);
+            return TRUE;
+        }
+    }
+
+    return FALSE;
+}
+
 static void
 cetus_clean_conn_data(network_mysqld_con *con)
 {
@@ -4223,7 +4248,7 @@ network_mysqld_con_accept(int G_GNUC_UNUSED event_fd, short events, void *user_d
     network_mysqld_add_connection(listen_con->srv, client_con, FALSE);
 
     client_con->key = client_con->srv->sess_key++;
-    g_message("%s: accept a new client connection, sess key:%d", G_STRLOC, client_con->key);
+    g_message("%s: accept a new client connection", G_STRLOC);
 
     /**
      * inherit the config to the new connection 
@@ -5098,5 +5123,4 @@ check_and_create_conns_func(int fd, short what, void *arg)
     struct timeval check_interval = {30, 0};
     chassis_event_add_with_timeout(chas, &chas->auto_create_conns_event, &check_interval);
 }
-
 

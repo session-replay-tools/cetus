@@ -542,10 +542,14 @@ skip_field(network_packet *packet, guint skip)
     return 0;
 }
 
-#define MAX_ORDER_BY_ITEMS 16
+#define MAX_ORDER_BY_ITEMS 32
 
+/**
+ * @breif For all ORDER-BY columns, get their offsets inside Row-Packet
+ * @return At most 4 offset values embedded in a 64-bit integer: 4 * int16_t --> int64_t
+ */
 static guint64
-set_rec_fields_off(network_packet *packet, ORDER_BY order_array[], int order_array_size)
+get_field_offsets(network_packet *packet, ORDER_BY order_array[], int order_array_size)
 {
     int i, max_pos = 0;
     int orderby_count = MIN(order_array_size, 4);
@@ -573,7 +577,7 @@ set_rec_fields_off(network_packet *packet, ORDER_BY order_array[], int order_arr
 
     guint iter;
     for (iter = 0; iter < max_pos; iter++) {
-        if (packet->data->str[packet->offset] == MYSQLD_PACKET_NULL) {
+        if (packet->data->str[packet->offset] == (char)MYSQLD_PACKET_NULL) {
             network_mysqld_proto_skip(packet, 1);
         } else {
             if (network_mysqld_proto_skip_lenenc_str(packet) == -1) {
@@ -1363,56 +1367,57 @@ compare_records_from_column(char *str1, char *str2, int com_type, int desc, int 
     return 0;
 }
 
+/* short means 16-bit integer */
+static guint16 get_nth_short(guint64 base, int n)
+{
+    g_assert(n < 4);
+    int i;
+    guint64 mask = 0xFFFF;
+    for (i = 0; i < n; i++) {
+        mask = mask << 16;
+    }
+    guint64 value = mask & base;
+
+    for (i = 0; i < n; i++) {
+        value = value >> 16;
+    }
+    return value;
+}
+
 static int
 compare_records_by_str(network_packet *packet1, network_packet *packet2,
                        order_by_para_t *para, int pkt1_index, int pkt2_index, int i, int *result)
 {
-    int j;
     char str1[MAX_COL_VALUE_LEN] = { 0 };
     char str2[MAX_COL_VALUE_LEN] = { 0 };
     ORDER_BY *ob = &(para->order_array[i]);
 
-    guint64 mask = 0xFFFF;
-    for (j = 0; j < i; j++) {
-        mask = mask << 16;
-    }
-
-    uint64_t value1, value2;
-    if (para->field_index[pkt1_index]) {
-        value1 = para->field_index[pkt1_index];
+    uint64_t offsets_1, offsets_2;
+    if (para->field_offsets_cache[pkt1_index]) {
+        offsets_1 = para->field_offsets_cache[pkt1_index];
     } else {
-        value1 = set_rec_fields_off(packet1, para->order_array, para->order_array_size);
-        para->field_index[pkt1_index] = value1;
+        offsets_1 = get_field_offsets(packet1, para->order_array, para->order_array_size);
+        para->field_offsets_cache[pkt1_index] = offsets_1;
     }
 
-    guint64 expect_value = mask & value1;
-
-    for (j = 0; j < i; j++) {
-        expect_value = expect_value >> 16;
+    guint offset = get_nth_short(offsets_1, i);
+    if (offset == 0) {
+        offset = NET_HEADER_SIZE;
     }
+    packet1->offset = offset;
 
-    if (expect_value == 0) {
-        expect_value = NET_HEADER_SIZE;
-    }
-    packet1->offset = (guint)(intptr_t) expect_value;
-
-    if (para->field_index[pkt2_index]) {
-        value2 = para->field_index[pkt2_index];
+    if (para->field_offsets_cache[pkt2_index]) {
+        offsets_2 = para->field_offsets_cache[pkt2_index];
     } else {
-        value2 = set_rec_fields_off(packet2, para->order_array, para->order_array_size);
-        para->field_index[pkt2_index] = value2;
+        offsets_2 = get_field_offsets(packet2, para->order_array, para->order_array_size);
+        para->field_offsets_cache[pkt2_index] = offsets_2;
     }
 
-    expect_value = mask & value2;
-
-    for (j = 0; j < i; j++) {
-        expect_value = expect_value >> 16;
+    offset = get_nth_short(offsets_2, i);
+    if (offset == 0) {
+        offset = NET_HEADER_SIZE;
     }
-
-    if (expect_value == 0) {
-        expect_value = NET_HEADER_SIZE;
-    }
-    packet2->offset = (guint)(intptr_t) expect_value;
+    packet2->offset = offset;
 
     network_mysqld_proto_get_column(packet1, str1, MAX_COL_VALUE_LEN);
     network_mysqld_proto_get_column(packet2, str2, MAX_COL_VALUE_LEN);
@@ -2106,7 +2111,7 @@ do_sort_merge(network_mysqld_con *con, merge_parameters_t *data, int is_finished
     heap_type *heap = data->heap;
     int *row_cnter = &(data->row_cnter);
     int *off_pos = &(data->off_pos);
-    uint64_t *field_index = heap->order_para.field_index;
+    uint64_t *field_offsets = heap->order_para.field_offsets_cache;
 
     GList *candidate = NULL;
 
@@ -2142,7 +2147,7 @@ do_sort_merge(network_mysqld_con *con, merge_parameters_t *data, int is_finished
         }
 
         candidate = heap->element[0]->record;
-        field_index[cand_index] = 0;
+        field_offsets[cand_index] = 0;
 
         g_debug("%s: row counter:%d", G_STRLOC, (int)(*row_cnter));
 

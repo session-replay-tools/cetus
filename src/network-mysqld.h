@@ -649,7 +649,6 @@ struct network_mysqld_con {
     char last_backends_type[MAX_SERVER_NUM];
 
     struct sharding_plan_t *sharding_plan;
-    struct query_queue_t *recent_queries;
     void *data;
 };
 

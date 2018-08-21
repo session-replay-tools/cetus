@@ -51,10 +51,6 @@
 #include "chassis-options-utils.h"
 #include "chassis-sql-log.h"
 
-#ifdef NETWORK_DEBUG_TRACE_STATE_CHANGES
-#include "cetus-query-queue.h"
-#endif
-
 #ifndef PLUGIN_VERSION
 #ifdef CHASSIS_BUILD_TAG
 #define PLUGIN_VERSION CHASSIS_BUILD_TAG
@@ -253,10 +249,6 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
         con->state = ST_ERROR;
         return NETWORK_SOCKET_SUCCESS;
     }
-#ifdef NETWORK_DEBUG_TRACE_STATE_CHANGES
-    query_queue_append(con->recent_queries, p.data);
-#endif
-
     int is_process_stopped = 0;
     int rc;
 
@@ -964,9 +956,6 @@ process_rv_use_previous_tran_conns(network_mysqld_con *con, sharding_plan_t *pla
         con->is_auto_commit_trans_buffered = 0;
         con->is_start_trans_buffered = 0;
         g_debug("%s: buffer_and_send_fake_resp set true:%p", G_STRLOC, con);
-#ifdef NETWORK_DEBUG_TRACE_STATE_CHANGES
-        query_queue_dump(con->recent_queries);
-#endif
     } else {
         if (con->servers->len > 1) {
             if (!con->dist_tran) {
@@ -2178,7 +2167,6 @@ static gchar*
 show_proxy_read_only_backend_address(gpointer param) {
     gchar *ret = NULL;
     struct external_param *opt_param = (struct external_param *)param;
-    chassis *srv = opt_param->chas;
     gint opt_type = opt_param->opt_type;
     network_backends_t *bs = opt_param->chas->priv->backends;
     if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
@@ -2208,7 +2196,6 @@ static gchar*
 show_proxy_backend_addresses(gpointer param) {
     gchar *ret = NULL;
     struct external_param *opt_param = (struct external_param *)param;
-    chassis *srv = opt_param->chas;
     gint opt_type = opt_param->opt_type;
     network_backends_t *bs = opt_param->chas->priv->backends;
     if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {

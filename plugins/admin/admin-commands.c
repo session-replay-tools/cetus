@@ -1078,7 +1078,6 @@ void admin_update_backend(network_mysqld_con* con, GList* equations,
 void admin_delete_backend(network_mysqld_con* con, char *key, char *val)
 {
     chassis_private *g = con->srv->priv;
-    int affected_rows = 0;
     int backend_ndx = -1;
     if (strcasecmp(key, "backend_ndx")==0) {
         backend_ndx = atoi(val);

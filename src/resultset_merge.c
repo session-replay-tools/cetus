@@ -2449,29 +2449,6 @@ check_dist_tran_resultset(network_queue *recv_queue, network_mysqld_con *con)
     return 0;
 }
 
-static int
-log_packet_error_info(network_socket *client, network_socket *server, char *orig_sql,
-                      GString *packet_str, uint64_t uniq_id)
-{
-    network_mysqld_err_packet_t *err_packet;
-    network_packet packet;
-
-    packet.data = packet_str;
-    packet.offset = NET_HEADER_SIZE;
-
-    err_packet = network_mysqld_err_packet_new();
-
-    if (network_mysqld_proto_get_err_packet(&packet, err_packet)) {
-        g_message("%s:dst:%s, sql:%s", G_STRLOC, server->dst->name->str, orig_sql);
-        network_mysqld_err_packet_free(err_packet);
-        return -1;
-    }
-
-    g_message("%s:dst:%s,sql:%s,errmsg:%s", G_STRLOC, server->dst->name->str, orig_sql, err_packet->errmsg->str);
-
-    network_mysqld_err_packet_free(err_packet);
-    return 0;
-}
 
 static int
 merge_for_modify(sql_context_t *context, network_queue *send_queue, GPtrArray *recv_queues,
@@ -2810,7 +2787,7 @@ merge_for_admin(network_queue *send_queue, GPtrArray *recv_queues,
         network_mysqld_con *con, cetus_result_t *res_merge, result_merge_t *merged_result)
 {
     int p;
-    char *orig_sql = con->orig_sql->str;
+
     for (p = 0; p < recv_queues->len; p++) {
         network_queue *recv_q = g_ptr_array_index(recv_queues, p);
         GString *pkt = g_queue_peek_head(recv_q->chunks);

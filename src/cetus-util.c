@@ -29,42 +29,6 @@
 #include "glib-ext.h"
 #include "cetus-util.h"
 
-void
-cetus_string_dequote(char *z)
-{
-    int quote;
-    int i, j;
-    if (z == 0)
-        return;
-    quote = z[0];
-    switch (quote) {
-    case '\'':
-        break;
-    case '"':
-        break;
-    case '`':
-        break;                  /* For MySQL compatibility */
-    default:
-        return;
-    }
-    for (i = 1, j = 0; z[i]; i++) {
-        if (z[i] == quote) {
-            if (z[i + 1] == quote) {    /* quote escape */
-                z[j++] = quote;
-                i++;
-            } else {
-                z[j++] = 0;
-                break;
-            }
-        } else if (z[i] == '\\') {  /* slash escape */
-            i++;
-            z[j++] = z[i];
-        } else {
-            z[j++] = z[i];
-        }
-    }
-}
-
 gboolean
 try_get_int_value(const gchar *option_value, gint *return_value)
 {

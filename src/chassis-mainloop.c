@@ -273,20 +273,6 @@ chassis_is_shutdown()
     return signal_shutdown == 1 || cetus_terminate == 1;
 }
 
-static void
-sighup_handler(int G_GNUC_UNUSED fd, short G_GNUC_UNUSED event_type, void *_data)
-{
-    chassis *chas = _data;
-
-    /* this should go into the old logfile */
-    g_message("received a SIGHUP, closing log file");
-
-    chassis_log_set_logrotate(chas->log);
-
-    /* ... and this into the new one */
-    g_message("re-opened log file after SIGHUP");
-}
-
 /**
  * forward libevent messages to the glib error log
  */
@@ -313,7 +299,6 @@ int
 chassis_mainloop(void *_chas)
 {
     chassis *chas = _chas;
-    guint i;
 
     /* redirect logging from libevent to glib */
     event_set_log_callback(event_log_use_glib);

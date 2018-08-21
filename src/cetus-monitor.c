@@ -389,8 +389,8 @@ gint
 check_hostname(network_backend_t *backend)
 {
      gint ret = 0;
-     gchar *p = NULL;
      if (!backend) return ret;
+
      gchar old_addr[INET_ADDRSTRLEN] = {""};
      inet_ntop(AF_INET, &(backend->addr->addr.ipv4.sin_addr), old_addr, sizeof(old_addr));
      if (0 != network_address_set_address(backend->addr, backend->address->str)) {

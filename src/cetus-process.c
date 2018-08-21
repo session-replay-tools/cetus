@@ -135,7 +135,6 @@ pid_t
 cetus_spawn_process(cetus_cycle_t *cycle, cetus_spawn_proc_pt proc, void *data,
     char *name, int respawn)
 {
-    u_long       on;
     pid_t  pid;
     int  s;
 
@@ -313,12 +312,8 @@ cetus_init_signals()
 static void 
 cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
 {
-    char            *action;
-    int              ignore;
     int              err;
     cetus_signal_t  *sig;
-
-    ignore = 0;
 
     err =  errno;
 
@@ -328,8 +323,6 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
         }
     }
 
-    action = "";
-
     switch (cetus_process) {
 
     case CETUS_PROCESS_MASTER:
@@ -338,29 +331,23 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
 
         case cetus_signal_value(CETUS_SHUTDOWN_SIGNAL):
             cetus_quit = 1;
-            action = ", shutting down";
             break;
 
         case cetus_signal_value(CETUS_TERMINATE_SIGNAL):
         case SIGINT:
             cetus_terminate = 1;
-            action = ", exiting";
             break;
 
         case cetus_signal_value(CETUS_NOACCEPT_SIGNAL):
             cetus_noaccept = 1;
-            action = ", stop accepting connections";
             break;
 
         case cetus_signal_value(CETUS_CHANGEBIN_SIGNAL):
             if (getppid() == cetus_parent || cetus_new_binary > 0) {
-                action = ", ignoring";
-                ignore = 1;
                 break;
             }
 
             cetus_change_binary = 1;
-            action = ", changing binary";
             break;
 
         case SIGALRM:
@@ -385,18 +372,15 @@ cetus_signal_handler(int signo, siginfo_t *siginfo, void *ucontext)
             break;
         case cetus_signal_value(CETUS_SHUTDOWN_SIGNAL):
             cetus_quit = 1;
-            action = ", shutting down";
             break;
 
         case cetus_signal_value(CETUS_TERMINATE_SIGNAL):
         case SIGINT:
             cetus_terminate = 1;
-            action = ", exiting";
             break;
 
         case cetus_signal_value(CETUS_CHANGEBIN_SIGNAL):
         case SIGIO:
-            action = ", ignoring";
             break;
         }
 
@@ -415,7 +399,6 @@ static void
 cetus_process_get_status(void)
 {
     int            status;
-    char          *process;
     pid_t          pid;
     int            err;
     int            i;
@@ -450,13 +433,10 @@ cetus_process_get_status(void)
 
 
         one = 1;
-        process = "unknown process";
-
         for (i = 0; i < cetus_last_process; i++) {
             if (cetus_processes[i].pid == pid) {
                 cetus_processes[i].status = status;
                 cetus_processes[i].exited = 1;
-                process = cetus_processes[i].name;
                 break;
             }
         }
@@ -465,24 +445,5 @@ cetus_process_get_status(void)
             cetus_processes[i].respawn = 0;
         }
     }
-}
-
-
-int
-cetus_os_signal_process(cetus_cycle_t *cycle, char *name, pid_t pid)
-{
-    cetus_signal_t  *sig;
-
-    for (sig = signals; sig->signo != 0; sig++) {
-        if (strcmp(name, sig->name) == 0) {
-            if (kill(pid, sig->signo) != -1) {
-                return 0;
-            }
-
-            g_critical("%s: kill(%d, %d) failed", G_STRLOC, pid, sig->signo);
-        }
-    }
-
-    return 1;
 }
 

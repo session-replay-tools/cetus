@@ -107,10 +107,7 @@ cetus_exec_new_binary(cetus_cycle_t *cycle, char **argv)
 void
 cetus_master_process_cycle(cetus_cycle_t *cycle)
 {
-    u_char            *p;
-    int                i, try_cnt;
-    unsigned int       n;
-    struct itimerval   itv;
+    int                try_cnt;
     unsigned int       live;
 
     cetus_start_worker_processes(cycle, cycle->worker_processes,
@@ -474,8 +471,6 @@ cetus_reap_children(cetus_cycle_t *cycle)
 static void
 cetus_master_process_exit(cetus_cycle_t *cycle)
 {
-    unsigned int  i;
-
     g_message("%s: exit", G_STRLOC);
 
     exit(0);
@@ -596,8 +591,6 @@ cetus_worker_process_init(cetus_cycle_t *cycle, int worker)
 {
     sigset_t           set;
     int                n;
-    unsigned int       i;
-    struct rlimit      rlmt;
 
     sigemptyset(&set);
 
@@ -653,8 +646,6 @@ cetus_worker_process_init(cetus_cycle_t *cycle, int worker)
 static void
 cetus_worker_process_exit(cetus_cycle_t *cycle)
 {
-    unsigned int         i;
-
     cetus_monitor_stop_thread(cycle->priv->monitor);
 
     g_message("%s: exit", G_STRLOC);
@@ -742,7 +733,7 @@ process_admin_sql(cetus_cycle_t *cycle, cetus_channel_t *ch)
 
         func = plugin->con_exectute_sql;
         retval = (*func) (cycle, con);
-        g_debug("%s: call admin", G_STRLOC);
+        g_debug("%s: call admin:%d", G_STRLOC, retval);
         send_admin_resp(cycle, con);
     }
 }

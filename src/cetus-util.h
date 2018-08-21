@@ -38,8 +38,6 @@ typedef int32_t BitArray;
 #define ClearBit(A,k)   (A[(k/32)] &= ~(1 << (k%32)))
 #define TestBit(A,k)    (A[(k/32)] & (1 << (k%32)))
 
-void cetus_string_dequote(char *z);
-
 #define KB 1024
 #define MB 1024 * KB
 #define GB 1024 * MB

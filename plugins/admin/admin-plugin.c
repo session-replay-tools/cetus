@@ -359,10 +359,9 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
         int  unread_len = ch.admin_sql_resp_len;
         GString *raw_packet = g_string_sized_new(unread_len);
         unsigned char *p = raw_packet->str;
-        int len;
 
         do {
-            len = recv(fd, p, unread_len, 0);
+            int len = recv(fd, p, unread_len, 0);
             if (len > 0) {
                 g_debug("%s: resp_len:%d, len:%d, fd:%d",
                         G_STRLOC, unread_len, len, fd);

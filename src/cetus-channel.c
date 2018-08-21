@@ -11,7 +11,6 @@
 int
 cetus_write_channel(int s, cetus_channel_t *ch, size_t size)
 {
-    int                 err;
     ssize_t             n;
     struct iovec        iov[1];
     struct msghdr       msg;
@@ -62,7 +61,7 @@ cetus_write_channel(int s, cetus_channel_t *ch, size_t size)
 
     g_debug("%s: sendmsg fd:%d, n:%d, size:%d", G_STRLOC, s, (int) n, (int) size);
     if (n == -1) {
-        err = errno;
+        int err = errno;
         if (err == EAGAIN) {
             return NETWORK_SOCKET_WAIT_FOR_EVENT;
         }
@@ -78,8 +77,6 @@ cetus_write_channel(int s, cetus_channel_t *ch, size_t size)
 int
 cetus_read_channel(int s, cetus_channel_t *ch, size_t size)
 {
-    int                 fd;
-    int                 err;
     ssize_t             n;
     struct iovec        iov[1];
     struct msghdr       msg;
@@ -106,7 +103,7 @@ cetus_read_channel(int s, cetus_channel_t *ch, size_t size)
     g_debug("%s: recvmsg fd:%d, n:%d", G_STRLOC, s, (int) n);
 
     if (n == -1) {
-        err = errno;
+        int err = errno;
         if (err == EAGAIN) {
             g_message("%s:recvmsg() EAGAIN, errno:%d", G_STRLOC, errno);
             return NETWORK_SOCKET_WAIT_FOR_EVENT;

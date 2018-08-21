@@ -748,6 +748,7 @@ struct chassis_private {
     struct cetus_variable_t *stats_variables;
     struct cetus_monitor_t *monitor;
     guint32 thread_id;
+    struct cetus_acl_t *acl;
 };
 
 NETWORK_API network_socket_retval_t

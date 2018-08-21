@@ -42,7 +42,7 @@
 
 #include "network-exports.h"
 
-NETWORK_API network_socket_retval_t do_read_auth(network_mysqld_con *, GHashTable *, GHashTable *);
+NETWORK_API network_socket_retval_t do_read_auth(network_mysqld_con *);
 NETWORK_API network_socket_retval_t do_connect_cetus(network_mysqld_con *, network_backend_t **, int *);
 NETWORK_API network_socket_retval_t plugin_add_backends(chassis *, gchar **, gchar **);
 NETWORK_API int do_check_qeury_cache(network_mysqld_con *con);

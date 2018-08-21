@@ -75,6 +75,7 @@
 #include "network-compress.h"
 #include "network-ssl.h"
 #include "chassis-sql-log.h"
+#include "cetus-acl.h"
 
 #ifdef HAVE_WRITEV
 #define USE_BUFFERED_NETIO
@@ -174,6 +175,7 @@ network_mysqld_priv_init(void)
     priv->backends = network_backends_new();
     priv->users = cetus_users_new();
     priv->monitor = cetus_monitor_new();
+    priv->acl = cetus_acl_new();
     priv->thread_id = 1;
     return priv;
 }
@@ -225,6 +227,7 @@ network_mysqld_priv_free(chassis G_GNUC_UNUSED *chas, chassis_private *priv)
     cetus_users_free(priv->users);
     g_free(priv->stats_variables);
     cetus_monitor_free(priv->monitor);
+    cetus_acl_free(priv->acl);
     g_free(priv);
 }
 

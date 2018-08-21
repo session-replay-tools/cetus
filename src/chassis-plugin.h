@@ -84,24 +84,6 @@ typedef struct chassis_plugin {
     /**< handler function to retrieve the plugin's global state */
     void *(*get_global_state) (chassis_plugin_config *user_data, const char *member);
 
-    /**< handler function used to get allow ip list */
-    GList *(*allow_ip_get) (chassis_plugin_config *user_data);
-
-    /**< handler function used to add IP addr to allow_ip_table */
-    gboolean (*allow_ip_add) (chassis_plugin_config *user_data, char *addr);
-
-    /**< handler function used to delete IP addr to allow_ip_table */
-    gboolean (*allow_ip_del) (chassis_plugin_config *user_data, char *addr);
-
-    /**< handler function used to get deny ip list */
-    GList *(*deny_ip_get) (chassis_plugin_config *user_data);
-
-    /**< handler function used to add IP addr to deny_ip_table */
-    gboolean (*deny_ip_add) (chassis_plugin_config *user_data, char *addr);
-
-    /**< handler function used to delete IP addr to deny_ip_table */
-    gboolean (*deny_ip_del) (chassis_plugin_config *user_data, char *addr);
-
 } chassis_plugin;
 
 CHASSIS_API chassis_plugin *chassis_plugin_new(void);

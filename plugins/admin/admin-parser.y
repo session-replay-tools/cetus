@@ -179,23 +179,30 @@ cmd ::= SELECT STAR FROM GROUPS SEMI. {
 cmd ::= SHOW CONNECTIONLIST opt_integer(X) SEMI. {
   admin_show_connectionlist(con, X);
 }
-cmd ::= SHOW ALLOW_IP ids(X) SEMI. {
-  char* module = token_strdup(X);
-  admin_show_allow_ip(con, module);
-  free(module);
+cmd ::= SHOW ALLOW_IP SEMI. {
+  admin_acl_show_rules(con, TRUE);
 }
-cmd ::= ADD ALLOW_IP ids(X) STRING(Y) SEMI. {
-  char* module = token_strdup(X);
+cmd ::= ADD ALLOW_IP STRING(Y) SEMI. {
   char* ip = token_strdup(Y);
-  admin_add_allow_ip(con, module, ip);
-  free(module);
+  admin_acl_add_rule(con, TRUE, ip);
   free(ip);
 }
-cmd ::= DELETE ALLOW_IP ids(X) STRING(Y) SEMI. {
-  char* module = token_strdup(X);
+cmd ::= DELETE ALLOW_IP STRING(Y) SEMI. {
   char* ip = token_strdup(Y);
-  admin_delete_allow_ip(con, module, ip);
-  free(module);
+  admin_acl_delete_rule(con, TRUE, ip);
+  free(ip);
+}
+cmd ::= SHOW DENY_IP SEMI. {
+  admin_acl_show_rules(con, FALSE);
+}
+cmd ::= ADD DENY_IP STRING(Y) SEMI. {
+  char* ip = token_strdup(Y);
+  admin_acl_add_rule(con, FALSE, ip);
+  free(ip);
+}
+cmd ::= DELETE DENY_IP STRING(Y) SEMI. {
+  char* ip = token_strdup(Y);
+  admin_acl_delete_rule(con, FALSE, ip);
   free(ip);
 }
 cmd ::= SET REDUCE_CONNS boolean(X) SEMI. {

@@ -1267,6 +1267,17 @@ void admin_config_reload(network_mysqld_con* con, char* object)
         } else {
             network_mysqld_con_send_error(con->client, C("read user failed"));
         }
+    } else if (strcasecmp(object, "variables") == 0) {
+        char* var_json = NULL;
+        if (chassis_config_reload_variables(con->srv->config_manager, object, &var_json)) {
+            if (sql_filter_vars_reload_str_rules(var_json) == FALSE) {
+                g_warning("variable rule reload error");
+            }
+            g_free(var_json);
+            network_mysqld_con_send_ok(con->client);
+        } else {
+            network_mysqld_con_send_error(con->client, C("reload variables failed"));
+        }
     } else {
         network_mysqld_con_send_error(con->client, C("wrong parameter"));
     }

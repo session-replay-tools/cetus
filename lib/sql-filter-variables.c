@@ -299,3 +299,17 @@ sql_filter_vars_shard_load_default_rules()
     gboolean rc = sql_filter_vars_load_str_rules(default_var_rule);
     g_assert(rc);
 }
+
+gboolean
+sql_filter_vars_reload_str_rules(const char *json_str)
+{
+    if (!json_str) {
+        return FALSE;
+    }
+
+    if (cetus_variables) {
+        g_hash_table_remove_all(cetus_variables);
+    }
+
+    return sql_filter_vars_load_str_rules(json_str);
+}

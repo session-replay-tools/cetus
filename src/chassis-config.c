@@ -767,3 +767,45 @@ chassis_config_unregister_service(chassis_config_t *conf, char *id)
         return;
     }
 }
+
+gboolean
+chassis_config_reload_variables(chassis_config_t *conf, const char *name, char **json_res)
+{
+    if (conf->type != CHASSIS_CONF_MYSQL) {
+        return FALSE;
+    }
+
+    gboolean status = FALSE;
+    MYSQL *conn = chassis_config_get_mysql_connection(conf);
+
+    if (!conn) {
+        g_warning("Cannot connect to mysql server when reload variables");
+        goto mysql_error;
+    }
+    char sql[256] = { 0 };
+    snprintf(sql, sizeof(sql), "SELECT object_value,mtime FROM %s.objects where object_name='%s'", conf->schema, name);
+    if (mysql_query(conn, sql)) {
+        g_warning("sql failed: %s, when reload variables, mysql_errno: %d", sql, mysql_errno(conn));
+        goto mysql_error;
+    }
+    MYSQL_RES *result = mysql_store_result(conn);
+    if (!result)
+        goto mysql_error;
+
+    MYSQL_ROW row;
+    row = mysql_fetch_row(result);
+    if (!row) {
+        mysql_free_result(result);
+        goto mysql_error;
+    }
+
+    *json_res = g_strdup(row[0]);
+    time_t mt = chassis_epoch_from_string(row[1], NULL);
+
+    struct config_object_t *object = chassis_config_get_object(conf, name);
+    chassis_config_object_set_cache(object, row[0], mt);
+    mysql_free_result(result);
+    status = TRUE;
+mysql_error:
+    return status;
+}

@@ -46,6 +46,7 @@
 #include "cetus-channel.h"
 #include "cetus-process-cycle.h"
 #include "resultset_merge.h"
+#include "cetus-acl.h"
 
 #include "admin-lexer.l.h"
 #include "admin-parser.y.h"
@@ -193,70 +194,39 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_auth) {
         g_string_free(auth_data, TRUE);
         auth = con->client->response;
     }
-    /* Check client addr in admin-allow-ip and admin-deny-ip */
-    gboolean check_ip;
-    char *ip_err_msg = NULL;
-    if (con->config->allow_ip_table || con->config->deny_ip_table) {
-        char *client_addr = con->client->src->name->str;
-        char **client_addr_arr = g_strsplit(client_addr, ":", -1);
-        char *client_ip = client_addr_arr[0];
-        if (g_hash_table_size(con->config->allow_ip_table) != 0 &&
-            (g_hash_table_lookup(con->config->allow_ip_table, client_ip)
-             || g_hash_table_lookup(con->config->allow_ip_table, "*")
-             || ip_range_lookup(con->config->allow_ip_table, client_ip))) {
-            check_ip = FALSE;
-        } else if (g_hash_table_size(con->config->deny_ip_table) != 0 &&
-                   (g_hash_table_lookup(con->config->deny_ip_table, client_ip)
-                    || g_hash_table_lookup(con->config->deny_ip_table, "*")
-                    || ip_range_lookup(con->config->deny_ip_table, client_ip))) {
-            check_ip = TRUE;
-            ip_err_msg = g_strdup_printf("Access denied for user '%s'@'%s'", con->config->admin_username, client_ip);
-        } else {
-            check_ip = FALSE;
-        }
-        g_strfreev(client_addr_arr);
-    } else {
-        check_ip = FALSE;
-    }
 
-    if (check_ip) {
-        network_mysqld_con_send_error_full(send_sock, L(ip_err_msg), 1045, "28000");
-        g_free(ip_err_msg);
+    /* check if the password matches */
+    excepted_response = g_string_new(NULL);
+    hashed_pwd = g_string_new(NULL);
+
+    if (!strleq(S(con->client->response->username),
+                con->config->admin_username, strlen(con->config->admin_username))) {
+        network_mysqld_con_send_error_full(send_sock, C("unknown user"), 1045, "28000");
+
+        /* close the connection after we have sent this packet */
+        con->state = ST_SEND_ERROR;
+    } else if (network_mysqld_proto_password_hash(hashed_pwd,
+                                                  con->config->admin_password,
+                                                  strlen(con->config->admin_password))) {
+    } else if (network_mysqld_proto_password_scramble(excepted_response,
+                                                      S(recv_sock->challenge->auth_plugin_data), S(hashed_pwd))) {
+        network_mysqld_con_send_error_full(send_sock, C("scrambling failed"), 1045, "28000");
+
+        /* close the connection after we have sent this packet */
+        con->state = ST_SEND_ERROR;
+    } else if (!g_string_equal(excepted_response, auth->auth_plugin_data)) {
+        network_mysqld_con_send_error_full(send_sock, C("password doesn't match"), 1045, "28000");
+
+        /* close the connection after we have sent this packet */
         con->state = ST_SEND_ERROR;
     } else {
-        /* check if the password matches */
-        excepted_response = g_string_new(NULL);
-        hashed_pwd = g_string_new(NULL);
+        network_mysqld_con_send_ok(send_sock);
 
-        if (!strleq(S(con->client->response->username),
-                    con->config->admin_username, strlen(con->config->admin_username))) {
-            network_mysqld_con_send_error_full(send_sock, C("unknown user"), 1045, "28000");
-
-            /* close the connection after we have sent this packet */
-            con->state = ST_SEND_ERROR;
-        } else if (network_mysqld_proto_password_hash(hashed_pwd,
-                                                      con->config->admin_password,
-                                                      strlen(con->config->admin_password))) {
-        } else if (network_mysqld_proto_password_scramble(excepted_response,
-                                                          S(recv_sock->challenge->auth_plugin_data), S(hashed_pwd))) {
-            network_mysqld_con_send_error_full(send_sock, C("scrambling failed"), 1045, "28000");
-
-            /* close the connection after we have sent this packet */
-            con->state = ST_SEND_ERROR;
-        } else if (!g_string_equal(excepted_response, auth->auth_plugin_data)) {
-            network_mysqld_con_send_error_full(send_sock, C("password doesn't match"), 1045, "28000");
-
-            /* close the connection after we have sent this packet */
-            con->state = ST_SEND_ERROR;
-        } else {
-            network_mysqld_con_send_ok(send_sock);
-
-            con->state = ST_SEND_AUTH_RESULT;
-        }
-
-        g_string_free(hashed_pwd, TRUE);
-        g_string_free(excepted_response, TRUE);
+        con->state = ST_SEND_AUTH_RESULT;
     }
+
+    g_string_free(hashed_pwd, TRUE);
+    g_string_free(excepted_response, TRUE);
 
     g_string_free(g_queue_pop_tail(recv_sock->recv_queue->chunks), TRUE);
 
@@ -265,64 +235,6 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_auth) {
     }
 
     return NETWORK_SOCKET_SUCCESS;
-}
-
-GList *network_mysqld_admin_plugin_allow_ip_get(chassis_plugin_config *config)
-{
-    if (config && config->allow_ip_table) {
-        return g_hash_table_get_keys(config->allow_ip_table);
-    }
-    return NULL;
-}
-
-gboolean network_mysqld_admin_plugin_allow_ip_add(chassis_plugin_config *config, char *addr) {
-    if (!config || !addr) return FALSE;
-    if (!config->allow_ip_table) {
-        config->allow_ip_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-    }
-    gboolean success = FALSE;
-    if (!g_hash_table_lookup(config->allow_ip_table, addr)) {
-        g_hash_table_insert(config->allow_ip_table, g_strdup(addr), (void *) TRUE);
-        success = TRUE;
-    }
-    return success;
-}
-
-gboolean network_mysqld_admin_plugin_allow_ip_del(chassis_plugin_config *config, char *addr) {
-    if (!config || !addr || !config->allow_ip_table) return FALSE;
-    return g_hash_table_remove(config->allow_ip_table, addr);
-}
-
-GList *network_mysqld_admin_plugin_deny_ip_get(chassis_plugin_config *config)
-{
-    if (config && config->deny_ip_table) {
-        return g_hash_table_get_keys(config->deny_ip_table);
-    }
-    return NULL;
-}
-
-gboolean
-network_mysqld_admin_plugin_deny_ip_add(chassis_plugin_config *config, char *addr)
-{
-    if (!config || !addr)
-        return FALSE;
-    if (!config->deny_ip_table) {
-        config->deny_ip_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-    }
-    gboolean success = FALSE;
-    if (!g_hash_table_lookup(config->deny_ip_table, addr)) {
-        g_hash_table_insert(config->deny_ip_table, g_strdup(addr), (void *)TRUE);
-        success = TRUE;
-    }
-    return success;
-}
-
-static gboolean
-network_mysqld_admin_plugin_deny_ip_del(chassis_plugin_config *config, char *addr)
-{
-    if (!config || !addr || !config->deny_ip_table)
-        return FALSE;
-    return g_hash_table_remove(config->deny_ip_table, addr);
 }
 
 void *adminParserAlloc(void *(*mallocProc)(size_t));
@@ -716,9 +628,7 @@ static void network_mysqld_admin_plugin_free(chassis *chas, chassis_plugin_confi
     g_free(config->admin_username);
     g_free(config->admin_password);
     g_free(config->allow_ip);
-    if (config->allow_ip_table) g_hash_table_destroy(config->allow_ip_table);
     g_free(config->deny_ip);
-    if (config->deny_ip_table) g_hash_table_destroy(config->deny_ip_table);
 
     if (config->admin_stats) admin_stats_free(config->admin_stats);
 
@@ -770,66 +680,6 @@ show_admin_password(gpointer param) {
     return NULL;
 }
 
-gchar*
-show_admin_allow_ip(gpointer param) {
-    struct external_param *opt_param = (struct external_param *)param;
-    gchar *ret = NULL;
-    gint opt_type = opt_param->opt_type;
-    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        GString *free_str = g_string_new(NULL);
-        GList *free_list = NULL;
-        if(config && config->allow_ip_table && g_hash_table_size(config->allow_ip_table)) {
-            free_list = g_hash_table_get_keys(config->allow_ip_table);
-            GList *it = NULL;
-            for(it = free_list; it; it=it->next) {
-                free_str = g_string_append(free_str, it->data);
-                free_str = g_string_append(free_str, ",");
-            }
-            if(free_str->len) {
-                free_str->str[free_str->len - 1] = '\0';
-                ret = g_strdup(free_str->str);
-            }
-        }
-        if(free_str) {
-            g_string_free(free_str, TRUE);
-        }
-        if(free_list) {
-            g_list_free(free_list);
-        }
-    }
-    return ret;
-}
-
-gchar*
-show_admin_deny_ip(gpointer param) {
-    struct external_param *opt_param = (struct external_param *)param;
-    gchar *ret = NULL;
-    gint opt_type = opt_param->opt_type;
-    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        GString *free_str = g_string_new(NULL);
-        GList *free_list = NULL;
-        if(config && config->deny_ip_table && g_hash_table_size(config->deny_ip_table)) {
-            free_list = g_hash_table_get_keys(config->deny_ip_table);
-            GList *it = NULL;
-            for(it = free_list; it; it=it->next) {
-                free_str = g_string_append(free_str, it->data);
-                free_str = g_string_append(free_str, ",");
-            }
-            if(free_str->len) {
-                free_str->str[free_str->len - 1] = '\0';
-                ret = g_strdup(free_str->str);
-            }
-        }
-        if(free_str) {
-            g_string_free(free_str, TRUE);
-        }
-        if(free_list) {
-            g_list_free(free_list);
-        }
-    }
-    return ret;
-}
-
 /**
  * add the proxy specific options to the cmdline interface
  */
@@ -854,11 +704,11 @@ network_mysqld_admin_plugin_get_options(chassis_plugin_config *config)
     chassis_options_add(&opts, "admin-allow-ip",
                         0, 0, OPTION_ARG_STRING, &(config->allow_ip),
                         "ip address allowed to connect to admin", "<string>",
-                        NULL, show_admin_allow_ip, SAVE_OPTS_PROPERTY);
+                        NULL, NULL, SAVE_OPTS_PROPERTY);
     chassis_options_add(&opts, "admin-deny-ip",
                         0, 0, OPTION_ARG_STRING, &(config->deny_ip),
                         "ip address denyed to connect to admin", "<string>",
-                        NULL, show_admin_deny_ip, SAVE_OPTS_PROPERTY);
+                        NULL, NULL, SAVE_OPTS_PROPERTY);
 
     return opts.options;
 }
@@ -904,18 +754,8 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
                 G_STRLOC);
         return -1;
     }
-    GHashTable *allow_ip_table = NULL;
-    if (config->allow_ip) {
-        allow_ip_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-        char **ip_arr = g_strsplit(config->allow_ip, ",", -1);
-        int i;
-        for (i = 0; ip_arr[i]; i++) {
-            g_hash_table_insert(allow_ip_table, g_strdup(ip_arr[i]), (void *) TRUE);
-        }
-        g_strfreev(ip_arr);
-    }
-    config->allow_ip_table = allow_ip_table;
 
+    cetus_acl_add_rules(chas->priv->acl, ACL_WHITELIST, config->allow_ip);
 
     con = network_mysqld_con_new();
     con->config = config;
@@ -998,11 +838,6 @@ G_MODULE_EXPORT int plugin_init(chassis_plugin *p) {
     p->apply_config = network_mysqld_admin_plugin_apply_config;
     p->stop_listening = network_mysqld_admin_plugin_stop_listening;
     p->destroy      = network_mysqld_admin_plugin_free;
-
-    /* For allow_ip configs */
-    p->allow_ip_get = network_mysqld_admin_plugin_allow_ip_get;
-    p->allow_ip_add = network_mysqld_admin_plugin_allow_ip_add;
-    p->allow_ip_del = network_mysqld_admin_plugin_allow_ip_del;
 
     return 0;
 }

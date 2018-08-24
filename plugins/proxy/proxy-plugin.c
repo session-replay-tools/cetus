@@ -67,6 +67,7 @@ typedef int socklen_t;
 #include "chassis-options.h"
 #include "chassis-options-utils.h"
 #include "chassis-sql-log.h"
+#include "cetus-acl.h"
 
 #ifndef PLUGIN_VERSION
 #ifdef CHASSIS_BUILD_TAG
@@ -116,10 +117,8 @@ struct chassis_plugin_config {
     gdouble write_timeout_dbl;
 
     gchar *allow_ip;
-    GHashTable *allow_ip_table;
 
     gchar *deny_ip;
-    GHashTable *deny_ip_table;
 
     int read_master_percentage;
 };
@@ -369,7 +368,7 @@ proxy_c_read_query_result(network_mysqld_con *con)
 
 NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_auth)
 {
-    return do_read_auth(con, con->config->allow_ip_table, con->config->deny_ip_table);
+    return do_read_auth(con);
 }
 
 static int
@@ -2454,64 +2453,6 @@ assign_proxy_write_timeout(const gchar *newval, gpointer param) {
 }
 
 static gchar*
-show_proxy_allow_ip(gpointer param) {
-    struct external_param *opt_param = (struct external_param *)param;
-    gchar *ret = NULL;
-    gint opt_type = opt_param->opt_type;
-    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        GString *free_str = g_string_new(NULL);
-        GList *free_list = NULL;
-        if(config && config->allow_ip_table && g_hash_table_size(config->allow_ip_table)) {
-            free_list = g_hash_table_get_keys(config->allow_ip_table);
-            GList *it = NULL;
-            for(it = free_list; it; it=it->next) {
-                free_str = g_string_append(free_str, it->data);
-                free_str = g_string_append(free_str, ",");
-            }
-            if(free_str->len) {
-                free_str->str[free_str->len - 1] = '\0';
-                ret = g_strdup(free_str->str);
-            }
-        }
-
-        g_string_free(free_str, TRUE);
-        if(free_list) {
-            g_list_free(free_list);
-        }
-    }
-    return ret;
-}
-
-static gchar*
-show_proxy_deny_ip(gpointer param) {
-    struct external_param *opt_param = (struct external_param *)param;
-    gchar *ret = NULL;
-    gint opt_type = opt_param->opt_type;
-    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        GString *free_str = g_string_new(NULL);
-        GList *free_list = NULL;
-        if(config && config->deny_ip_table && g_hash_table_size(config->deny_ip_table)) {
-            free_list = g_hash_table_get_keys(config->deny_ip_table);
-            GList *it = NULL;
-            for(it = free_list; it; it=it->next) {
-                free_str = g_string_append(free_str, it->data);
-                free_str = g_string_append(free_str, ",");
-            }
-            if(free_str->len) {
-                free_str->str[free_str->len - 1] = '\0';
-                ret = g_strdup(free_str->str);
-            }
-        }
-
-        g_string_free(free_str, TRUE);
-        if(free_list) {
-            g_list_free(free_list);
-        }
-    }
-    return ret;
-}
-
-static gchar*
 show_read_master_percentage(gpointer param) {
     struct external_param *opt_param = (struct external_param *)param;
     gint opt_type = opt_param->opt_type;
@@ -2593,11 +2534,11 @@ network_mysqld_proxy_plugin_get_options(chassis_plugin_config *config)
 
     chassis_options_add(&opts, "proxy-allow-ip",
                         0, 0, OPTION_ARG_STRING, &(config->allow_ip), "allow user@IP for proxy permission", NULL,
-                        NULL, show_proxy_allow_ip, SAVE_OPTS_PROPERTY);
+                        NULL, NULL, SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-deny-ip",
                         0, 0, OPTION_ARG_STRING, &(config->deny_ip), "deny user@IP for proxy permission", NULL,
-                        NULL, show_proxy_deny_ip, SAVE_OPTS_PROPERTY);
+                        NULL, NULL, SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "read-master-percentage",
                         0, 0, OPTION_ARG_INT, &(config->read_master_percentage), "range [0, 100]", NULL,
@@ -2624,31 +2565,12 @@ network_mysqld_proxy_plugin_apply_config(chassis *chas, chassis_plugin_config *c
         config->backend_addresses[1] = NULL;
     }
 
-    /* set allow_ip_table */
-    GHashTable *allow_ip_table = NULL;
     if (config->allow_ip) {
-        allow_ip_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-        char **ip_arr = g_strsplit(config->allow_ip, ",", -1);
-        guint j;
-        for (j = 0; ip_arr[j]; j++) {
-            g_hash_table_insert(allow_ip_table, g_strdup(ip_arr[j]), (void *)TRUE);
-        }
-        g_strfreev(ip_arr);
+        cetus_acl_add_rules(g->acl, ACL_WHITELIST, config->allow_ip);
     }
-    config->allow_ip_table = allow_ip_table;
-
-    /* set deny_ip_table */
-    GHashTable *deny_ip_table = NULL;
     if (config->deny_ip) {
-        deny_ip_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-        char **ip_arr = g_strsplit(config->deny_ip, ",", -1);
-        guint j;
-        for (j = 0; ip_arr[j]; j++) {
-            g_hash_table_insert(deny_ip_table, g_strdup(ip_arr[j]), (void *)TRUE);
-        }
-        g_strfreev(ip_arr);
+        cetus_acl_add_rules(g->acl, ACL_BLACKLIST, config->deny_ip);
     }
-    config->deny_ip_table = deny_ip_table;
 
     /**
      * create a connection handle for the listen socket
@@ -2724,72 +2646,6 @@ network_mysqld_proxy_plugin_stop_listening(chassis *chas,
 }
 
 
-GList *
-network_mysqld_proxy_plugin_allow_ip_get(chassis_plugin_config *config)
-{
-    if (config && config->allow_ip_table) {
-        return g_hash_table_get_keys(config->allow_ip_table);
-    }
-    return NULL;
-}
-
-GList *
-network_mysqld_proxy_plugin_deny_ip_get(chassis_plugin_config *config)
-{
-    if (config && config->deny_ip_table) {
-        return g_hash_table_get_keys(config->deny_ip_table);
-    }
-    return NULL;
-}
-
-gboolean
-network_mysqld_proxy_plugin_allow_ip_add(chassis_plugin_config *config, char *addr)
-{
-    if (!config || !addr)
-        return FALSE;
-    if (!config->allow_ip_table) {
-        config->allow_ip_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-    }
-    gboolean success = FALSE;
-    if (!g_hash_table_lookup(config->allow_ip_table, addr)) {
-        g_hash_table_insert(config->allow_ip_table, g_strdup(addr), (void *)TRUE);
-        success = TRUE;
-    }
-    return success;
-}
-
-gboolean
-network_mysqld_proxy_plugin_deny_ip_add(chassis_plugin_config *config, char *addr)
-{
-    if (!config || !addr)
-        return FALSE;
-    if (!config->deny_ip_table) {
-        config->deny_ip_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
-    }
-    gboolean success = FALSE;
-    if (!g_hash_table_lookup(config->deny_ip_table, addr)) {
-        g_hash_table_insert(config->deny_ip_table, g_strdup(addr), (void *)TRUE);
-        success = TRUE;
-    }
-    return success;
-}
-
-gboolean
-network_mysqld_proxy_plugin_allow_ip_del(chassis_plugin_config *config, char *addr)
-{
-    if (!config || !addr || !config->allow_ip_table)
-        return FALSE;
-    return g_hash_table_remove(config->allow_ip_table, addr);
-}
-
-gboolean
-network_mysqld_proxy_plugin_deny_ip_del(chassis_plugin_config *config, char *addr)
-{
-    if (!config || !addr || !config->deny_ip_table)
-        return FALSE;
-    return g_hash_table_remove(config->deny_ip_table, addr);
-}
-
 G_MODULE_EXPORT int
 plugin_init(chassis_plugin *p)
 {
@@ -2802,16 +2658,6 @@ plugin_init(chassis_plugin *p)
     p->apply_config = network_mysqld_proxy_plugin_apply_config;
     p->stop_listening = network_mysqld_proxy_plugin_stop_listening;
     p->destroy = network_mysqld_proxy_plugin_free;
-
-    /* For allow_ip configs */
-    p->allow_ip_get = network_mysqld_proxy_plugin_allow_ip_get;
-    p->allow_ip_add = network_mysqld_proxy_plugin_allow_ip_add;
-    p->allow_ip_del = network_mysqld_proxy_plugin_allow_ip_del;
-
-    /* For deny_ip configs */
-    p->deny_ip_get = network_mysqld_proxy_plugin_deny_ip_get;
-    p->deny_ip_add = network_mysqld_proxy_plugin_deny_ip_add;
-    p->deny_ip_del = network_mysqld_proxy_plugin_deny_ip_del;
 
     return 0;
 }

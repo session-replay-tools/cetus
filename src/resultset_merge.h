@@ -63,7 +63,7 @@ typedef struct {
 
 typedef struct order_by_para_s {
     ORDER_BY order_array[MAX_ORDER_COLS];
-    uint64_t field_index[MAX_SHARD_NUM];
+    uint64_t field_offsets_cache[MAX_SHARD_NUM];
     int order_array_size;
 } order_by_para_t;
 

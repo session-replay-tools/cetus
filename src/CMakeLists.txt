@@ -95,15 +95,12 @@ SET(proxy_sources
     cetus-util.c
     cetus-variable.c
     cetus-monitor.c
+    cetus-acl.c
 )
 
 if (HAVE_OPENSSL)
   list(APPEND proxy_sources network-ssl.c)
 endif(HAVE_OPENSSL)
-
-if(NETWORK_DEBUG_TRACE_STATE_CHANGES)
-  list(APPEND proxy_sources cetus-query-queue.c)
-endif(NETWORK_DEBUG_TRACE_STATE_CHANGES)
 
 ADD_LIBRARY(mysql-chassis SHARED ${chassis_sources})
 ADD_LIBRARY(mysql-chassis-proxy SHARED ${proxy_sources})

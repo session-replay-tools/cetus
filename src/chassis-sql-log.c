@@ -279,7 +279,10 @@ static void sql_log_check_rotate(struct sql_log_mgr *mgr) {
         mgr->sql_log_action = SQL_LOG_STOP;
         return NULL;
     }
-    fstat(fileno(mgr->sql_log_fp), &st);
+    gint rst = fstat(fileno(mgr->sql_log_fp), &st);
+    if (rst != 0) {
+        g_message("fstat() failed in sql_log_mainloop");
+    }
     mgr->sql_log_cursize = st.st_size;
     g_message("sql log thread started");
     mgr->sql_log_action = SQL_LOG_START;
@@ -343,13 +346,11 @@ sql_log_thread_start(struct sql_log_mgr *mgr) {
      if (mgr->sql_log_path == NULL) {
          mgr->sql_log_path = g_strdup(SQL_LOG_DEF_PATH);
      }
-     int result = access(mgr->sql_log_path, F_OK);
-     if (result != 0) {
-         g_message("sql log path is not exist, try to mkdir");
-         result = mkdir(mgr->sql_log_path, 0660);
-         if (result != 0) {
-             g_message("mkdir(%s) failed", mgr->sql_log_path);
-         }
+     gint result = mkdir(mgr->sql_log_path, 0770);
+     if (!result) {
+         g_message("sql log path maybe exist, try to mkdir failed");
+     } else {
+         g_message("sql log path is not exist, try to mkdir success");
      }
      if (mgr->sql_log_fullname == NULL) {
          mgr->sql_log_fullname = g_strdup_printf("%s/%s-%d.%s",
@@ -488,7 +489,7 @@ log_sql_backend_sharding(network_mysqld_con *con, server_session_t *session)
                                               session->is_in_xa ==1 ? "true" : "false", com_dis_tras_state[xa_state],
                                               latency_ms, session->query_status == MYSQLD_PACKET_OK ? "OK" : "ERR",
                                               GET_COM_NAME(con->parse.command),//type
-                                              con->parse.command == 23 ? "" : (session->sql != NULL ? session->sql->str : ""));//sql
+                                              con->parse.command == COM_STMT_EXECUTE ? "" : (session->sql != NULL ? session->sql->str : ""));//sql
      }
      rfifo_write(mgr->fifo, message->str, message->len);
      g_string_free(message, TRUE);

@@ -72,13 +72,10 @@
 #include "cetus-monitor.h"
 #include "cetus-variable.h"
 #include "plugin-common.h"
-#ifdef NETWORK_DEBUG_TRACE_STATE_CHANGES
-#include "cetus-query-queue.h"
-#endif
-
 #include "network-compress.h"
 #include "network-ssl.h"
 #include "chassis-sql-log.h"
+#include "cetus-acl.h"
 
 #ifdef HAVE_WRITEV
 #define USE_BUFFERED_NETIO
@@ -179,6 +176,8 @@ network_mysqld_priv_init(void)
     priv->backends = network_backends_new();
     priv->users = cetus_users_new();
     priv->monitor = cetus_monitor_new();
+    priv->acl = cetus_acl_new();
+    priv->thread_id = 1;
 
     return priv;
 }
@@ -230,6 +229,7 @@ network_mysqld_priv_free(chassis G_GNUC_UNUSED *chas, chassis_private *priv)
     cetus_users_free(priv->users);
     g_free(priv->stats_variables);
     cetus_monitor_free(priv->monitor);
+    cetus_acl_free(priv->acl);
     g_free(priv);
 }
 
@@ -292,9 +292,6 @@ network_mysqld_con_new()
 
     con->wait_clt_next_sql.tv_sec = 0;
     con->wait_clt_next_sql.tv_usec = 256 * 1000;
-#ifdef NETWORK_DEBUG_TRACE_STATE_CHANGES
-    con->recent_queries = query_queue_new(20);
-#endif
     return con;
 }
 
@@ -414,9 +411,6 @@ network_mysqld_con_free(network_mysqld_con *con)
     con->srv->priv->listen_conns = g_list_remove(con->srv->priv->listen_conns, con);
     con->srv->allow_new_conns = TRUE;
 
-#ifdef NETWORK_DEBUG_TRACE_STATE_CHANGES
-    query_queue_free(con->recent_queries);
-#endif
     g_free(con);
 }
 

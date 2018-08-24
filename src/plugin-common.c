@@ -71,6 +71,7 @@ typedef int socklen_t;
 #include "plugin-common.h"
 #include "network-ssl.h"
 #include "chassis-sql-log.h"
+#include "cetus-acl.h"
 
 #define MAX_CACHED_ITEMS 65536
 
@@ -111,7 +112,7 @@ client_ip_table_lookup(GHashTable *ip_table, char *client_ip_with_username)
 }
 
 network_socket_retval_t
-do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *deny_ip_table)
+do_read_auth(network_mysqld_con *con)
 {
     /* read auth from client */
     network_packet packet;
@@ -209,33 +210,20 @@ do_read_auth(network_mysqld_con *con, GHashTable *allow_ip_table, GHashTable *de
         auth = con->client->response;
         g_debug("sock:%p, 2nd round auth", con);
     }
-    /* Check allow and deny IP */
-    gboolean check_ip;
-    if (allow_ip_table || deny_ip_table) {
-        char **client_addr_arr = g_strsplit(con->client->src->name->str, ":", -1);
-        char *client_ip = client_addr_arr[0];
-        char *client_username = con->client->response->username->str;
-        char *client_ip_with_username = g_strdup_printf("%s@%s", client_username, client_ip);
-        char *ip_err_msg = NULL;
-        if (g_hash_table_size(allow_ip_table) != 0 
-            && (g_hash_table_lookup(allow_ip_table, "*") || client_ip_table_lookup(allow_ip_table, client_ip_with_username))) {
-            check_ip = FALSE;
-        } else if (g_hash_table_size(deny_ip_table) != 0 
-                  && (g_hash_table_lookup(deny_ip_table, "*") || client_ip_table_lookup(deny_ip_table, client_ip_with_username))) {
-            check_ip = TRUE;
-            ip_err_msg = g_strdup_printf("Access denied for user '%s'", client_ip_with_username);
-        } else {
-            check_ip = FALSE;
-        }
-        g_free(client_ip_with_username);
-        g_strfreev(client_addr_arr);
-        if (check_ip) {
-            network_mysqld_con_send_error_full(recv_sock, L(ip_err_msg), 1045, "28000");
-            log_sql_connect(con, ip_err_msg);
-            g_free(ip_err_msg);
-            con->state = ST_SEND_ERROR;
-            return NETWORK_SOCKET_SUCCESS;
-        }
+
+    char **client_addr_arr = g_strsplit(con->client->src->name->str, ":", -1);
+    char *client_ip = client_addr_arr[0];
+    char *client_username = con->client->response->username->str;
+
+    gboolean can_pass = cetus_acl_verify(con->srv->priv->acl, client_username, client_ip);
+    if (!can_pass) {
+        char *ip_err_msg = g_strdup_printf("Access denied for user '%s@%s'",
+                                           client_username, client_ip);
+        network_mysqld_con_send_error_full(recv_sock, L(ip_err_msg), 1045, "28000");
+        log_sql_connect(con, ip_err_msg);
+        g_free(ip_err_msg);
+        con->state = ST_SEND_ERROR;
+        return NETWORK_SOCKET_SUCCESS;
     }
 
     const char *client_charset = charset_get_name(auth->charset);

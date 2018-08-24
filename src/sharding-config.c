@@ -1051,7 +1051,7 @@ gboolean shard_conf_write_json(chassis_config_t* conf_manager)
     }
 
     char* json_str = cJSON_Print(root);
-    chassis_config_write_object(conf_manager, "sharding-new", json_str);
+    chassis_config_write_object(conf_manager, "sharding", json_str);
     cJSON_Delete(root);
     g_free(json_str);
     return TRUE;

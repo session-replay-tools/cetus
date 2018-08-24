@@ -744,7 +744,7 @@ NETWORK_API void network_mysqld_con_reset_query_state(network_mysqld_con *con);
  * should be socket 
  */
 NETWORK_API network_socket_retval_t network_mysqld_read(chassis *srv, network_socket *con);
-NETWORK_API network_socket_retval_t network_mysqld_write(chassis *srv, network_socket *con);
+NETWORK_API network_socket_retval_t network_mysqld_write(network_socket *con);
 NETWORK_API network_socket_retval_t network_mysqld_con_get_packet(chassis G_GNUC_UNUSED *chas, network_socket *con);
 
 struct chassis_private {

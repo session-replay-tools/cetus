@@ -736,7 +736,7 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
         config->address = g_strdup(":4041");
     } else {
         chas->proxy_address = config->address;
-        g_message("set proxy address for chassis:%s", config->address);
+        g_message("set admin address for chassis:%s", config->address);
     }
 
     if (!config->admin_username) {
@@ -793,8 +793,6 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
         if (0 != network_socket_bind(listen_sock)) {
             return -1;
         }
-        g_message("admin-server listening on port %s", config->address);
-
 
         /**
          * call network_mysqld_con_accept() with this connection when we are done

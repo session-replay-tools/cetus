@@ -244,7 +244,7 @@ process_write_event(network_mysqld_con *con, server_session_t *ss)
 {
     network_socket *sock = ss->server;
 
-    switch (network_mysqld_write(con->srv, sock)) {
+    switch (network_mysqld_write(sock)) {
     case NETWORK_SOCKET_SUCCESS:
         con->num_pending_servers++;
         con->num_servers_visited++;

@@ -1116,7 +1116,7 @@ network_mysqld_read(chassis G_GNUC_UNUSED *chas, network_socket *sock)
 }
 
 network_socket_retval_t
-network_mysqld_write(chassis G_GNUC_UNUSED *chas, network_socket *sock)
+network_mysqld_write(network_socket *sock)
 {
     if (sock->do_compress) {
         network_mysqld_con_compress_all_packets(sock);
@@ -2519,7 +2519,7 @@ process_write_to_server(network_mysqld_con *con, server_session_t *ss, int *writ
     network_socket_retval_t ret;
 
     con->num_write_pending++;
-    ret = network_mysqld_write(con->srv, ss->server);
+    ret = network_mysqld_write(ss->server);
 
     switch (ret) {
     case NETWORK_SOCKET_SUCCESS:
@@ -2641,7 +2641,7 @@ process_rw_write(network_mysqld_con *con, network_mysqld_con_state_t ostate, int
     con->server->resp_len = 0;
     con->server->compressed_packet_id = 0;
 
-    switch (network_mysqld_write(con->srv, con->server)) {
+    switch (network_mysqld_write(con->server)) {
     case NETWORK_SOCKET_SUCCESS:
         break;
     case NETWORK_SOCKET_WAIT_FOR_EVENT:
@@ -3397,7 +3397,7 @@ send_part_content_to_client(network_mysqld_con *con)
 {
     g_debug("%s: call send_part_content_to_client, and queue len:%llu, con client:%p",
             G_STRLOC, (unsigned long long)con->client->send_queue->chunks->length, con->client);
-    switch (network_mysqld_write(con->srv, con->client)) {
+    switch (network_mysqld_write(con->client)) {
     case NETWORK_SOCKET_SUCCESS:
         break;
     case NETWORK_SOCKET_WAIT_FOR_EVENT:
@@ -3456,7 +3456,7 @@ send_result_to_client(network_mysqld_con *con, network_mysqld_con_state_t ostate
     /**
      * send the query result-set to the client 
      */
-    switch (network_mysqld_write(srv, con->client)) {
+    switch (network_mysqld_write(con->client)) {
     case NETWORK_SOCKET_SUCCESS:
         break;
     case NETWORK_SOCKET_WAIT_FOR_EVENT:
@@ -3887,7 +3887,7 @@ network_mysqld_con_handle(int event_fd, short events, void *user_data)
             /* send the hand-shake to the client and 
              * wait for a response
              */
-            switch (network_mysqld_write(srv, con->client)) {
+            switch (network_mysqld_write(con->client)) {
             case NETWORK_SOCKET_SUCCESS:
                 break;
             case NETWORK_SOCKET_WAIT_FOR_EVENT:
@@ -3999,7 +3999,7 @@ network_mysqld_con_handle(int event_fd, short events, void *user_data)
             break;
 #endif
         case ST_SEND_AUTH_RESULT:
-            switch (network_mysqld_write(srv, con->client)) {
+            switch (network_mysqld_write(con->client)) {
             case NETWORK_SOCKET_SUCCESS:
                 break;
             case NETWORK_SOCKET_WAIT_FOR_EVENT:
@@ -4107,7 +4107,7 @@ network_mysqld_con_handle(int event_fd, short events, void *user_data)
              * send error to the client
              * and close the connections afterwards
              */
-            switch (network_mysqld_write(srv, con->client)) {
+            switch (network_mysqld_write(con->client)) {
             case NETWORK_SOCKET_SUCCESS:
                 break;
             case NETWORK_SOCKET_WAIT_FOR_EVENT:
@@ -4792,7 +4792,7 @@ network_mysqld_self_con_handle(int event_fd, short events, void *user_data)
             proxy_self_create_auth(srv, con);
             network_queue_clear(con->server->recv_queue);
 
-            switch (network_mysqld_write(con->srv, con->server)) {
+            switch (network_mysqld_write(con->server)) {
             case NETWORK_SOCKET_SUCCESS:
                 con->state = ST_ASYNC_READ_AUTH_RESULT;
                 break;

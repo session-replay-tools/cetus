@@ -1351,9 +1351,13 @@ check_query_status(network_mysqld_con *con, network_socket *server, network_mysq
         return;
     }
     if (com_query->server_status & SERVER_STATUS_IN_TRANS) {
-        con->is_in_transaction = 1;
-        server->is_in_tran_context = 1;
-        g_debug("%s: set is_in_transaction true for con:%p", G_STRLOC, con);
+        if (!server->is_read_only) {
+            con->is_in_transaction = 1;
+            server->is_in_tran_context = 1;
+            g_debug("%s: set is_in_transaction true for con:%p", G_STRLOC, con);
+        } else {
+            g_message("%s: SERVER_STATUS_IN_TRANS true from read server", G_STRLOC);
+        }
     } else {
         con->is_in_transaction = 0;
         server->is_in_tran_context = 0;

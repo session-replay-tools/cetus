@@ -284,8 +284,12 @@ proxy_c_read_query_result(network_mysqld_con *con)
             g_debug("%s: check is_in_transaction here:%p", G_STRLOC, con);
             if (inj->id != INJ_ID_COM_STMT_PREPARE) {
                 if (res->qstat.server_status & SERVER_STATUS_IN_TRANS) {
-                    con->is_in_transaction = 1;
-                    g_debug("%s: set is_in_transaction true for con:%p", G_STRLOC, con);
+                    if (recv_sock->is_read_only) {
+                        g_message("%s: SERVER_STATUS_IN_TRANS true from read server", G_STRLOC);
+                    } else {
+                        con->is_in_transaction = 1;
+                        g_debug("%s: set is_in_transaction true for con:%p", G_STRLOC, con);
+                    }
                 } else {
                     con->is_in_transaction = 0;
                     g_debug("%s: set is_in_transaction false for con:%p", G_STRLOC, con);
@@ -1349,6 +1353,8 @@ network_read_query(network_mysqld_con *con, proxy_plugin_con_t *st)
         return PROXY_NO_CONNECTION;
     }
 
+    con->server->is_read_only = 0;
+
     if (backend->state != BACKEND_STATE_UP && backend->state != BACKEND_STATE_UNKNOWN) {
         switch (command) {
         case COM_STMT_PREPARE:
@@ -1369,6 +1375,7 @@ network_read_query(network_mysqld_con *con, proxy_plugin_con_t *st)
         } else {
             con->srv->query_stats.proxyed_query.ro++;
             con->srv->query_stats.server_query_details[st->backend_ndx].rw++;
+            con->server->is_read_only = 1;
         }
     }
 

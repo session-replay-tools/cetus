@@ -65,16 +65,16 @@ chassis_check_version(const char *lib_version, const char *hdr_version)
     int hdr_maj, hdr_min, hdr_pat;
     int scanned_fields;
 
-    if (3 != (scanned_fields = sscanf(lib_version, "%d.%d.%d%*s", &lib_maj, &lib_min, &lib_pat))) {
+    if (2 != (scanned_fields = sscanf(lib_version, "%d.%d", &lib_maj, &lib_min))) {
         g_critical("%s: library version %s failed to parse: %d", G_STRLOC, lib_version, scanned_fields);
         return -1;
     }
-    if (3 != (scanned_fields = sscanf(hdr_version, "%d.%d.%d%*s", &hdr_maj, &hdr_min, &hdr_pat))) {
+    if (2 != (scanned_fields = sscanf(hdr_version, "%d.%d", &hdr_maj, &hdr_min))) {
         g_critical("%s: header version %s failed to parse: %d", G_STRLOC, hdr_version, scanned_fields);
         return -1;
     }
 
-    if (lib_maj == hdr_maj && lib_min == hdr_min && lib_pat >= hdr_pat) {
+    if (lib_maj == hdr_maj && lib_min == hdr_min) {
         return 0;
     }
 

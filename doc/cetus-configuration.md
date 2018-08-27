@@ -28,7 +28,7 @@ Default: root
 
 Default: conf
 
-配置文件路径，包括：用户设置文件、变量处理配置文件、分库版本的分片规则配置文件、读写分离版本的启动配置文件和分库版本的启动配置文件。
+JSON配置文件路径，JSON文件包括包括：账号配置文件、变量处理配置文件、分库版本的分片规则配置文件
 
 > conf-dir = /usr/lib/cetus/conf
 
@@ -184,7 +184,7 @@ Default: 100
 
 Default: default-pool-size * 2
 
-连接池的最大连接数，超过此数目的连接不会放入连接池
+每个MySQL实例的最大连接数，包括连接池里的空闲连接和正在使用的连接
 
 > max-pool-size = 300
 

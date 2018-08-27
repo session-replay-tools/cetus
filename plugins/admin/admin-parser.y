@@ -299,6 +299,9 @@ cmd ::= CONFIG RELOAD SEMI. {
 cmd ::= CONFIG RELOAD USER SEMI. {
   admin_config_reload(con, "user");
 }
+cmd ::= CONFIG RELOAD VARIABLES SEMI. {
+  admin_config_reload(con, "variables");
+}
 cmd ::= SAVE SETTINGS SEMI. {
   admin_save_settings(con);
 }

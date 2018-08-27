@@ -2289,7 +2289,7 @@ void log_slowquery(int interval_ms, char* host, char* user, char* sql)
           "# Time: %s\n"
           "# User@Host: %s @ %s Id: 0\n"
           "# Query_time: %f Lock_time: 0.000000 Rows_sent: 0 Rows_examined: 0\n"
-          "SET timestamp=%ld\n%s", time_str, user, host, interval, t.tv_sec, sql);
+          "SET timestamp=%ld;\n%s;", time_str, user, host, interval, t.tv_sec, sql);
 }
 
 static void

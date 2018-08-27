@@ -768,6 +768,7 @@ slow_query_log_handler(const gchar *log_domain, GLogLevelFlags log_level, const 
     FILE *fp = user_data;
     fwrite(message, 1, strlen(message), fp);
     fwrite("\n", 1, 1, fp);
+    fflush(fp);
 }
 
 static FILE *

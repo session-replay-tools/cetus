@@ -255,7 +255,7 @@ network_ssl_write(network_socket *sock, int send_chunks)
     if (chunk_count == 0)
         return NETWORK_SOCKET_SUCCESS;
 
-    gint max_chunk_count = UIO_MAXIOV;
+    gint max_chunk_count = 1024; /*IOV_MAX*/
 
     chunk_count = chunk_count > max_chunk_count ? max_chunk_count : chunk_count;
 

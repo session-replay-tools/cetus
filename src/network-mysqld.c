@@ -2334,20 +2334,18 @@ process_service_unavailable(network_mysqld_con *con)
     con->state = ST_SEND_QUERY_RESULT;
     g_message("%s: service unavailable for con:%p", G_STRLOC, con);
 
-    if (con->is_auto_commit) {
-        if (con->dist_tran) {
-            if (con->orig_sql) {
-                g_message("%s: global update/insert is not fullfiled for con:%p, sql:%s", 
-                        G_STRLOC, con, con->orig_sql->str);
-            } else {
-                g_message("%s: global update/insert is not fullfiled for con:%p", 
-                        G_STRLOC, con);
-            }
-            con->dist_tran = 0;
-            con->server_to_be_closed = 1;
+    if (con->dist_tran) {
+        if (con->orig_sql) {
+            g_message("%s: global update/insert is not fullfiled for con:%p, sql:%s", 
+                    G_STRLOC, con, con->orig_sql->str);
+        } else {
+            g_message("%s: global update/insert is not fullfiled for con:%p", 
+                    G_STRLOC, con);
         }
-    }
 
+        con->server_to_be_closed = 1;
+        con->dist_tran = 0;
+    }
 #ifndef SIMPLE_PARSER
     if (con->servers != NULL) {
         g_debug("%s: server num :%d for con:%p", G_STRLOC, (int)con->servers->len, con);

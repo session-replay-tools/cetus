@@ -374,6 +374,43 @@ network_socket_connect(network_socket *sock)
     return NETWORK_SOCKET_SUCCESS;
 }
 
+#ifdef BPF_ENABLED
+static void attach_bpf(int fd) 
+{
+    static char bpf_log_buf[65536];
+    static const char bpf_license[] = ""; 
+
+    int bpf_fd;
+    const struct bpf_insn prog[] = { 
+        /* R0 = bpf_get_numa_node_id() */
+        { BPF_JMP | BPF_CALL, 0, 0, 0, BPF_FUNC_get_numa_node_id },
+        /* return R0 */
+        { BPF_JMP | BPF_EXIT, 0, 0, 0, 0 } 
+    };  
+    union bpf_attr attr;
+
+
+    memset(&attr, 0, sizeof(attr));
+    attr.prog_type = BPF_PROG_TYPE_SOCKET_FILTER;
+    attr.insn_cnt = sizeof(prog) / sizeof(prog[0]);
+    attr.insns = (unsigned long) &prog;
+    attr.license = (unsigned long) &bpf_license;
+    attr.log_buf = (unsigned long) &bpf_log_buf;
+    attr.log_size = sizeof(bpf_log_buf);
+    attr.log_level = 1;
+
+    bpf_fd = syscall(__NR_bpf, BPF_PROG_LOAD, &attr, sizeof(attr));
+    if (bpf_fd < 0)
+        error(1, errno, "ebpf error. log:\n%s\n", bpf_log_buf);
+
+    if (setsockopt(fd, SOL_SOCKET, SO_ATTACH_REUSEPORT_EBPF, &bpf_fd,
+                sizeof(bpf_fd)))
+        error(1, errno, "failed to set SO_ATTACH_REUSEPORT_EBPF");
+
+    close(bpf_fd);
+}
+#endif
+
 /**
  * connect a socket
  *

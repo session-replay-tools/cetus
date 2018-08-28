@@ -2339,7 +2339,6 @@ process_service_unavailable(network_mysqld_con *con)
                     G_STRLOC, con);
         }
 
-        con->server_to_be_closed = 1;
         con->dist_tran = 0;
         con->is_in_transaction = 0;
     }
@@ -2365,6 +2364,7 @@ process_service_unavailable(network_mysqld_con *con)
 #endif
 
     network_mysqld_con_send_error_full(con->client, C("service unavailable"), ER_TOO_MANY_USER_CONNECTIONS, "42000");
+    con->server_to_be_closed = 1;
     con->is_wait_server = 0;
     network_queue_clear(con->client->recv_queue);
     network_mysqld_queue_reset(con->client);
@@ -3061,14 +3061,11 @@ static void
 disp_no_workers(network_mysqld_con *con)
 {
     if (con->dist_tran) {
-        network_queue_clear(con->client->send_queue);
         con->dist_tran_state = NEXT_ST_XA_OVER;
-        con->dist_tran = 0;
         con->dist_tran_failed = 0;
     }
 
-    con->server_to_be_closed = 1;
-
+    network_queue_clear(con->client->send_queue);
     process_service_unavailable(con);
 }
 
@@ -3106,20 +3103,17 @@ disp_resp_workers_not_matched(network_mysqld_con *con, int *disp_flag)
                     }
                 }
 
-                con->state = ST_SEND_QUERY_RESULT;
-                g_message("%s: send dist trans error to client, dist state:%d", G_STRLOC, con->dist_tran_state);
+                g_message("%s: dist state:%d", G_STRLOC, con->dist_tran_state);
                 if (con->dist_tran_state != NEXT_ST_XA_OVER) {
                     g_message("%s: dist state not NEXT_ST_XA_OVER for con:%p", G_STRLOC, con);
                 }
                 g_debug("%s: set dist_tran_state NEXT_ST_XA_OVER for con:%p", G_STRLOC, con);
 
                 con->dist_tran_state = NEXT_ST_XA_OVER;
-                con->dist_tran = 0;
-                con->dist_tran_failed = 0;
 
                 process_service_unavailable(con);
                 remove_mul_server_recv_packets(con);
-
+                con->dist_tran_failed = 0;
                 *disp_flag = DISP_CONTINUE;
                 result = 0;
             }
@@ -3252,10 +3246,9 @@ disp_attr(network_mysqld_con *con, int srv_down_count, int *disp_flag)
                     con->dist_tran_state = NEXT_ST_XA_OVER;
                 }
 
-                network_mysqld_con_send_error_full(con->client, C("MySQL server down"), ER_SERVER_SHUTDOWN, "08S01");
-
-                remove_mul_server_recv_packets(con);
                 network_queue_clear(con->client->send_queue);
+                network_mysqld_con_send_error_full(con->client, C("MySQL server down"), ER_SERVER_SHUTDOWN, "08S01");
+                remove_mul_server_recv_packets(con);
                 network_queue_clear(con->client->recv_queue);
                 network_mysqld_queue_reset(con->client);
 

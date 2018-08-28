@@ -466,6 +466,10 @@ network_socket_bind(network_socket *con)
                         G_STRLOC, con->dst->name->str, g_strerror(errno), errno);
                 return NETWORK_SOCKET_ERROR;
             }
+
+#ifdef BPF_ENABLED
+            attach_bpf(con->fd);
+#endif
         }
 
         if (con->dst->addr.common.sa_family == AF_INET6) {

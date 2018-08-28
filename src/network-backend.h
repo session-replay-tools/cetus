@@ -124,7 +124,9 @@ typedef struct network_group_t {
     GString *name;
     network_backend_t *master;
     network_backend_t *slaves[MAX_GROUP_SLAVES];
-    int nslaves;
+    gint nslaves;
+    network_backend_t *unknown[MAX_GROUP_SLAVES];
+    gint nunknown;
     unsigned int slave_visit_cnt;
 } network_group_t;
 

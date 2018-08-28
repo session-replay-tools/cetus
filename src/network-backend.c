@@ -470,6 +470,20 @@ network_group_add(network_group_t *gp, network_backend_t *backend)
         }
         gp->nslaves += 1;
         gp->slaves[gp->nslaves - 1] = backend;
+    } else if (backend->type == BACKEND_TYPE_UNKNOWN) {
+        if (gp->nunknown >= MAX_GROUP_SLAVES) {
+            g_critical("too many unknown for group");
+            return;
+        }
+        int i = 0;
+        for (i = 0; i < gp->nunknown; ++i) {
+            network_backend_t *slave = gp->unknown[i];
+            if (strleq(S(slave->addr->name), S(backend->addr->name))) {
+                return;
+            }
+        }
+        gp->nunknown += 1;
+        gp->unknown[gp->nunknown - 1] = backend;
     }
 }
 
@@ -488,6 +502,10 @@ network_group_update(network_group_t *gp)
         backends = g_list_append(backends, gp->slaves[i]);
     }
     gp->nslaves = 0;
+    for (i = 0; i < gp->nunknown; ++i) {
+        backends = g_list_append(backends, gp->unknown[i]);
+    }
+    gp->nunknown = 0;
 
     /* rearrange them into this group */
     GList *l;

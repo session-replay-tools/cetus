@@ -3119,7 +3119,6 @@ disp_resp_workers_not_matched(network_mysqld_con *con, int *disp_flag)
 
                 process_service_unavailable(con);
                 remove_mul_server_recv_packets(con);
-                network_queue_clear(con->client->send_queue);
 
                 *disp_flag = DISP_CONTINUE;
                 result = 0;

@@ -2327,7 +2327,6 @@ handle_query_wait_stats(network_mysqld_con *con)
 static void
 process_service_unavailable(network_mysqld_con *con)
 {
-
     con->state = ST_SEND_QUERY_RESULT;
     g_message("%s: service unavailable for con:%p", G_STRLOC, con);
 
@@ -2342,6 +2341,7 @@ process_service_unavailable(network_mysqld_con *con)
 
         con->server_to_be_closed = 1;
         con->dist_tran = 0;
+        con->is_in_transaction = 0;
     }
 #ifndef SIMPLE_PARSER
     if (con->servers != NULL) {

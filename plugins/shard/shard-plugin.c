@@ -1294,6 +1294,11 @@ proxy_get_pooled_connection(network_mysqld_con *con,
     if (type == BACKEND_TYPE_RW) {
         backend = backend_group->master;    /* may be NULL if master down */
         if (!backend || (backend->state != BACKEND_STATE_UP && backend->state != BACKEND_STATE_UNKNOWN)) {
+            if (backend) {
+                g_message("%s: backend->state:%d", G_STRLOC, backend->state);
+            } else {
+                g_message("%s: backend is nil", G_STRLOC);
+            }
             *server_unavailable = 1;
             return FALSE;
         }
@@ -1313,6 +1318,7 @@ proxy_get_pooled_connection(network_mysqld_con *con,
             con->slave_conn_shortaged = 1;
         }
 
+        g_message("%s: conn shortaged, type:%d", G_STRLOC, type);
         return FALSE;
     }
 

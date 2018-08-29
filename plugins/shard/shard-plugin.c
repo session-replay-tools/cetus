@@ -197,12 +197,15 @@ check_backends_attr_changed(network_mysqld_con *con)
     for (i = 0; i < con->servers->len; i++) {
         server_session_t *ss = g_ptr_array_index(con->servers, i);
         if (ss->backend->type != con->last_backends_type[i]) {
+            g_message("%s backend type:%d, record type:%d",
+                    G_STRLOC, ss->backend->type, con->last_backends_type[i]);
             server_attr_changed = 1;
             break;
         }
 
         if (ss->backend->state != BACKEND_STATE_UP && ss->backend->state != BACKEND_STATE_UNKNOWN) {
             server_attr_changed = 1;
+            g_message("%s backend state:%d", G_STRLOC, ss->backend->state);
         }
     }
 

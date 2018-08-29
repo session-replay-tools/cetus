@@ -1716,7 +1716,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
                 con->state = ST_READ_QUERY;
             }
             return NETWORK_SOCKET_SUCCESS;
-        } else {
+        } else if (con->server) {
             GString *packet;
             while ((packet = g_queue_pop_head(con->server->recv_queue->chunks))) {
                 g_string_free(packet, TRUE);

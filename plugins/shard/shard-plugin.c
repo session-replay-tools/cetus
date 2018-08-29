@@ -264,7 +264,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
             } else {
                 network_mysqld_con_send_error(con->client, C("(proxy) unable to continue processing command"));
                 rc = PROXY_SEND_RESULT;
-                con->server_to_be_closed = 1;
+                network_mysqld_con_clear_xa_env_when_not_expected(con);
                 g_message("%s server attr changed", G_STRLOC);
             }
         }

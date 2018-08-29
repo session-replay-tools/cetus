@@ -422,6 +422,20 @@ network_mysqld_con_retry_timeout(network_mysqld_con *con)
     return timeout;
 }
 
+int network_mysqld_con_clear_xa_env_when_not_expected(network_mysqld_con *con)
+{
+    con->dist_tran = 0;
+    con->dist_tran_failed = 0;
+    if (con->is_start_tran_command) {
+        con->is_auto_commit = 1;
+        con->is_start_tran_command = 0;
+    }
+    con->is_in_transaction = 0;
+    con->client->is_need_q_peek_exec = 0;
+    con->client->is_server_conn_reserved = 0;
+    con->server_to_be_closed = 1;
+}
+
 int
 network_mysqld_queue_reset(network_socket *sock)
 {
@@ -1826,8 +1840,6 @@ build_xa_command(network_mysqld_con *con, server_session_t *ss, int end, char *b
                 con->is_auto_commit = 1;
                 con->is_start_tran_command = 0;
                 con->is_in_transaction = 0;
-                con->client->is_need_q_peek_exec = 1;
-                con->client->is_server_conn_reserved = 0;
                 g_debug("%s: set is_need_q_peek_exec true", G_STRLOC);
             } else {
                 g_debug("%s: is_start_tran_command false", G_STRLOC);
@@ -2330,18 +2342,6 @@ process_service_unavailable(network_mysqld_con *con)
     con->state = ST_SEND_QUERY_RESULT;
     g_message("%s: service unavailable for con:%p", G_STRLOC, con);
 
-    if (con->dist_tran) {
-        if (con->orig_sql) {
-            g_message("%s: global update/insert is not fullfiled for con:%p, sql:%s", 
-                    G_STRLOC, con, con->orig_sql->str);
-        } else {
-            g_message("%s: global update/insert is not fullfiled for con:%p", 
-                    G_STRLOC, con);
-        }
-
-        con->dist_tran = 0;
-        con->is_in_transaction = 0;
-    }
 #ifndef SIMPLE_PARSER
     if (con->servers != NULL) {
         g_debug("%s: server num :%d for con:%p", G_STRLOC, (int)con->servers->len, con);
@@ -2362,6 +2362,17 @@ process_service_unavailable(network_mysqld_con *con)
         }
     }
 #endif
+
+    if (con->dist_tran) {
+        if (con->orig_sql) {
+            g_message("%s: global update/insert is not fullfiled for con:%p, sql:%s", 
+                    G_STRLOC, con, con->orig_sql->str);
+        } else {
+            g_message("%s: global update/insert is not fullfiled for con:%p", 
+                    G_STRLOC, con);
+        }
+        network_mysqld_con_clear_xa_env_when_not_expected(con);
+    }
 
     network_mysqld_con_send_error_full(con->client, C("service unavailable"), ER_TOO_MANY_USER_CONNECTIONS, "42000");
     con->server_to_be_closed = 1;
@@ -2908,6 +2919,7 @@ handle_dist_tran_after_read_mul_resp(network_mysqld_con *con, int *result_reserv
 
                 con->dist_tran = 0;
                 con->dist_tran_failed = 0;
+                con->client->is_server_conn_reserved = 0;
                 g_debug("%s: set dist tran 0:%p", G_STRLOC, con);
             } else {
                 g_debug("%s: call here for con:%p, xa state:%d", G_STRLOC, con, con->dist_tran_state);

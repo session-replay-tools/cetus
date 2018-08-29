@@ -764,6 +764,7 @@ NETWORK_API void network_mysqld_con_handle(int event_fd, short events, void *use
 NETWORK_API int network_mysqld_queue_append(network_socket *sock, network_queue *queue, const char *data, size_t len);
 NETWORK_API int network_mysqld_queue_append_raw(network_socket *sock, network_queue *queue, GString *data);
 NETWORK_API int network_mysqld_queue_reset(network_socket *sock);
+NETWORK_API int network_mysqld_con_clear_xa_env_when_not_expected(network_mysqld_con *con);
 
 NETWORK_API void network_connection_pool_create_conn(network_mysqld_con *con);
 NETWORK_API void network_connection_pool_create_conns(chassis *srv);

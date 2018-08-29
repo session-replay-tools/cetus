@@ -967,6 +967,8 @@ gboolean shard_conf_add_sharded_table(sharding_table_t* t)
 {
     sharding_vdb_t* vdb = shard_vdbs_get_by_id(shard_conf_vdbs, t->vdb_id);
     if (vdb) {
+        t->vdb_ref = vdb;
+        t->shard_key_type = vdb->key_type;
         return sharding_tables_add(t);
     } else {
         return FALSE;
@@ -1052,6 +1054,7 @@ gboolean shard_conf_write_json(chassis_config_t* conf_manager)
 
     char* json_str = cJSON_Print(root);
     chassis_config_write_object(conf_manager, "sharding", json_str);
+    g_message("Update sharding.json");
     cJSON_Delete(root);
     g_free(json_str);
     return TRUE;

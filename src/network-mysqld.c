@@ -422,7 +422,7 @@ network_mysqld_con_retry_timeout(network_mysqld_con *con)
     return timeout;
 }
 
-int network_mysqld_con_clear_xa_env_when_not_expected(network_mysqld_con *con)
+void network_mysqld_con_clear_xa_env_when_not_expected(network_mysqld_con *con)
 {
     con->dist_tran = 0;
     con->dist_tran_failed = 0;

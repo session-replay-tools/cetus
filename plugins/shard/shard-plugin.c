@@ -197,12 +197,15 @@ check_backends_attr_changed(network_mysqld_con *con)
     for (i = 0; i < con->servers->len; i++) {
         server_session_t *ss = g_ptr_array_index(con->servers, i);
         if (ss->backend->type != con->last_backends_type[i]) {
+            g_message("%s backend type:%d, record type:%d",
+                    G_STRLOC, ss->backend->type, con->last_backends_type[i]);
             server_attr_changed = 1;
             break;
         }
 
         if (ss->backend->state != BACKEND_STATE_UP && ss->backend->state != BACKEND_STATE_UNKNOWN) {
             server_attr_changed = 1;
+            g_message("%s backend state:%d", G_STRLOC, ss->backend->state);
         }
     }
 
@@ -261,7 +264,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
             } else {
                 network_mysqld_con_send_error(con->client, C("(proxy) unable to continue processing command"));
                 rc = PROXY_SEND_RESULT;
-                con->server_to_be_closed = 1;
+                network_mysqld_con_clear_xa_env_when_not_expected(con);
                 g_message("%s server attr changed", G_STRLOC);
             }
         }

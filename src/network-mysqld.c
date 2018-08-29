@@ -431,6 +431,20 @@ network_mysqld_con_retry_timeout(network_mysqld_con *con)
     return timeout;
 }
 
+int network_mysqld_con_clear_xa_env_when_not_expected(network_mysqld_con *con)
+{
+    con->dist_tran = 0;
+    con->dist_tran_failed = 0;
+    if (con->is_start_tran_command) {
+        con->is_auto_commit = 1;
+        con->is_start_tran_command = 0;
+    }
+    con->is_in_transaction = 0;
+    con->client->is_need_q_peek_exec = 0;
+    con->client->is_server_conn_reserved = 0;
+    con->server_to_be_closed = 1;
+}
+
 int
 network_mysqld_queue_reset(network_socket *sock)
 {
@@ -1835,8 +1849,6 @@ build_xa_command(network_mysqld_con *con, server_session_t *ss, int end, char *b
                 con->is_auto_commit = 1;
                 con->is_start_tran_command = 0;
                 con->is_in_transaction = 0;
-                con->client->is_need_q_peek_exec = 1;
-                con->client->is_server_conn_reserved = 0;
                 g_debug("%s: set is_need_q_peek_exec true", G_STRLOC);
             } else {
                 g_debug("%s: is_start_tran_command false", G_STRLOC);
@@ -2333,19 +2345,6 @@ process_service_unavailable(network_mysqld_con *con)
     con->state = ST_SEND_QUERY_RESULT;
     g_message("%s: service unavailable for con:%p", G_STRLOC, con);
 
-    if (con->dist_tran) {
-        if (con->orig_sql) {
-            g_message("%s: global update/insert is not fullfiled for con:%p, sql:%s", 
-                    G_STRLOC, con, con->orig_sql->str);
-        } else {
-            g_message("%s: global update/insert is not fullfiled for con:%p", 
-                    G_STRLOC, con);
-        }
-
-        con->server_to_be_closed = 1;
-        con->dist_tran = 0;
-        con->is_in_transaction = 0;
-    }
 #ifndef SIMPLE_PARSER
     if (con->servers != NULL) {
         g_debug("%s: server num :%d for con:%p", G_STRLOC, (int)con->servers->len, con);
@@ -2367,7 +2366,19 @@ process_service_unavailable(network_mysqld_con *con)
     }
 #endif
 
+    if (con->dist_tran) {
+        if (con->orig_sql) {
+            g_message("%s: global update/insert is not fullfiled for con:%p, sql:%s", 
+                    G_STRLOC, con, con->orig_sql->str);
+        } else {
+            g_message("%s: global update/insert is not fullfiled for con:%p", 
+                    G_STRLOC, con);
+        }
+        network_mysqld_con_clear_xa_env_when_not_expected(con);
+    }
+
     network_mysqld_con_send_error_full(con->client, C("service unavailable"), ER_TOO_MANY_USER_CONNECTIONS, "42000");
+    con->server_to_be_closed = 1;
     con->is_wait_server = 0;
     network_queue_clear(con->client->recv_queue);
     network_mysqld_queue_reset(con->client);
@@ -2914,6 +2925,7 @@ handle_dist_tran_after_read_mul_resp(network_mysqld_con *con, int *result_reserv
 
                 con->dist_tran = 0;
                 con->dist_tran_failed = 0;
+                con->client->is_server_conn_reserved = 0;
                 g_debug("%s: set dist tran 0:%p", G_STRLOC, con);
             } else {
                 g_debug("%s: call here for con:%p, xa state:%d", G_STRLOC, con, con->dist_tran_state);
@@ -3067,14 +3079,11 @@ static void
 disp_no_workers(network_mysqld_con *con)
 {
     if (con->dist_tran) {
-        network_queue_clear(con->client->send_queue);
         con->dist_tran_state = NEXT_ST_XA_OVER;
-        con->dist_tran = 0;
         con->dist_tran_failed = 0;
     }
 
-    con->server_to_be_closed = 1;
-
+    network_queue_clear(con->client->send_queue);
     process_service_unavailable(con);
 }
 
@@ -3112,21 +3121,17 @@ disp_resp_workers_not_matched(network_mysqld_con *con, int *disp_flag)
                     }
                 }
 
-                con->state = ST_SEND_QUERY_RESULT;
-                g_message("%s: send dist trans error to client, dist state:%d", G_STRLOC, con->dist_tran_state);
+                g_message("%s: dist state:%d", G_STRLOC, con->dist_tran_state);
                 if (con->dist_tran_state != NEXT_ST_XA_OVER) {
                     g_message("%s: dist state not NEXT_ST_XA_OVER for con:%p", G_STRLOC, con);
                 }
                 g_debug("%s: set dist_tran_state NEXT_ST_XA_OVER for con:%p", G_STRLOC, con);
 
                 con->dist_tran_state = NEXT_ST_XA_OVER;
-                con->dist_tran = 0;
-                con->dist_tran_failed = 0;
 
                 process_service_unavailable(con);
                 remove_mul_server_recv_packets(con);
-                network_queue_clear(con->client->send_queue);
-
+                con->dist_tran_failed = 0;
                 *disp_flag = DISP_CONTINUE;
                 result = 0;
             }
@@ -3259,10 +3264,9 @@ disp_attr(network_mysqld_con *con, int srv_down_count, int *disp_flag)
                     con->dist_tran_state = NEXT_ST_XA_OVER;
                 }
 
-                network_mysqld_con_send_error_full(con->client, C("MySQL server down"), ER_SERVER_SHUTDOWN, "08S01");
-
-                remove_mul_server_recv_packets(con);
                 network_queue_clear(con->client->send_queue);
+                network_mysqld_con_send_error_full(con->client, C("MySQL server down"), ER_SERVER_SHUTDOWN, "08S01");
+                remove_mul_server_recv_packets(con);
                 network_queue_clear(con->client->recv_queue);
                 network_mysqld_queue_reset(con->client);
 

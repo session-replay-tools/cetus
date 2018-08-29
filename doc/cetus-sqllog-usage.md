@@ -208,6 +208,24 @@ backend模式打印的是发送到SQL的语句等相关内容，该模式下，�
 > 
 > type: SQL类型
 
+xa\_state的类型包括如下内容：
+> UNKNOWN
+>
+> NEXT_ST_XA_START
+>
+> NEXT_ST_XA_QUERY
+>
+> NEXT_ST_XA_END
+>
+> NEXT_ST_XA_PREPARE
+>
+> NEXT_ST_XA_COMMIT
+>
+> NEXT_ST_XA_ROLLBACK
+>
+> NEXT_ST_XA_CANDIDATE_OVER
+>
+> NEXT_ST_XA_OVER
 
 分片版本下，当调整连接状态时候，会打印如下日志：
 

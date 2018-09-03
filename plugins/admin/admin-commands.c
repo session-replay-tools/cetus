@@ -1752,6 +1752,7 @@ void admin_create_vdb(network_mysqld_con* con, int id, GPtrArray* partitions,
     gboolean ok = sharding_vdb_is_valid(vdb, g->backends->groups->len)
         && shard_conf_add_vdb(vdb);
     if (ok) {
+        g_message("Admin: %s", con->orig_sql->str);
         shard_conf_write_json(con->srv->config_manager);
         network_mysqld_con_send_ok(con->client);
     } else {
@@ -1774,6 +1775,7 @@ void admin_create_sharded_table(network_mysqld_con* con, const char* schema,
     t->pkey = g_string_new(key);
     gboolean ok = shard_conf_add_sharded_table(t);
     if (ok) {
+        g_message("Admin: %s", con->orig_sql->str);
         shard_conf_write_json(con->srv->config_manager);
         network_mysqld_con_send_ok(con->client);
     } else {
@@ -1965,6 +1967,7 @@ void admin_create_single_table(network_mysqld_con* con, const char* schema,
 
     gboolean ok = shard_conf_add_single_table(schema, table, group);
     if (ok) {
+        g_message("Admin: %s", con->orig_sql->str);
         shard_conf_write_json(con->srv->config_manager);
         network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
     } else {

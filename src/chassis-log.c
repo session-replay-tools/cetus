@@ -206,10 +206,6 @@ chassis_log_write(chassis_log *log, int log_level, GString *str)
     
     int log_fd = log->log_file_fd;
 
-    if (log_fd == -1) {
-        return -1;
-    }
-
     p = buffer;
 
     sprintf(p, "(pid=%d) ", cetus_pid);
@@ -224,7 +220,12 @@ chassis_log_write(chassis_log *log, int log_level, GString *str)
 
     *p++ = '\n';
 
-    write(log_fd, buffer, p - buffer);
+    if (log_fd == -1) {
+        write(STDERR_FILENO, buffer, p - buffer);
+        return -1;
+    } else {
+        write(log_fd, buffer, p - buffer);
+    }
 
     return 0;
 }

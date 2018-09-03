@@ -1,9 +1,12 @@
+#define _GNU_SOURCE
+
 #include <sys/resource.h>
 #include <errno.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
 #include <net/if.h>
+#include <sched.h>
 #include <sys/ioctl.h>
 
 #include "chassis-sql-log.h"
@@ -109,6 +112,8 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
 {
     int                try_cnt;
     unsigned int       live;
+
+    cycle->cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
     cetus_start_worker_processes(cycle, cycle->worker_processes,
                                CETUS_PROCESS_RESPAWN);
@@ -480,7 +485,20 @@ cetus_master_process_exit(cetus_cycle_t *cycle)
 static void
 cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
 {
+
     g_message("%s: call cetus_worker_process_cycle", G_STRLOC);
+
+    if (cycle->cpus > 0) {
+        cpu_set_t cpu_set;
+        memset(&cpu_set, 0, sizeof(cpu_set));
+        int cpu_ndx = cetus_last_process % cycle->cpus;
+        CPU_SET(cpu_ndx, &cpu_set);
+        if (sched_setaffinity(0, sizeof(cpu_set), &cpu_set) < 0) {
+            g_critical("%s: failed to pin to cpu:%s, cpu index:%d",
+                    G_STRLOC, strerror(errno), cpu_ndx);
+        }
+    }
+
     int worker = (intptr_t) data;
 
     cetus_process = CETUS_PROCESS_WORKER;

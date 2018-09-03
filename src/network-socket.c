@@ -377,37 +377,21 @@ network_socket_connect(network_socket *sock)
 #ifdef BPF_ENABLED
 static void attach_bpf(int fd) 
 {
-    static char bpf_log_buf[65536];
-    static const char bpf_license[] = ""; 
+    struct sock_filter code[] = {
+        /* A = raw_smp_processor_id() */
+        { BPF_LD  | BPF_W | BPF_ABS, 0, 0, SKF_AD_OFF + SKF_AD_CPU },
+        /* return A */
+        { BPF_RET | BPF_A, 0, 0, 0 },
+    };
+    struct sock_fprog p = {
+        .len = 2,
+        .filter = code,
+    };
 
-    int bpf_fd;
-    const struct bpf_insn prog[] = { 
-        /* R0 = bpf_get_numa_node_id() */
-        { BPF_JMP | BPF_CALL, 0, 0, 0, BPF_FUNC_get_numa_node_id },
-        /* return R0 */
-        { BPF_JMP | BPF_EXIT, 0, 0, 0, 0 } 
-    };  
-    union bpf_attr attr;
-
-
-    memset(&attr, 0, sizeof(attr));
-    attr.prog_type = BPF_PROG_TYPE_SOCKET_FILTER;
-    attr.insn_cnt = sizeof(prog) / sizeof(prog[0]);
-    attr.insns = (unsigned long) &prog;
-    attr.license = (unsigned long) &bpf_license;
-    attr.log_buf = (unsigned long) &bpf_log_buf;
-    attr.log_size = sizeof(bpf_log_buf);
-    attr.log_level = 1;
-
-    bpf_fd = syscall(__NR_bpf, BPF_PROG_LOAD, &attr, sizeof(attr));
-    if (bpf_fd < 0)
-        error(1, errno, "ebpf error. log:\n%s\n", bpf_log_buf);
-
-    if (setsockopt(fd, SOL_SOCKET, SO_ATTACH_REUSEPORT_EBPF, &bpf_fd,
-                sizeof(bpf_fd)))
-        error(1, errno, "failed to set SO_ATTACH_REUSEPORT_EBPF");
-
-    close(bpf_fd);
+    if (setsockopt(fd, SOL_SOCKET, SO_ATTACH_REUSEPORT_CBPF, &p, sizeof(p))) {
+        g_critical("%s:failed to set SO_ATTACH_REUSEPORT_CBPF, err:%s",
+                G_STRLOC, strerror(errno));
+    }
 }
 #endif
 

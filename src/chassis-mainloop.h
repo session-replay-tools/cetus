@@ -153,6 +153,7 @@ struct chassis {
     int enable_admin_listen;
 
     int worker_processes;
+    int cpus;
 
     int max_alive_time;
     int max_resp_len;

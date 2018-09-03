@@ -644,9 +644,8 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->default_db = DUP_STRING(frontend->default_db, NULL);
     srv->ifname = DUP_STRING(frontend->ifname, "eth0");
 
-    frontend->worker_processes = 1;
     if (frontend->worker_processes < 1) {
-        srv->worker_processes = 4;
+        srv->worker_processes = 1;
     } else if (frontend->worker_processes > MAX_WORK_PROCESSES) {
         srv->worker_processes = MAX_WORK_PROCESSES;
     } else {

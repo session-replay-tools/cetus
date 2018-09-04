@@ -50,6 +50,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/version.h>
+#include <linux/filter.h>
+
 
 #ifdef HAVE_WRITEV
 #define USE_BUFFERED_NETIO

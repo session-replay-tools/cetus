@@ -113,6 +113,8 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
     int                try_cnt;
     unsigned int       live;
 
+    cetus_pid = getpid();
+
     cycle->cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
     cetus_start_worker_processes(cycle, cycle->worker_processes,

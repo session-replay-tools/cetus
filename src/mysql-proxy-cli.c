@@ -988,6 +988,8 @@ main_cmdline(int argc, char **argv)
         srv->config_manager = chassis_config_from_local_dir(srv->conf_dir, frontend->default_file);
     }
 
+    cetus_pid = getpid();
+
     /*
      * start the logging
      */
@@ -1016,8 +1018,6 @@ main_cmdline(int argc, char **argv)
 
         GOTO_EXIT(EXIT_FAILURE);
     }
-
-    cetus_pid = getpid();
 
     g_message("starting " PACKAGE_STRING);
 #ifdef CHASSIS_BUILD_TAG

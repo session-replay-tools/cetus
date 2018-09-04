@@ -790,7 +790,7 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
         }
 
         /* FIXME: network_socket_bind() */
-        if (0 != network_socket_bind(listen_sock)) {
+        if (0 != network_socket_bind(listen_sock, 0)) {
             return -1;
         }
 

@@ -408,7 +408,7 @@ static void attach_bpf(int fd)
  * @see network_address_set_address()
  */
 network_socket_retval_t
-network_socket_bind(network_socket *con)
+network_socket_bind(network_socket *con,  int advanced_mode)
 {
     /* 
      * HPUX:       int setsockopt(int s, int level, int optname, 
@@ -454,7 +454,9 @@ network_socket_bind(network_socket *con)
             }
 
 #ifdef BPF_ENABLED
-            attach_bpf(con->fd);
+            if (advanced_mode) {
+                attach_bpf(con->fd);
+            }
 #endif
         }
 

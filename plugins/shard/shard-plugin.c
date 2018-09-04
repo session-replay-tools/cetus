@@ -2521,7 +2521,7 @@ network_mysqld_shard_plugin_apply_config(chassis *chas, chassis_plugin_config *c
         return -1;
     }
 
-    if (network_socket_bind(listen_sock)) {
+    if (network_socket_bind(listen_sock, 1)) {
         return -1;
     }
     g_message("shard module listening on port %s, con:%p", config->address, con);

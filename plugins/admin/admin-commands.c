@@ -836,17 +836,6 @@ void admin_select_connection_stat(network_mysqld_con* con, int backend_ndx, char
         g_free(numstr);
 }
 
-static void bytes_to_hex_str(char* pin, int len, char* pout)
-{
-    const char* hex = "0123456789ABCDEF";
-    int i = 0;
-    for(; i < len; ++i){
-        *pout++ = hex[(*pin>>4)&0xF];
-        *pout++ = hex[(*pin++)&0xF];
-    }
-    *pout = 0;
-}
-
 static enum cetus_pwd_type password_type(char* table)
 {
     if (strcmp(table, "user_pwd")==0) {

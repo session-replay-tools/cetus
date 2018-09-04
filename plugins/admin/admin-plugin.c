@@ -344,7 +344,7 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
         result.detail = NULL;
         g_debug("%s: call admin_resultset_merge", G_STRLOC);
         admin_resultset_merge(con, con->client->send_queue, recv_queues, &result);
-
+        g_debug("%s: call admin_resultset_merge end", G_STRLOC);
         con->state = ST_SEND_QUERY_RESULT;
         network_mysqld_queue_reset(con->client);
         network_queue_clear(con->client->recv_queue);

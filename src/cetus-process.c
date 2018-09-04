@@ -81,7 +81,7 @@ create_channel(int channel[])
         return -1;
     }
 
-    g_debug("%s: create channel %d:%d", G_STRLOC,
+    g_message("%s: create channel %d:%d", G_STRLOC,
             channel[0], channel[1]);
 
     if (fcntl(channel[0], F_SETFL, O_NONBLOCK | O_RDWR) != 0) {
@@ -107,8 +107,8 @@ create_channel(int channel[])
     }
 
     if (fcntl(channel[0], F_SETOWN, cetus_pid) == -1) {
-        g_critical("%s: fcntl(F_SETOWN) failed while spawning ",
-                G_STRLOC);
+        g_critical("%s: fcntl(F_SETOWN) failed while spawning:%s, cetus_pid:%d",
+                G_STRLOC, strerror(errno), cetus_pid);
         cetus_close_channel(channel);
         return -1;
     }

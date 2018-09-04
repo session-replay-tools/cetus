@@ -707,6 +707,10 @@ void admin_show_connectionlist(network_mysqld_con *con, int show_count)
 
 void admin_acl_show_rules(network_mysqld_con *con, gboolean is_white)
 {
+    if (con->is_admin_client) {
+        con->ask_one_worker = 1;
+        return;
+    }
     GPtrArray *fields = network_mysqld_proto_fielddefs_new();
     MAKE_FIELD_DEF_2_COL(fields, "User", "Host");
 
@@ -728,6 +732,10 @@ void admin_acl_show_rules(network_mysqld_con *con, gboolean is_white)
 
 void admin_acl_add_rule(network_mysqld_con *con, gboolean is_white, char *addr)
 {
+    if (con->is_admin_client) {
+        return;
+    }
+
     chassis *chas = con->srv;
     gboolean ok = cetus_acl_add_rule_str(chas->priv->acl,
                                          is_white?ACL_WHITELIST:ACL_BLACKLIST, addr);
@@ -736,6 +744,9 @@ void admin_acl_add_rule(network_mysqld_con *con, gboolean is_white, char *addr)
 
 void admin_acl_delete_rule(network_mysqld_con *con, gboolean is_white, char *addr)
 {
+    if (con->is_admin_client) {
+        return;
+    }
     chassis *chas = con->srv;
     int affected = cetus_acl_delete_rule_str(chas->priv->acl,
                                              is_white?ACL_WHITELIST:ACL_BLACKLIST, addr);
@@ -770,7 +781,6 @@ static GList* admin_get_all_options(chassis* chas)
 void admin_show_variables(network_mysqld_con* con, const char* like)
 {
     if (con->is_admin_client) {
-        con->admin_read_merge = 1;
         con->ask_one_worker = 1; 
         return;
     }
@@ -819,10 +829,14 @@ void admin_show_status(network_mysqld_con* con, const char* like)
     cetus_variable_t* variables = con->srv->priv->stats_variables;
 
     GPtrArray *fields = network_mysqld_proto_fielddefs_new();
-    MAKE_FIELD_DEF_2_COL(fields, "Variable_name", "Value");
+    MAKE_FIELD_DEF_3_COL(fields, "PID", "Variable_name", "Value");
 
     GPtrArray *rows = g_ptr_array_new_with_free_func(
         (void*)network_mysqld_mysql_field_row_free);
+
+    char buffer[32];
+    cetus_pid_t process_id = getpid();
+    sprintf(buffer, "%d", process_id);
 
     GList *freelist = NULL;
     int i = 0;
@@ -830,7 +844,7 @@ void admin_show_status(network_mysqld_con* con, const char* like)
         if (sql_pattern_like(pattern, variables[i].name)) {
             char* value = cetus_variable_get_value_str(&variables[i]);
             freelist = g_list_append(freelist, value);
-            APPEND_ROW_2_COL(rows, variables[i].name, value);
+            APPEND_ROW_3_COL(rows, buffer, variables[i].name, value);
         }
     }
     network_mysqld_con_send_resultset(con->client, fields, rows);
@@ -1204,17 +1218,21 @@ static void admin_supported_stats(network_mysqld_con* con)
 
 void admin_get_stats(network_mysqld_con* con, char* p)
 {
-    if (con->is_admin_client) {
-        con->admin_read_merge = 1;
-        return;
-    }
-
     if (!p) { /* just "stats get", no argument */
         admin_supported_stats(con);
         return;
     }
+    
+    if (con->is_admin_client) {
+        con->admin_read_merge = 1;
+        return;
+    }
+    char buffer[32];
+    cetus_pid_t process_id = getpid();
+    sprintf(buffer, "%d", process_id);
+
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();
-    MAKE_FIELD_DEF_2_COL(fields, "name", "value");
+    MAKE_FIELD_DEF_3_COL(fields, "PID", "name", "value");
     GPtrArray *rows = g_ptr_array_new_with_free_func(
         (void*)network_mysqld_mysql_field_row_free);
     chassis *chas = con->srv;
@@ -1224,17 +1242,18 @@ void admin_get_stats(network_mysqld_con* con, char* p)
     if (strcasecmp(p, "client_query") == 0) {
         snprintf(buf1, 32, "%lu", stats->client_query.ro);
         snprintf(buf2, 32, "%lu", stats->client_query.rw);
-        APPEND_ROW_2_COL(rows, "client_query.ro", buf1);
-        APPEND_ROW_2_COL(rows, "client_query.rw", buf2);
+        APPEND_ROW_3_COL(rows, buffer, "client_query.ro", buf1);
+        APPEND_ROW_3_COL(rows, buffer, "client_query.rw", buf2);
     } else if (strcasecmp(p, "proxyed_query") == 0) {
         snprintf(buf1, 32, "%lu", stats->proxyed_query.ro);
         snprintf(buf2, 32, "%lu", stats->proxyed_query.rw);
-        APPEND_ROW_2_COL(rows, "proxyed_query.ro", buf1);
-        APPEND_ROW_2_COL(rows, "proxyed_query.rw", buf2);
+        APPEND_ROW_3_COL(rows, buffer, "proxyed_query.ro", buf1);
+        APPEND_ROW_3_COL(rows, buffer, "proxyed_query.rw", buf2);
     } else if (strcasecmp(p, "query_time_table") == 0) {
         int i = 0;
         for (i; i < MAX_QUERY_TIME && stats->query_time_table[i]; ++i) {
             GPtrArray* row = g_ptr_array_new_with_free_func(g_free);
+            g_ptr_array_add(row, buffer);
             g_ptr_array_add(row, g_strdup_printf("query_time_table.%d", i+1));
             g_ptr_array_add(row, g_strdup_printf("%lu", stats->query_time_table[i]));
             g_ptr_array_add(rows, row);
@@ -1243,6 +1262,7 @@ void admin_get_stats(network_mysqld_con* con, char* p)
         int i = 0;
         for (i; i < MAX_WAIT_TIME && stats->query_wait_table[i]; ++i) {
             GPtrArray* row = g_ptr_array_new_with_free_func(g_free);
+            g_ptr_array_add(row, buffer);
             g_ptr_array_add(row, g_strdup_printf("query_wait_table.%d", i+1));
             g_ptr_array_add(row, g_strdup_printf("%lu", stats->query_wait_table[i]));
             g_ptr_array_add(rows, row);
@@ -1252,18 +1272,20 @@ void admin_get_stats(network_mysqld_con* con, char* p)
         for (i; i < network_backends_count(chas->priv->backends)
                  && i < MAX_SERVER_NUM; ++i) {
             GPtrArray* row = g_ptr_array_new_with_free_func(g_free);
+            g_ptr_array_add(row, buffer);
             g_ptr_array_add(row, g_strdup_printf("server_query_details.%d.ro", i+1));
             g_ptr_array_add(row, g_strdup_printf("%lu", stats->server_query_details[i].ro));
             g_ptr_array_add(rows, row);
             row = g_ptr_array_new_with_free_func(g_free);
+            g_ptr_array_add(row, buffer);
             g_ptr_array_add(row, g_strdup_printf("server_query_details.%d.rw", i+1));
             g_ptr_array_add(row, g_strdup_printf("%lu", stats->server_query_details[i].rw));
             g_ptr_array_add(rows, row);
         }
     } else if (strcasecmp(p, "reset") == 0) {
-        APPEND_ROW_2_COL(rows, "reset", "0");
+        APPEND_ROW_3_COL(rows, buffer, "reset", "0");
     } else {
-        APPEND_ROW_2_COL(rows, (char*)p, (char*)p);
+        APPEND_ROW_3_COL(rows, buffer, (char*)p, (char*)p);
     }
     network_mysqld_con_send_resultset(con->client, fields, rows);
 
@@ -1370,10 +1392,6 @@ void admin_set_config(network_mysqld_con* con, char* key, char* value)
 
 static void admin_reload_settings(network_mysqld_con* con)
 {
-    if (con->is_admin_client) {
-        return;
-    }
-
     GList *options = admin_get_all_options(con->srv);
     gint ret = chassis_config_reload_options(con->srv->config_manager);
     if (ret == -1) {
@@ -1482,7 +1500,6 @@ void admin_reset_stats(network_mysqld_con* con)
 void admin_select_all_groups(network_mysqld_con* con)
 {
     if (con->is_admin_client) {
-        con->admin_read_merge = 1;
         con->ask_one_worker = 1;
         return;
     }
@@ -1634,42 +1651,46 @@ void admin_send_overview(network_mysqld_con* con)
     chassis_private* g = con->srv->priv;
     chassis_plugin_config *config = con->config;
     GPtrArray *fields = network_mysqld_proto_fielddefs_new();
-    MAKE_FIELD_DEF_2_COL(fields, "Status", "Value");
+    MAKE_FIELD_DEF_3_COL(fields, "PID", "Status", "Value");
+
+    char buffer[32];
+    cetus_pid_t process_id = getpid();
+    sprintf(buffer, "%d", process_id);
 
     GPtrArray *rows = g_ptr_array_new_with_free_func(
         (void*)network_mysqld_mysql_field_row_free);
-    APPEND_ROW_2_COL(rows, "Cetus version", PLUGIN_VERSION);
+    APPEND_ROW_3_COL(rows, buffer, "Cetus version", PLUGIN_VERSION);
     char start_time[32];
     chassis_epoch_to_string(&con->srv->startup_time, C(start_time));
-    APPEND_ROW_2_COL(rows, "Startup time", start_time);
+    APPEND_ROW_3_COL(rows, buffer, "Startup time", start_time);
     GString* plugin_names = g_string_new(0);
     get_module_names(con->srv, plugin_names);
-    APPEND_ROW_2_COL(rows, "Loaded modules", plugin_names->str);
+    APPEND_ROW_3_COL(rows, buffer, "Loaded modules", plugin_names->str);
     const int bsize = 32;
     static char buf1[32], buf2[32], buf3[32];
     snprintf(buf1, bsize, "%d", network_backends_idle_conns(g->backends));
-    APPEND_ROW_2_COL(rows, "Idle backend connections", buf1);
+    APPEND_ROW_3_COL(rows, buffer, "Idle backend connections", buf1);
     snprintf(buf2, bsize, "%d", network_backends_used_conns(g->backends));
-    APPEND_ROW_2_COL(rows, "Used backend connections", buf2);
+    APPEND_ROW_3_COL(rows, buffer, "Used backend connections", buf2);
     snprintf(buf3, bsize, "%d", g->cons->len);
-    APPEND_ROW_2_COL(rows, "Client connections", buf3);
+    APPEND_ROW_3_COL(rows, buffer, "Client connections", buf3);
 
     query_stats_t* stats = &(con->srv->query_stats);
     char qcount[32];
     snprintf(qcount, 32, "%ld", stats->client_query.ro+stats->client_query.rw);
-    APPEND_ROW_2_COL(rows, "Query count", qcount);
+    APPEND_ROW_3_COL(rows, buffer, "Query count", qcount);
 
     if (config->has_shard_plugin) {
         char xacount[32];
         snprintf(xacount, 32, "%ld", stats->xa_count);
-        APPEND_ROW_2_COL(rows, "XA count", xacount);
+        APPEND_ROW_3_COL(rows, buffer, "XA count", xacount);
     }
     char qps[64];
     admin_stats_get_average(con->config->admin_stats, ADMIN_STATS_QPS, C(qps));
-    APPEND_ROW_2_COL(rows, "QPS (1min, 5min, 15min)", qps);
+    APPEND_ROW_3_COL(rows, buffer, "QPS (1min, 5min, 15min)", qps);
     char tps[64];
     admin_stats_get_average(con->config->admin_stats, ADMIN_STATS_TPS, C(tps));
-    APPEND_ROW_2_COL(rows, "TPS (1min, 5min, 15min)", tps);
+    APPEND_ROW_3_COL(rows, buffer, "TPS (1min, 5min, 15min)", tps);
     network_mysqld_con_send_resultset(con->client, fields, rows);
 
     network_mysqld_proto_fielddefs_free(fields);
@@ -1786,7 +1807,6 @@ void admin_create_sharded_table(network_mysqld_con* con, const char* schema,
 void admin_select_vdb(network_mysqld_con* con)
 {
     if (con->is_admin_client) {
-        con->admin_read_merge = 1;
         con->ask_one_worker = 1;
         return;
     }
@@ -1821,7 +1841,6 @@ void admin_select_vdb(network_mysqld_con* con)
 void admin_select_sharded_table(network_mysqld_con* con)
 {
     if (con->is_admin_client) {
-        con->admin_read_merge = 1;
         con->ask_one_worker = 1;
         return;
     }

@@ -215,7 +215,7 @@ network_backends_add(network_backends_t *bs, const gchar *address,
 
     if (0 != network_address_set_address(new_backend->addr, new_backend->address->str)) {
         network_backend_free(new_backend);
-        return -1;
+        return BACKEND_OPERATE_NETERR;
     }
 
     guint i;
@@ -227,8 +227,12 @@ network_backends_add(network_backends_t *bs, const gchar *address,
             network_backend_free(new_backend);
 
             g_critical("backend %s is already known!", address);
-            return -1;
+            return BACKEND_OPERATE_DUPLICATE;
         }
+    }
+
+    if (type == BACKEND_TYPE_RW && network_backend_check_available_rw(bs, new_backend->server_group)) {
+        return BACKEND_OPERATE_2MASTER;
     }
 
     g_ptr_array_add(bs->backends, new_backend);
@@ -241,7 +245,7 @@ network_backends_add(network_backends_t *bs, const gchar *address,
     network_backends_into_group(bs, new_backend);
     g_message("added %s backend: %s, state: %s", backend_type_t_str[type], address, backend_state_t_str[state]);
 
-    return 0;
+    return BACKEND_OPERATE_SUCCESS;
 }
 
 /**
@@ -642,4 +646,32 @@ network_backends_used_conns(network_backends_t *bs)
         sum += in_use;
     }
     return sum;
+}
+
+int
+network_backend_check_available_rw(network_backends_t *bs, GString *name)
+{
+    if (!name || name->len == 0) {
+        int i = 0;
+        int count = network_backends_count(bs);
+        for (i = 0; i < count; i++) {
+            network_backend_t *backend = network_backends_get(bs, i);
+            if ((BACKEND_TYPE_RW == backend->type) &&
+                backend->state != BACKEND_STATE_MAINTAINING && backend->state != BACKEND_STATE_DELETED) {
+                break;
+            }
+        }
+        return i < count ? 1 : 0;
+    } else {
+        network_group_t *group = network_backends_get_group(bs, name);
+        if (group == NULL) {
+            return 0;
+        }
+        network_backend_t *rw = group->master;
+        if (rw && rw->state != BACKEND_STATE_MAINTAINING && rw->state != BACKEND_STATE_DELETED) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
 }

@@ -650,9 +650,15 @@ void admin_acl_show_rules(network_mysqld_con *con, gboolean is_white)
 void admin_acl_add_rule(network_mysqld_con *con, gboolean is_white, char *addr)
 {
     chassis *chas = con->srv;
-    gboolean ok = cetus_acl_add_rule_str(chas->priv->acl,
+    int affected = cetus_acl_add_rule_str(chas->priv->acl,
                                          is_white?ACL_WHITELIST:ACL_BLACKLIST, addr);
-    network_mysqld_con_send_ok_full(con->client, ok, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+    gint ret = CHANGE_SAVE_ERROR;
+    chassis *srv = con->srv;
+    network_socket *client = con->client;
+    gint effected_rows = 0;
+    if (affected)
+        ret = save_setting(srv, &effected_rows);
+    send_result(client, ret, affected);
 }
 
 void admin_acl_delete_rule(network_mysqld_con *con, gboolean is_white, char *addr)
@@ -660,7 +666,13 @@ void admin_acl_delete_rule(network_mysqld_con *con, gboolean is_white, char *add
     chassis *chas = con->srv;
     int affected = cetus_acl_delete_rule_str(chas->priv->acl,
                                              is_white?ACL_WHITELIST:ACL_BLACKLIST, addr);
-    network_mysqld_con_send_ok_full(con->client, affected, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+    gint ret = CHANGE_SAVE_ERROR;
+    chassis *srv = con->srv;
+    network_socket *client = con->client;
+    gint effected_rows = 0;
+    if (affected)
+        ret = save_setting(srv, &effected_rows);
+    send_result(client, ret, affected);
 }
 
 /* only match % wildcard, case insensitive */

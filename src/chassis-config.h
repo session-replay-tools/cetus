@@ -22,6 +22,37 @@
 #define CHASSIS_CONFIG_H
 
 #include "glib-ext.h"
+#include <mysql.h>
+
+enum chassis_config_type_t {
+    CHASSIS_CONF_SSH,
+    CHASSIS_CONF_FTP,
+    CHASSIS_CONF_MYSQL,
+    CHASSIS_CONF_SQLITE,
+    CHASSIS_CONF_LOCAL,         /* maybe unify local directory? */
+};
+
+struct chassis_config_t {
+    enum chassis_config_type_t type;
+    char *user;
+    char *password;
+    char *host;
+    int port;
+    char *schema;
+
+/* this mysql conn might be used in 2 threads,
+ * on startup, the main thread use it to load config
+ * while running, the monitor thread use it periodically
+ * for now, it is guaranteed not used simutaneously, so it's not locked
+ */
+    MYSQL *mysql_conn;
+
+    char *options_table;
+    char *options_filter;
+    GHashTable *options;
+
+    GList *objects;
+};
 
 /**
  * The config manager module, it manages `options` and `object`

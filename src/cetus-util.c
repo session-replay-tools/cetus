@@ -132,3 +132,14 @@ guint64 get_timer_microseconds() {
     }
     return last_value;
 }
+
+void bytes_to_hex_str(char* pin, int len, char* pout)
+{
+    const char* hex = "0123456789ABCDEF";
+    int i = 0;
+    for(; i < len; ++i){
+        *pout++ = hex[(*pin>>4)&0xF];
+        *pout++ = hex[(*pin++)&0xF];
+    }
+    *pout = 0;
+}

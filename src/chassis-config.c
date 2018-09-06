@@ -30,14 +30,6 @@
 #include <ctype.h>
 #include <glib/gstdio.h>        /* for g_stat */
 
-enum chassis_config_type_t {
-    CHASSIS_CONF_SSH,
-    CHASSIS_CONF_FTP,
-    CHASSIS_CONF_MYSQL,
-    CHASSIS_CONF_SQLITE,
-    CHASSIS_CONF_LOCAL,         /* maybe unify local directory? */
-};
-
 #define RF_MAX_NAME_LEN 128
 struct config_object_t {
     char name[RF_MAX_NAME_LEN];
@@ -54,28 +46,6 @@ config_object_free(struct config_object_t *ob)
         g_free(ob->cache);
     g_free(ob);
 }
-
-struct chassis_config_t {
-    enum chassis_config_type_t type;
-    char *user;
-    char *password;
-    char *host;
-    int port;
-    char *schema;
-
-/* this mysql conn might be used in 2 threads,
- * on startup, the main thread use it to load config
- * while running, the monitor thread use it periodically
- * for now, it is guaranteed not used simutaneously, so it's not locked
- */
-    MYSQL *mysql_conn;
-
-    char *options_table;
-    char *options_filter;
-    GHashTable *options;
-
-    GList *objects;
-};
 
 static gboolean
 url_parse_user_pass(chassis_config_t *rconf, const char *userpass, int len)

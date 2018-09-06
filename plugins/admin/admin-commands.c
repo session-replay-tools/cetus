@@ -28,6 +28,9 @@
 #include "chassis-sql-log.h"
 #include "cetus-acl.h"
 
+gint save_setting(chassis *srv, gint *effected_rows);
+void send_result(network_socket *client, gint ret, gint affected);
+
 static const char *get_conn_xa_state_name(network_mysqld_con_dist_tran_state_t state) {
     switch (state) {
     case NEXT_ST_XA_START: return "XS";
@@ -647,9 +650,18 @@ void admin_acl_show_rules(network_mysqld_con *con, gboolean is_white)
 void admin_acl_add_rule(network_mysqld_con *con, gboolean is_white, char *addr)
 {
     chassis *chas = con->srv;
-    gboolean ok = cetus_acl_add_rule_str(chas->priv->acl,
+    int affected = cetus_acl_add_rule_str(chas->priv->acl,
                                          is_white?ACL_WHITELIST:ACL_BLACKLIST, addr);
-    network_mysqld_con_send_ok_full(con->client, ok, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+    if(chas->config_manager->type == CHASSIS_CONF_MYSQL) {
+        network_mysqld_con_send_ok_full(con->client, affected,
+                                        0, SERVER_STATUS_AUTOCOMMIT, 0);        
+    } else {
+        gint ret = CHANGE_SAVE_ERROR;
+        gint effected_rows = 0;
+        if (affected)
+            ret = save_setting(chas, &effected_rows);
+        send_result(con->client, ret, affected);
+    }
 }
 
 void admin_acl_delete_rule(network_mysqld_con *con, gboolean is_white, char *addr)
@@ -657,7 +669,16 @@ void admin_acl_delete_rule(network_mysqld_con *con, gboolean is_white, char *add
     chassis *chas = con->srv;
     int affected = cetus_acl_delete_rule_str(chas->priv->acl,
                                              is_white?ACL_WHITELIST:ACL_BLACKLIST, addr);
-    network_mysqld_con_send_ok_full(con->client, affected, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+    if(chas->config_manager->type == CHASSIS_CONF_MYSQL) {
+        network_mysqld_con_send_ok_full(con->client, affected,
+                                        0, SERVER_STATUS_AUTOCOMMIT, 0);
+    } else {
+        gint ret = CHANGE_SAVE_ERROR;
+        gint effected_rows = 0;
+        if (affected)
+            ret = save_setting(chas, &effected_rows);
+        send_result(con->client, ret, affected);
+    }
 }
 
 /* only match % wildcard, case insensitive */
@@ -754,7 +775,16 @@ void admin_set_reduce_conns(network_mysqld_con* con, int mode)
         con->srv->is_reduce_conns = mode;
         affected = 1;
     }
-    network_mysqld_con_send_ok_full(con->client, affected, 0,2,0);
+    if(con->srv->config_manager->type == CHASSIS_CONF_MYSQL) {
+        network_mysqld_con_send_ok_full(con->client, affected,
+                                        0, SERVER_STATUS_AUTOCOMMIT, 0);
+    } else {
+        gint ret = CHANGE_SAVE_ERROR;
+        gint effected_rows = 0;
+        if (affected)
+            ret = save_setting(con->srv, &effected_rows);
+        send_result(con->client, ret, affected);
+    }
 }
 
 void admin_set_maintain(network_mysqld_con* con, int mode)
@@ -834,17 +864,6 @@ void admin_select_connection_stat(network_mysqld_con* con, int backend_ndx, char
     g_ptr_array_free(rows, TRUE);
     if (numstr)
         g_free(numstr);
-}
-
-static void bytes_to_hex_str(char* pin, int len, char* pout)
-{
-    const char* hex = "0123456789ABCDEF";
-    int i = 0;
-    for(; i < len; ++i){
-        *pout++ = hex[(*pin>>4)&0xF];
-        *pout++ = hex[(*pin++)&0xF];
-    }
-    *pout = 0;
 }
 
 static enum cetus_pwd_type password_type(char* table)
@@ -964,11 +983,40 @@ static backend_state_t backend_state(const char* str)
 void admin_insert_backend(network_mysqld_con* con, char *addr, char *type, char *state)
 {
     chassis_private *g = con->srv->priv;
-    int affected = network_backends_add(g->backends, addr,
+  
+    int ret = network_backends_add(g->backends, addr,
                                         backend_type(type),
                                         backend_state(state), con->srv);
-    network_mysqld_con_send_ok_full(con->client, affected==0?1:0, 0,
-                                    SERVER_STATUS_AUTOCOMMIT, 0);
+    switch (ret) {
+        case BACKEND_OPERATE_SUCCESS:
+        {
+            if(con->srv->config_manager->type == CHASSIS_CONF_MYSQL) {
+                network_mysqld_con_send_ok_full(con->client, 1, 0,
+                                                SERVER_STATUS_AUTOCOMMIT, 0);
+            } else {
+                gint ret = CHANGE_SAVE_ERROR;
+                gint effected_rows = 0;
+                ret = save_setting(con->srv, &effected_rows);
+                send_result(con->client, ret, 1);
+            }
+            break;
+        }
+        case BACKEND_OPERATE_NETERR:
+        {
+            network_mysqld_con_send_error(con->client, C("get network address failed"));
+            break;
+        }
+        case BACKEND_OPERATE_DUPLICATE:
+        {
+            network_mysqld_con_send_error(con->client, C("backend is already known"));
+            break;
+        }
+        case BACKEND_OPERATE_2MASTER:
+        {
+            network_mysqld_con_send_error(con->client, C("rw node is already exists，only one rw node is allowed"));
+            break;
+        }
+    }
 }
 
 void admin_update_backend(network_mysqld_con* con, GList* equations,
@@ -1008,16 +1056,34 @@ void admin_update_backend(network_mysqld_con* con, GList* equations,
         network_mysqld_con_send_error(con->client, C("no such backend"));
         return;
     }
+
+    if (type_str && backend_type(type_str) == BACKEND_TYPE_RW && network_backend_check_available_rw(g->backends, bk->server_group)) {
+        if (backend_type(type_str) == bk->type) {
+            network_mysqld_con_send_ok_full(con->client, 0, 0,
+                                                SERVER_STATUS_AUTOCOMMIT, 0);
+        } else {
+            network_mysqld_con_send_error(con->client, C("rw node is already exists，only one rw node is allowed"));
+        }
+        return;
+    }
+
     int type = type_str ? backend_type(type_str) : bk->type;
     int state = state_str ? backend_state(state_str) : bk->state;
     if (type == ERROR_PARAM || state == ERROR_PARAM) {
         network_mysqld_con_send_error(con->client, C("parameter error"));
         return;
     }
-    int ok = network_backends_modify(g->backends, backend_ndx, type, state, NO_PREVIOUS_STATE);
-    int affected_rows = ok ? 1 : 0;
-    network_mysqld_con_send_ok_full(con->client, affected_rows, 0,
-                                    SERVER_STATUS_AUTOCOMMIT, 0);
+    int affected = (network_backends_modify(g->backends, backend_ndx, type, state, NO_PREVIOUS_STATE)==0)?1:0;
+    if(con->srv->config_manager->type == CHASSIS_CONF_MYSQL) {
+        network_mysqld_con_send_ok_full(con->client, affected,
+                                        0, SERVER_STATUS_AUTOCOMMIT, 0);
+    } else {
+        gint ret = CHANGE_SAVE_ERROR;
+        gint effected_rows = 0;
+        if (affected)
+            ret = save_setting(con->srv, &effected_rows);
+        send_result(con->client, ret, affected);
+    }
 }
 
 void admin_delete_backend(network_mysqld_con* con, char *key, char *val)
@@ -1036,8 +1102,15 @@ void admin_delete_backend(network_mysqld_con* con, char *key, char *val)
 
     if (backend_ndx >= 0 && backend_ndx < network_backends_count(g->backends)) {
         network_backends_remove(g->backends, backend_ndx);/*TODO: just change state? */
-        network_mysqld_con_send_ok_full(con->client, 1, 0,
-                                        SERVER_STATUS_AUTOCOMMIT, 0);
+        if(con->srv->config_manager->type == CHASSIS_CONF_MYSQL) {
+            network_mysqld_con_send_ok_full(con->client, 1, 0,
+                                            SERVER_STATUS_AUTOCOMMIT, 0);
+        } else {
+            gint ret = CHANGE_SAVE_ERROR;
+            gint effected_rows = 0;
+            ret = save_setting(con->srv, &effected_rows);
+            send_result(con->client, ret, 1);
+        }
     } else {
         network_mysqld_con_send_ok_full(con->client, 0, 0,
                                         SERVER_STATUS_AUTOCOMMIT, 0);
@@ -1202,7 +1275,14 @@ void admin_set_config(network_mysqld_con* con, char* key, char* value)
     }
 
     if(0 == ret) {
-        network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+        if(con->srv->config_manager->type == CHASSIS_CONF_MYSQL) {
+            network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+        } else {
+            gint save_ret = CHANGE_SAVE_ERROR;
+            gint effected_rows = 0;
+            save_ret = save_setting(con->srv, &effected_rows);
+            send_result(con->client, save_ret, 1);
+        }
     } else if(ASSIGN_NOT_SUPPORT == ret){
         network_mysqld_con_send_error_full(con->client, C("Variable cannot be set dynamically"), 1065, "28000");
     } else if(ASSIGN_VALUE_INVALID == ret){
@@ -1625,13 +1705,11 @@ void admin_select_sharded_table(network_mysqld_con* con)
     g_list_free(tables);
 }
 
-void admin_save_settings(network_mysqld_con *con)
+gint save_setting(chassis *srv, gint *effected_rows)
 {
-    chassis *srv = con->srv;
+    gint ret = ASSIGN_OK;
     GKeyFile *keyfile = g_key_file_new();
     g_key_file_set_list_separator(keyfile, ',');
-    gint ret = ASSIGN_OK;
-    gint effected_rows = 0;
     GString *free_path = g_string_new(NULL);
 
     if(srv->default_file == NULL) {
@@ -1673,10 +1751,9 @@ void admin_save_settings(network_mysqld_con *con)
         }
         g_string_free(new_file, TRUE);
     }
-
     if(ret == ASSIGN_OK) {
         /* save new config */
-        effected_rows = chassis_options_save(keyfile, srv->options, srv);
+        *effected_rows = chassis_options_save(keyfile, srv->options, srv);
         gsize file_size = 0;
         gchar *file_buf = g_key_file_to_data(keyfile, &file_size, NULL);
         GError *gerr = NULL;
@@ -1691,9 +1768,13 @@ void admin_save_settings(network_mysqld_con *con)
             }
         }
     }
+    return ret;
+}
 
+void send_result(network_socket *client, gint ret, gint affected)
+{
     if(ret == ASSIGN_OK) {
-        network_mysqld_con_send_ok_full(con->client, effected_rows,
+        network_mysqld_con_send_ok_full(client, affected,
                                         0, SERVER_STATUS_AUTOCOMMIT, 0);
     } else {
         char *msg = NULL;
@@ -1701,9 +1782,21 @@ void admin_save_settings(network_mysqld_con *con)
         case RENAME_ERROR: msg = "rename file failed"; break;
         case SAVE_ERROR: msg = "save file failed"; break;
         case CHMOD_ERROR: msg = "chmod file failed"; break;
+        case CHANGE_SAVE_ERROR: msg = "change config and save file failed"; break;
         }
-        network_mysqld_con_send_error_full(con->client, L(msg), 1066, "28000");
+        network_mysqld_con_send_error_full(client, L(msg), 1066, "28000");
     }
+}
+
+void admin_save_settings(network_mysqld_con *con)
+{
+    gint ret = ASSIGN_OK;
+    chassis *srv = con->srv;
+    gint effected_rows = 0;
+    ret = save_setting(srv, &effected_rows);
+
+    network_socket *client = con->client;
+    send_result(client, ret, effected_rows);
 }
 void admin_compatible_cmd(network_mysqld_con* con)
 {

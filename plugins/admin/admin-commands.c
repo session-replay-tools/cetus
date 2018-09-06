@@ -857,17 +857,6 @@ void admin_select_connection_stat(network_mysqld_con* con, int backend_ndx, char
         g_free(numstr);
 }
 
-static void bytes_to_hex_str(char* pin, int len, char* pout)
-{
-    const char* hex = "0123456789ABCDEF";
-    int i = 0;
-    for(; i < len; ++i){
-        *pout++ = hex[(*pin>>4)&0xF];
-        *pout++ = hex[(*pin++)&0xF];
-    }
-    *pout = 0;
-}
-
 static enum cetus_pwd_type password_type(char* table)
 {
     if (strcmp(table, "user_pwd")==0) {
@@ -985,16 +974,33 @@ static backend_state_t backend_state(const char* str)
 void admin_insert_backend(network_mysqld_con* con, char *addr, char *type, char *state)
 {
     chassis_private *g = con->srv->priv;
-    int affected = (network_backends_add(g->backends, addr,
+  
+    int ret = network_backends_add(g->backends, addr,
                                         backend_type(type),
-                                        backend_state(state), con->srv)==0)?1:0;
-    gint ret = CHANGE_SAVE_ERROR;
-    chassis *srv = con->srv;
-    network_socket *client = con->client;
-    gint effected_rows = 0;
-    if (affected)
-        ret = save_setting(srv, &effected_rows);
-    send_result(client, ret, affected);
+                                        backend_state(state), con->srv);
+    switch (ret) {
+        case BACKEND_OPERATE_SUCCESS:
+        {
+            network_mysqld_con_send_ok_full(con->client, 1, 0,
+                                                SERVER_STATUS_AUTOCOMMIT, 0);
+            break;
+        }
+        case BACKEND_OPERATE_NETERR:
+        {
+            network_mysqld_con_send_error(con->client, C("get network address failed"));
+            break;
+        }
+        case BACKEND_OPERATE_DUPLICATE:
+        {
+            network_mysqld_con_send_error(con->client, C("backend is already known"));
+            break;
+        }
+        case BACKEND_OPERATE_2MASTER:
+        {
+            network_mysqld_con_send_error(con->client, C("rw node is already exists，only one rw node is allowed"));
+            break;
+        }
+    }
 }
 
 void admin_update_backend(network_mysqld_con* con, GList* equations,
@@ -1034,6 +1040,17 @@ void admin_update_backend(network_mysqld_con* con, GList* equations,
         network_mysqld_con_send_error(con->client, C("no such backend"));
         return;
     }
+
+    if (type_str && backend_type(type_str) == BACKEND_TYPE_RW && network_backend_check_available_rw(g->backends, bk->server_group)) {
+        if (backend_type(type_str) == bk->type) {
+            network_mysqld_con_send_ok_full(con->client, 0, 0,
+                                                SERVER_STATUS_AUTOCOMMIT, 0);
+        } else {
+            network_mysqld_con_send_error(con->client, C("rw node is already exists，only one rw node is allowed"));
+        }
+        return;
+    }
+
     int type = type_str ? backend_type(type_str) : bk->type;
     int state = state_str ? backend_state(state_str) : bk->state;
     if (type == ERROR_PARAM || state == ERROR_PARAM) {

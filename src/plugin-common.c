@@ -446,16 +446,18 @@ plugin_add_backends(chassis *chas, gchar **backend_addresses, gchar **read_only_
 
     GPtrArray *backends_arr = g->backends->backends;
     for (i = 0; backend_addresses[i]; i++) {
-        if (-1 == network_backends_add(g->backends, backend_addresses[i], BACKEND_TYPE_RW, BACKEND_STATE_UNKNOWN, chas)) {
-            return -1;
+        if (BACKEND_OPERATE_SUCCESS != network_backends_add(g->backends, backend_addresses[i], BACKEND_TYPE_RW, BACKEND_STATE_UNKNOWN, chas)) {
+            g_critical("add rw node: %s failed.", backend_addresses[i]);
+            continue;
         }
         network_backend_init_extra(backends_arr->pdata[backends_arr->len - 1], chas);
     }
 
     for (i = 0; read_only_backend_addresses && read_only_backend_addresses[i]; i++) {
-        if (-1 == network_backends_add(g->backends,
+        if (BACKEND_OPERATE_SUCCESS != network_backends_add(g->backends,
                                        read_only_backend_addresses[i], BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN, chas)) {
-            return -1;
+            g_critical("add ro node: %s failed.", read_only_backend_addresses[i]);
+            continue;
         }
         /* set conn-pool config */
         network_backend_init_extra(backends_arr->pdata[backends_arr->len - 1], chas);

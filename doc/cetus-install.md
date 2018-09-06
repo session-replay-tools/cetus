@@ -76,3 +76,50 @@ bin/cetus --defaults-file=conf/shard.conf [--conf-dir＝/home/user/cetus_install
 其中Cetus启动时可以添加命令行选项，--defaults-file选项用来加载启动配置文件（proxy.conf或者shard.conf），且在启动前保证启动配置文件的权限为660；--conf-dir是可选项，用来加载其他配置文件(.json文件)，默认为当前目录下conf文件夹。
 
 Cetus可起动守护进程后台运行，也可在进程意外终止自动启动一个新进程，可通过启动配置选项进行设置。
+
+## 注意事项
+
+发现在某些最新版本的操作系统上（例如centos:7.5.1804），虽然成功安装了tcmalloc库，但是有可能cetus仍然没有正确的链接该库。以下方法可以检测cetus是否已经成功链接了tcmalloc库：
+
+- cmake阶段
+
+```
+## cmake结束后，如果检测到系统安装有tcmalloc，会打印以下信息
+-- Looking for malloc in tcmalloc
+-- Looking for malloc in tcmalloc - found
+
+## 如果检测不到tcmalloc，则会打印以下信，此时，需要检测tcmalloc安装是否正确
+-- Looking for malloc in tcmalloc
+-- Looking for malloc in tcmalloc - not found
+```
+
+- make install 阶段
+
+```
+## make install命令执行之后，编译出cetus可执行文件会被拷贝到安装目录，可以检测该执行文件的动态库是否动态链接了tcmalloc库
+ldd ${cetus_install_path}/libexec/cetus|grep tcmalloc
+```
+
+如果发现已经安装过了tcmalloc相应的发行包，但是cetus却没有正确链接tcmalloc库，极大可能是没有找到libtcmalloc.so动态库，此时，应该手动建立软链接。建立方法：
+
+```
+## 以64位  centos7.5 为例
+cd ls -alh /usr/lib64/|grep tcmalloc
+lrwxrwxrwx  1 root root   20 Sep  4 00:58 libtcmalloc.so.4 -> libtcmalloc.so.4.4.5
+-rwxr-xr-x  1 root root 295K Apr 11 01:41 libtcmalloc.so.4.4.5
+lrwxrwxrwx  1 root root   33 Sep  4 00:58 libtcmalloc_and_profiler.so.4 -> libtcmalloc_and_profiler.so.4.4.5
+-rwxr-xr-x  1 root root 315K Apr 11 01:41 libtcmalloc_and_profiler.so.4.4.5
+lrwxrwxrwx  1 root root   26 Sep  4 00:58 libtcmalloc_debug.so.4 -> libtcmalloc_debug.so.4.4.5
+-rwxr-xr-x  1 root root 351K Apr 11 01:41 libtcmalloc_debug.so.4.4.5
+lrwxrwxrwx  1 root root   28 Sep  4 00:58 libtcmalloc_minimal.so.4 -> libtcmalloc_minimal.so.4.4.5
+-rwxr-xr-x  1 root root 152K Apr 11 01:41 libtcmalloc_minimal.so.4.4.5
+lrwxrwxrwx  1 root root   34 Sep  4 00:58 libtcmalloc_minimal_debug.so.4 -> libtcmalloc_minimal_debug.so.4.4.5
+-rwxr-xr-x  1 root root 208K Apr 11 01:41 libtcmalloc_minimal_debug.so.4.4.5
+
+## 发现没有 libtcmalloc.so，建立软链接
+ln -s /usr/lib64/libtcmalloc.so.4.4.5 /usr/lib64/libtcmalloc.so
+
+## 重新cmake
+rm -rf CMakeCache.txt
+根据所需的cetus版本执行对应cmake命令
+```

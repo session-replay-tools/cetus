@@ -953,11 +953,32 @@ static backend_state_t backend_state(const char* str)
 void admin_insert_backend(network_mysqld_con* con, char *addr, char *type, char *state)
 {
     chassis_private *g = con->srv->priv;
-    int affected = network_backends_add(g->backends, addr,
+    int ret = network_backends_add(g->backends, addr,
                                         backend_type(type),
                                         backend_state(state), con->srv);
-    network_mysqld_con_send_ok_full(con->client, affected==0?1:0, 0,
-                                    SERVER_STATUS_AUTOCOMMIT, 0);
+    switch (ret) {
+        case BACKEND_OPERATE_SUCCESS:
+        {
+            network_mysqld_con_send_ok_full(con->client, 1, 0,
+                                                SERVER_STATUS_AUTOCOMMIT, 0);
+            break;
+        }
+        case BACKEND_OPERATE_NETERR:
+        {
+            network_mysqld_con_send_error(con->client, C("get network address failed"));
+            break;
+        }
+        case BACKEND_OPERATE_DUPLICATE:
+        {
+            network_mysqld_con_send_error(con->client, C("backend is already known"));
+            break;
+        }
+        case BACKEND_OPERATE_2MASTER:
+        {
+            network_mysqld_con_send_error(con->client, C("rw node is already exists，only one rw node is allowed"));
+            break;
+        }
+    }
 }
 
 void admin_update_backend(network_mysqld_con* con, GList* equations,
@@ -997,6 +1018,17 @@ void admin_update_backend(network_mysqld_con* con, GList* equations,
         network_mysqld_con_send_error(con->client, C("no such backend"));
         return;
     }
+
+    if (type_str && backend_type(type_str) == BACKEND_TYPE_RW && network_backend_check_available_rw(g->backends, bk->server_group)) {
+        if (backend_type(type_str) == bk->type) {
+            network_mysqld_con_send_ok_full(con->client, 0, 0,
+                                                SERVER_STATUS_AUTOCOMMIT, 0);
+        } else {
+            network_mysqld_con_send_error(con->client, C("rw node is already exists，only one rw node is allowed"));
+        }
+        return;
+    }
+
     int type = type_str ? backend_type(type_str) : bk->type;
     int state = state_str ? backend_state(state_str) : bk->state;
     if (type == ERROR_PARAM || state == ERROR_PARAM) {

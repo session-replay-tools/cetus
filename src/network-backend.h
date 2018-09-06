@@ -48,6 +48,13 @@ typedef enum {
     BACKEND_TYPE_RO,
 } backend_type_t;
 
+typedef enum {
+    BACKEND_OPERATE_SUCCESS,
+    BACKEND_OPERATE_NETERR,
+    BACKEND_OPERATE_DUPLICATE,
+    BACKEND_OPERATE_2MASTER
+} backend_operate_t;
+
 typedef struct backend_config {
     GString *default_username;
     GString *default_db;
@@ -143,5 +150,7 @@ int network_backends_get_rw_ndx(network_backends_t *);
 
 int network_backends_idle_conns(network_backends_t *);
 int network_backends_used_conns(network_backends_t *);
+
+int network_backend_check_available_rw(network_backends_t *, GString *);
 
 #endif /* _BACKEND_H_ */

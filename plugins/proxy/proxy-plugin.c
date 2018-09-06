@@ -2287,7 +2287,8 @@ show_proxy_read_only_backend_address(gpointer param) {
         guint i;
         for (i = 0; i < bs->backends->len; i++) {
             network_backend_t *old_backend = g_ptr_array_index(bs->backends, i);
-            if(old_backend && old_backend->type == BACKEND_TYPE_RO && old_backend->state != BACKEND_STATE_DELETED) {
+            if(old_backend && old_backend->type == BACKEND_TYPE_RO
+                        && old_backend->state != BACKEND_STATE_DELETED && old_backend->state != BACKEND_STATE_MAINTAINING) {
                 free_str = g_string_append(free_str, old_backend->address->str);
                 if(old_backend->server_group && old_backend->server_group->len) {
                     free_str = g_string_append(free_str, "@");
@@ -2317,7 +2318,8 @@ show_proxy_backend_addresses(gpointer param) {
         guint i;
         for (i = 0; i < bs->backends->len; i++) {
             network_backend_t *old_backend = g_ptr_array_index(bs->backends, i);
-            if(old_backend && old_backend->type == BACKEND_TYPE_RW && old_backend->state != BACKEND_STATE_DELETED) {
+            if(old_backend && old_backend->type == BACKEND_TYPE_RW
+                        && old_backend->state != BACKEND_STATE_DELETED && old_backend->state != BACKEND_STATE_MAINTAINING) {
                 free_str = g_string_append(free_str, old_backend->address->str);
                 if(old_backend->server_group && old_backend->server_group->len) {
                     free_str = g_string_append(free_str, "@");

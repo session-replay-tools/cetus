@@ -1742,12 +1742,13 @@ gint save_setting(chassis *srv, gint *effected_rows)
             g_debug("remove operate, filename:%s, errno:%d",
                     new_file->str == NULL? "":new_file->str, errno);
         }
-
-        if(rename(srv->default_file, new_file->str)) {
-            g_debug("rename operate failed, filename:%s, filename:%s, errno:%d",
-                    (srv->default_file == NULL ? "":srv->default_file),
-                    (new_file->str == NULL ? "":new_file->str), errno);
-            ret = RENAME_ERROR;
+        if(access(srv->default_file, F_OK) == 0) {
+            if(rename(srv->default_file, new_file->str)) {
+                g_debug("rename operate failed, filename:%s, filename:%s, errno:%d",
+                        (srv->default_file == NULL ? "":srv->default_file),
+                        (new_file->str == NULL ? "":new_file->str), errno);
+                ret = RENAME_ERROR;
+            }
         }
         g_string_free(new_file, TRUE);
     }

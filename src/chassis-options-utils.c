@@ -1457,7 +1457,7 @@ show_check_dns(gpointer param) {
         return g_strdup_printf("%s", srv->check_dns ? "true" : "false");
     }
     if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        return (srv->check_dns == 0) ? g_strdup("false") : NULL;
+        return srv->check_dns ? g_strdup("true") : NULL;
     }
     return NULL;
 }

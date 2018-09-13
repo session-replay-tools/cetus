@@ -1,6 +1,13 @@
 # 启动配置选项
 
 ## 常规配置
+### worker-processes
+
+Default: 1
+
+启动worker进程的数量，启动的数量最好小于等于cpu数目
+
+> worker-processes = 4
 
 ### daemon
 

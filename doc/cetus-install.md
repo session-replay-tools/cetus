@@ -8,11 +8,10 @@
 - gcc
 - glib2-devel
 - flex
-- libevent-devel
 - mysql-devel／mariadb-devel
 - gperftools-libs (由于malloc存在着潜在的内存碎片问题，建议采用gperftools-libs中的tcmalloc)
 
-centos系统可使用：yum install cmake gcc glib2-devel flex libevent-devel mysql-devel gperftools-libs -y 安装依赖包，请确保在编译安装Cetus前已安装好相应的依赖。
+centos系统可使用：yum install cmake gcc glib2-devel flex mysql-devel gperftools-libs -y 安装依赖包，请确保在编译安装Cetus前已安装好相应的依赖。
 
 ## 安装步骤
 

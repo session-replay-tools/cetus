@@ -44,7 +44,8 @@ enum {
     ASSIGN_VALUE_INVALID,
     SAVE_ERROR,
     RENAME_ERROR,
-    CHMOD_ERROR
+    CHMOD_ERROR,
+    CHANGE_SAVE_ERROR
 };
 
 /* show utils */

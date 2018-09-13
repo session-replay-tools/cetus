@@ -556,7 +556,7 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                           "check-dns",
                           0, 0, OPTION_ARG_NONE, &(frontend->check_dns),
                           "check dns when hostname changed",NULL,
-                          assign_check_dns, show_check_dns, ALL_OPTS_PROPERTY);
+                          NULL, show_check_dns, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     return 0;
 }

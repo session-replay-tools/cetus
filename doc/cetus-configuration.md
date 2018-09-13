@@ -551,3 +551,13 @@ Default: false
 采用tcp stream来输出响应，规避内存炸裂等问题
 
 > enable-tcp-stream = true
+
+### ssl
+
+Default: false
+
+前端支持SSL连接。需要在 `--conf-dir` 中提供：
+- 私钥：`server-key.pem`
+- 公钥证书：`server-cert.pem`
+这两个文件可以使用[mysql工具生成](https://dev.mysql.com/doc/refman/8.0/en/creating-ssl-rsa-files-using-mysql.html)，
+生成之后拷贝到`conf-dir`目录，程序会按照这两个固定名称加载文件。

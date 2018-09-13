@@ -669,13 +669,17 @@ gchar*
 show_admin_password(gpointer param) {
     struct external_param *opt_param = (struct external_param *)param;
     gint opt_type = opt_param->opt_type;
+
     if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
-        return g_strdup_printf("%s", config->admin_password != NULL ? config->admin_password: "NULL");
+        GString* hashed_pwd = g_string_new(0);
+        network_mysqld_proto_password_hash(hashed_pwd, L(config->admin_password));
+        char* pwdhex = g_malloc0(hashed_pwd->len * 2 + 10);
+        bytes_to_hex_str(hashed_pwd->str, hashed_pwd->len, pwdhex);
+        g_string_free(hashed_pwd, TRUE);
+        return pwdhex;
     }
     if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        if(config->admin_password != NULL) {
-            return g_strdup_printf("%s", config->admin_password);
-        }
+        return g_strdup(config->admin_password);
     }
     return NULL;
 }

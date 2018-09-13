@@ -376,6 +376,7 @@ network_socket_connect(network_socket *sock)
     return NETWORK_SOCKET_SUCCESS;
 }
 
+#if defined(SO_REUSEPORT)
 #ifdef BPF_ENABLED
 static void attach_bpf(int fd) 
 {
@@ -395,6 +396,7 @@ static void attach_bpf(int fd)
                 G_STRLOC, strerror(errno));
     }
 }
+#endif
 #endif
 
 /**
@@ -447,6 +449,7 @@ network_socket_bind(network_socket *con,  int advanced_mode)
                 return NETWORK_SOCKET_ERROR;
             }
 
+#if defined(SO_REUSEPORT)
             if (0 != setsockopt(con->fd, SOL_SOCKET, SO_REUSEPORT, SETSOCKOPT_OPTVAL_CAST & val, sizeof(val))) {
                 g_critical("%s: setsockopt(%s, SOL_SOCKET, SO_REUSEPORT) failed: %s (%d)",
                         G_STRLOC, con->dst->name->str, g_strerror(errno), errno);
@@ -459,6 +462,7 @@ network_socket_bind(network_socket *con,  int advanced_mode)
             }
 #endif
         }
+#endif
 
         if (con->dst->addr.common.sa_family == AF_INET6) {
 #ifdef IPV6_V6ONLY

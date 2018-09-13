@@ -644,6 +644,8 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->default_db = DUP_STRING(frontend->default_db, NULL);
     srv->ifname = DUP_STRING(frontend->ifname, "eth0");
 
+#if defined(SO_REUSEPORT)
+    g_message("%s:SO_REUSEPORT is defined", G_STRLOC);
     if (frontend->worker_processes < 1) {
         srv->worker_processes = 1;
     } else if (frontend->worker_processes > MAX_WORK_PROCESSES) {
@@ -651,6 +653,10 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     } else {
         srv->worker_processes = frontend->worker_processes;
     }
+#else
+    g_message("%s:SO_REUSEPORT is undefined", G_STRLOC);
+    srv->worker_processes = 1;
+#endif
 
     g_message("set worker processes:%d", srv->worker_processes);
 

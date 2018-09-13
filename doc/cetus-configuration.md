@@ -1,7 +1,6 @@
 # 启动配置选项
 
 ## 常规配置
-
 ### daemon
 
 Default: false

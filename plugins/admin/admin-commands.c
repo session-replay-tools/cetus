@@ -1739,19 +1739,13 @@ gint save_setting(chassis *srv, gint *effected_rows)
         new_file = g_string_append(new_file, ".old");
 
         if (remove(new_file->str)) {
-            g_debug("remove operate, filename:%s, errno:%d",
+            g_message("remove operate, filename:%s, errno:%d",
                     new_file->str == NULL? "":new_file->str, errno);
         }
-        rename(srv->default_file, new_file->str);
-        if(errno == 2) {
-            g_debug("rename operate failed, filename:%s, filename:%s, errmsg: no such file or directory",
-                    (srv->default_file == NULL ? "":srv->default_file),
-                    (new_file->str == NULL ? "":new_file->str));
-        } else if (errno != 0) {
-            g_debug("rename operate failed, filename:%s, filename:%s, errno:%d",
+        if (rename(srv->default_file, new_file->str)) {
+            g_message("rename operate failed, filename:%s, filename:%s, errno:%d",
                     (srv->default_file == NULL ? "":srv->default_file),
                     (new_file->str == NULL ? "":new_file->str), errno);
-            ret = RENAME_ERROR;
         }
         g_string_free(new_file, TRUE);
     }
@@ -1777,7 +1771,6 @@ void send_result(network_socket *client, gint ret, gint affected)
     } else {
         char *msg = NULL;
         switch (ret) {
-        case RENAME_ERROR: msg = "rename file failed"; break;
         case SAVE_ERROR: msg = "save file failed"; break;
         case CHANGE_SAVE_ERROR: msg = "change config and save file failed"; break;
         default:msg = "unknown error type"; break;

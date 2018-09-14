@@ -183,6 +183,7 @@ Default: : 600 (seconds)
 
 Default: 100
 
+每个worker进程启动时允许创建的连接数
 当前连接数不足此值时，会自动创建连接
 
 > default-pool-size = 200
@@ -191,7 +192,7 @@ Default: 100
 
 Default: default-pool-size * 2
 
-每个MySQL实例的最大连接数，包括连接池里的空闲连接和正在使用的连接
+每个worker进程允许创建的最大连接数，包括连接池里的空闲连接和正在使用的连接
 
 > max-pool-size = 300
 
@@ -249,9 +250,9 @@ Default: false
 
 ### worker_id
 
-自增guid的worker id，最大值为63最小值为1
+不同cetus实例的id号必须是不一样，否则容易有冲突
 
-> worker_id = 4
+> worker_id = 1
 
 ## Admin配置
 

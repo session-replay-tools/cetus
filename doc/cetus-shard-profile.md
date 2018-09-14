@@ -177,6 +177,9 @@ sharding.json是分库版本的分库规则配置文件，同样采用键值对�
 # Loaded Plugins
 plugins=XXXX,XXXX
 
+# Defines the number of worker processes. 
+worker-processes=XXX
+
 # Proxy Configuration
 proxy-address=XXX.XXX.XXX.XXX:XXXX
 proxy-backend-addresses=XXX.XXX.XXX.XXX:XXXX@XXXX1,XXX.XXX.XXX.XXX:XXXX@XXXX2,XXX.XXX.XXX.XXX:XXXX@XXXX3,XXX.XXX.XXX.XXX:XXXX@XXXX4
@@ -204,6 +207,9 @@ shard.conf是分库版本的启动配置文件，在启动Cetus时需要加载�
 # Loaded Plugins
 plugins=shard,admin
 
+# Defines the number of worker processes. 
+worker-processes=4
+
 # Proxy Configuration
 proxy-address=127.0.0.1:1234
 proxy-backend-addresses=127.0.0.1:3361@data1,127.0.0.1:3362@data2,127.0.0.1:3363@data3,127.0.0.1:3364@data4
@@ -224,6 +230,8 @@ log-level=debug
 
 我们配置了分库版本的启动选项，其中plugins的值是加载插件的名称，分库（sharding）版本需加载的插件为shard和admin；
 
+worker-processes为4，代表工作进程数量为4，建议设置数量小于等于cpu数目；
+
 proxy-address的值是Proxy监听的IP和端口，我们设置为127.0.0.1:1234；proxy-backend-addresses的值是后端的IP和端口，需要同时指定group（@group），本例分为4个group，分别data1的127.0.0.1:3361、data2的127.0.0.1:3362、data3的127.0.0.1:3363、data4的127.0.0.1:3364；
 
 admin-address的值是管理模块的IP和端口，我们设置为127.0.0.1:5678；admin-username的值是管理模块的用户名，我们设置为admin；admin-password的值是管理模块的密码明文，我们设置为admin；
@@ -238,9 +246,9 @@ log-file的值是日志文件路径，我们设置为当前安装路径下的cet
 
 **启动配置文件shard.conf 常用参数：**
 
-**1）default-pool-size=\<num\>，设置刚启动的连接数量**
+**1）default-pool-size=\<num\>，设置刚启动的连接数量（by a worker process）**
 
-**2）max-pool-size=\<num\>，设置最大连接数量**
+**2）max-pool-size=\<num\>，设置最大连接数量（by a worker process）**
 
 **3）max-resp-size=\<num\>，设置最大响应大小，一旦超过此大小，则会报错给客户端**
 

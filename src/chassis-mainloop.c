@@ -61,8 +61,8 @@ extern int cetus_process_id;
 int
 chassis_check_version(const char *lib_version, const char *hdr_version)
 {
-    int lib_maj, lib_min, lib_pat;
-    int hdr_maj, hdr_min, hdr_pat;
+    int lib_maj, lib_min;
+    int hdr_maj, hdr_min;
     int scanned_fields;
 
     if (2 != (scanned_fields = sscanf(lib_version, "%d.%d", &lib_maj, &lib_min))) {

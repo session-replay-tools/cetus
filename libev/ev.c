@@ -196,20 +196,9 @@
 # define ECB_NO_SMP 1
 #endif
 
-#ifndef _WIN32
 # include <sys/time.h>
 # include <sys/wait.h>
 # include <unistd.h>
-#else
-# include <io.h>
-# define WIN32_LEAN_AND_MEAN
-# include <winsock2.h>
-# include <windows.h>
-# ifndef EV_SELECT_IS_WINSOCKET
-#  define EV_SELECT_IS_WINSOCKET 1
-# endif
-# undef EV_AVOID_STDIO
-#endif
 
 /* OS X, in its infinite idiocy, actually HARDCODES
  * a limit of 1024 into their select. Where people have brains,
@@ -292,11 +281,7 @@
 #endif
 
 #ifndef EV_USE_POLL
-# ifdef _WIN32
-#  define EV_USE_POLL 0
-# else
-#  define EV_USE_POLL EV_FEATURE_BACKENDS
-# endif
+# define EV_USE_POLL EV_FEATURE_BACKENDS
 #endif
 
 #ifndef EV_USE_EPOLL
@@ -413,10 +398,7 @@
 #endif
 
 #if !EV_USE_NANOSLEEP
-/* hp-ux has it in sys/time.h, which we unconditionally include above */
-# if !defined _WIN32 && !defined __hpux
-#  include <sys/select.h>
-# endif
+# include <sys/select.h>
 #endif
 
 #if EV_USE_INOTIFY
@@ -536,36 +518,11 @@ struct signalfd_siginfo
 /* 16 bits major, 16 bits minor */
 #define ECB_VERSION 0x00010005
 
-#ifdef _WIN32
-  typedef   signed char   int8_t;
-  typedef unsigned char  uint8_t;
-  typedef   signed short  int16_t;
-  typedef unsigned short uint16_t;
-  typedef   signed int    int32_t;
-  typedef unsigned int   uint32_t;
-  #if __GNUC__
-    typedef   signed long long int64_t;
-    typedef unsigned long long uint64_t;
-  #else /* _MSC_VER || __BORLANDC__ */
-    typedef   signed __int64   int64_t;
-    typedef unsigned __int64   uint64_t;
-  #endif
-  #ifdef _WIN64
-    #define ECB_PTRSIZE 8
-    typedef uint64_t uintptr_t;
-    typedef  int64_t  intptr_t;
-  #else
-    #define ECB_PTRSIZE 4
-    typedef uint32_t uintptr_t;
-    typedef  int32_t  intptr_t;
-  #endif
+#include <inttypes.h>
+#if (defined INTPTR_MAX ? INTPTR_MAX : ULONG_MAX) > 0xffffffffU
+#define ECB_PTRSIZE 8
 #else
-  #include <inttypes.h>
-  #if (defined INTPTR_MAX ? INTPTR_MAX : ULONG_MAX) > 0xffffffffU
-    #define ECB_PTRSIZE 8
-  #else
-    #define ECB_PTRSIZE 4
-  #endif
+#define ECB_PTRSIZE 4
 #endif
 
 #define ECB_GCC_AMD64 (__amd64 || __amd64__ || __x86_64 || __x86_64__)
@@ -734,9 +691,6 @@ struct signalfd_siginfo
     #define ECB_MEMORY_FENCE         _ReadWriteBarrier ()
     #define ECB_MEMORY_FENCE_ACQUIRE _ReadWriteBarrier () /* according to msdn, _ReadBarrier is not a load fence */
     #define ECB_MEMORY_FENCE_RELEASE _WriteBarrier ()
-  #elif defined _WIN32
-    #include <WinNT.h>
-    #define ECB_MEMORY_FENCE         MemoryBarrier () /* actually just xchg on x86... scary */
   #elif __SUNPRO_C >= 0x5110 || __SUNPRO_CC >= 0x5110
     #include <mbarrier.h>
     #define ECB_MEMORY_FENCE         __machine_rw_barrier ()
@@ -1570,10 +1524,6 @@ static EV_ATOMIC_T have_monotonic; /* did clock_gettime (CLOCK_MONOTONIC) work? 
 # define EV_WIN32_CLOSE_FD(fd) close (fd)
 #endif
 
-#ifdef _WIN32
-# include "ev_win32.c"
-#endif
-
 /*****************************************************************************/
 
 /* define a suitable floor function (only used by periodics atm) */
@@ -1907,8 +1857,6 @@ ev_sleep (ev_tstamp delay) EV_THROW
 
       EV_TS_SET (ts, delay);
       nanosleep (&ts, 0);
-#elif defined _WIN32
-      Sleep ((unsigned long)(delay * 1e3));
 #else
       struct timeval tv;
 
@@ -2163,11 +2111,7 @@ fd_kill (EV_P_ int fd)
 inline_size ecb_cold int
 fd_valid (int fd)
 {
-#ifdef _WIN32
-  return EV_FD_TO_WIN32_HANDLE (fd) != -1;
-#else
   return fcntl (fd, F_GETFD) != -1;
-#endif
 }
 
 /* called on EBADF to verify fds */
@@ -2219,13 +2163,8 @@ fd_rearm_all (EV_P)
 inline_speed void
 fd_intern (int fd)
 {
-#ifdef _WIN32
-  unsigned long arg = 1;
-  ioctlsocket (EV_FD_TO_WIN32_HANDLE (fd), FIONBIO, &arg);
-#else
   fcntl (fd, F_SETFD, FD_CLOEXEC);
   fcntl (fd, F_SETFL, O_NONBLOCK);
-#endif
 }
 
 /*****************************************************************************/
@@ -2470,15 +2409,7 @@ evpipe_write (EV_P_ EV_ATOMIC_T *flag)
       else
 #endif
         {
-#ifdef _WIN32
-          WSABUF buf;
-          DWORD sent;
-          buf.buf = &buf;
-          buf.len = 1;
-          WSASend (EV_FD_TO_WIN32_HANDLE (evpipe [1]), &buf, 1, &sent, 0, 0, 0);
-#else
           write (evpipe [1], &(evpipe [1]), 1);
-#endif
         }
 
       errno = old_errno;
@@ -2504,16 +2435,7 @@ pipecb (EV_P_ ev_io *iow, int revents)
 #endif
         {
           char dummy[4];
-#ifdef _WIN32
-          WSABUF buf;
-          DWORD recvd;
-          DWORD flags = 0;
-          buf.buf = dummy;
-          buf.len = sizeof (dummy);
-          WSARecv (EV_FD_TO_WIN32_HANDLE (evpipe [0]), &buf, 1, &recvd, &flags, 0, 0);
-#else
           read (evpipe [0], &dummy, sizeof (dummy));
-#endif
         }
     }
 
@@ -2573,10 +2495,6 @@ ev_feed_signal (int signum) EV_THROW
 static void
 ev_sighandler (int signum)
 {
-#ifdef _WIN32
-  signal (signum, ev_sighandler);
-#endif
-
   ev_feed_signal (signum);
 }
 
@@ -2724,12 +2642,8 @@ ev_version_minor (void) EV_THROW
 inline_size ecb_cold int
 enable_secure (void)
 {
-#ifdef _WIN32
-  return 0;
-#else
   return getuid () != geteuid ()
       || getgid () != getegid ();
-#endif
 }
 
 ecb_cold
@@ -2870,10 +2784,8 @@ loop_init (EV_P_ unsigned int flags) EV_THROW
 #endif
 
       /* pid check not overridable via env */
-#ifndef _WIN32
       if (flags & EVFLAG_FORKCHECK)
         curpid = getpid ();
-#endif
 
       if (!(flags & EVFLAG_NOENV)
           && !enable_secure ()
@@ -3579,14 +3491,12 @@ ev_run (EV_P_ int flags)
       ev_verify (EV_A);
 #endif
 
-#ifndef _WIN32
       if (expect_false (curpid)) /* penalise the forking check even more */
-        if (expect_false (getpid () != curpid))
+          if (expect_false (getpid () != curpid))
           {
-            curpid = getpid ();
-            postfork = 1;
+              curpid = getpid ();
+              postfork = 1;
           }
-#endif
 
 #if EV_FORK_ENABLE
       /* we might have forked, so queue fork handlers */
@@ -4125,11 +4035,6 @@ ev_signal_start (EV_P_ ev_signal *w) EV_THROW
     if (sigfd < 0) /*TODO*/
 # endif
       {
-# ifdef _WIN32
-        evpipe_init (EV_A);
-
-        signal (w->signum, ev_sighandler);
-# else
         struct sigaction sa;
 
         evpipe_init (EV_A);
@@ -4145,7 +4050,6 @@ ev_signal_start (EV_P_ ev_signal *w) EV_THROW
             sigaddset (&sa.sa_mask, w->signum);
             sigprocmask (SIG_UNBLOCK, &sa.sa_mask, 0);
           }
-#endif
       }
 
   EV_FREQUENT_CHECK;
@@ -4228,11 +4132,6 @@ ev_child_stop (EV_P_ ev_child *w) EV_THROW
 #endif
 
 #if EV_STAT_ENABLE
-
-# ifdef _WIN32
-#  undef lstat
-#  define lstat(a,b) _stati64 (a,b)
-# endif
 
 #define DEF_STAT_INTERVAL  5.0074891
 #define NFS_STAT_INTERVAL 30.1074891 /* for filesystems potentially failing inotify */
@@ -4479,11 +4378,7 @@ infy_fork (EV_P)
 
 #endif
 
-#ifdef _WIN32
-# define EV_LSTAT(p,b) _stati64 (p, b)
-#else
 # define EV_LSTAT(p,b) lstat (p, b)
-#endif
 
 void
 ev_stat_stat (EV_P_ ev_stat *w) EV_THROW

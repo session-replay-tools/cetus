@@ -250,6 +250,7 @@ Default: false
 
 ### worker_id
 
+只针对分库版本有效
 不同cetus实例的id号必须是不一样，否则容易有冲突
 
 > worker_id = 1

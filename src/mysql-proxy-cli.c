@@ -640,7 +640,7 @@ static void
 init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
 {
     srv->default_username = DUP_STRING(frontend->default_username, NULL);
-    srv->default_charset = DUP_STRING(frontend->default_charset, NULL);
+    srv->default_charset = DUP_STRING(frontend->default_charset, "utf8");
     srv->default_db = DUP_STRING(frontend->default_db, NULL);
     srv->ifname = DUP_STRING(frontend->ifname, "eth0");
 

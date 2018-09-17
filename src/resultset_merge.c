@@ -619,7 +619,7 @@ get_pkt_type(GString *pkt)
 }
 
 static char *
-retrieve_aggr_value(GString *data, group_aggr_t * aggr, char *str)
+retrieve_aggr_value(GString *data, group_aggr_t *aggr, char *str)
 {
     network_packet packet;
     packet.data = data;
@@ -1791,7 +1791,8 @@ aggr_by_group(aggr_by_group_para_t *para, GList **candidates, guint *pkt_count, 
             }
         }
 
-        g_debug("candidate:%p", candidate);
+        g_debug("candidate:%p, off_pos:%d, para->limit->offset:%d",
+                candidate, (int) off_pos, (int) para->limit->offset);
         if (off_pos < para->limit->offset) {
             off_pos++;
             candidates[cand_index] = candidate->next;
@@ -2934,8 +2935,8 @@ merge_for_select(sql_context_t *context, network_queue *send_queue, GPtrArray *r
     }
     res_merge->field_count = field_count;
 
-    group_aggr_t aggr_array[MAX_AGGR_FUNS] = { {0}
-    };
+    group_aggr_t aggr_array[MAX_AGGR_FUNS] = {{0}};
+
     int aggr_num = sql_expr_list_find_aggregates(select->columns, aggr_array);
     sql_column_list_t *sel_orderby = select->orderby_clause;
     sql_expr_list_t *sel_groupby = select->groupby_clause;

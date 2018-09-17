@@ -1977,16 +1977,13 @@ static gint save_setting(chassis *srv, gint *effected_rows)
         new_file = g_string_append(new_file, ".old");
 
         if (remove(new_file->str)) {
-            g_debug("remove operate, filename:%s, errno:%d",
+            g_message("remove operate, filename:%s, errno:%d",
                     new_file->str == NULL? "":new_file->str, errno);
         }
-        if(access(srv->default_file, F_OK) == 0) {
-            if(rename(srv->default_file, new_file->str)) {
-                g_debug("rename operate failed, filename:%s, filename:%s, errno:%d",
-                        (srv->default_file == NULL ? "":srv->default_file),
-                        (new_file->str == NULL ? "":new_file->str), errno);
-                ret = RENAME_ERROR;
-            }
+        if (rename(srv->default_file, new_file->str)) {
+            g_message("rename operate failed, filename:%s, filename:%s, errno:%d",
+                    (srv->default_file == NULL ? "":srv->default_file),
+                    (new_file->str == NULL ? "":new_file->str), errno);
         }
         g_string_free(new_file, TRUE);
     }
@@ -1999,12 +1996,6 @@ static gint save_setting(chassis *srv, gint *effected_rows)
         if (FALSE == g_file_set_contents(srv->default_file, file_buf, file_size, &gerr)) {
             ret = SAVE_ERROR;
             g_clear_error(&gerr);
-        } else {
-            if((ret = chmod(srv->default_file, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP))) {
-                g_debug("remove operate failed, filename:%s, errno:%d",
-                        (srv->default_file == NULL? "":srv->default_file), errno);
-                ret = CHMOD_ERROR;
-            }
         }
     }
     return ret;
@@ -2018,10 +2009,9 @@ static void send_result(network_socket *client, gint ret, gint affected)
     } else {
         char *msg = NULL;
         switch (ret) {
-        case RENAME_ERROR: msg = "rename file failed"; break;
         case SAVE_ERROR: msg = "save file failed"; break;
-        case CHMOD_ERROR: msg = "chmod file failed"; break;
         case CHANGE_SAVE_ERROR: msg = "change config and save file failed"; break;
+        default:msg = "unknown error type"; break;
         }
         network_mysqld_con_send_error_full(client, L(msg), 1066, "28000");
     }

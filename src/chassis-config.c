@@ -788,6 +788,10 @@ chassis_config_reload_variables(chassis_config_t *conf, const char *name, char *
     time_t mt = chassis_epoch_from_string(row[1], NULL);
 
     struct config_object_t *object = chassis_config_get_object(conf, name);
+    if (!object) {
+        mysql_free_result(result);
+        goto mysql_error;
+    }
     chassis_config_object_set_cache(object, row[0], mt);
     mysql_free_result(result);
     status = TRUE;

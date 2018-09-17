@@ -220,6 +220,11 @@ sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi)
         sql_expr_t *having = select->having_clause;
         if (having) {
             if (is_compare_op(having->op)) {
+                sql_expr_t* hav_name = having->left;
+                hav_condi->column_index =
+                    sql_expr_list_find_exact_aggregate(select->columns,
+                                                 hav_name->start,
+                                                 hav_name->end - hav_name->start);
                 hav_condi->rel_type = having->op;
                 sql_expr_t *val = having->right;
                 if (hav_condi->condition_value) {
@@ -1668,29 +1673,17 @@ select_check_HAVING_column(sql_select_t *select)
     if (!(having && having->left)) {    /* no HAVING is alright */
         return TRUE;
     }
-    gboolean found = FALSE;     /* found having cond in columns */
-    int num_aggregate = 0;
+
     const char *having_func = having->left->token_text;
     if (!having_func) {
         return FALSE;
     }
+
+    /* find having cond in columns */
     sql_expr_list_t *columns = select->columns;
-    int i;
-    for (i = 0; columns && i < columns->len; ++i) {
-        sql_expr_t *col = g_ptr_array_index(columns, i);
-        if (col->op == TK_FUNCTION && sql_func_type(col->token_text) != FT_UNKNOWN) {
-            if (strcasecmp(having_func, col->token_text) == 0) {
-                found = TRUE;
-            }
-            if (col->alias && strcasecmp(having_func, col->alias) == 0) {
-                found = TRUE;
-            }
-            ++num_aggregate;
-        }
-    }
-    if (num_aggregate > 1)      /* if HAVING is used, only 1 aggregate can appear in column */
-        return FALSE;
-    return found;
+    int index = sql_expr_list_find_exact_aggregate(columns, having->left->start,
+                                       having->left->end - having->left->start);
+    return index != -1;
 }
 
 static gboolean
@@ -1768,8 +1761,7 @@ sharding_filter_sql(sql_context_t *context)
             }
             if (!select_check_HAVING_column(select)) {
                 sql_context_set_error(context, PARSE_NOT_SUPPORT,
-                                      "(cetus) HAVING condition must show up in column, "
-                                      "and only 1 aggregate can appear in column when HAVING is used");
+                                      "(cetus) HAVING condition must show up in column");
                 return;
             }
         }
@@ -1792,7 +1784,7 @@ sharding_filter_sql(sql_context_t *context)
                 return;
             }
             /* if we can't find simple aggregates, it's inside complex expressions */
-            if (sql_expr_list_find_aggregate(select->columns) == 0) {
+            if (sql_expr_list_find_aggregate(select->columns, NULL) == -1) {
                 sql_context_set_error(context, PARSE_NOT_SUPPORT,
                                       "(cetus) Complex aggregate function not allowed on sharded sql");
                 return;

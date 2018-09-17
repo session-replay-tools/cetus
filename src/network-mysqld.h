@@ -366,6 +366,7 @@ typedef struct having_condition_t {
     int rel_type;
     int data_type;
     char *condition_value;
+    int column_index;
 } having_condition_t;
 
 typedef struct mysqld_query_attr_t {

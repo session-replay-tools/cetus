@@ -466,7 +466,7 @@ analysis_query(network_mysqld_con *con, mysqld_query_attr_t *query_attr)
         sql_select_t *select = (sql_select_t *)context->sql_statement;
 
         if (con->could_be_tcp_streamed) {
-            if (sql_expr_list_find_aggregate(select->columns)) {
+            if (sql_expr_list_find_aggregate(select->columns, NULL) != -1) {
                 con->could_be_tcp_streamed = 0;
                 g_debug("%s: con tcp stream false", G_STRLOC);
             }

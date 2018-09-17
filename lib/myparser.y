@@ -992,7 +992,7 @@ func_expr(A) ::= ID(X) LP distinct(D) exprlist(Y) RP(R). {
             "(proxy)LAST_INSERT_ID() not supported");
         //TODO: parse interupted, func_expr free?
     }
-    if (sql_func_type(X.z) != FT_UNKNOWN) {
+    if (sql_aggregate_type(X.z) != FT_UNKNOWN) {
         A->flags |= EP_AGGREGATE;
         if (context->parsing_place == SELECT_COLUMN) {
             context->clause_flags |= CF_AGGREGATE;
@@ -1005,7 +1005,7 @@ func_expr(A) ::= ID(X) LP distinct(D) exprlist(Y) RP(R). {
 }
 func_expr(A) ::= ID(X) LP STAR RP(R). {
     A = function_expr_new(&X, 0, &R);
-    if (sql_func_type(X.z) != FT_UNKNOWN) {
+    if (sql_aggregate_type(X.z) != FT_UNKNOWN) {
         A->flags |= EP_AGGREGATE;
         if (context->parsing_place == SELECT_COLUMN) {
             context->clause_flags |= CF_AGGREGATE;

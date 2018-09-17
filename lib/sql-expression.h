@@ -144,7 +144,7 @@ enum sql_expr_flags_t {
     EP_AGGREGATE = 0x1000,
 };
 
-enum sql_func_type_t {
+enum sql_aggregate_type_t {
     FT_UNKNOWN = 0,
     FT_COUNT,
     FT_SUM,
@@ -289,7 +289,9 @@ sql_expr_t *sql_expr_list_find(sql_expr_list_t *list, const char *name);
 sql_expr_t *sql_expr_list_find_fullname(sql_expr_list_t *list, const sql_expr_t *expr);
 
 int sql_expr_list_find_aggregates(sql_expr_list_t *list, group_aggr_t * aggr_array);
-int sql_expr_list_find_aggregate(sql_expr_list_t *list);
+int sql_expr_list_find_aggregate(sql_expr_list_t *list, const char *target);
+
+int sql_expr_list_find_exact_aggregate(sql_expr_list_t *list, const char *target, int len);
 
 void sql_expr_list_free(sql_expr_list_t *list);
 
@@ -335,7 +337,7 @@ void sql_statement_free(void *clause, sql_stmt_type_t stmt_type);
 
 gboolean sql_is_quoted_string(const char *s);
 
-enum sql_func_type_t sql_func_type(const char *s);
+enum sql_aggregate_type_t sql_aggregate_type(const char *s);
 
 gboolean sql_expr_equals(const sql_expr_t *, const sql_expr_t *);
 

@@ -619,12 +619,12 @@ get_pkt_type(GString *pkt)
 }
 
 static char *
-retrieve_aggr_value(GString *data, group_aggr_t *aggr, char *str)
+retrieve_aggr_value(GString *data, int pos, char *str)
 {
     network_packet packet;
     packet.data = data;
     packet.offset = NET_HEADER_SIZE;
-    skip_field(&packet, aggr->pos);
+    skip_field(&packet, pos);
     network_mysqld_proto_get_column(&packet, str, MAX_COL_VALUE_LEN);
 
     return str;
@@ -1800,7 +1800,7 @@ aggr_by_group(aggr_by_group_para_t *para, GList **candidates, guint *pkt_count, 
             continue;
         } else {
             char aggr_value[MAX_COL_VALUE_LEN] = { 0 };
-            retrieve_aggr_value(candidate->data, para->aggr_array, aggr_value);
+            retrieve_aggr_value(candidate->data, para->hav_condi->column_index, aggr_value);
 
             if (!para->hav_condi->rel_type || fulfill_condi(aggr_value, para->hav_condi, merged_result)) {
                 ((GString *)candidate->data)->str[3] = (*pkt_count) + 1;

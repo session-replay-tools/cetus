@@ -711,6 +711,7 @@ void admin_acl_show_rules(network_mysqld_con *con, gboolean is_white)
 {
     if (con->is_admin_client) {
         con->ask_one_worker = 1;
+        con->admin_read_merge = 1;
         return;
     }
     GPtrArray *fields = network_mysqld_proto_fielddefs_new();
@@ -802,6 +803,7 @@ void admin_show_variables(network_mysqld_con* con, const char* like)
 {
     if (con->is_admin_client) {
         con->ask_one_worker = 1; 
+        con->admin_read_merge = 1;
         return;
     }
 
@@ -1016,6 +1018,7 @@ void admin_select_user_password(network_mysqld_con* con, char* from_table, char 
 {
     if (con->is_admin_client) {
         con->ask_one_worker = 1;
+        con->admin_read_merge = 1;
         return;
     }
 
@@ -1591,6 +1594,7 @@ void admin_select_all_groups(network_mysqld_con* con)
 {
     if (con->is_admin_client) {
         con->ask_one_worker = 1;
+        con->admin_read_merge = 1;
         return;
     }
 
@@ -1900,6 +1904,7 @@ void admin_select_vdb(network_mysqld_con* con)
 {
     if (con->is_admin_client) {
         con->ask_one_worker = 1;
+        con->admin_read_merge = 1;
         return;
     }
 
@@ -1934,6 +1939,7 @@ void admin_select_sharded_table(network_mysqld_con* con)
 {
     if (con->is_admin_client) {
         con->ask_one_worker = 1;
+        con->admin_read_merge = 1;
         return;
     }
 
@@ -2094,6 +2100,7 @@ void admin_select_single_table(network_mysqld_con* con)
 {
     if (con->is_admin_client) {
         con->ask_one_worker = 1;
+        con->admin_read_merge = 1;
         return;
     }
 

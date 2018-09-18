@@ -827,7 +827,8 @@ void admin_show_variables(network_mysqld_con* con, const char* like)
                 continue;
             }
             freelist = g_list_append(freelist, value);
-            APPEND_ROW_3_COL(rows, (char *)opt->long_name, value, (CAN_ASSIGN_OPTS_PROPERTY(opt->opt_property)? "Dynamic" : "Static"));
+            APPEND_ROW_3_COL(rows, (char *)opt->long_name, value,
+                    (CAN_ASSIGN_OPTS_PROPERTY(opt->opt_property)? "Dynamic" : "Static"));
         }
     }
     network_mysqld_con_send_resultset(con->client, fields, rows);
@@ -918,13 +919,17 @@ void admin_show_maintain(network_mysqld_con* con)
         return;
     }
 
+    char buffer[32];
+    cetus_pid_t process_id = getpid();
+    sprintf(buffer, "%d", process_id);
+
     GPtrArray *fields = network_mysqld_proto_fielddefs_new();
     GPtrArray *rows = g_ptr_array_new_with_free_func((void *)network_mysqld_mysql_field_row_free);
-    MAKE_FIELD_DEF_1_COL(fields, "Cetus maintain status");
+    MAKE_FIELD_DEF_2_COL(fields, "PID", "Cetus maintain status");
     if(con->srv->maintain_close_mode == 1) {
-        APPEND_ROW_1_COL(rows, "true");
+        APPEND_ROW_2_COL(rows, buffer, "true");
     } else {
-        APPEND_ROW_1_COL(rows, "false");
+        APPEND_ROW_2_COL(rows, buffer, "false");
     }
     network_mysqld_con_send_resultset(con->client, fields, rows);
     network_mysqld_proto_fielddefs_free(fields);
@@ -957,10 +962,13 @@ void admin_select_connection_stat(network_mysqld_con* con, int backend_ndx, char
         return;
     }
 
+    char buffer[32];
+    cetus_pid_t process_id = getpid();
+    sprintf(buffer, "%d", process_id);
 
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();
 
-    MAKE_FIELD_DEF_1_COL(fields, "connection_num");
+    MAKE_FIELD_DEF_2_COL(fields, "PID", "connection_num");
 
     GPtrArray *rows = g_ptr_array_new_with_free_func(
         (void*)network_mysqld_mysql_field_row_free);
@@ -980,9 +988,9 @@ void admin_select_connection_stat(network_mysqld_con* con, int backend_ndx, char
         g_string_free(user_name, TRUE);
     }
     if (numstr) {
-        APPEND_ROW_1_COL(rows, numstr);
+        APPEND_ROW_2_COL(rows, buffer, numstr);
     } else {
-        APPEND_ROW_1_COL(rows, "0");
+        APPEND_ROW_2_COL(rows, buffer, "0");
     }
 
     network_mysqld_con_send_resultset(con->client, fields, rows);
@@ -1204,7 +1212,9 @@ void admin_update_backend(network_mysqld_con* con, GList* equations,
         return;
     }
 
-    if (type_str && backend_type(type_str) == BACKEND_TYPE_RW && network_backend_check_available_rw(g->backends, bk->server_group)) {
+    if (type_str && backend_type(type_str) == BACKEND_TYPE_RW &&
+            network_backend_check_available_rw(g->backends, bk->server_group))
+    {
         if (backend_type(type_str) == bk->type) {
             network_mysqld_con_send_ok_full(con->client, 0, 0,
                                                 SERVER_STATUS_AUTOCOMMIT, 0);
@@ -1387,8 +1397,13 @@ void admin_get_config(network_mysqld_con* con, char* p)
         admin_supported_config(con);
         return;
     }
+
+    char buffer[32];
+    cetus_pid_t process_id = getpid();
+    sprintf(buffer, "%d", process_id);
+
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();
-    MAKE_FIELD_DEF_2_COL(fields, "name", "value");
+    MAKE_FIELD_DEF_3_COL(fields, "PID", "name", "value");
     GPtrArray *rows = g_ptr_array_new_with_free_func(
         (void*)network_mysqld_mysql_field_row_free);
     chassis *chas = con->srv;
@@ -1399,21 +1414,21 @@ void admin_get_config(network_mysqld_con* con, char* p)
         snprintf(buf2, 32, "%f", chas->slave_delay_down_threshold_sec);
         snprintf(buf3, 32, "%f", chas->slave_delay_recover_threshold_sec);
         snprintf(buf4, 32, "%d", chas->long_query_time);
-        APPEND_ROW_2_COL(rows, "common.check_slave_delay", buf1);
-        APPEND_ROW_2_COL(rows, "common.slave_delay_down_threshold_sec", buf2);
-        APPEND_ROW_2_COL(rows, "common.slave_delay_recover_threshold_sec", buf3);
-        APPEND_ROW_2_COL(rows, "common.long_query_time", buf4);
+        APPEND_ROW_3_COL(rows, buffer, "common.check_slave_delay", buf1);
+        APPEND_ROW_3_COL(rows, buffer, "common.slave_delay_down_threshold_sec", buf2);
+        APPEND_ROW_3_COL(rows, buffer, "common.slave_delay_recover_threshold_sec", buf3);
+        APPEND_ROW_3_COL(rows, buffer, "common.long_query_time", buf4);
     } else if (strcasecmp(p, "pool") == 0) {
         snprintf(buf1, 32, "%d", chas->mid_idle_connections);
         snprintf(buf2, 32, "%d", chas->max_idle_connections);
         snprintf(buf3, 32, "%d", chas->max_resp_len);
         snprintf(buf4, 32, "%d", chas->master_preferred);
-        APPEND_ROW_2_COL(rows, "pool.default_pool_size", buf1);
-        APPEND_ROW_2_COL(rows, "pool.max_pool_size", buf2);
-        APPEND_ROW_2_COL(rows, "pool.max_resp_len", buf3);
-        APPEND_ROW_2_COL(rows, "pool.master_preferred", buf4);
+        APPEND_ROW_3_COL(rows, buffer, "pool.default_pool_size", buf1);
+        APPEND_ROW_3_COL(rows, buffer, "pool.max_pool_size", buf2);
+        APPEND_ROW_3_COL(rows, buffer, "pool.max_resp_len", buf3);
+        APPEND_ROW_3_COL(rows, buffer, "pool.master_preferred", buf4);
     } else {
-        APPEND_ROW_2_COL(rows, (char*)p, (char*)p);
+        APPEND_ROW_3_COL(rows, buffer, (char*)p, (char*)p);
     }
     network_mysqld_con_send_resultset(con->client, fields, rows);
 

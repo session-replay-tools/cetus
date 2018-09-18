@@ -1656,6 +1656,7 @@ static struct sql_help_entry_t {
     {"delete allow_ip/deny_ip '<user>@<address>'", "delete address from white list of module", ALL_HELP},
     {"set reduce_conns (true|false)", "reduce idle connections if set to true", ALL_HELP},
     {"set maintain (true|false)", "close all client connections if set to true", ALL_HELP},
+    {"show maintain status", "show maintain status", ALL_HELP},
     {"show status [like '%pattern%']", "show select/update/insert/delete statistics", ALL_HELP},
     {"show variables [like '%pattern%']", NULL, ALL_HELP},
     {"select version", "cetus version", ALL_HELP},

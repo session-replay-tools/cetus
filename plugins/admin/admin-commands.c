@@ -1007,7 +1007,7 @@ static enum cetus_pwd_type password_type(char* table)
 void admin_select_user_password(network_mysqld_con* con, char* from_table, char *user)
 {
     if (con->is_admin_client) {
-        con->admin_read_merge = 1;
+        con->ask_one_worker = 1;
         return;
     }
 

@@ -736,7 +736,7 @@ chassis_config_register_service(chassis_config_t *conf, char *id, char *data)
 void
 chassis_config_unregister_service(chassis_config_t *conf, char *id)
 {
-    if (conf->type != CHASSIS_CONF_MYSQL)
+    if (conf == NULL || conf->type != CHASSIS_CONF_MYSQL)
         return;
 
     MYSQL *conn = chassis_config_get_mysql_connection(conf);

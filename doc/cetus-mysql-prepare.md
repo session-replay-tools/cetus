@@ -10,7 +10,7 @@ MySQL建议使用5.7.16以上版本
 
 Cetus所在的主机ip为192.0.0.1
 
-CREATE database if not exists testdb;
+CREATE DATABASE IF NOT EXISTS testdb;
 GRANT USAGE ON *.* TO 'cetus_app'@'192.0.0.1' identified by 'cetus_app';
 GRANT all ON `testdb`.* TO 'cetus_app'@'192.0.0.1';
 
@@ -64,15 +64,17 @@ start slave;
 
 Cetus所在的主机ip为192.0.0.1
 
-create database if not exists proxy_heart_beat;
+CREATE DATABASE IF NOT EXISTS proxy_heart_beat;
 use proxy_heart_beat;       
-CREATE TABLE if not exists `tb_heartbeat` (
+CREATE TABLE IF NOT EXISTS `tb_heartbeat` (
   `p_id` varchar(128) NOT NULL ,
-  `p_ts` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `p_ts` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   PRIMARY KEY (`p_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 GRANT ALL ON `proxy_heart_beat`.* TO 'cetus_app'@'192.0.0.1';
+
+**注意：创建心跳表时p_ts精度必须到小数点后，否则会影响主从延迟检测的准确度**
 
 ## sharding版MySQL环境准备
 

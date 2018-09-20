@@ -18,9 +18,9 @@ Cetus 读写分离版将前端发来的读请求和写请求分别发送到不�
 
     USE proxy_heart_beat;
 
-    CREATE TABLE tb_heartbeat (
+    CREATE TABLE IF NOT EXISTS tb_heartbeat (
     p_id varchar(128) NOT NULL,
-    p_ts timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    p_ts timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     PRIMARY KEY (p_id)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 

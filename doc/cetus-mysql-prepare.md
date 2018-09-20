@@ -68,11 +68,13 @@ create database if not exists proxy_heart_beat;
 use proxy_heart_beat;       
 CREATE TABLE if not exists `tb_heartbeat` (
   `p_id` varchar(128) NOT NULL ,
-  `p_ts` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `p_ts` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
   PRIMARY KEY (`p_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 GRANT ALL ON `proxy_heart_beat`.* TO 'cetus_app'@'192.0.0.1';
+
+**注意：创建心跳表时p_ts精度必须到小数点后，否则会影响主从延迟检测的准确度**
 
 ## sharding版MySQL环境准备
 

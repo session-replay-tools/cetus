@@ -964,13 +964,9 @@ void admin_select_connection_stat(network_mysqld_con* con, int backend_ndx, char
         return;
     }
 
-    char buffer[32];
-    cetus_pid_t process_id = getpid();
-    sprintf(buffer, "%d", process_id);
-
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();
 
-    MAKE_FIELD_DEF_2_COL(fields, "PID", "connection_num");
+    MAKE_FIELD_DEF_1_COL(fields, "connection_num");
 
     GPtrArray *rows = g_ptr_array_new_with_free_func(
         (void*)network_mysqld_mysql_field_row_free);
@@ -990,9 +986,9 @@ void admin_select_connection_stat(network_mysqld_con* con, int backend_ndx, char
         g_string_free(user_name, TRUE);
     }
     if (numstr) {
-        APPEND_ROW_2_COL(rows, g_strdup(buffer), numstr);
+        APPEND_ROW_1_COL(rows, numstr);
     } else {
-        APPEND_ROW_2_COL(rows, g_strdup(buffer), "0");
+        APPEND_ROW_1_COL(rows, "0");
     }
 
     network_mysqld_con_send_resultset(con->client, fields, rows);

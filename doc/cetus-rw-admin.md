@@ -29,7 +29,6 @@
 | show status [like '%\<pattern>%']        | show select/update/insert/delete statistics |
 | show variables [like '%\<pattern>%']     | show configuration variables             |
 | select version                           | cetus version                            |
-| select conn_num from backends where backend_ndx=\<index> and user='\<name>') | display selected backend and its connection number |
 | select * from user_pwd [where user='\<name>'] | display server username and password     |
 | select * from app_user_pwd [where user='\<name>'] | display client username and password     |
 | update user_pwd set password='xx' where user='\<name>' | update server username and password      |

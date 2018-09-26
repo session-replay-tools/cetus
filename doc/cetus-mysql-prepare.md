@@ -68,7 +68,7 @@ CREATE DATABASE IF NOT EXISTS proxy_heart_beat;
 use proxy_heart_beat;       
 CREATE TABLE IF NOT EXISTS `tb_heartbeat` (
   `p_id` varchar(128) NOT NULL ,
-  `p_ts` timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+  `p_ts` timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
   PRIMARY KEY (`p_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 

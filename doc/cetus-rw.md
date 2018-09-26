@@ -20,7 +20,7 @@ Cetus 读写分离版将前端发来的读请求和写请求分别发送到不�
 
     CREATE TABLE tb_heartbeat (
     p_id varchar(128) NOT NULL,
-    p_ts timestamp(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    p_ts timestamp(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     PRIMARY KEY (p_id)
     ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
 

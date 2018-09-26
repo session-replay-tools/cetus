@@ -380,7 +380,7 @@ network_mysqld_con_free(network_mysqld_con *con)
     }
 
     if (con->server)
-        network_socket_free(con->server);
+        network_socket_send_quit_and_free(con->server);
     if (con->client)
         network_socket_free(con->client);
 
@@ -3048,7 +3048,7 @@ check_server_status(network_mysqld_con *con, int *srv_down_count, int *srv_respo
             if (ss->state == NET_RW_STATE_ERROR) {
                 while (con->servers->len > 0) {
                     ss = g_ptr_array_remove_index_fast(con->servers, 0);
-                    network_socket_free(ss->server);
+                    network_socket_send_quit_and_free(ss->server);
                     ss->sql = NULL;
                     ss->server = NULL;
                     server_session_free(ss);
@@ -4560,7 +4560,7 @@ network_mysqld_self_con_free(server_connection_state_t *con)
         return;
 
     if (con->server) {
-        network_socket_free(con->server);
+        network_socket_send_quit_and_free(con->server);
         g_debug("%s: connection server free:%p", G_STRLOC, con);
         con->server = NULL;
     } else {

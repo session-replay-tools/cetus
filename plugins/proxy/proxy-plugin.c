@@ -1726,7 +1726,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
             }
 
             st->backend->connected_clients--;
-            network_socket_free(con->server);
+            network_socket_send_quit_and_free(con->server);
             g_debug("%s:server needs to closed for con:%p", G_STRLOC, con);
             con->server = NULL;
             st->backend_ndx = -1;
@@ -2085,7 +2085,7 @@ mysqld_con_reserved_connections_free(network_mysqld_con *con)
 
             CHECK_PENDING_EVENT(&(server->event));
 
-            network_socket_free(server);
+            network_socket_send_quit_and_free(server);
             backend->connected_clients--;
             g_debug("%s: connected_clients sub, con:%p, now clients:%d", G_STRLOC, con, backend->connected_clients);
             checked++;

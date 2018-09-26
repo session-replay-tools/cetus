@@ -118,6 +118,22 @@ network_socket_new()
 }
 
 void
+network_socket_send_quit_and_free(network_socket *s)
+{
+    int len = NET_HEADER_SIZE + 1;
+    GString *new_packet = g_string_sized_new(len);
+    new_packet->len = NET_HEADER_SIZE;
+    g_string_append_c(new_packet, (char)COM_QUIT);
+    network_mysqld_proto_set_packet_id(new_packet, 0);
+    network_mysqld_proto_set_packet_len(new_packet, 1);
+    g_queue_push_tail(s->send_queue->chunks, new_packet);
+
+    network_socket_write(s, -1);
+
+    network_socket_free(s);
+}
+
+void
 network_socket_free(network_socket *s)
 {
     if (!s)

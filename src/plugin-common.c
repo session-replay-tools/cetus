@@ -629,7 +629,7 @@ proxy_put_shard_conn_to_pool(network_mysqld_con *con)
             } else {
                 g_debug("%s: is_put_to_pool_allowed false here, server:%p, con:%p, num:%d",
                         G_STRLOC, server, con, (int)con->servers->len);
-                network_socket_free(server);
+                network_socket_send_quit_and_free(server);
                 if (!is_reduced) {
                     con->srv->complement_conn_flag = 1;
                 }

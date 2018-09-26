@@ -188,7 +188,7 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
 
         st->backend->connected_clients--;
 
-        network_socket_free(con->server);
+        network_socket_send_quit_and_free(con->server);
 
         st->backend = NULL;
         st->backend_ndx = -1;

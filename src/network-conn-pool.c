@@ -64,7 +64,7 @@ network_connection_pool_entry_free(network_connection_pool_entry *e, gboolean fr
 
     if (e->sock && free_sock) {
         network_socket *sock = e->sock;
-        network_socket_free(sock);
+        network_socket_send_quit_and_free(sock);
     }
 
     g_free(e);

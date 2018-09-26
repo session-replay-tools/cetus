@@ -39,7 +39,7 @@ server_session_free(server_session_t *ss)
 {
     if (ss) {
         if (ss->server != NULL) {
-            network_socket_free(ss->server);
+            network_socket_send_quit_and_free(ss->server);
         }
 
         ss->sql = NULL;

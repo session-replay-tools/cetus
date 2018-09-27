@@ -1763,7 +1763,7 @@ void admin_send_overview(network_mysqld_con* con)
     APPEND_ROW_3_COL(rows, g_strdup(buffer), "Idle backend connections", buf1);
     snprintf(buf2, bsize, "%d", network_backends_used_conns(g->backends));
     APPEND_ROW_3_COL(rows, g_strdup(buffer), "Used backend connections", buf2);
-    snprintf(buf3, bsize, "%d", g->cons->len);
+    snprintf(buf3, bsize, "%d", g->cons->len - 1);
     APPEND_ROW_3_COL(rows, g_strdup(buffer), "Client connections", buf3);
 
     query_stats_t* stats = &(con->srv->query_stats);

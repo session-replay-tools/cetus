@@ -1758,6 +1758,12 @@ gint save_setting(chassis *srv, gint *effected_rows)
         if (FALSE == g_file_set_contents(srv->default_file, file_buf, file_size, &gerr)) {
             ret = SAVE_ERROR;
             g_clear_error(&gerr);
+        } else {
+            if((ret = chmod(srv->default_file, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP))) {
+                g_debug("remove operate failed, filename:%s, errno:%d",
+                        (srv->default_file == NULL? "":srv->default_file), errno);
+                ret = CHMOD_ERROR;
+            }
         }
     }
     return ret;
@@ -1772,6 +1778,7 @@ void send_result(network_socket *client, gint ret, gint affected)
         char *msg = NULL;
         switch (ret) {
         case SAVE_ERROR: msg = "save file failed"; break;
+        case CHMOD_ERROR: msg = "chmod file failed"; break;
         case CHANGE_SAVE_ERROR: msg = "change config and save file failed"; break;
         default:msg = "unknown error type"; break;
         }

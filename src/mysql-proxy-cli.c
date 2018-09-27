@@ -159,6 +159,8 @@ struct chassis_frontend_t {
     guint sql_log_idletime;
     gint sql_log_maxnum;
 
+    gint ssl;
+
     int check_dns;
 };
 
@@ -204,6 +206,8 @@ chassis_frontend_new(void)
     frontend->sql_log_maxnum = -1;
 
     frontend->check_dns = 0;
+
+    frontend->ssl = 0;
 
     return frontend;
 }
@@ -393,9 +397,9 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
 
     chassis_options_add(opts,
                         "ssl",
-                        0, 0, OPTION_ARG_NONE, &(srv->ssl), "Specifies that the server permits but does not require"
+                        0, 0, OPTION_ARG_NONE, &(frontend->ssl), "Specifies that the server permits but does not require"
                         " encrypted connections. This option is disabled by default", NULL,
-                        NULL, NULL, SHOW_OPTS_PROPERTY);
+                        NULL, show_ssl, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts,
                         "enable-back-compress",
@@ -1179,6 +1183,8 @@ main_cmdline(int argc, char **argv)
         if (frontend->sql_log_maxsize >= 0) {
             srv->sql_mgr->sql_log_maxsize = frontend->sql_log_maxsize;
         }
+
+        srv->ssl = frontend->ssl;
 
         if (frontend->sql_log_mode) {
             if (strcasecmp(frontend->sql_log_mode, "CLIENT") == 0) {

@@ -43,6 +43,7 @@ enum {
     ASSIGN_NOT_SUPPORT,
     ASSIGN_VALUE_INVALID,
     SAVE_ERROR,
+    CHMOD_ERROR,
     CHANGE_SAVE_ERROR
 };
 
@@ -100,6 +101,7 @@ CHASSIS_API gchar* show_sql_log_mode(gpointer param);
 CHASSIS_API gchar* show_sql_log_idletime(gpointer param);
 CHASSIS_API gchar* show_sql_log_maxnum(gpointer param);
 CHASSIS_API gchar* show_check_dns(gpointer param);
+CHASSIS_API gchar* show_ssl(gpointer param);
 
 /* assign utils */
 CHASSIS_API gint assign_log_level(const gchar *newval, gpointer param);

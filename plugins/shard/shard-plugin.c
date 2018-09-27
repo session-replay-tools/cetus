@@ -2258,8 +2258,8 @@ show_proxy_connect_timeout(gpointer param) {
 static gchar* show_allow_nested_subquery(gpointer param) {
     struct external_param *opt_param = (struct external_param *)param;
     gint opt_type = opt_param->opt_type;
-    if(CAN_SHOW_OPTS_PROPERTY(opt_type)) {
-        return g_strdup_printf("%d", config->allow_nested_subquery);
+    if(CAN_SHOW_OPTS_PROPERTY(opt_type) || CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%s", config->allow_nested_subquery ? "true": "false");
     }
     return NULL;
 }
@@ -2478,7 +2478,7 @@ network_mysqld_shard_plugin_get_options(chassis_plugin_config *config)
     chassis_options_add(&opts, "allow-nested-subquery",
                         0, 0, OPTION_ARG_NONE, &(config->allow_nested_subquery),
                         "Use this on your own risk, data integrity is not guaranteed", NULL,
-                        NULL, show_allow_nested_subquery, SHOW_OPTS_PROPERTY);
+                        NULL, show_allow_nested_subquery, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-read-timeout",
                         0, 0, OPTION_ARG_DOUBLE, &(config->read_timeout_dbl),

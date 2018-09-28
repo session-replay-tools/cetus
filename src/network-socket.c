@@ -466,17 +466,18 @@ network_socket_bind(network_socket *con,  int advanced_mode)
             }
 
 #if defined(SO_REUSEPORT)
-            if (0 != setsockopt(con->fd, SOL_SOCKET, SO_REUSEPORT, SETSOCKOPT_OPTVAL_CAST & val, sizeof(val))) {
-                g_critical("%s: setsockopt(%s, SOL_SOCKET, SO_REUSEPORT) failed: %s (%d)",
-                        G_STRLOC, con->dst->name->str, g_strerror(errno), errno);
-                return NETWORK_SOCKET_ERROR;
-            }
+            if (advanced_mode) {
+                g_message("%s:set SO_REUSEPORT", G_STRLOC);
+                if (0 != setsockopt(con->fd, SOL_SOCKET, SO_REUSEPORT, SETSOCKOPT_OPTVAL_CAST & val, sizeof(val))) {
+                    g_critical("%s: setsockopt(%s, SOL_SOCKET, SO_REUSEPORT) failed: %s (%d)",
+                            G_STRLOC, con->dst->name->str, g_strerror(errno), errno);
+                    return NETWORK_SOCKET_ERROR;
+                }
 
 #ifdef BPF_ENABLED
-            if (advanced_mode) {
                 attach_bpf(con->fd);
-            }
 #endif
+            }
         }
 #endif
 

@@ -125,6 +125,7 @@ struct chassis {
     char *default_username;
     char *default_charset;
     char *default_hashed_pwd;
+    char *unix_socket_name;
 
     guint64 sess_key;
     unsigned int maintain_close_mode;

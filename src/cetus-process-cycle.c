@@ -17,7 +17,7 @@
 #include "cetus-process-cycle.h"
 #include "network-socket.h"
 #include "chassis-event.h"
-#include "chassis-plugin.h"
+#include "chassis-frontend.h"
 #include "glib-ext.h"
 
 static void cetus_start_worker_processes(cetus_cycle_t *cycle, int n, int type);
@@ -54,7 +54,7 @@ static u_char  master_process[] = "master process";
 static cetus_cycle_t      cetus_exit_cycle;
 
 
-static void
+static int
 open_admin(cetus_cycle_t *cycle)
 {
     int      i;
@@ -67,9 +67,12 @@ open_admin(cetus_cycle_t *cycle)
             g_message("%s: call apply_config", G_STRLOC);
             if (0 != p->apply_config(cycle, p->config)) {
                 g_critical("%s: applying config of plugin %s failed", G_STRLOC, p->name);
+                return -1;
             }
         }
     }
+
+    return 0;
 }
 
 
@@ -86,6 +89,7 @@ cetus_exec_new_binary(cetus_cycle_t *cycle, char **argv)
     ctx.envp = g_new0(char *, 2);
     char *new_env = g_new0(char, strlen(env) + 32);
     sprintf(new_env, "LD_LIBRARY_PATH=%s", env);
+
     ctx.envp[0] = (char *) new_env;
     ctx.envp[1] = NULL;
 
@@ -120,7 +124,19 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
     cetus_start_worker_processes(cycle, cycle->worker_processes,
                                CETUS_PROCESS_RESPAWN);
 
-    open_admin(cycle);
+    if (open_admin(cycle) == -1) {
+        return;
+    }
+
+    if (cycle->pid_file) {
+        GError *gerr = NULL;
+        if (0 != chassis_frontend_write_pidfile(cycle->pid_file, &gerr)) {
+            g_critical("%s", gerr->message);
+            g_clear_error(&gerr);
+            return;
+        }
+    }
+
 
     live = 1;
     try_cnt = 0;
@@ -161,6 +177,7 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
         if (cetus_quit) {
             cetus_signal_worker_processes(cycle,
                                         cetus_signal_value(CETUS_SHUTDOWN_SIGNAL));
+            live = 0;
             continue;
         }
 
@@ -176,6 +193,9 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
 
         if (cetus_change_binary) {
             g_message("%s: changing binary", G_STRLOC);
+            unlink(cycle->unix_socket_name);
+            g_free(cycle->unix_socket_name);
+            cycle->unix_socket_name = NULL;
             cetus_new_binary = cetus_exec_new_binary(cycle, cycle->argv);
             cetus_change_binary = 0;
         }
@@ -478,6 +498,10 @@ cetus_reap_children(cetus_cycle_t *cycle)
 static void
 cetus_master_process_exit(cetus_cycle_t *cycle)
 {
+    if (cycle->unix_socket_name) {
+        unlink(cycle->unix_socket_name);
+    }
+
     g_message("%s: exit", G_STRLOC);
 
     exit(0);

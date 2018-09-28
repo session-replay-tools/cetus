@@ -717,6 +717,42 @@ network_mysqld_admin_plugin_get_options(chassis_plugin_config *config)
     return opts.options;
 }
 
+static int
+check_allowed_running(chassis *chas)
+{
+    char buffer[64];
+
+    memset(buffer, 0 ,64);
+
+    sprintf(buffer, "/tmp/%s", chas->proxy_address);
+    chas->unix_socket_name = g_strdup(buffer);
+
+    int fd;
+
+    if ((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0) {
+        g_message("%s:create socket error", G_STRLOC);
+        return -1;
+    }
+
+
+    struct sockaddr_un  un;
+    memset(&un, 0, sizeof(un));
+    un.sun_family = AF_UNIX;
+    const char *name  = chas->unix_socket_name;
+    strcpy(un.sun_path, name);
+    int len = offsetof(struct sockaddr_un, sun_path) + strlen(name);
+
+    if (bind(fd, (struct sockaddr *)&un, len) < 0) {
+        g_message("%s:already running", G_STRLOC);
+        close(fd);
+        return -1;
+    }
+
+    close(fd);
+    return 0;
+}
+
+
 /**
  * init the plugin with the parsed config
  */
@@ -738,9 +774,15 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
 
     if (!config->address) {
         config->address = g_strdup(":4041");
-    } else {
-        chas->proxy_address = config->address;
-        g_message("set admin address for chassis:%s", config->address);
+    }
+
+    chas->proxy_address = config->address;
+    g_message("set admin address for chassis:%s", config->address);
+
+    if (chas->enable_admin_listen) {
+        if (check_allowed_running(chas) == -1) {
+            return -1;
+        }
     }
 
     if (!config->admin_username) {
@@ -793,8 +835,7 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
             return -1;
         }
 
-        /* FIXME: network_socket_bind() */
-        if (0 != network_socket_bind(listen_sock, 0)) {
+        if (0 != network_socket_bind(listen_sock, 1)) {
             return -1;
         }
 

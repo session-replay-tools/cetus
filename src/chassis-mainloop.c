@@ -194,6 +194,9 @@ chassis_free(chassis *chas)
         g_hash_table_destroy(chas->query_cache_table);
     if (chas->cache_index)
         g_queue_free_cache_index(chas->cache_index);
+    if  (chas->unix_socket_name) {
+        g_free(chas->unix_socket_name);
+    }
 
     g_free(chas->event_hdr_version);
 

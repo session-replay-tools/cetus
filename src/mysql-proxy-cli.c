@@ -836,6 +836,7 @@ init_slow_query_log(const char *main_log)
     return fp;
 }
 
+
 /**
  * This is the "real" main which is called on UNIX platforms.
  */
@@ -1111,15 +1112,6 @@ main_cmdline(int argc, char **argv)
 
     if (srv->daemon_mode) {
         chassis_unix_daemonize();
-    }
-
-    if (srv->pid_file) {
-        if (0 != chassis_frontend_write_pidfile(srv->pid_file, &gerr)) {
-            g_critical("%s", gerr->message);
-            g_clear_error(&gerr);
-
-            GOTO_EXIT(EXIT_FAILURE);
-        }
     }
 
     if(frontend->group_replication_mode != 0 && frontend->group_replication_mode != 1) {

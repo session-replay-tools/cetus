@@ -709,7 +709,7 @@ cetus_channel_t *retrieve_admin_resp(network_mysqld_con *con)
         GString *s = chunk->data;
         g_debug_hexdump(G_STRLOC, S(s));
         resp_len += s->len; 
-        g_message("%s:s->len:%d, resp len:%d", G_STRLOC, (int) s->len, resp_len);
+        g_debug("%s:s->len:%d, resp len:%d", G_STRLOC, (int) s->len, resp_len);
     }
 
     total = total + resp_len;

@@ -164,10 +164,15 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_auth) {
 
 #ifdef HAVE_OPENSSL
         if (auth->ssl_request) {
-            network_ssl_create_connection(con->client, NETWORK_SSL_SERVER);
-            g_string_free(g_queue_pop_tail(con->client->recv_queue->chunks), TRUE);
-            con->state = ST_FRONT_SSL_HANDSHAKE;
-            return NETWORK_SOCKET_SUCCESS;
+            if (network_ssl_create_connection(con->client, NETWORK_SSL_SERVER) == FALSE) {
+                network_mysqld_con_send_error_full(con->client, C("SSL server failed"), 1045, "28000");
+                network_mysqld_auth_response_free(auth);
+                return NETWORK_SOCKET_ERROR;
+            } else {
+                g_string_free(g_queue_pop_tail(con->client->recv_queue->chunks), TRUE);
+                con->state = ST_FRONT_SSL_HANDSHAKE;
+                return NETWORK_SOCKET_SUCCESS;
+            }
         }
 #endif
         con->client->response = auth;

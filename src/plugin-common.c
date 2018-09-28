@@ -152,13 +152,18 @@ do_read_auth(network_mysqld_con *con)
 
 #ifdef HAVE_OPENSSL
         if (con->srv->ssl && auth->ssl_request) {
-            network_ssl_create_connection(recv_sock, NETWORK_SSL_SERVER);
-            g_string_free(g_queue_pop_tail(recv_sock->recv_queue->chunks), TRUE);
-            if (recv_sock->recv_queue->chunks->length > 0) {
-                g_warning("%s: client-recv-queue-len = %d", G_STRLOC, recv_sock->recv_queue->chunks->length);
+            if (network_ssl_create_connection(recv_sock, NETWORK_SSL_SERVER) == FALSE) {
+                network_mysqld_con_send_error_full(con->client, C("SSL server failed"), 1045, "28000");
+                network_mysqld_auth_response_free(auth);
+                return NETWORK_SOCKET_ERROR;
+            } else {
+                g_string_free(g_queue_pop_tail(recv_sock->recv_queue->chunks), TRUE);
+                if (recv_sock->recv_queue->chunks->length > 0) {
+                    g_warning("%s: client-recv-queue-len = %d", G_STRLOC, recv_sock->recv_queue->chunks->length);
+                }
+                con->state = ST_FRONT_SSL_HANDSHAKE;
+                return NETWORK_SOCKET_SUCCESS;
             }
-            con->state = ST_FRONT_SSL_HANDSHAKE;
-            return NETWORK_SOCKET_SUCCESS;
         }
 #endif
         if (!(auth->client_capabilities & CLIENT_PROTOCOL_41)) {

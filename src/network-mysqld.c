@@ -252,6 +252,8 @@ network_mysqld_init(chassis *srv)
             g_critical("SSL init error, not using secure connection");
             srv->ssl = 0;
         }
+    } else {
+        g_message("ssl is false");
     }
 #endif
     return 0;

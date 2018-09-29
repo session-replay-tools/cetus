@@ -1039,6 +1039,8 @@ main_cmdline(int argc, char **argv)
     g_message("libevent version: %s", event_get_version());
     g_message("config dir: %s", frontend->conf_dir);
 
+    srv->ssl = frontend->ssl;
+
     if (network_mysqld_init(srv) == -1) {
         g_print("network_mysqld_init failed\n");
         GOTO_EXIT(EXIT_FAILURE);
@@ -1208,8 +1210,6 @@ main_cmdline(int argc, char **argv)
         if (frontend->sql_log_maxsize >= 0) {
             srv->sql_mgr->sql_log_maxsize = frontend->sql_log_maxsize;
         }
-
-        srv->ssl = frontend->ssl;
 
         if (frontend->sql_log_mode) {
             if (strcasecmp(frontend->sql_log_mode, "CLIENT") == 0) {

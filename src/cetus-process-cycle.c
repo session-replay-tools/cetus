@@ -193,9 +193,11 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
 
         if (cetus_change_binary) {
             g_message("%s: changing binary", G_STRLOC);
+#if defined(SO_REUSEPORT)
             unlink(cycle->unix_socket_name);
             g_free(cycle->unix_socket_name);
             cycle->unix_socket_name = NULL;
+#endif
             cetus_new_binary = cetus_exec_new_binary(cycle, cycle->argv);
             cetus_change_binary = 0;
         }
@@ -498,9 +500,11 @@ cetus_reap_children(cetus_cycle_t *cycle)
 static void
 cetus_master_process_exit(cetus_cycle_t *cycle)
 {
+#if defined(SO_REUSEPORT)
     if (cycle->unix_socket_name) {
         unlink(cycle->unix_socket_name);
     }
+#endif
 
     g_message("%s: exit", G_STRLOC);
 

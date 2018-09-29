@@ -722,15 +722,45 @@ network_mysqld_admin_plugin_get_options(chassis_plugin_config *config)
     return opts.options;
 }
 
+#define MAX_CMD_OR_PATH_LEN 128
+static void remove_unix_socket_if_stale(chassis *chas)
+{
+    char command[MAX_CMD_OR_PATH_LEN];
+
+    memset(command, 0, MAX_CMD_OR_PATH_LEN);
+
+    sprintf(command, "netstat -npl|grep '%s'", chas->proxy_address);
+
+    FILE *p = popen(command, "r");
+
+    if (p)  {
+        char result[256];
+        int count = fread(result, 1, sizeof(result), p);
+
+        if (count == 0) {
+            g_message("%s:call unlink", G_STRLOC);
+            /* no matter if it does not exist */
+            unlink(chas->unix_socket_name);
+        }
+    }
+}
+
 static int
 check_allowed_running(chassis *chas)
 {
-    char buffer[64];
+    char buffer[MAX_CMD_OR_PATH_LEN];
 
-    memset(buffer, 0 ,64);
+    if (strlen(chas->proxy_address) > (MAX_CMD_OR_PATH_LEN / 2)) {
+        g_message("%s:ip:port string is too long", G_STRLOC);
+        return -1;
+    }
+
+    memset(buffer, 0 ,MAX_CMD_OR_PATH_LEN);
 
     sprintf(buffer, "/tmp/%s", chas->proxy_address);
     chas->unix_socket_name = g_strdup(buffer);
+
+    remove_unix_socket_if_stale(chas);
 
     int fd;
 
@@ -784,11 +814,13 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
     chas->proxy_address = config->address;
     g_message("set admin address for chassis:%s", config->address);
 
+#if defined(SO_REUSEPORT)
     if (chas->enable_admin_listen) {
         if (check_allowed_running(chas) == -1) {
             return -1;
         }
     }
+#endif
 
     if (!config->admin_username) {
         g_critical("%s: --admin-username needs to be set",

@@ -198,6 +198,11 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
             g_free(cycle->unix_socket_name);
             cycle->unix_socket_name = NULL;
 #endif
+            int i;
+            for (i = 0; i < cycle->modules->len; i++) {
+                chassis_plugin *p = cycle->modules->pdata[i];
+                p->stop_listening(cycle, p->config);
+            }
             cetus_new_binary = cetus_exec_new_binary(cycle, cycle->argv);
             cetus_change_binary = 0;
         }
@@ -205,12 +210,6 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
         if (cetus_noaccept) {
             g_message("%s: cetus_noaccept is set true", G_STRLOC);
             cetus_noaccept = 0;
-
-            int i;
-            for (i = 0; i < cycle->modules->len; i++) {
-                chassis_plugin *p = cycle->modules->pdata[i];
-                p->stop_listening(cycle, p->config);
-            }
 
             cetus_signal_worker_processes(cycle, cetus_signal_value(CETUS_NOACCEPT_SIGNAL));
         }

@@ -268,6 +268,12 @@ cetus_execute(cetus_cycle_t *cycle, cetus_exec_ctx_t *ctx)
 static void
 cetus_execute_proc(cetus_cycle_t *cycle, void *data)
 {
+    int i;
+    for (i = 0; i < cycle->modules->len; i++) {
+        chassis_plugin *p = cycle->modules->pdata[i];
+        p->stop_listening(cycle, p->config);
+    }
+
     cetus_exec_ctx_t  *ctx = data;
 
     if (execve(ctx->path, (char * const*) ctx->argv, (char * const*) ctx->envp) == -1) {

@@ -105,6 +105,9 @@ chassis_event_loop(chassis_event_loop_t *loop)
                 g_message("%s: cetus_quit is true", G_STRLOC);
             }
 
+            if (cetus_noaccept) {
+                g_message("%s: cetus_noaccept is true", G_STRLOC);
+            }
             break;
         }
 

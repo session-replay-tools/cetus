@@ -139,7 +139,7 @@ network_socket_free(network_socket *s)
     if (!s)
         return;
 
-    g_debug("%s: network_socket_free:%p", G_STRLOC, s);
+    g_message("%s: network_socket_free:%p", G_STRLOC, s);
 
     if (s->last_compressed_packet) {
         g_string_free(s->last_compressed_packet, TRUE);
@@ -167,6 +167,7 @@ network_socket_free(network_socket *s)
 #ifdef HAVE_OPENSSL
     network_ssl_free_connection(s);
 #endif
+    g_message("%s: s->fd:%d", G_STRLOC, s->fd);
     if (s->fd != -1) {
         closesocket(s->fd);
     }

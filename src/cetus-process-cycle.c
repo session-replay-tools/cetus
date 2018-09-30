@@ -211,6 +211,8 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
                 chassis_plugin *p = cycle->modules->pdata[i];
                 p->stop_listening(cycle, p->config);
             }
+
+            cetus_signal_worker_processes(cycle, cetus_signal_value(CETUS_NOACCEPT_SIGNAL));
         }
     }
 }
@@ -603,13 +605,14 @@ cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
         /* call main procedures for worker */
         chassis_event_loop_t *loop = cycle->event_base;
         chassis_event_loop(loop);
-        g_debug("%s: after chassis_event_loop", G_STRLOC);
+        g_message("%s: after chassis_event_loop", G_STRLOC);
 
         if (cetus_terminate) {
             g_message("%s: exiting", G_STRLOC);
             cetus_worker_process_exit(cycle);
         }
 
+        g_message("%s: check cetus_noaccept", G_STRLOC);
         if (cetus_noaccept) {
             g_message("%s: cetus_noaccept is set true", G_STRLOC);
             cetus_noaccept = 0;

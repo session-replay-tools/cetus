@@ -900,6 +900,7 @@ static void
 network_mysqld_admin_plugin_stop_listening(chassis *chas,
         chassis_plugin_config *config)
 {
+    g_message("%s:call network_mysqld_admin_plugin_stop_listening", G_STRLOC);
     if (config->listen_con) {
         g_message("%s:close listen socket", G_STRLOC);
         network_socket_free(config->listen_con->server);

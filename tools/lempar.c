@@ -330,6 +330,14 @@ void *ParseAlloc(void *(*mallocProc)(YYMALLOCARGTYPE)) {
   return pParser;
 }
 
+void ParseReset(void *parser) {
+  yyParser *pParser = parser;
+    pParser->yyidx = -1;
+#ifdef YYTRACKMAXSTACKDEPTH
+    pParser->yyidxMax = 0;
+#endif
+}
+
 /* The following function deletes the "minor type" or semantic value
 ** associated with a symbol.  The symbol can be either a terminal
 ** or nonterminal. "yymajor" is the symbol code, and "yypminor" is

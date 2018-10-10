@@ -26,6 +26,7 @@
 void sqlParser(void *yyp, int yymajor, sql_token_t yyminor, sql_context_t *);
 void sqlParserFree(void *p, void (*freeProc) (void *));
 void *sqlParserAlloc(void *(*mallocProc) (size_t));
+void sqlParserReset(void *parser);
 void sqlParserTrace(FILE *TraceFILE, char *zTracePrompt);
 void yylex_restore_buffer(void *);
 
@@ -179,6 +180,8 @@ sql_context_parse_len(void *sql_parser, sql_context_t *context, GString *sql)
 #if PARSER_TRACE
     sqlParserTrace(stdout, "---ParserTrace: ");
 #endif
+
+    sqlParserReset(sql_parser);
 
     sql_context_reset(context);
 

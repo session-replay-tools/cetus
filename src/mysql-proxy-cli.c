@@ -80,6 +80,7 @@
 #include "chassis-options.h"
 #include "cetus-monitor.h"
 #include "chassis-sql-log.h"
+#include "sql-context.h"
 
 #define GETTEXT_PACKAGE "cetus"
 
@@ -640,7 +641,7 @@ g_query_cache_item_free(gpointer q)
 #define DUP_STRING(STR, DEFAULT) \
         (STR) ? g_strdup(STR) : ((DEFAULT) ? g_strdup(DEFAULT) : NULL)
 
-static void
+static gboolean
 init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
 {
     srv->default_username = DUP_STRING(frontend->default_username, NULL);
@@ -754,6 +755,14 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->cetus_max_allowed_packet = CLAMP(frontend->cetus_max_allowed_packet,
                                           MAX_ALLOWED_PACKET_FLOOR, MAX_ALLOWED_PACKET_CEIL);
     srv->check_dns = frontend->check_dns;
+
+    srv->sql_parser = sql_parser_init();
+    if (srv->sql_parser == NULL) {
+        g_critical("%s:sql parser is nil", G_STRLOC);
+        return FALSE;
+    }
+
+    return TRUE;
 }
 
 static void
@@ -1146,7 +1155,9 @@ main_cmdline(int argc, char **argv)
         GOTO_EXIT(EXIT_FAILURE);
     }
 
-    init_parameters(frontend, srv);
+    if (init_parameters(frontend, srv) == FALSE) {
+        GOTO_EXIT(EXIT_FAILURE);
+    }
 
 #ifndef SIMPLE_PARSER
     if (!frontend->log_xa_filename)

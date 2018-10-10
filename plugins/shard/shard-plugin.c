@@ -651,7 +651,7 @@ proxy_parse_query(network_mysqld_con *con)
 
             g_debug("%s: sql:%s", G_STRLOC, con->orig_sql->str);
             sql_context_t *context = st->sql_context;
-            sql_context_parse_len(context, con->orig_sql);
+            sql_context_parse_len(con->srv->sql_parser, context, con->orig_sql);
 
             if (context->rc == PARSE_SYNTAX_ERR) {
                 char *msg = context->message;

@@ -69,6 +69,10 @@ void sql_context_reset(sql_context_t *);
 
 void sql_context_destroy(sql_context_t *);
 
+void *sql_parser_init();
+
+void sql_parser_destroy(void *);
+
 void sql_context_append_msg(sql_context_t *, char *msg);
 
 void sql_context_set_error(sql_context_t *, int err, char *msg);
@@ -79,7 +83,7 @@ gboolean sql_context_using_property(sql_context_t *);
 
 gboolean sql_context_has_sharding_property(sql_context_t *p);
 
-void sql_context_parse_len(sql_context_t *, GString *sql);
+void sql_context_parse_len(void *sql_parser, sql_context_t *, GString *sql);
 
 gboolean sql_context_is_autocommit_on(sql_context_t *);
 

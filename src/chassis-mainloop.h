@@ -118,6 +118,7 @@ struct chassis {
     gchar *conf_dir;
     /**< user to run as */
     gchar *user;
+    void *sql_parser;
 
     char *proxy_address;
     char *default_db;

@@ -1150,7 +1150,7 @@ process_query_or_stmt_prepare(network_mysqld_con *con, proxy_plugin_con_t *st,
     g_string_append_c(con->orig_sql, '\0');
 
     sql_context_t *context = st->sql_context;
-    sql_context_parse_len(context, con->orig_sql);
+    sql_context_parse_len(con->srv->sql_parser, context, con->orig_sql);
         
     g_debug("%s process query:%s", G_STRLOC, con->orig_sql->str);
 

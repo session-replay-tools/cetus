@@ -155,11 +155,23 @@ parse_token(sql_context_t *context, int code, sql_token_t token, void *parser, s
 
 #define PARSER_TRACE 0
 
+void *
+sql_parser_init()
+{
+    return sqlParserAlloc(malloc);
+}
+
+void
+sql_parser_destroy(void *sql_parser)
+{
+    sqlParserFree(sql_parser, free);
+}
+
 /* Parse user allocated sql string
   sql->str must be terminated with 2 NUL
   sql->len is length including the 2 NUL */
 void
-sql_context_parse_len(sql_context_t *context, GString *sql)
+sql_context_parse_len(void *sql_parser, sql_context_t *context, GString *sql)
 {
     yyscan_t scanner;
     yylex_init(&scanner);
@@ -168,7 +180,6 @@ sql_context_parse_len(sql_context_t *context, GString *sql)
     sqlParserTrace(stdout, "---ParserTrace: ");
 #endif
 
-    void *parser = sqlParserAlloc(malloc);
     sql_context_reset(context);
 
     static sql_property_parser_t comment_parser;
@@ -184,7 +195,7 @@ sql_context_parse_len(sql_context_t *context, GString *sql)
         printf("***LexerTrace: code: %d, yytext: %.*s\n", code, token.n, token.z);
         printf("***LexerTrace: yytext addr: %p\n", token.z);
 #endif
-        parse_token(context, code, token, parser, &comment_parser);
+        parse_token(context, code, token, sql_parser, &comment_parser);
 
         last_parsed_token = code;
 
@@ -196,11 +207,10 @@ sql_context_parse_len(sql_context_t *context, GString *sql)
     if (context->rc == PARSE_OK) {
         /* grammar require semicolon as ending token */
         if (last_parsed_token != TK_SEMI) {
-            sqlParser(parser, TK_SEMI, token, context);
+            sqlParser(sql_parser, TK_SEMI, token, context);
         }
-        sqlParser(parser, 0, token, context);
+        sqlParser(sql_parser, 0, token, context);
     }
-    sqlParserFree(parser, free);
     yy_delete_buffer(buf_state, scanner);
     yylex_destroy(scanner);
 }

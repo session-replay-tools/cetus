@@ -50,6 +50,7 @@
 #include "chassis-timings.h"
 #include "cetus-process-cycle.h"
 #include "chassis-sql-log.h"
+#include "sql-context.h"
 
 static volatile sig_atomic_t signal_shutdown;
 extern int cetus_process_id;
@@ -196,6 +197,9 @@ chassis_free(chassis *chas)
         g_queue_free_cache_index(chas->cache_index);
     if  (chas->unix_socket_name) {
         g_free(chas->unix_socket_name);
+    }
+    if (chas->sql_parser) {
+        sql_parser_destroy(chas->sql_parser);
     }
 
     g_free(chas->event_hdr_version);

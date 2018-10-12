@@ -1750,6 +1750,11 @@ sharding_filter_sql(sql_context_t *context)
                                       "(cetus) HAVING condition must show up in column");
                 return;
             }
+            if (select->limit) {
+                sql_context_set_error(context, PARSE_NOT_SUPPORT,
+                                      "(cetus) Only support HAVING condition without limit");
+                return;
+            }
         }
 
         if (select->groupby_clause) {

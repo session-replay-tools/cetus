@@ -257,7 +257,7 @@ HEX_DIGIT [0-9a-fA-F]
 <PROPERTY>\"([^"\\]|\"\"|\\.)*\"   return TK_STRING;
 <PROPERTY>'([^'\\]|\\.|'')*'     return TK_STRING;
 <PROPERTY>[ \t\n\r,;]+ /* ignore */
-<PROPERTY>. { g_warning("### bad char in property comment: %02x\n", yytext[0]);}
+<PROPERTY>. { g_warning("### bad char in property comment: %02x", yytext[0]);}
 <PROPERTY>"*"+"/" { BEGIN(INITIAL); return TK_PROPERTY_END;}
 
 
@@ -275,7 +275,7 @@ HEX_DIGIT [0-9a-fA-F]
 "#".*  { /* useless comment */ }
 "--"[ \t\n].*  { /* useless comment */ }
 
-.   {g_warning("### flex: bad input character: %02x\n", yytext[0]);return 0;}
+.   {g_warning("### flex: bad input character: %02x", yytext[0]);return 0;}
 
 %%
 /*hack function to restore user allocated string.

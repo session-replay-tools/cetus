@@ -523,7 +523,7 @@ analysis_query(network_mysqld_con *con, mysqld_query_attr_t *query_attr)
                 if (sql_filter_vars_is_silent(lhs, rhs)) {
                     network_mysqld_con_send_ok(con->client);
                     g_string_free(g_queue_pop_tail(con->client->recv_queue->chunks), TRUE);
-                    g_message("silent variable: %s\n", lhs);
+                    g_message("silent variable: %s", lhs);
                     return PROXY_SEND_RESULT;
                 }
 

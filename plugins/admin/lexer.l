@@ -121,4 +121,4 @@
 "#".*  { /* useless comment */ }
 "--"[ \t\n].*  { /* useless comment */ }
 
-.   {printf("### flex: bad input character: 0x%02x\n", yytext[0]);return 0;}
+.   {printf("### flex: bad input character: 0x%02x", yytext[0]);return 0;}

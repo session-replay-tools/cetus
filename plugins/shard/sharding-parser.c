@@ -166,7 +166,6 @@ prepare_for_sql_modify_orderby(sql_select_t *select)
 GString *
 sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi)
 {
-    /* TODO: sql rewrite priority */
     if (context->stmt_type == STMT_SELECT && context->sql_statement) {
         sql_select_t *select = context->sql_statement;
 
@@ -1717,12 +1716,21 @@ select_groupby_orderby_have_same_column(sql_select_t *select)
     g_assert(select->groupby_clause && select->orderby_clause);
     sql_expr_list_t *grp = select->groupby_clause;
     sql_column_list_t *ord = select->orderby_clause;
-    if (grp->len > 1 || ord->len > 1) { /* only support one col */
+    if (grp->len != ord->len) {
         return FALSE;
     }
-    sql_expr_t *grp_expr = g_ptr_array_index(grp, 0);
-    sql_column_t *ord_col = g_ptr_array_index(ord, 0);
-    return g_strcmp0(ord_col->expr->token_text, grp_expr->token_text) == 0;
+
+    int i;
+
+    for (i = 0; i < grp->len; i++) {
+        sql_expr_t *grp_expr = g_ptr_array_index(grp, i);
+        sql_column_t *ord_col = g_ptr_array_index(ord, i);
+        if (g_strcmp0(ord_col->expr->token_text, grp_expr->token_text) != 0) {
+            return FALSE;
+        }
+    }
+
+    return TRUE;
 }
 
 void

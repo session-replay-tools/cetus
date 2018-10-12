@@ -591,7 +591,7 @@ process_non_trans_query(network_mysqld_con *con, sql_context_t *context, mysqld_
 
                 if (sql_filter_vars_is_silent(left->token_text, right->token_text)) {
                     network_mysqld_con_send_ok(con->client);
-                    g_message("silent variable: %s\n", left->token_text);
+                    g_message("silent variable: %s", left->token_text);
                     return PROXY_SEND_RESULT;
                 }
 
@@ -1658,7 +1658,7 @@ proxy_get_backend_ndx(network_mysqld_con *con, int type, gboolean force_slave)
             } else {
                 idx = network_backends_get_ro_ndx(g->backends);
             }
-            g_debug(G_STRLOC ": %d, read_master_percentage: %d, read: %d\n",
+            g_debug(G_STRLOC ": %d, read_master_percentage: %d, read: %d",
                     x, con->config->read_master_percentage, idx);
         }
     } else {                    /* type == BACKEND_TYPE_RW */

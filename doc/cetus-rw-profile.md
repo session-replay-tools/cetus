@@ -172,7 +172,7 @@ log-file的值是日志文件路径，我们设置为当前安装路径下的cet
 
 **启动配置文件proxy.conf 常用参数：**
 
-**1）default-pool-size=\<num\>，设置刚启动的连接数量（by a worker process）**
+**1）default-pool-size=\<num\>，设置刚启动的连接数量（by a worker process），最小只能设置为10，如果设置小于10，则实际该值为10**
 
 **2）max-pool-size=\<num\>，设置最大连接数量（by a worker process）**
 

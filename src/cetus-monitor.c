@@ -280,7 +280,7 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
             snprintf(slave_addr, ADDRESS_LEN, "%s:%s", ip, row[1]);
             if(slave_addr[0] != '\0') {
                 slave_list = g_list_append(slave_list, strdup(slave_addr));
-                g_message("add slave %s in list, %d", slave_addr, g_list_length(slave_list));
+                g_debug("add slave %s in list, %d", slave_addr, g_list_length(slave_list));
             } else {
                 g_message("get slave address failed. error: %d, text: %s",
                                                        mysql_errno(conn), mysql_error(conn));

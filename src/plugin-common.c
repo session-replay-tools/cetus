@@ -184,6 +184,7 @@ do_read_auth(network_mysqld_con *con)
         }
 
         con->client->response = auth;
+        g_string_assign_len(con->client->default_db, S(auth->database));
 
         if ((auth->client_capabilities & CLIENT_PLUGIN_AUTH)
             && (g_strcmp0(auth->auth_plugin_name->str, "mysql_native_password") != 0))
@@ -199,7 +200,6 @@ do_read_auth(network_mysqld_con *con)
             return NETWORK_SOCKET_SUCCESS;
         }
 
-        g_string_assign_len(con->client->default_db, S(auth->database));
         g_debug("%s:1nd round auth and set default db:%s for con:%p", G_STRLOC, con->client->default_db->str, con);
 
     } else {

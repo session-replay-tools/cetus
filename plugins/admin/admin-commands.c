@@ -143,7 +143,7 @@ void admin_select_all_backends(network_mysqld_con* con)
     int len = bs->backends->len;
     int i;
     char buffer[32];
-    static char *states[] = {"unknown", "up", "down", "maintaining", "deleted"};
+    static char *states[] = {"unknown", "up", "down", "maintaining", "deleted", "offline"};
     static char *types[] = {"unknown", "rw", "ro"};
 
     cetus_pid_t process_id = getpid();

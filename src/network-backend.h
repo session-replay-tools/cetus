@@ -38,6 +38,7 @@ typedef enum {
     BACKEND_STATE_DOWN,
     BACKEND_STATE_MAINTAINING,
     BACKEND_STATE_DELETED,
+    BACKEND_STATE_OFFLINE
 } backend_state_t;
 
 #define NO_PREVIOUS_STATE -1
@@ -45,7 +46,7 @@ typedef enum {
 typedef enum {
     BACKEND_TYPE_UNKNOWN,
     BACKEND_TYPE_RW,
-    BACKEND_TYPE_RO,
+    BACKEND_TYPE_RO
 } backend_type_t;
 
 typedef enum {

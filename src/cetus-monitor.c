@@ -273,7 +273,6 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
             if((get_ip_by_name(row[0], ip) != 0) || ip[0] == '\0') {
                 g_message("get slave ip by name failed. error: %d, text: %s",
                                                        mysql_errno(conn), mysql_error(conn));
-                mysql_free_result(rs_set);
                 continue;
             }
             memset(slave_addr, 0, ADDRESS_LEN);
@@ -301,14 +300,14 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
         if(backend->type == BACKEND_TYPE_RW) {
             has_master++;
             if(!strcasecmp(backend_addr, master_addr)) {
-                if(backend->state != BACKEND_STATE_UP) {
-                    network_backends_modify(bs, i, BACKEND_TYPE_RW, BACKEND_STATE_UP, NO_PREVIOUS_STATE);
+                if(backend->state == BACKEND_STATE_OFFLINE) {
+                    network_backends_modify(bs, i, BACKEND_TYPE_RW, BACKEND_STATE_UNKNOWN, NO_PREVIOUS_STATE);
                 }
                 break;
             }
             GList *it = g_list_find_custom(slave_list, backend_addr, slave_list_compare);
             if(it) {
-                if(backend->state == BACKEND_STATE_DELETED || backend->state == BACKEND_STATE_MAINTAINING) {
+                if(backend->state == BACKEND_STATE_OFFLINE) {
                     network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN, NO_PREVIOUS_STATE);
                 } else {
                     network_backends_modify(bs, i, BACKEND_TYPE_RO, backend->state, NO_PREVIOUS_STATE);
@@ -317,7 +316,9 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
                 g_free(it->data);
                 g_list_free(it);
             } else {
-                network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_DELETED, NO_PREVIOUS_STATE);
+                if(backend->state != BACKEND_STATE_MAINTAINING && backend->state != BACKEND_STATE_DELETED) {
+                    network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_OFFLINE, NO_PREVIOUS_STATE);
+                }
             }
             break;
         }
@@ -335,19 +336,25 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
         if(backend->type == BACKEND_TYPE_RO || backend->type == BACKEND_TYPE_UNKNOWN) {
             GList *it = g_list_find_custom(slave_list, backend_addr, slave_list_compare);
             if(it) {
-                if(backend->state == BACKEND_STATE_DELETED || backend->state == BACKEND_STATE_MAINTAINING) {
+                if(backend->state == BACKEND_STATE_OFFLINE) {
                     network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN, NO_PREVIOUS_STATE);
+                } else {
+                    network_backends_modify(bs, i, BACKEND_TYPE_RO, backend->state, NO_PREVIOUS_STATE);
                 }
                 slave_list = g_list_remove_link(slave_list, it);
                 g_free(it->data);
                 g_list_free(it);
             } else {
                 if(master_addr[0] != '\0' && !strcasecmp(backend_addr, master_addr)) {
-                    network_backends_modify(bs, i, BACKEND_TYPE_RW, BACKEND_STATE_UP, NO_PREVIOUS_STATE);
+                    if(backend->state == BACKEND_STATE_OFFLINE) {
+                        network_backends_modify(bs, i, BACKEND_TYPE_RW, BACKEND_STATE_UNKNOWN, NO_PREVIOUS_STATE);
+                    } else {
+                        network_backends_modify(bs, i, BACKEND_TYPE_RW, backend->state, NO_PREVIOUS_STATE);
+                    }
                     has_master++;
                 } else {
-                    if(backend->type != BACKEND_TYPE_RO || backend->state != BACKEND_STATE_DELETED) {
-                        network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_DELETED, NO_PREVIOUS_STATE);
+                    if(backend->state != BACKEND_STATE_MAINTAINING && backend->state != BACKEND_STATE_DELETED) {
+                        network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_OFFLINE, NO_PREVIOUS_STATE);
                     }
                 }
             }
@@ -421,7 +428,7 @@ check_backend_alive(int fd, short what, void *arg)
         network_backend_t *backend = network_backends_get(bs, i);
         backend_state_t oldstate = backend->state;
         gint ret = 0;
-        if (backend->state == BACKEND_STATE_DELETED || backend->state == BACKEND_STATE_MAINTAINING)
+        if (backend->state == BACKEND_STATE_DELETED || backend->state == BACKEND_STATE_MAINTAINING || backend->state == BACKEND_STATE_OFFLINE)
             continue;
 
         char *backend_addr = backend->addr->name->str;
@@ -497,7 +504,7 @@ update_master_timestamp(int fd, short what, void *arg)
         network_backend_t *backend = network_backends_get(bs, i);
         backend_state_t oldstate = backend->state;
         gint ret = 0;
-        if (backend->state == BACKEND_STATE_DELETED || backend->state == BACKEND_STATE_MAINTAINING)
+        if (backend->state == BACKEND_STATE_DELETED || backend->state == BACKEND_STATE_MAINTAINING || backend->state == BACKEND_STATE_OFFLINE)
             continue;
 
         if (backend->type == BACKEND_TYPE_RW) {

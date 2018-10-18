@@ -331,9 +331,8 @@ network_backends_modify(network_backends_t *bs, guint ndx,
 
     network_backend_t *cur = bs->backends->pdata[ndx];
 
-    g_message("change backend: %s from type: %s, state: %s to type: %s, state: %s",
-              cur->addr->name->str, backend_type_t_str[cur->type],
-              backend_state_t_str[cur->state], backend_type_t_str[type], backend_state_t_str[state]);
+    guint is_change = 0;
+
     if(oldstate == NO_PREVIOUS_STATE) {
         oldstate = cur->state;
     }
@@ -346,6 +345,7 @@ network_backends_modify(network_backends_t *bs, guint ndx,
                     srv->is_need_to_create_conns = 1;
                 }
             }
+            is_change++;
         } else {
             g_debug("there might be conflict, network_backends_modify failed.");
             return -1;
@@ -362,6 +362,13 @@ network_backends_modify(network_backends_t *bs, guint ndx,
         network_group_t *gp = network_backends_get_group(bs, cur->server_group);
         if (gp)
             network_group_update(gp);
+        is_change++;
+    }
+
+    if(is_change) {
+        g_message("change backend: %s from type: %s, state: %s to type: %s, state: %s",
+                          cur->addr->name->str, backend_type_t_str[cur->type],
+                          backend_state_t_str[cur->state], backend_type_t_str[type], backend_state_t_str[state]);
     }
 
     g_debug("%s: backend state:%d for backend:%p", G_STRLOC, cur->state, cur);

@@ -182,7 +182,7 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
     backends_num = network_backends_count(bs);
     for (i = 0; i < backends_num; i++) {
         network_backend_t *backend = network_backends_get(bs, i);
-        if (backend->state == BACKEND_STATE_MAINTAINING)
+        if (backend->state == BACKEND_STATE_MAINTAINING || backend->state == BACKEND_STATE_DELETED)
             continue;
 
         char *backend_addr = backend->addr->name->str;
@@ -213,8 +213,10 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
 
         row = mysql_fetch_row(rs_set);
         if(row == NULL || row[0] == NULL || row[1] == NULL) {
-            g_message("get primary info rows failed for group_replication. error: %d, text: %s, backend: %s",
-                                                                   mysql_errno(conn), mysql_error(conn), backend_addr);
+            if(backend->state != BACKEND_STATE_OFFLINE) {
+                g_message("get primary info rows failed for group_replication. error: %d, text: %s, backend: %s",
+                                                                                   mysql_errno(conn), mysql_error(conn), backend_addr);
+            }
             mysql_free_result(rs_set);
             continue;
         }

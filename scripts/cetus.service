@@ -1,0 +1,65 @@
+#!/bin/bash
+# chkconfig: - 30 21
+# description: Cetus service.
+# Source Function Library
+. /etc/init.d/functions
+
+# Cetus Settings
+CETUS_HOME=/usr/local
+CETUS_CONF=${CETUS_HOME}/conf/proxy.conf
+CETUS_SBIN=${CETUS_HOME}/bin/cetus
+CETUS_PID=${CETUS_HOME}/cetus.pid
+CETUS_DAEMON="0"
+
+cetus_pid=`sed '/^pid-file=/!d;s/.*=//' ${CETUS_CONF}`     
+if [ "$cetus_pid" != "" ];then
+        CETUS_PID=$cetus_pid
+fi
+
+cetus_daemon=`sed '/^daemon=/!d;s/.*=//' ${CETUS_CONF}`
+if [ "$cetus_daemon" != "" ];then
+        CETUS_DAEMON=$cetus_daemon
+fi
+
+start() {
+        echo -n $"Starting $prog ... "
+        if [ "${CETUS_DAEMON}" == "0" ];then
+            nohup ${CETUS_SBIN} --defaults-file=${CETUS_CONF} >/dev/null 2>&1 &
+        else
+            daemon ${CETUS_SBIN} --defaults-file=${CETUS_CONF}
+        fi
+        RETVAL=$?
+        echo
+}
+
+stop() {
+        echo -n $"Stopping $prog ... "
+        if [ -e ${CETUS_PID} ]; then
+                daemon kill -INT $(cat ${CETUS_PID})
+                RETVAL=$?
+        fi
+        echo
+}
+
+restart(){
+        stop
+        sleep 1
+        start
+}
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  restart)
+        restart
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart}"
+        RETVAL=1
+esac
+
+exit $RETVAL

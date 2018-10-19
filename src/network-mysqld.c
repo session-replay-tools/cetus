@@ -4250,7 +4250,7 @@ network_mysqld_con_accept(int G_GNUC_UNUSED event_fd, short events, void *user_d
     network_mysqld_add_connection(listen_con->srv, client_con, FALSE);
 
     client_con->key = client_con->srv->sess_key++;
-    g_message("%s: accept a new client connection", G_STRLOC);
+    g_debug("%s: accept a new client connection", G_STRLOC);
 
     /**
      * inherit the config to the new connection 

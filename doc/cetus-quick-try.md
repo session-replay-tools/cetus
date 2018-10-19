@@ -14,9 +14,22 @@ Cetus只支持linux系统，安装步骤参考[Cetus 安装说明](https://githu
 
 ## 启动
 
+### 1. 命令行启动
 ```
 bin/cetus --defaults-file=conf/proxy.conf|shard.conf [--conf-dir＝/home/user/cetus_install/conf/]
 ```
+
+### 2. service命令启动
+
+cetus在cmake阶段，会根据编译的版本（-DSIMPLE_PARSER）、安装路径（-DCMAKE_INSTALL_PREFIX），生成启动脚本，并自动部署到系统/etc/init.d目录下，因此用户如果使用的是安装路径中的conf文件夹下的proxy.conf/shard.confp配置文件启动cetus时，可以通过以下命令启动、停止、重启服务。
+
+```
+service cetus start
+service cetus stop
+service cetus restart
+```
+
+如果使用的是非安装路径下的配置文件启动的cetus，可以自行修改/etc/init.d/cetus脚本中的对应项。
 
 ## 连接
 

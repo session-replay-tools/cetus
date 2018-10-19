@@ -21,7 +21,7 @@ bin/cetus --defaults-file=conf/proxy.conf|shard.conf [--conf-dir＝/home/user/ce
 
 ### 2. service命令启动
 
-cetus在cmake阶段，会根据编译的版本（-DSIMPLE_PARSER）、安装路径（-DCMAKE_INSTALL_PREFIX），生成启动脚本，并自动部署到系统/etc/init.d目录下，因此用户如果使用的是安装路径中的conf文件夹下的proxy.conf/shard.confp配置文件启动cetus时，可以通过以下命令启动、停止、重启服务。
+cetus在cmake阶段，会根据编译的版本（-DSIMPLE_PARSER）、安装路径（-DCMAKE_INSTALL_PREFIX），生成启动脚本，并自动部署到系统/etc/init.d目录下，因此用户如果使用的是安装路径中的conf文件夹下的proxy.conf/shard.conf配置文件启动cetus时，可以通过以下命令启动、停止、重启服务。
 
 ```
 service cetus start

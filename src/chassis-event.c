@@ -115,8 +115,8 @@ chassis_event_loop(chassis_event_loop_t *loop)
         int r;
 
         g_debug("%s: enter event_base_loopexit", G_STRLOC);
-        timeout.tv_sec = 1;
-        timeout.tv_usec = 0;
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 256000;
 
         r = event_base_loopexit(loop, &timeout);
         if (r == -1) {

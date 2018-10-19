@@ -271,20 +271,3 @@ install(FILES
   doc/proxy.conf.example
   DESTINATION conf
   )
-
-#CONFIGURE_FILE(./scripts/cetus.service cetus.service)
-EXECUTE_PROCESS(COMMAND bash "-c" "cp ${CMAKE_CURRENT_SOURCE_DIR}/scripts/cetus.service ${CMAKE_CURRENT_BINARY_DIR}/cetus.service")
-EXECUTE_PROCESS(COMMAND bash "-c" "sed -i '/^CETUS_HOME=*/d' cetus.service")
-EXECUTE_PROCESS(COMMAND bash "-c" "sed -i '/^CETUS_SBIN=*/d' cetus.service")
-EXECUTE_PROCESS(COMMAND bash "-c" "sed -i '/^CETUS_CONF=*/d' cetus.service")
-EXECUTE_PROCESS(COMMAND bash "-c" "sed -i '/^CETUS_PID=*/d' cetus.service")
-EXECUTE_PROCESS(COMMAND bash "-c" "sed -i '/^# Cetus Settings*/a CETUS_PID=${CMAKE_INSTALL_PREFIX}/cetus.pid' cetus.service")
-if(SIMPLE_PARSER)
-    EXECUTE_PROCESS(COMMAND bash "-c" "sed -i '/^# Cetus Settings*/a CETUS_CONF=${CMAKE_INSTALL_PREFIX}/conf/proxy.conf' cetus.service")
-else(SIMPLE_PARSER)
-    EXECUTE_PROCESS(COMMAND bash "-c" "sed -i '/^# Cetus Settings*/a CETUS_CONF=${CMAKE_INSTALL_PREFIX}/conf/shard.conf' cetus.service")
-endif(SIMPLE_PARSER)
-EXECUTE_PROCESS(COMMAND bash "-c" "sed -i '/^# Cetus Settings*/a CETUS_SBIN=${CMAKE_INSTALL_PREFIX}/bin/cetus' cetus.service")
-EXECUTE_PROCESS(COMMAND bash "-c" "sed -i '/^# Cetus Settings*/a CETUS_HOME=${CMAKE_INSTALL_PREFIX}' cetus.service")
-EXECUTE_PROCESS(COMMAND bash "-c" "cp ${CMAKE_CURRENT_BINARY_DIR}/cetus.service /etc/init.d/cetus")
-EXECUTE_PROCESS(COMMAND bash "-c" "chmod +x /etc/init.d/cetus")

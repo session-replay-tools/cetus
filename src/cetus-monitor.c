@@ -569,7 +569,7 @@ check_slave_timestamp(int fd, short what, void *arg)
         backend_state_t oldstate = backend->state;
         gint ret = 0;
         if (backend->type == BACKEND_TYPE_RW || backend->state == BACKEND_STATE_DELETED ||
-            backend->state == BACKEND_STATE_MAINTAINING)
+            backend->state == BACKEND_STATE_MAINTAINING || backend->state == BACKEND_STATE_OFFLINE)
             continue;
 
         char *backend_addr = backend->addr->name->str;

@@ -505,7 +505,9 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
 
     char command = packet->str[NET_HEADER_SIZE + 0];
 
-    if (COM_QUERY == command) {
+    if (COM_QUIT == command) {
+        return PROXY_CLIENT_QUIT;
+    } else if (COM_QUERY == command) {
         /* we need some more data after the COM_QUERY */
         if (packet->len < NET_HEADER_SIZE + 2) return PROXY_SEND_QUERY;
     }
@@ -561,6 +563,9 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_query) {
         break;
     case PROXY_SEND_RESULT:
         con->state = ST_SEND_QUERY_RESULT;
+        break;
+    case PROXY_CLIENT_QUIT:
+        con->state = ST_CLIENT_QUIT;
         break;
     default:
         network_mysqld_con_send_error(con->client,

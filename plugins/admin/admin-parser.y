@@ -471,3 +471,9 @@ cmd ::= SQL LOG STOP SEMI. {
 cmd ::= KILL QUERY INTEGER(X) SEMI. {
   admin_kill_query(con, token2int(X));
 }
+cmd ::= STARTCOM ENDCOM SEMI. {
+  admin_comment_handle(con);
+}
+cmd ::= SELECT GLOBAL VERSION_COMMENT LIMIT INTEGER SEMI. {
+  admin_select_version_comment(con);
+}

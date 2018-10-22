@@ -62,4 +62,6 @@ void admin_sql_log_start(network_mysqld_con* con);
 void admin_sql_log_stop(network_mysqld_con* con);
 void admin_sql_log_status(network_mysqld_con* con);
 void admin_kill_query(network_mysqld_con* con, guint32);
+void admin_comment_handle(network_mysqld_con* con);
+void admin_select_version_comment(network_mysqld_con* con);
 #endif // ADMIN_COMMANDS_H

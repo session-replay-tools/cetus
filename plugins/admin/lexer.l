@@ -103,6 +103,10 @@
 "KILL" return TK_KILL;
 "QUERY" return TK_QUERY;
 
+"@@" return TK_GLOBAL;
+"version_comment" return TK_VERSION_COMMENT;
+"limit" return TK_LIMIT;
+
 [0-9]+                 return TK_INTEGER; /*sign symbol is handled in parser*/
 
 [0-9]*\.[0-9]+([eE][-+]?[0-9]+)? return TK_FLOAT;
@@ -113,10 +117,10 @@
 \"([^"\\]|\"\"|\\.)*\"   return TK_STRING;
 `([^`]|``)*`   return TK_ID;
 
-"/*" { BEGIN(COMMENT); }
+"/*" { BEGIN(COMMENT); return TK_STARTCOM;}
 <COMMENT>[^*]*
 <COMMENT>"*"+[^*/]*
-<COMMENT>"*"+"/" { BEGIN(INITIAL); }
+<COMMENT>"*"+"/" { BEGIN(INITIAL); return TK_ENDCOM;}
 
 "#".*  { /* useless comment */ }
 "--"[ \t\n].*  { /* useless comment */ }

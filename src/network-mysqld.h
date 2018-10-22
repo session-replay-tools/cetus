@@ -63,7 +63,8 @@ typedef enum {
     PROXY_SEND_RESULT,
     PROXY_SEND_INJECTION,
     PROXY_SEND_NONE,
-    PROXY_IGNORE_RESULT       /** for read_query_result */
+    PROXY_IGNORE_RESULT,       /** for read_query_result */
+    PROXY_CLIENT_QUIT
 } network_mysqld_stmt_ret;
 
 typedef struct network_mysqld_con network_mysqld_con;   /* forward declaration */

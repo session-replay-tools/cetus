@@ -14,6 +14,11 @@ Cetus只支持linux系统，安装步骤参考[Cetus 安装说明](https://githu
 
 ## 启动
 
+启动cetus之前，要保证配置文件（proxy.conf/shard.conf）的权限最小为660，可以通过以下命令修改权限：
+```
+chmod 660 proxy.conf
+```
+
 ### 1. 命令行启动
 ```
 bin/cetus --defaults-file=conf/proxy.conf|shard.conf [--conf-dir＝/home/user/cetus_install/conf/]

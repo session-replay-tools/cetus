@@ -1673,6 +1673,8 @@ static struct sql_help_entry_t {
     {"update backends set (type|state)=x where (backend_ndx=<index>|address=<'ip:port'>)",
      "update mysql instance type or state", ALL_HELP},
     {"delete from backends where (backend_ndx=<index>|address=<'ip:port'>)", NULL, ALL_HELP},
+    {"remove backend where (backend_ndx=<index>|address='<ip:port>')", NULL, ALL_HELP},
+    {"remove backend backend_ndx", NULL, ALL_HELP},
     {"add master <'ip:port'>", NULL, RW_HELP},
     {"add master <'ip:port@group'>", NULL, SHARD_HELP},
     {"add slave <'ip:port'>", NULL, RW_HELP},

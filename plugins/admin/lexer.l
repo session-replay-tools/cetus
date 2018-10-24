@@ -102,6 +102,8 @@
 "STOP" return TK_STOP;
 "KILL" return TK_KILL;
 "QUERY" return TK_QUERY;
+"REMOVE" return TK_REMOVE;
+"BACKEND" return TK_BACKEND;
 
 "@@" return TK_GLOBAL;
 "version_comment" return TK_VERSION_COMMENT;

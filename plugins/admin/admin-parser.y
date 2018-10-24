@@ -477,3 +477,15 @@ cmd ::= STARTCOM ENDCOM SEMI. {
 cmd ::= SELECT GLOBAL VERSION_COMMENT LIMIT INTEGER SEMI. {
   admin_select_version_comment(con);
 }
+cmd ::= REMOVE BACKEND INTEGER(X) SEMI. {
+  char* val = token_strdup(X);
+  admin_delete_backend(con, "backend_ndx", val);
+  free(val);
+}
+cmd ::=REMOVE BACKEND WHERE equation(Z) SEMI. {
+  char* key = token_strdup(Z.left);
+  char* val = token_strdup(Z.right);
+  admin_delete_backend(con, key, val);
+  free(key);
+  free(val);   
+} 

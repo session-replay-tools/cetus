@@ -153,7 +153,7 @@ chassis_config_get_mysql_connection(chassis_config_t *conf)
     if (!conn)
         return NULL;
 
-    unsigned int timeout = 2 * SECONDS;
+    unsigned int timeout = 1 * SECONDS;
     mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
     mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
     mysql_options(conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);

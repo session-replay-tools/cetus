@@ -261,10 +261,19 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
     g_debug("%s: cetus_read_channel channel, fd:%d", G_STRLOC, fd);
 
     if (ret == NETWORK_SOCKET_ERROR) {
-        return;
-    }
-
-    if (ret == NETWORK_SOCKET_WAIT_FOR_EVENT) {
+        con->num_read_pending--;
+        if  (con->num_read_pending > 0) {
+            return;
+        } else {
+            con->srv->socketpair_mutex = 0;
+            network_mysqld_con_send_error(con->client, C("internal error"));
+            con->state = ST_SEND_QUERY_RESULT;
+            network_mysqld_queue_reset(con->client);
+            network_queue_clear(con->client->recv_queue);
+            network_mysqld_con_handle(-1, 0, con);
+            return;
+        }
+    } else if (ret == NETWORK_SOCKET_WAIT_FOR_EVENT) {
         return;
     }
 
@@ -327,10 +336,17 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
 
     } else {
         g_critical("%s: not admin sql response command", G_STRLOC);
+        con->srv->socketpair_mutex = 0;
+        network_mysqld_con_send_error(con->client, C("internal error"));
+        con->state = ST_SEND_QUERY_RESULT;
+        network_mysqld_queue_reset(con->client);
+        network_queue_clear(con->client->recv_queue);
+        network_mysqld_con_handle(-1, 0, con);
         return;
     }
 
     if (con->num_read_pending == 0) {
+        con->srv->socketpair_mutex = 0;
         int len = con->servers->len;
         GPtrArray *recv_queues = g_ptr_array_sized_new(len);
 
@@ -363,6 +379,7 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
         network_mysqld_con_handle(-1, 0, con);
     }
 }
+
 
 static 
 int construct_channel_info(network_mysqld_con *con, char *sql)
@@ -427,6 +444,32 @@ int construct_channel_info(network_mysqld_con *con, char *sql)
         return 0;
     }
 }
+
+static void
+network_send_admin_sql_to_workers(int G_GNUC_UNUSED fd, short what, void *user_data)
+{
+    network_mysqld_con *con = user_data;
+
+    if  (con->srv->socketpair_mutex) {
+        event_set(&con->client->event, con->client->fd, EV_TIMEOUT, network_send_admin_sql_to_workers, con);
+        struct timeval timeout = {0, 10000};
+        chassis_event_add_with_timeout(con->srv, &con->client->event, &timeout);
+        return;
+    }
+
+    con->srv->socketpair_mutex = 1;
+    if (construct_channel_info(con, con->orig_sql->str) == -1) {
+        con->srv->socketpair_mutex = 0;
+        con->state = ST_SEND_QUERY_RESULT;
+        network_mysqld_queue_reset(con->client);
+        network_queue_clear(con->client->recv_queue);
+        network_mysqld_con_handle(-1, 0, con);
+    }
+
+    g_debug("%s: network_send_admin_sql_to_workers, fd:%d", G_STRLOC, fd);
+
+}
+
 
 static void visit_parser(network_mysqld_con *con, const char *sql) 
 {
@@ -525,7 +568,16 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
     if (con->direct_answer) {
         return PROXY_SEND_RESULT;
     } else {
+        if  (con->srv->socketpair_mutex) {
+            event_set(&con->client->event, con->client->fd, EV_TIMEOUT, network_send_admin_sql_to_workers, con);
+            struct timeval timeout = {0, 10000};
+            chassis_event_add_with_timeout(con->srv, &con->client->event, &timeout);
+            return PROXY_WAIT_QUERY_RESULT;
+        }
+
+        con->srv->socketpair_mutex = 1;
         if (construct_channel_info(con, con->orig_sql->str) == -1) {
+            con->srv->socketpair_mutex = 0;
             return PROXY_SEND_RESULT;
         } else {
             return PROXY_WAIT_QUERY_RESULT;

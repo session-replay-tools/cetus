@@ -141,6 +141,7 @@ struct chassis {
     unsigned int is_reduce_conns;
     unsigned int xa_log_detailed;
     unsigned int check_slave_delay;
+    int socketpair_mutex;
     int complement_conn_flag;
     int default_query_cache_timeout;
     int client_idle_timeout;

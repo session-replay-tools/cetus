@@ -668,7 +668,7 @@ chassis_config_update_object_cache(chassis_config_t *conf, const char *name)
         return;
     time_t now = time(0);
     chassis_config_object_set_cache(object, NULL, now);
-    char *str;
+    char *str = NULL;
     chassis_config_query_object(conf, name, &str);
     if (str) {                  /* we just want to trigger query&caching, result is not needed */
         g_free(str);

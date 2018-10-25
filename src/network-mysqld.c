@@ -2686,10 +2686,10 @@ process_rw_write(network_mysqld_con *con, network_mysqld_con_state_t ostate, int
     case COM_STMT_SEND_LONG_DATA:  /* not acked */
     case COM_STMT_CLOSE:
         if (!con->server_to_be_closed) {
-            g_message("%s: set ST_READ_QUERY for con:%p", G_STRLOC, con);
+            g_debug("%s: set ST_READ_QUERY for con:%p", G_STRLOC, con);
             con->state = ST_READ_QUERY;
         } else {
-            g_message("%s: set ST_CLOSE_SERVER for con:%p", G_STRLOC, con);
+            g_debug("%s: set ST_CLOSE_SERVER for con:%p", G_STRLOC, con);
             con->state = ST_CLOSE_SERVER;
         }
         if (con->client) {

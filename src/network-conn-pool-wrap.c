@@ -337,7 +337,7 @@ network_connection_pool_swap(network_mysqld_con *con, int backend_ndx)
             g_debug("%s: server switch is true", G_STRLOC);
         } else {
             if (backend->type == BACKEND_TYPE_RO) {
-                g_message("%s: use orig server", G_STRLOC);
+                g_debug("%s: use orig server", G_STRLOC);
                 return NULL;
             }
         }

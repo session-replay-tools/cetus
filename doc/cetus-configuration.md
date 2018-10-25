@@ -406,8 +406,9 @@ mysql> select * from services;
 
 当修改表`settings`中的配置信息时，可以通过在Cetus的admin端口执行`config reload`命令，使Cetus重新从配置中心拉取配置信息，使得配置中心新修改的配置在Cetus上生效。
 
-当修改表`objects`中的账号信息时，可以通过在Cetus的admin端口执行`config reload user`命令，使Cetus重新从配置中心拉取账号信息，使得配置中心修改的账号信息在Cetus上生效。
+当修改表`objects`中的账号信息时，可以通过在Cetus的admin端口执行`config reload user`、`config reload variables`命令，使Cetus重新从配置中心拉取账号信息、静默处理的变量信息，使其在Cetus上生效。
 
+**注意** ：目前cetus执行reload操作与远程配置库进行交互时，连接、读、写超时均为1秒，即如果由于远程配置库负载过大、网络抖动等原因导致超时超过1秒，会reload操作失败。与此同时，reload操作目前和SQL处理的线程为同一个线程，所以尽量少用该命令，或是业务低峰期使用该命令，后续会将其修改成异步形式，彻底不影响SQL的处理。
 
 
 ## 辅助线程配置

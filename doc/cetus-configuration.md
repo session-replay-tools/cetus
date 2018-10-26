@@ -425,7 +425,7 @@ Default: false
 
 Default: true
 
-是否检查从库延迟
+是否检查从库延迟。注意，cetus的延迟检测只单纯检测主从之间的延迟毫秒数（主库写入时间戳，从库读取时间戳，与本地时间做差值，计算主从延迟），而非检测io_thread/sql_thread是否正常工作。
 
 > check-slave-delay = false
 

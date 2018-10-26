@@ -114,7 +114,7 @@ cetus_exec_new_binary(cetus_cycle_t *cycle, char **argv)
 void
 cetus_master_process_cycle(cetus_cycle_t *cycle)
 {
-    int                try_cnt;
+    int                try_cnt, mutex_set;
     unsigned int       live;
 
     cetus_pid = getpid();
@@ -140,12 +140,19 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
 
     live = 1;
     try_cnt = 0;
+    mutex_set = 0;
 
     for ( ;; ) {
 
+
         if (!cetus_terminate) {
+            if (mutex_set) {
+                cycle->socketpair_mutex = 0;
+            }
             chassis_event_loop_t *loop = cycle->event_base;
-            chassis_event_loop(loop);
+            chassis_event_loop(loop, &(cycle->socketpair_mutex));
+            cycle->socketpair_mutex = 1;
+            mutex_set = 1;
         }
 
         if (cetus_terminate) {
@@ -604,7 +611,7 @@ cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
 
         /* call main procedures for worker */
         chassis_event_loop_t *loop = cycle->event_base;
-        chassis_event_loop(loop);
+        chassis_event_loop(loop, NULL);
         g_message("%s: after chassis_event_loop", G_STRLOC);
 
         if (cetus_terminate) {

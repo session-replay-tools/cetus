@@ -755,7 +755,7 @@ cetus_monitor_mainloop(void *data)
 #if 0
     cetus_monitor_open(monitor, MONITOR_TYPE_CHECK_CONFIG);
 #endif
-    chassis_event_loop(loop);
+    chassis_event_loop(loop, NULL);
 
     g_message("monitor thread closing %d mysql conns", g_hash_table_size(monitor->backend_conns));
     g_hash_table_destroy(monitor->backend_conns);

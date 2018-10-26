@@ -93,13 +93,13 @@ chassis_event_loop_free(chassis_event_loop_t *event)
 }
 
 void *
-chassis_event_loop(chassis_event_loop_t *loop)
+chassis_event_loop(chassis_event_loop_t *loop, int *mutex)
 {
 
     /**
      * check once a second if we shall shutdown the proxy
      */
-    while (!chassis_is_shutdown()) {
+    while ((mutex != NULL && (*mutex) != 0) || !chassis_is_shutdown()) {
         if (cetus_reap || cetus_change_binary || cetus_quit || cetus_noaccept) {
             if (cetus_quit) {
                 g_message("%s: cetus_quit is true", G_STRLOC);

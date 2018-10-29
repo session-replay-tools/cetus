@@ -1457,14 +1457,14 @@ void admin_set_config(network_mysqld_con* con, char* key, char* value)
 
     g_list_free(options);
 
-    if(0 == ret && !chassis_config_set_remote_options(con->srv->config_manager, key, value)) {
-        network_mysqld_con_send_error(con->client,C("Variable is set locally but cannot replace remote settings"));
-        return;
-    }
-
     if(0 == ret) {
         if(con->srv->config_manager->type == CHASSIS_CONF_MYSQL) {
-            network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+            if(chassis_config_set_remote_options(con->srv->config_manager, key, value)) {
+                network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+            } else {
+                network_mysqld_con_send_error(con->client,C("Variable is set locally but cannot replace remote settings"));
+            }
+            return;
         } else {
             gint effected_rows = 0;
             gint save_ret = save_setting(con->srv, &effected_rows);

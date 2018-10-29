@@ -300,20 +300,18 @@ chassis_config_load_options_mysql(chassis_config_t *conf)
 gboolean
 chassis_config_set_remote_options(chassis_config_t *conf, gchar* key, gchar* value)
 {
-    if(conf->type == CHASSIS_CONF_MYSQL){
-        MYSQL *conn = chassis_config_get_mysql_connection(conf);
-        if (!conn) {
-            g_warning("Cannot connect to mysql server.");
-            return FALSE;
-        }
-        gchar sql[1024] = { 0 }, real_value[1024] = { 0 };
-        mysql_real_escape_string(conn, real_value, value, strlen(value));
-        snprintf(sql, sizeof(sql),
-        "REPLACE INTO %s.`settings`(option_key,option_value) VALUES ('%s', '%s')", conf->schema, key, real_value);
-        if (mysql_query(conn, sql)) {
-            g_warning("sql failed: %s | error: %s", sql, mysql_error(conn));
-            return FALSE;
-        }
+    MYSQL *conn = chassis_config_get_mysql_connection(conf);
+    if (!conn) {
+        g_warning("Cannot connect to mysql server.");
+        return FALSE;
+    }
+    gchar sql[1024] = { 0 }, real_value[1024] = { 0 };
+    mysql_real_escape_string(conn, real_value, value, strlen(value));
+    snprintf(sql, sizeof(sql),
+    "REPLACE INTO %s.`settings`(option_key,option_value) VALUES ('%s', '%s')", conf->schema, key, real_value);
+    if (mysql_query(conn, sql)) {
+        g_warning("sql failed: %s | error: %s", sql, mysql_error(conn));
+        return FALSE;
     }
     return TRUE;
 }

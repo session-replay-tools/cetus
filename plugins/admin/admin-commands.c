@@ -897,15 +897,18 @@ void admin_set_reduce_conns(network_mysqld_con* con, int mode)
         con->srv->is_reduce_conns = mode;
         affected = 1;
     }
-    if(con->srv->config_manager->type == CHASSIS_CONF_MYSQL) {
-        network_mysqld_con_send_ok_full(con->client, affected,
-                                        0, SERVER_STATUS_AUTOCOMMIT, 0);
+    if(affected) {
+        if(con->srv->config_manager->type == CHASSIS_CONF_MYSQL) {
+            gchar *key = "reduce-connections";
+            gint ret = config_set_remote_option_by_key(con, key);
+            send_result(con->client, ret, affected);
+        } else {
+            gint effected_rows = 0;
+            gint ret = save_setting(con->srv, &effected_rows);
+            send_result(con->client, ret, affected);
+        }
     } else {
-        gint ret = CHANGE_SAVE_ERROR;
-        gint effected_rows = 0;
-        if (affected)
-            ret = save_setting(con->srv, &effected_rows);
-        send_result(con->client, ret, affected);
+        send_result(con->client, ASSIGN_OK, affected);
     }
 }
 

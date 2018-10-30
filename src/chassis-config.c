@@ -306,9 +306,14 @@ chassis_config_set_remote_options(chassis_config_t *conf, gchar* key, gchar* val
         return FALSE;
     }
     gchar sql[1024] = { 0 }, real_value[1024] = { 0 };
-    mysql_real_escape_string(conn, real_value, value, strlen(value));
-    snprintf(sql, sizeof(sql),
-    "REPLACE INTO %s.`settings`(option_key,option_value) VALUES ('%s', '%s')", conf->schema, key, real_value);
+    if(value) {
+        mysql_real_escape_string(conn, real_value, value, strlen(value));
+        snprintf(sql, sizeof(sql),
+        "REPLACE INTO %s.`settings`(option_key,option_value) VALUES ('%s', '%s')", conf->schema, key, real_value);
+    } else {
+        snprintf(sql, sizeof(sql),
+        "DELETE FROM %s.`settings` WHERE option_key = '%s'", conf->schema, key);
+    }
     if (mysql_query(conn, sql)) {
         g_warning("sql failed: %s | error: %s", sql, mysql_error(conn));
         return FALSE;

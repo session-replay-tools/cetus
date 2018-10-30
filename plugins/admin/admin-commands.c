@@ -29,6 +29,7 @@
 
 static gint save_setting(chassis *srv, gint *effected_rows);
 static void send_result(network_socket *client, gint ret, gint affected);
+static gboolean config_set_remote_option_by_key(network_mysqld_con* con, gchar *key);
 
 static const char *get_conn_xa_state_name(network_mysqld_con_dist_tran_state_t state) {
     switch (state) {
@@ -742,16 +743,20 @@ void admin_acl_add_rule(network_mysqld_con *con, gboolean is_white, char *addr)
     chassis *chas = con->srv;
     int affected = cetus_acl_add_rule_str(chas->priv->acl,
                                          is_white?ACL_WHITELIST:ACL_BLACKLIST, addr);
-    if(chas->config_manager->type == CHASSIS_CONF_MYSQL) {
-        network_mysqld_con_send_ok_full(con->client, affected,
-                                        0, SERVER_STATUS_AUTOCOMMIT, 0);        
+    if(affected) {
+        if(chas->config_manager->type == CHASSIS_CONF_MYSQL) {
+            gchar *cate = is_white?"proxy-allow-ip":"proxy-deny-ip";
+            gint ret = config_set_remote_option_by_key(con, cate);
+            send_result(con->client, ret, 1);
+        } else {
+            gint effected_rows = 0;
+            gint ret = save_setting(chas, &effected_rows);
+            send_result(con->client, ret, affected);
+            }
     } else {
-        gint ret = CHANGE_SAVE_ERROR;
-        gint effected_rows = 0;
-        if (affected)
-            ret = save_setting(chas, &effected_rows);
-        send_result(con->client, ret, affected);
+        send_result(con->client, ACL_ADD_RULE_ERROR, 0);
     }
+
 }
 
 void admin_acl_delete_rule(network_mysqld_con *con, gboolean is_white, char *addr)
@@ -762,16 +767,20 @@ void admin_acl_delete_rule(network_mysqld_con *con, gboolean is_white, char *add
     chassis *chas = con->srv;
     int affected = cetus_acl_delete_rule_str(chas->priv->acl,
                                              is_white?ACL_WHITELIST:ACL_BLACKLIST, addr);
-    if(chas->config_manager->type == CHASSIS_CONF_MYSQL) {
-        network_mysqld_con_send_ok_full(con->client, affected,
-                                        0, SERVER_STATUS_AUTOCOMMIT, 0);
+    if(affected) {
+        if(chas->config_manager->type == CHASSIS_CONF_MYSQL) {
+            gchar *cate = is_white?"proxy-allow-ip":"proxy-deny-ip";
+            gint ret = config_set_remote_option_by_key(con, cate);
+            send_result(con->client, ret, 1);
+        } else {
+            gint effected_rows = 0;
+            gint ret = save_setting(chas, &effected_rows);
+            send_result(con->client, ret, affected);
+        }
     } else {
-        gint ret = CHANGE_SAVE_ERROR;
-        gint effected_rows = 0;
-        if (affected)
-            ret = save_setting(chas, &effected_rows);
-        send_result(con->client, ret, affected);
+        send_result(con->client, ACL_DELETE_RULE_ERROR, 0);
     }
+
 }
 
 /* only match % wildcard, case insensitive */
@@ -2037,6 +2046,9 @@ static void send_result(network_socket *client, gint ret, gint affected)
         case SAVE_ERROR: msg = "save file failed"; break;
         case CHMOD_ERROR: msg = "chmod file failed"; break;
         case CHANGE_SAVE_ERROR: msg = "change config and save file failed"; break;
+        case SET_REMOTE_ERROR: msg = "set remote failed";break;
+        case ACL_ADD_RULE_ERROR: msg = "add rule failed" ;break;
+        case ACL_DELETE_RULE_ERROR: msg = "delete rule failed";break;
         default:msg = "unknown error type"; break;
         }
         network_mysqld_con_send_error_full(client, L(msg), 1066, "28000");
@@ -2252,4 +2264,27 @@ void admin_select_version_comment(network_mysqld_con* con) {
 
     network_mysqld_proto_fielddefs_free(fields);
     g_ptr_array_free(rows, TRUE);
+}
+
+gboolean config_set_remote_option_by_key(network_mysqld_con* con, gchar *key) {
+    if(!key) return SET_REMOTE_ERROR;
+    GList *options = admin_get_all_options(con->srv);
+    GList *l = NULL;
+    for(l = options; l; l = l->next) {
+        chassis_option_t *opt = l->data;
+        if(sql_pattern_like(key, opt->long_name)) {
+            struct external_param param = {0};
+            param.chas = con->srv;
+            param.opt_type = SHOW_OPTS_PROPERTY;
+            gchar *value = opt->show_hook != NULL? opt->show_hook(&param) : NULL;
+            if(chassis_config_set_remote_options(con->srv->config_manager, key, value)) {
+                g_free(value);
+                return ASSIGN_OK;
+            } else {
+                g_free(value);
+                return SET_REMOTE_ERROR;
+            }
+        }
+    }
+    return SET_REMOTE_ERROR;
 }

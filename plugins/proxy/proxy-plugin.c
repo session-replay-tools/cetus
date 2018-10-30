@@ -2509,7 +2509,7 @@ show_proxy_allow_ip(gpointer param) {
     struct external_param *opt_param = (struct external_param *)param;
     gint opt_type = opt_param->opt_type;
     GList *list = opt_param->chas->priv->acl->whitelist;
-    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type) || CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         GString *free_str = g_string_new(NULL);
         GList *l = NULL;
         for (l = list; l; l = l->next) {
@@ -2534,7 +2534,7 @@ show_proxy_deny_ip(gpointer param) {
     struct external_param *opt_param = (struct external_param *)param;
     gint opt_type = opt_param->opt_type;
     GList *list = opt_param->chas->priv->acl->blacklist;
-    if(CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+    if(CAN_SAVE_OPTS_PROPERTY(opt_type) || CAN_SHOW_OPTS_PROPERTY(opt_type)) {
         GString *free_str = g_string_new(NULL);
         GList *l = NULL;
         for (l = list; l; l = l->next) {

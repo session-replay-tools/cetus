@@ -476,8 +476,8 @@ network_socket_bind(network_socket *con,  int advanced_mode)
                 attach_bpf(con->fd);
 #endif
             }
-        }
 #endif
+        }
 
         if (con->dst->addr.common.sa_family == AF_INET6) {
 #ifdef IPV6_V6ONLY

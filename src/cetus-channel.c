@@ -105,7 +105,7 @@ cetus_read_channel(int s, cetus_channel_t *ch, size_t size)
     if (n == -1) {
         int err = errno;
         if (err == EAGAIN) {
-            g_message("%s:recvmsg() EAGAIN, errno:%d", G_STRLOC, errno);
+            g_debug("%s:recvmsg() EAGAIN, errno:%d", G_STRLOC, errno);
             return NETWORK_SOCKET_WAIT_FOR_EVENT;
         }
 

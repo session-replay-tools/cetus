@@ -390,6 +390,7 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
 }
 
 #define ADD_MONITOR_TIMER(ev_struct, ev_cb, timeout) \
+    ev_now_update((struct ev_loop *) monitor->evloop);\
     evtimer_set(&(monitor->ev_struct), ev_cb, monitor);\
     event_base_set(monitor->evloop, &(monitor->ev_struct));\
     evtimer_add(&(monitor->ev_struct), &timeout);

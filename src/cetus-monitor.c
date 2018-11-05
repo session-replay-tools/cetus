@@ -44,9 +44,9 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 
-#define CHECK_ALIVE_INTERVAL 3
+#define CHECK_ALIVE_INTERVAL 1
 #define CHECK_ALIVE_TIMES 2
-#define CHECK_DELAY_INTERVAL 300 * 1000 /* 300ms */
+#define CHECK_DELAY_INTERVAL 100 * 1000 /* 100ms */
 
 #define ADDRESS_LEN 64
 
@@ -552,7 +552,7 @@ hostnameloop:;
 
     /* Wait 50ms for RO write data */
     struct timeval timeout = { 0 };
-    timeout.tv_usec = 50 * 1000;
+    timeout.tv_usec = 10 * 1000;
     ADD_MONITOR_TIMER(read_slave_timer, check_slave_timestamp, timeout);
 }
 

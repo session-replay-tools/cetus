@@ -155,15 +155,89 @@ slave_list_compare(gconstpointer a, gconstpointer b) {
     return strcasecmp(old_value, search_value);
 }
 
+static void modify_master_only(network_backends_t *bs, gchar *master_addr, cetus_monitor_t *monitor) {
+    gchar server_group[64] = {""};
+    gint backends_num = network_backends_count(bs);
+    gint i = 0;
+    for (i = 0; i < backends_num; i++) {
+        network_backend_t *backend = network_backends_get(bs, i);
+
+        char *backend_addr = backend->addr->name->str;
+
+        if(server_group[0] == '\0' && backend->server_group && backend->server_group->len) {
+            snprintf(server_group, 32, "%s", backend->server_group->str);
+        }
+        if(backend->type == BACKEND_TYPE_RW) {
+            if(!strcasecmp(backend_addr, master_addr)) {
+                if(backend->state == BACKEND_STATE_OFFLINE) {
+                    network_backends_modify(bs, i, BACKEND_TYPE_RW, BACKEND_STATE_UNKNOWN, NO_PREVIOUS_STATE);
+                }
+            } else {
+                network_backends_modify(bs, i, BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN, NO_PREVIOUS_STATE);
+                if(server_group[0] != '\0') {
+                    gchar master_addr_temp[ADDRESS_LEN] = {""};
+                    snprintf(master_addr_temp, ADDRESS_LEN, "%s@%s", master_addr, server_group);
+                    network_backends_add(bs, master_addr_temp, BACKEND_TYPE_RW, BACKEND_STATE_UP, monitor->chas);
+                } else {
+                    network_backends_add(bs, master_addr, BACKEND_TYPE_RW, BACKEND_STATE_UP, monitor->chas);
+                }
+            }
+            break;
+        }
+    }
+}
+
 static void
 group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
 {
     if(bs == NULL) return ;
 
+    typedef struct backend_topology{
+        gchar master_addr[ADDRESS_LEN];
+        gint master_avaliable;
+    }backend_topology_t;
+
+    backend_topology_t *backend_topology_new(gchar *master) {
+        backend_topology_t *topology = g_new0(backend_topology_t, 1);
+        if(!topology) return NULL;
+        topology->master_avaliable = 1;
+        memcpy(topology->master_addr, master, strlen(master));
+    }
+
+    backend_topology_t *find_maxnum_topology(GHashTable *topology_table) {
+        GHashTableIter iter;
+        g_hash_table_iter_init(&iter, topology_table);
+        backend_topology_t *ret = NULL;
+        backend_topology_t *value = NULL;
+        gchar *key = NULL;
+        gint maxnum = 0;
+        while (g_hash_table_iter_next(&iter, (void **)&key, (void **)&value)) {
+            if(value->master_avaliable > maxnum) {
+                ret = value;
+                maxnum = value->master_avaliable;
+            }
+        }
+        return ret;
+    }
+
+    void add_master_to_topology(GHashTable *topology_table, gchar *master) {
+        if(!master) return;
+        backend_topology_t *value = g_hash_table_lookup(topology_table, master);
+        if(value) {
+            value->master_avaliable ++;
+        } else {
+            value = backend_topology_new(master);
+            g_hash_table_insert(topology_table, g_strdup(master), value);
+        }
+    }
+
+    GHashTable *topology_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, g_free);
+
     GList *slave_list = NULL;
     gchar master_addr[ADDRESS_LEN] = {""};
     gchar slave_addr[ADDRESS_LEN] = {""};
     gchar server_group[64] = {""};
+    gchar ip[ADDRESS_LEN] = {""};
     guint has_master = 0;
     guint i = 0;
     guint backends_num = 0;
@@ -189,8 +263,6 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
         MYSQL *conn = get_mysql_connection(monitor, backend_addr);
         MYSQL_RES *rs_set = NULL;
         MYSQL_ROW row = NULL;
-        gchar ip[ADDRESS_LEN] = {""};
-        gchar old_master[ADDRESS_LEN] = {""};
 
         if(conn == NULL) {
             g_message("get connection failed. error: %d, text: %s, backend: %s",
@@ -221,6 +293,8 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
             continue;
         }
 
+        memset(ip, 0, ADDRESS_LEN);
+
         if((get_ip_by_name(row[0], ip) != 0) || ip[0] == '\0') {
             g_message("get master ip by name failed. error: %d, text: %s, backend: %s",
                                                                    mysql_errno(conn), mysql_error(conn), backend_addr);
@@ -228,66 +302,82 @@ group_replication_detect(network_backends_t *bs, cetus_monitor_t *monitor)
             continue;
         }
 
-        memcpy(old_master, master_addr, strlen(master_addr));
+        memset(master_addr, 0, ADDRESS_LEN);
         snprintf(master_addr, ADDRESS_LEN, "%s:%s", ip, row[1]);
-
-        if(old_master[0] != '\0' && strcasecmp(old_master, master_addr) != 0) {
-            g_warning("exists more than one masters.");
-            mysql_free_result(rs_set);
-            return ;
-        } else if (old_master[0] != '\0' && strcasecmp(old_master, master_addr) == 0) {
-            mysql_free_result(rs_set);
-            continue;
-        }
 
         mysql_free_result(rs_set);
         rs_set = NULL;
 
         if(master_addr[0] == '\0') {
             g_message("get master address failed. error: %d, text: %s, backend: %s",
-                                                                   mysql_errno(conn), mysql_error(conn), backend_addr);
+                    mysql_errno(conn), mysql_error(conn), backend_addr);
             continue;
         }
+        add_master_to_topology(topology_table, master_addr);
+    }
 
-        if(strcasecmp(backend_addr, master_addr)) {
-            conn = get_mysql_connection(monitor, master_addr);
-            if(conn == NULL) {
-                g_message("get connection failed. error: %d, text: %s, backend: %s",
-                                                                    mysql_errno(conn), mysql_error(conn), master_addr);
-                continue;
-            }
+    backend_topology_t *topology = find_maxnum_topology(topology_table);
+    if(!topology) {
+        g_message("get primary node failed.");
+        if(topology_table) {
+            g_hash_table_unref (topology_table);
         }
-
+        return;
+    } else {
+        MYSQL *conn = get_mysql_connection(monitor, topology->master_addr);
+        if(conn == NULL) {
+            g_message("get primary node connection failed. error: %d, text: %s, backend: %s",
+                    mysql_errno(conn), mysql_error(conn), topology->master_addr);
+            modify_master_only(bs, topology->master_addr, monitor);
+            if(topology_table) {
+                g_hash_table_unref (topology_table);
+            }
+            return;
+        }
+        MYSQL_RES *rs_set = NULL;
+        MYSQL_ROW row = NULL;
         if(mysql_real_query(conn, L(sql2))) {
             g_message("select slave info failed for group_replication. error: %d, text: %s, backend: %s",
-                                           mysql_errno(conn), mysql_error(conn), master_addr);
-            continue;
+                    mysql_errno(conn), mysql_error(conn), topology->master_addr);
+            modify_master_only(bs, topology->master_addr, monitor);
+            if(topology_table) {
+                g_hash_table_unref (topology_table);
+            }
+            return;
         }
-
         rs_set = mysql_store_result(conn);
         if(rs_set == NULL) {
             g_message("get slave info result set failed for group_replication. error: %d, text: %s",
-                                                       mysql_errno(conn), mysql_error(conn));
-            continue;
+                    mysql_errno(conn), mysql_error(conn));
+            modify_master_only(bs, topology->master_addr, monitor);
+            if(topology_table) {
+                g_hash_table_unref (topology_table);
+            }
+            return;
         }
         while(row=mysql_fetch_row(rs_set)) {
             memset(ip, 0, ADDRESS_LEN);
             if((get_ip_by_name(row[0], ip) != 0) || ip[0] == '\0') {
                 g_message("get slave ip by name failed. error: %d, text: %s",
-                                                       mysql_errno(conn), mysql_error(conn));
+                        mysql_errno(conn), mysql_error(conn));
                 continue;
             }
             memset(slave_addr, 0, ADDRESS_LEN);
             snprintf(slave_addr, ADDRESS_LEN, "%s:%s", ip, row[1]);
             if(slave_addr[0] != '\0') {
-                slave_list = g_list_append(slave_list, strdup(slave_addr));
+                slave_list = g_list_append(slave_list, g_strdup(slave_addr));
                 g_debug("add slave %s in list, %d", slave_addr, g_list_length(slave_list));
             } else {
                 g_message("get slave address failed. error: %d, text: %s",
-                                                       mysql_errno(conn), mysql_error(conn));
+                         mysql_errno(conn), mysql_error(conn));
             }
         }
+        memcpy(master_addr, topology->master_addr, strlen(topology->master_addr));
         mysql_free_result(rs_set);
+    }
+
+    if(topology_table) {
+        g_hash_table_unref (topology_table);
     }
 
     backends_num = network_backends_count(bs);

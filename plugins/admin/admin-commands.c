@@ -110,7 +110,7 @@ void admin_select_all_backends(network_mysqld_con* con)
     g_ptr_array_add(fields, field);
 
     field = network_mysqld_proto_fielddef_new();
-    field->name = g_strdup("slave delay");
+    field->name = g_strdup("slave delay(ms)");
     field->type = MYSQL_TYPE_STRING;
     g_ptr_array_add(fields, field);
 

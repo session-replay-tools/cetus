@@ -685,6 +685,7 @@ check_config_worker(int fd, short what, void *arg)
             chassis_config_update_object_cache(conf, ob->name);
 
             /* then switch to main thread */
+            ev_now_update((struct ev_loop *) chas->event_base);\
             evtimer_set(&config_reload_timer, ob->func, ob->arg);
             event_base_set(chas->event_base, &config_reload_timer);
             evtimer_add(&config_reload_timer, &timeout);

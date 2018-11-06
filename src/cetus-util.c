@@ -40,6 +40,16 @@ try_get_int_value(const gchar *option_value, gint *return_value)
     }
 }
 
+gboolean
+try_get_long_value(const gchar *option_value, long long *return_value)
+{
+    gint ret = sscanf(option_value, "%lld", return_value);
+    if(1 == ret) {
+        return TRUE;
+    } else {
+        return FALSE;
+    }
+}
 
 gboolean
 try_get_double_value(const gchar *option_value, gdouble *return_value)

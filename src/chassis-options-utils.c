@@ -574,13 +574,13 @@ show_max_resp_len(gpointer param) {
     chassis *srv = opt_param->chas;
     gint opt_type = opt_param->opt_type;
     if (CAN_SHOW_OPTS_PROPERTY(opt_type)) {
-        return g_strdup_printf("%d", srv->max_resp_len);
+        return g_strdup_printf("%lld", srv->max_resp_len);
     }
     if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
         if (10 * 1024 * 1024 == srv->max_resp_len) {
             return NULL;
         }
-        return g_strdup_printf("%d", srv->max_resp_len);
+        return g_strdup_printf("%lld", srv->max_resp_len);
     }
     return NULL;
 }

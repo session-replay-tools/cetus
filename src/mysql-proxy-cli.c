@@ -99,7 +99,6 @@ struct chassis_frontend_t {
     int worker_processes;
     int merged_output_size;
     int max_header_size;
-    int max_resp_len;
     int max_alive_time;
     int master_preferred;
 #ifndef SIMPLE_PARSER
@@ -120,6 +119,7 @@ struct chassis_frontend_t {
     int maintained_client_idle_timeout;
     int query_cache_enabled;
     int disable_dns_cache;
+    long long max_resp_len;
     double slave_delay_down_threshold_sec;
     double slave_delay_recover_threshold_sec;
 
@@ -374,8 +374,8 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
 
     chassis_options_add(opts,
                         "max-resp-size",
-                        0, 0, OPTION_ARG_INT, &(frontend->max_resp_len),
-                        "Set the max response size for one backend", "<integer>",
+                        0, 0, OPTION_ARG_INT64, &(frontend->max_resp_len),
+                        "Set the max response size for one backend", "<integer(64)>",
                         assign_max_resp_len, show_max_resp_len, ALL_OPTS_PROPERTY);
 
     chassis_options_add(opts,
@@ -679,7 +679,7 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     g_message("set max pool size:%d", srv->max_idle_connections);
 
     srv->max_resp_len = frontend->max_resp_len;
-    g_message("set max resp len:%d", srv->max_resp_len);
+    g_message("set max resp len:%lld", srv->max_resp_len);
 
     srv->current_time = time(0);
     if (frontend->max_alive_time < 60) {

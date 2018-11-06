@@ -158,7 +158,6 @@ struct chassis {
     int cpus;
 
     int max_alive_time;
-    int max_resp_len;
     int merged_output_size;
     int max_header_size;
     int compressed_merged_output_size;
@@ -168,6 +167,7 @@ struct chassis {
     int max_idle_connections;
     int mid_idle_connections;
 
+    long long max_resp_len;
     unsigned long long dist_tran_id;
 
     char dist_tran_prefix[MAX_DIST_TRAN_PREFIX];

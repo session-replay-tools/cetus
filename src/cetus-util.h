@@ -43,6 +43,7 @@ typedef int32_t BitArray;
 #define GB 1024 * MB
 
 gboolean try_get_int_value(const gchar *option_value, gint *return_value);
+gboolean try_get_long_value(const gchar *option_value, long long *return_value);
 gboolean try_get_double_value(const gchar *option_value, gdouble *return_value);
 
 int make_iso8601_timestamp(char *buf, uint64_t utime);

@@ -135,7 +135,7 @@ typedef struct {
     int total_output;
 
     off_t to_read;
-    off_t resp_len;
+    long long resp_len;
 
     /**
      * data extracted from the handshake  

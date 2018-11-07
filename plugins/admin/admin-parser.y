@@ -489,3 +489,9 @@ cmd ::=REMOVE BACKEND WHERE equation(Z) SEMI. {
   free(key);
   free(val);   
 } 
+cmd ::=FLUSH CONFIG SEMI. {
+  flush_config(con);
+}
+cmd ::=LOAD CONFIG SEMI. {
+  load_config(con);
+}

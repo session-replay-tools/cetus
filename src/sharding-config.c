@@ -1087,3 +1087,59 @@ gboolean shard_conf_add_single_table(const char* schema,
     shard_conf_single_tables = g_list_append(shard_conf_single_tables, st);
     return TRUE;
 }
+
+gboolean parse_vdb_to_json(gchar **json) {
+    cJSON* vdb_array = cJSON_CreateArray();
+    if(!shard_conf_vdbs) return TRUE;
+    GList* l = NULL;
+    for (l = shard_conf_vdbs; l; l = l->next) {
+        sharding_vdb_t* vdb = l->data;
+        cJSON* node = json_create_vdb_object(vdb);
+        cJSON_AddItemToArray(vdb_array, node);
+    }
+    cJSON* root = cJSON_CreateObject();
+    cJSON_AddItemToObject(root, "vdb", vdb_array);
+    *json = cJSON_Print(root);
+    cJSON_Delete(root);
+    return TRUE;
+}
+
+gboolean parse_tables_to_json(gchar **json) {
+    cJSON* table_array = cJSON_CreateArray();
+    GList* tables = shard_conf_get_tables();
+    if(!tables) return TRUE;
+    GList* l = NULL;
+    for (l = tables; l; l = l->next) {
+        sharding_table_t* t = l->data;
+        cJSON* node = cJSON_CreateObject();
+        cJSON_AddStringToObject(node, "db", t->schema->str);
+        cJSON_AddStringToObject(node, "table", t->name->str);
+        cJSON_AddStringToObject(node, "pkey", t->pkey->str);
+        cJSON_AddNumberToObject(node, "vdb", t->vdb_id);
+        cJSON_AddItemToArray(table_array, node);
+    }
+    cJSON* root = cJSON_CreateObject();
+    cJSON_AddItemToObject(root, "table", table_array);
+    *json = cJSON_Print(root);
+    cJSON_Delete(root);
+    return TRUE;
+}
+
+gboolean parse_single_tables_to_json(gchar **json) {
+    if(!shard_conf_single_tables) return TRUE;
+    cJSON* single_table_array = cJSON_CreateArray();
+    GList* l = NULL;
+    for (l = shard_conf_single_tables; l; l = l->next) {
+        struct single_table_t* t = l->data;
+        cJSON* node = cJSON_CreateObject();
+        cJSON_AddStringToObject(node, "table", t->name->str);
+        cJSON_AddStringToObject(node, "db", t->schema->str);
+        cJSON_AddStringToObject(node, "group", t->group->str);
+        cJSON_AddItemToArray(single_table_array, node);
+    }
+    cJSON* root = cJSON_CreateObject();
+    cJSON_AddItemToObject(root, "single_tables", single_table_array);
+    *json = cJSON_Print(root);
+    cJSON_Delete(root);
+    return TRUE;
+}

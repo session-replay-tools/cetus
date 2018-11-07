@@ -2553,6 +2553,106 @@ show_proxy_deny_ip(gpointer param) {
     return ret;
 }
 
+static gint
+assign_proxy_deny_ip(const gchar *newval, gpointer param) {
+    gint ret = ASSIGN_OK;
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
+        cetus_acl_t* acl = opt_param->chas->priv->acl;
+        if(acl->blacklist) {
+            cetus_acl_free_by_type(acl, ACL_BLACKLIST);
+        }
+        cetus_acl_add_rules(acl, ACL_BLACKLIST, newval);
+        gint len = opt_param->chas->modules->len;
+        gint i = 0;
+        for(i = 0; i< len; i++) {
+            chassis_plugin *p = (chassis_plugin *)((opt_param->chas->modules->pdata)[i]);
+            if(strcasecmp(p->option_grp_name, "proxy") == 0) {
+                if(p->config->deny_ip) {
+                    g_free(p->config->deny_ip);
+                }
+                p->config->deny_ip = g_strdup(newval);
+                break;
+            }
+        }
+    }
+    return ASSIGN_OK;
+}
+
+static gint
+assign_proxy_allow_ip(const gchar *newval, gpointer param) {
+    gint ret = ASSIGN_OK;
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
+        cetus_acl_t* acl = opt_param->chas->priv->acl;
+        if(acl->whitelist) {
+            cetus_acl_free_by_type(acl, ACL_WHITELIST);
+        }
+        cetus_acl_add_rules(acl, ACL_WHITELIST, newval);
+        gint len = opt_param->chas->modules->len;
+        gint i = 0;
+        for(i = 0; i< len; i++) {
+            chassis_plugin *p = (chassis_plugin *)((opt_param->chas->modules->pdata)[i]);
+            if(strcasecmp(p->option_grp_name, "proxy") == 0) {
+                if(p->config->allow_ip) {
+                    g_free(p->config->allow_ip);
+                }
+                p->config->allow_ip = g_strdup(newval);
+                break;
+            }
+        }
+    }
+    return ASSIGN_OK;
+}
+
+static gint
+assign_proxy_backend_addresses(const gchar *newval, gpointer param) {
+    gint ret = ASSIGN_OK;
+    if(!newval) return ret;
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
+        gchar **address = g_strsplit(newval, ",", 0);
+        gint len = opt_param->chas->modules->len;
+        gint i = 0;
+        for(i = 0; i< len; i++) {
+            chassis_plugin *p = (chassis_plugin *)((opt_param->chas->modules->pdata)[i]);
+            if(strcasecmp(p->option_grp_name, "proxy") == 0) {
+                g_strfreev(p->config->backend_addresses);
+                p->config->backend_addresses = address;
+                network_backend_load_master(opt_param->chas, p->config->backend_addresses);
+                break;
+            }
+        }
+    }
+    return ret;
+}
+
+static gint
+assign_proxy_read_only_backend_address(const gchar *newval, gpointer param) {
+    gint ret = ASSIGN_OK;
+    if(!newval) return ret;
+    struct external_param *opt_param = (struct external_param *)param;
+    gint opt_type = opt_param->opt_type;
+    if(CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
+        gchar **address = g_strsplit(newval, ",", 0);
+        gint len = opt_param->chas->modules->len;
+        gint i = 0;
+        for(i = 0; i< len; i++) {
+            chassis_plugin *p = (chassis_plugin *)((opt_param->chas->modules->pdata)[i]);
+            if(strcasecmp(p->option_grp_name, "proxy") == 0) {
+                g_strfreev(p->config->read_only_backend_addresses);
+                p->config->read_only_backend_addresses = address;
+                network_backend_load_slave(opt_param->chas, p->config->read_only_backend_addresses);
+                break;
+            }
+        }
+    }
+    return ret;
+}
+
 /**
  * plugin options
  */
@@ -2569,12 +2669,12 @@ network_mysqld_proxy_plugin_get_options(chassis_plugin_config *config)
     chassis_options_add(&opts, "proxy-read-only-backend-addresses",
                         'r', 0, OPTION_ARG_STRING_ARRAY, &(config->read_only_backend_addresses),
                         "address:port of the remote slave-server (default: not set)", "<host:port>",
-                        NULL, show_proxy_read_only_backend_address, SAVE_OPTS_PROPERTY);
+                        assign_proxy_read_only_backend_address, show_proxy_read_only_backend_address, SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-backend-addresses",
                         'b', 0, OPTION_ARG_STRING_ARRAY, &(config->backend_addresses),
                         "address:port of the remote backend-servers (default: 127.0.0.1:3306)", "<host:port>",
-                        NULL, show_proxy_backend_addresses, SAVE_OPTS_PROPERTY);
+                        assign_proxy_backend_addresses, show_proxy_backend_addresses, SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-connect-timeout",
                         0, 0, OPTION_ARG_DOUBLE, &(config->connect_timeout_dbl),
@@ -2593,11 +2693,11 @@ network_mysqld_proxy_plugin_get_options(chassis_plugin_config *config)
 
     chassis_options_add(&opts, "proxy-allow-ip",
                         0, 0, OPTION_ARG_STRING, &(config->allow_ip), "allow user@IP for proxy permission", NULL,
-                        NULL, show_proxy_allow_ip, SAVE_OPTS_PROPERTY);
+                        assign_proxy_allow_ip, show_proxy_allow_ip, SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "proxy-deny-ip",
                         0, 0, OPTION_ARG_STRING, &(config->deny_ip), "deny user@IP for proxy permission", NULL,
-                        NULL, show_proxy_deny_ip, SAVE_OPTS_PROPERTY);
+                        assign_proxy_deny_ip, show_proxy_deny_ip, SAVE_OPTS_PROPERTY);
 
     chassis_options_add(&opts, "read-master-percentage",
                         0, 0, OPTION_ARG_INT, &(config->read_master_percentage), "range [0, 100]", NULL,

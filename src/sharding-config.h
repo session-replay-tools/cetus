@@ -141,6 +141,10 @@ GList* shard_conf_get_tables(); /* ! g_list_free() after use */
 GList* shard_conf_get_single_tables();
 gboolean shard_conf_write_json(chassis_config_t* conf_manager);
 
+gboolean parse_vdb_to_json(gchar **json);
+gboolean parse_tables_to_json(gchar **json);
+gboolean parse_single_tables_to_json(gchar **json);
+
 gboolean shard_conf_add_single_table(const char* schema,
                                      const char* table, const char* group);
 

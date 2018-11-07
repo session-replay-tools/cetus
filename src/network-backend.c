@@ -680,3 +680,31 @@ network_backend_check_available_rw(network_backends_t *bs, GString *name)
         }
     }
 }
+
+gboolean network_backend_load_master(chassis *chas, gchar **backend_addresses) {
+    chassis_private *g = chas->priv;
+    gint i = 0;
+    GPtrArray *backends_arr = g->backends->backends;
+    for (i = 0; backend_addresses[i]; i++) {
+        if (BACKEND_OPERATE_SUCCESS != network_backends_add(g->backends, backend_addresses[i], BACKEND_TYPE_RW, BACKEND_STATE_UNKNOWN, chas)) {
+            g_critical("load node: %s failed.", backend_addresses[i]);
+            continue;
+        }
+        network_backend_init_extra(backends_arr->pdata[backends_arr->len - 1], chas);
+    }
+    return TRUE;
+}
+
+gboolean network_backend_load_slave(chassis *chas, gchar **backend_addresses) {
+    chassis_private *g = chas->priv;
+    gint i = 0;
+    GPtrArray *backends_arr = g->backends->backends;
+    for (i = 0; backend_addresses[i]; i++) {
+        if (BACKEND_OPERATE_SUCCESS != network_backends_add(g->backends, backend_addresses[i], BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN, chas)) {
+            g_critical("load node: %s failed.", backend_addresses[i]);
+            continue;
+        }
+        network_backend_init_extra(backends_arr->pdata[backends_arr->len - 1], chas);
+    }
+    return TRUE;
+}

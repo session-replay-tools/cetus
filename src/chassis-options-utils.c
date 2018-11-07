@@ -1099,7 +1099,7 @@ show_reduce_connections(gpointer param) {
         return g_strdup_printf("%s", srv->is_reduce_conns ? "true" : "false");
     }
     if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        return srv->is_reduce_conns ? g_strdup("true") : NULL;
+        return srv->is_reduce_conns ? g_strdup("true") : g_strdup("false");
     }
     return NULL;
 }
@@ -1538,4 +1538,40 @@ show_ssl(gpointer param) {
         return g_strdup_printf("%s", srv->ssl ? "true" : "false");
     }
     return NULL;
+}
+
+gchar*
+show_temporary_file(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_SHOW_OPTS_PROPERTY(opt_type) || CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        if(srv->temporary_file) {
+            return g_strdup(srv->temporary_file);
+        }
+    }
+    return NULL;
+}
+
+gint assign_reduce_connections(const gchar *newval, gpointer param) {
+    gint ret = ASSIGN_ERROR;
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_ASSIGN_OPTS_PROPERTY(opt_type)) {
+        if (NULL != newval) {
+            if(strcasecmp("true", newval) == 0) {
+                srv->is_reduce_conns = 1;
+                ret = ASSIGN_OK;
+            } else if(strcasecmp("false", newval) == 0) {
+                srv->is_reduce_conns = 0;
+                ret = ASSIGN_OK;
+            } else {
+                ret = ASSIGN_VALUE_INVALID;
+            }
+         } else {
+            ret = ASSIGN_VALUE_INVALID;
+        }
+    }
+    return ret;
 }

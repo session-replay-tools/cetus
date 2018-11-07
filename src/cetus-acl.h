@@ -38,4 +38,6 @@ gboolean cetus_acl_verify(cetus_acl_t* acl, const char* user, const char* host);
 
 int cetus_acl_add_rules(cetus_acl_t* acl, enum cetus_acl_category cate, const char* str);
 
+void cetus_acl_free_by_type(cetus_acl_t* acl, enum cetus_acl_category cate);
+
 #endif

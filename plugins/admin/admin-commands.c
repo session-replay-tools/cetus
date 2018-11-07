@@ -26,6 +26,7 @@
 #include "chassis-options-utils.h"
 #include "chassis-sql-log.h"
 #include "cetus-acl.h"
+#include "cetus-persistence.h"
 
 static gint save_setting(chassis *srv, gint *effected_rows);
 static void send_result(network_socket *client, gint ret, gint affected);
@@ -163,7 +164,7 @@ void admin_select_all_backends(network_mysqld_con* con)
         g_ptr_array_add(row, g_strdup(states[(int) (backend->state)]));
         g_ptr_array_add(row, g_strdup(types[(int) (backend->type)]));
 
-        sprintf(buffer, "%d", backend->slave_delay_msec);
+        sprintf(buffer, "%d", (backend->slave_delay_msec - 10) >=0 ? (backend->slave_delay_msec - 10) : 0);
         g_ptr_array_add(row, (backend->type == BACKEND_TYPE_RO && chas->check_slave_delay == 1) ? g_strdup(buffer) : NULL);
 
         sprintf(buffer, "%d", backend->pool->cur_idle_connections); 
@@ -744,15 +745,14 @@ void admin_acl_add_rule(network_mysqld_con *con, gboolean is_white, char *addr)
     int affected = cetus_acl_add_rule_str(chas->priv->acl,
                                          is_white?ACL_WHITELIST:ACL_BLACKLIST, addr);
     if(affected) {
+        gchar *cate = is_white?"proxy-allow-ip":"proxy-deny-ip";
         if(chas->config_manager->type == CHASSIS_CONF_MYSQL) {
-            gchar *cate = is_white?"proxy-allow-ip":"proxy-deny-ip";
             gint ret = config_set_remote_option_by_key(con, cate);
             send_result(con->client, ret, 1);
         } else {
-            gint effected_rows = 0;
-            gint ret = save_setting(chas, &effected_rows);
-            send_result(con->client, ret, affected);
-            }
+            config_set_local_option_by_key(con->srv, cate);
+            send_result(con->client, ASSIGN_OK, affected);
+        }
     } else {
         send_result(con->client, ACL_ADD_RULE_ERROR, 0);
     }
@@ -768,19 +768,18 @@ void admin_acl_delete_rule(network_mysqld_con *con, gboolean is_white, char *add
     int affected = cetus_acl_delete_rule_str(chas->priv->acl,
                                              is_white?ACL_WHITELIST:ACL_BLACKLIST, addr);
     if(affected) {
+        gchar *cate = is_white?"proxy-allow-ip":"proxy-deny-ip";
         if(chas->config_manager->type == CHASSIS_CONF_MYSQL) {
-            gchar *cate = is_white?"proxy-allow-ip":"proxy-deny-ip";
             gint ret = config_set_remote_option_by_key(con, cate);
             send_result(con->client, ret, 1);
         } else {
             gint effected_rows = 0;
-            gint ret = save_setting(chas, &effected_rows);
-            send_result(con->client, ret, affected);
+            config_set_local_option_by_key(con->srv, cate);
+            send_result(con->client, ASSIGN_OK, affected);
         }
     } else {
         send_result(con->client, ACL_DELETE_RULE_ERROR, 0);
     }
-
 }
 
 /* only match % wildcard, case insensitive */
@@ -898,14 +897,13 @@ void admin_set_reduce_conns(network_mysqld_con* con, int mode)
         affected = 1;
     }
     if(affected) {
+        gchar *key = "reduce-connections";
         if(con->srv->config_manager->type == CHASSIS_CONF_MYSQL) {
-            gchar *key = "reduce-connections";
             gint ret = config_set_remote_option_by_key(con, key);
             send_result(con->client, ret, affected);
         } else {
-            gint effected_rows = 0;
-            gint ret = save_setting(con->srv, &effected_rows);
-            send_result(con->client, ret, affected);
+            config_set_local_option_by_key(con->srv, key);
+            send_result(con->client, ASSIGN_OK, affected);
         }
     } else {
         send_result(con->client, ASSIGN_OK, affected);
@@ -1091,10 +1089,16 @@ void admin_update_user_password(network_mysqld_con* con, char *from_table,
     chassis_private *g = con->srv->priv;
     enum cetus_pwd_type pwd_type = password_type(from_table);
     gboolean affected = cetus_users_update_record(g->users, user, password, pwd_type);
-    if (affected)
-        cetus_users_write_json(g->users);
-    network_mysqld_con_send_ok_full(con->client, affected?1:0, 0,
-                                    SERVER_STATUS_AUTOCOMMIT, 0);
+    if (affected) {
+        if(con->srv->config_manager->type == CHASSIS_CONF_MYSQL) {
+            network_mysqld_con_send_ok_full(con->client, affected?1:0, 0,
+                                            SERVER_STATUS_AUTOCOMMIT, 0);
+        } else {
+            save_users_to_temporary_file(con->srv);
+            network_mysqld_con_send_ok_full(con->client, affected?1:0, 0,
+                                            SERVER_STATUS_AUTOCOMMIT, 0);
+        }
+    }
 }
 
 void admin_delete_user_password(network_mysqld_con* con, char* user)
@@ -1105,10 +1109,16 @@ void admin_delete_user_password(network_mysqld_con* con, char* user)
 
     chassis_private *g = con->srv->priv;
     gboolean affected = cetus_users_delete_record(g->users, user);
-    if (affected)
-        cetus_users_write_json(g->users);
-    network_mysqld_con_send_ok_full(con->client, affected?1:0, 0,
-                                    SERVER_STATUS_AUTOCOMMIT, 0);
+    if (affected) {
+        if(con->srv->config_manager->type == CHASSIS_CONF_MYSQL) {
+            network_mysqld_con_send_ok_full(con->client, affected?1:0, 0,
+                                            SERVER_STATUS_AUTOCOMMIT, 0);
+        } else {
+            save_users_to_temporary_file(con->srv);
+            network_mysqld_con_send_ok_full(con->client, affected?1:0, 0,
+                                            SERVER_STATUS_AUTOCOMMIT, 0);
+        }
+    }
 }
 
 #define ERROR_PARAM -1
@@ -1157,9 +1167,14 @@ void admin_insert_backend(network_mysqld_con* con, char *addr, char *type, char 
                 network_mysqld_con_send_ok_full(con->client, 1, 0,
                                                 SERVER_STATUS_AUTOCOMMIT, 0);
             } else {
-                gint effected_rows = 0;
-                ret = save_setting(con->srv, &effected_rows);
-                send_result(con->client, ret, 1);
+                if(backend_type(type) == BACKEND_TYPE_RW) {
+                    config_set_local_option_by_key(con->srv, "proxy-backend-addresses");
+                } else {
+                    config_set_local_option_by_key(con->srv, "proxy-read-only-backend-addresses");
+                }
+                //gint effected_rows = 0;
+                //ret = save_setting(con->srv, &effected_rows);
+                send_result(con->client, ASSIGN_OK, 1);
             }
             break;
         }
@@ -1248,9 +1263,11 @@ void admin_update_backend(network_mysqld_con* con, GList* equations,
     } else {
         gint ret = CHANGE_SAVE_ERROR;
         gint effected_rows = 0;
-        if (affected)
-            ret = save_setting(con->srv, &effected_rows);
-        send_result(con->client, ret, affected);
+        if (affected) {
+            config_set_local_option_by_key(con->srv, type == BACKEND_TYPE_RW ? "proxy-backend-addresses" : "proxy-read-only-backend-addresses");
+        }
+            //ret = save_setting(con->srv, &effected_rows);
+        send_result(con->client, ASSIGN_OK, affected);
     }
 }
 
@@ -1278,9 +1295,11 @@ void admin_delete_backend(network_mysqld_con* con, char *key, char *val)
             network_mysqld_con_send_ok_full(con->client, 1, 0,
                                             SERVER_STATUS_AUTOCOMMIT, 0);
         } else {
-            gint effected_rows = 0;
-            gint ret = save_setting(con->srv, &effected_rows);
-            send_result(con->client, ret, 1);
+            //gint effected_rows = 0;
+            //gint ret = save_setting(con->srv, &effected_rows);
+            config_set_local_option_by_key(con->srv, "proxy-backend-addresses");
+            config_set_local_option_by_key(con->srv, "proxy-read-only-backend-addresses");
+            send_result(con->client, ASSIGN_OK, 1);
         }
     } else {
         network_mysqld_con_send_ok_full(con->client, 0, 0,
@@ -1479,8 +1498,13 @@ void admin_set_config(network_mysqld_con* con, char* key, char* value)
             return;
         } else {
             gint effected_rows = 0;
-            gint save_ret = save_setting(con->srv, &effected_rows);
-            send_result(con->client, save_ret, 1);
+            //gint save_ret = save_setting(con->srv, &effected_rows);
+            if(save_config_to_temporary_file(con->srv, key, value) == CONFIG_OPERATOR_SUCCESS) {
+                network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+            } else {
+                network_mysqld_con_send_error(con->client,C("Variable is set locally but cannot replace local settings"));
+            }
+            return;
         }
     } else if(ASSIGN_NOT_SUPPORT == ret){
         network_mysqld_con_send_error_full(con->client, C("Variable cannot be set dynamically"), 1065, "28000");
@@ -1879,7 +1903,7 @@ void admin_create_vdb(network_mysqld_con* con, int id, GPtrArray* partitions,
         && shard_conf_add_vdb(vdb);
     if (ok) {
         g_message("Admin: %s", con->orig_sql->str);
-        shard_conf_write_json(con->srv->config_manager);
+        save_sharding_to_temporary_file(con->srv);
         network_mysqld_con_send_ok(con->client);
     } else {
         sharding_vdb_free(vdb);
@@ -1902,7 +1926,7 @@ void admin_create_sharded_table(network_mysqld_con* con, const char* schema,
     gboolean ok = shard_conf_add_sharded_table(t);
     if (ok) {
         g_message("Admin: %s", con->orig_sql->str);
-        shard_conf_write_json(con->srv->config_manager);
+        save_sharding_to_temporary_file(con->srv);
         network_mysqld_con_send_ok(con->client);
     } else {
         network_mysqld_con_send_error(con->client, C("failed to add sharded table"));
@@ -2108,7 +2132,7 @@ void admin_create_single_table(network_mysqld_con* con, const char* schema,
     gboolean ok = shard_conf_add_single_table(schema, table, group);
     if (ok) {
         g_message("Admin: %s", con->orig_sql->str);
-        shard_conf_write_json(con->srv->config_manager);
+        save_sharding_to_temporary_file(con->srv);
         network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
     } else {
         network_mysqld_con_send_error(con->client, C("failed to add single table"));
@@ -2290,4 +2314,27 @@ gboolean config_set_remote_option_by_key(network_mysqld_con* con, gchar *key) {
         }
     }
     return SET_REMOTE_ERROR;
+}
+
+void flush_config(network_mysqld_con* con) {
+    if (con->is_admin_client) {
+        con->ask_one_worker = 1;
+        return;
+    }
+    gint rows = 0;
+    sync_config_to_file(con->srv, &rows);
+    sync_users_to_file(con->srv, &rows);
+    sync_variables_to_file(con->srv, &rows);
+    sync_sharding_to_file(con->srv, &rows);
+    network_mysqld_con_send_ok_full(con->client, rows, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+}
+
+void load_config(network_mysqld_con* con) {
+    if (con->is_admin_client) {
+        con->ask_one_worker = 1;
+        return;
+    }
+    gint rows = 0;
+    load_config_from_temporary_file(con->srv);
+    network_mysqld_con_send_ok_full(con->client, rows, 0, SERVER_STATUS_AUTOCOMMIT, 0);
 }

@@ -15,6 +15,21 @@ static void acl_entry_free(gpointer entry)
     g_free(e);
 }
 
+void cetus_acl_free_by_type(cetus_acl_t* acl, enum cetus_acl_category cate) {
+    if(cate == ACL_WHITELIST) {
+        if(acl->whitelist) {
+            g_list_free_full(acl->whitelist, acl_entry_free);
+            acl->whitelist = NULL;
+        }
+    }
+    if(cate == ACL_BLACKLIST) {
+        if(acl->blacklist) {
+            g_list_free_full(acl->blacklist, acl_entry_free);
+            acl->blacklist = NULL;
+        }
+    }
+}
+
 void cetus_acl_free(cetus_acl_t* acl)
 {
     g_list_free_full(acl->whitelist, acl_entry_free);
@@ -180,4 +195,3 @@ int cetus_acl_add_rules(cetus_acl_t* acl, enum cetus_acl_category cate, const ch
     }
     return count;
 }
-

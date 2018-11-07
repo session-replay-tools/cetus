@@ -26,11 +26,6 @@
 #include "cetus-util.h"
 #include "chassis-config.h"
 
-struct pwd_pair_t {
-    char *client;
-    char *server;
-};
-
 static struct pwd_pair_t *
 pwd_pair_new(const char *c, const char *s)
 {
@@ -107,7 +102,7 @@ cetus_users_set_records(cetus_users_t *users, GHashTable *new_records)
     users->records = new_records;
 }
 
-static gboolean
+gboolean
 cetus_users_parse_json(cetus_users_t *users, char *buffer)
 {
     cJSON *root = cJSON_Parse(buffer);

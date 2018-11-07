@@ -35,6 +35,11 @@ enum cetus_pwd_type {
     CETUS_SERVER_PWD,
 };
 
+struct pwd_pair_t {
+    char *client;
+    char *server;
+};
+
 cetus_users_t *cetus_users_new();
 
 void cetus_users_free(cetus_users_t *users);
@@ -62,5 +67,7 @@ void cetus_users_get_server_pwd(cetus_users_t *, const char *user, GString *pwd)
 gboolean cetus_users_contains(cetus_users_t *, const char *user);
 
 void cetus_users_reload_callback(int fd, short what, void *arg);
+
+gboolean cetus_users_parse_json(cetus_users_t *users, char *buffer);
 
 #endif /*_CETUS_USERS_H_*/

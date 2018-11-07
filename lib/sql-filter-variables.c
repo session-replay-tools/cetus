@@ -46,6 +46,27 @@ value_type(const char *str)
         return VAL_UNKNOWN;
 }
 
+static gchar *
+value_type_name(enum _value_type_t type) {
+    switch(type) {
+    case VAL_INT: {
+        return "int";
+        break;
+    }
+    case VAL_STRING: {
+        return "string";
+        break;
+    }
+    case VAL_STRING_CSV: {
+        return "string-csv";
+        break;
+    }
+    default:
+        return "unknown";
+        break;
+    }
+}
+
 struct sql_variable_t {
     char *name;
     enum _value_type_t type;
@@ -312,4 +333,60 @@ sql_filter_vars_reload_str_rules(const char *json_str)
     }
 
     return sql_filter_vars_load_str_rules(json_str);
+}
+
+gboolean parse_variables_to_json(gchar **json) {
+    cJSON *variables_node = cJSON_CreateArray();
+    if (!variables_node) {
+        g_warning(G_STRLOC ":variables_node is nil");
+        return FALSE;
+    }
+    GHashTableIter iter;
+    g_hash_table_iter_init(&iter, cetus_variables);
+    gchar * name= NULL;
+    struct sql_variable_t *var = NULL;
+    cJSON *item = cJSON_CreateArray();
+    while(g_hash_table_iter_next(&iter, (gpointer *) & name, (gpointer *) & var)) {
+        cJSON *node = cJSON_CreateObject();
+        cJSON_AddStringToObject(node,"name",var->name);
+        cJSON_AddStringToObject(node,"type",value_type_name(var->type));
+        cJSON *allow_node = NULL;
+        if(var->allow_all) {
+            allow_node = cJSON_CreateArray();
+            cJSON_AddItemToArray(allow_node, cJSON_CreateString("*"));
+        } else {
+            if(var->allowed_values) {
+                allow_node = cJSON_CreateArray();
+                GList *it = NULL;
+                for(it = var->allowed_values; it; it = it->next) {
+                    cJSON_AddItemToArray(allow_node, cJSON_CreateString(it->data));
+                }
+            }
+        }
+        if(allow_node) {
+            cJSON_AddItemToObject(node, "allowed_values", allow_node);
+        }
+
+        cJSON *silence_node = NULL;
+        if(var->silence_all) {
+            silence_node = cJSON_CreateArray();
+            cJSON_AddItemToArray(silence_node, cJSON_CreateString("*"));
+        } else {
+            if(var->silent_values) {
+                silence_node = cJSON_CreateArray();
+                GList *it = NULL;
+                for(it = var->silent_values; it; it = it->next) {
+                    cJSON_AddItemToArray(silence_node, cJSON_CreateString(it->data));
+                }
+            }
+        }
+        if(silence_node) {
+            cJSON_AddItemToObject(node, "silent_values", silence_node);
+        }
+        cJSON_AddItemToArray(variables_node, node);
+    }
+    cJSON *root = cJSON_CreateObject();
+    cJSON_AddItemToObject(root, "variables", variables_node);
+    *json = cJSON_Print(root);
+    return TRUE;
 }

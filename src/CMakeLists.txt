@@ -95,6 +95,7 @@ SET(proxy_sources
     cetus-variable.c
     cetus-monitor.c
     cetus-acl.c
+    cetus-persistence.c
 )
 
 if (HAVE_OPENSSL)

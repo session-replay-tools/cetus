@@ -167,6 +167,7 @@ struct chassis_frontend_t {
     gint ssl;
 
     int check_dns;
+    gchar *temporary_file;
 };
 
 /**
@@ -213,6 +214,7 @@ chassis_frontend_new(void)
     frontend->check_dns = 0;
 
     frontend->ssl = 0;
+    frontend->temporary_file = NULL;
 
     return frontend;
 }
@@ -252,6 +254,7 @@ chassis_frontend_free(struct chassis_frontend_t *frontend)
     g_free(frontend->sql_log_prefix);
     g_free(frontend->sql_log_path);
     g_free(frontend->sql_log_mode);
+    g_free(frontend->temporary_file);
 
     g_slice_free(struct chassis_frontend_t, frontend);
 }
@@ -478,7 +481,7 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                         "reduce-connections",
                         0, 0, OPTION_ARG_NONE, &(frontend->is_reduce_conns),
                         "Reduce connections when idle connection num is too high", NULL,
-                        NULL, show_reduce_connections, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
+                        assign_reduce_connections, show_reduce_connections, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts, "enable-query-cache", 0, 0, OPTION_ARG_NONE, &(frontend->query_cache_enabled), "", NULL,
                         NULL, show_enable_query_cache, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
@@ -561,6 +564,11 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                           0, 0, OPTION_ARG_NONE, &(frontend->check_dns),
                           "check dns when hostname changed",NULL,
                           NULL, show_check_dns, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
+    chassis_options_add(opts,
+                              "temporary-file",
+                              0, 0, OPTION_ARG_STRING, &(frontend->temporary_file),
+                              "temporary file path",NULL,
+                              NULL, show_temporary_file, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     return 0;
 }
@@ -1235,6 +1243,28 @@ main_cmdline(int argc, char **argv)
         }
     }
     srv->check_dns = frontend->check_dns;
+
+    if(frontend->temporary_file) {
+        if(g_path_is_absolute(frontend->temporary_file)) {
+            srv->temporary_file = frontend->temporary_file;
+        } else {
+            if(srv->conf_dir) {
+                srv->temporary_file = g_strdup_printf("%s/%s", srv->conf_dir, frontend->temporary_file);
+            } else {
+                srv->temporary_file = g_strdup_printf("%s/%s", frontend->base_dir, frontend->temporary_file);
+            }
+        }
+    } else {
+        if(srv->conf_dir) {
+            srv->temporary_file = g_strdup_printf("%s/%s", srv->conf_dir, "temporary.json");
+        } else {
+            srv->temporary_file = g_strdup_printf("%s/%s", frontend->base_dir, "temporary.json");
+        }
+    }
+
+    load_config_from_temporary_file(srv);
+    load_users_from_temporary_file(srv);
+    load_variables_from_temporary_file(srv);
 
     if (chassis_mainloop(srv)) {
         /* looks like we failed */

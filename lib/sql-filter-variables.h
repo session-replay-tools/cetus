@@ -35,4 +35,6 @@ gboolean sql_filter_vars_is_silent(const char *name, const char *val);
 
 gboolean sql_filter_vars_is_allowed(const char *name, const char *val);
 
+gboolean parse_variables_to_json(gchar **json);
+
 #endif /*_SQL_FILTER_VARIABLES_H_*/

@@ -424,6 +424,8 @@ check_backend_alive(int fd, short what, void *arg)
 
     if(chas->group_replication_mode ==1) {
         group_replication_detect(bs, monitor);
+        config_set_local_option_by_key(chas, "proxy-read-only-backend-addresses");
+        config_set_local_option_by_key(chas, "proxy-backend-addresses");
     }
 
     for (i = 0; i < network_backends_count(bs); i++) {
@@ -453,6 +455,7 @@ hostnameloop:
                 if (backend->type != BACKEND_TYPE_RW) {
                     ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN, oldstate);
                     if(ret == 0) {
+                        config_set_local_option_by_key(chas, "proxy-backend-addresses");
                         g_critical("Backend %s is set to DOWN.", backend_addr);
                     } else {
                         g_critical("Backend %s is set to DOWN failed.", backend_addr);
@@ -466,6 +469,7 @@ hostnameloop:
             if (backend->state != BACKEND_STATE_UP) {
                 ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP, oldstate);
                 if(ret == 0) {
+                    config_set_local_option_by_key(chas, "proxy-read-only-backend-addresses");
                     g_message("Backend %s is set to UP.", backend_addr);
                 } else {
                     g_message("Backend %s is set to UP failed.", backend_addr);
@@ -492,6 +496,8 @@ update_master_timestamp(int fd, short what, void *arg)
 
     if(chas->group_replication_mode ==1) {
         group_replication_detect(bs, monitor);
+        config_set_local_option_by_key(chas, "proxy-read-only-backend-addresses");
+        config_set_local_option_by_key(chas, "proxy-backend-addresses");
     }
 
     /* Catch RW time 
@@ -530,6 +536,7 @@ hostnameloop:;
                 if (backend->state != BACKEND_STATE_UP) {
                     ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP, oldstate);
                     if(ret == 0) {
+                        config_set_local_option_by_key(chas, "proxy-backend-addresses");
                         g_message("Backend %s is set to UP.", backend_addr);
                     } else {
                         g_message("Backend %s is set to UP failed.", backend_addr);
@@ -585,6 +592,7 @@ hostnameloop:;
             if (backend->state != BACKEND_STATE_DOWN) {
                 ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN, oldstate);
                 if(ret == 0) {
+                    config_set_local_option_by_key(chas, "proxy-read-only-backend-addresses");
                     g_critical("Backend %s is set to DOWN.", backend_addr);
                 } else {
                     g_critical("Backend %s is set to DOWN failed.", backend_addr);
@@ -635,6 +643,7 @@ hostnameloop:;
             if (delay_secs > chas->slave_delay_down_threshold_sec && backend->state != BACKEND_STATE_DOWN) {
                 ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_DOWN, oldstate);
                 if(ret == 0) {
+                    config_set_local_option_by_key(chas, "proxy-read-only-backend-addresses");
                     g_critical("Slave delay %.3f seconds. Set slave to DOWN.", delay_secs);
                 } else {
                     g_critical("Slave delay %.3f seconds. Set slave to DOWN failed.", delay_secs);
@@ -642,6 +651,7 @@ hostnameloop:;
             } else if (delay_secs <= chas->slave_delay_recover_threshold_sec && backend->state != BACKEND_STATE_UP) {
                 ret = network_backends_modify(bs, i, backend->type, BACKEND_STATE_UP, oldstate);
                 if(ret == 0) {
+                    config_set_local_option_by_key(chas, "proxy-read-only-backend-addresses");
                     g_message("Slave delay %.3f seconds. Recovered. Set slave to UP.", delay_secs);
                 } else {
                     g_message("Slave delay %.3f seconds. Recovered. Set slave to UP failed.", delay_secs);

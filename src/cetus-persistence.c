@@ -6,52 +6,55 @@
 #include "chassis-plugin.h"
 #include <string.h>
 
-gint rm_config_json_local(gchar *filename) {
-    if(!filename) return CONFIG_OPERATOR_ARGS_ERROR;
+gboolean rm_config_json_local(gchar *filename) {
+    if(!filename) return FALSE;
     if(g_file_test(filename, G_FILE_TEST_EXISTS)) {
         gint ret = g_unlink(filename);
         if(ret == 0) {
-            return CONFIG_OPERATOR_SUCCESS;
+            return TRUE;
+        } else {
+            g_critical("unlink file: %s failed", filename);
+            return FALSE;
         }
     }
-    return CONFIG_OPERATOR_RMFILE_ERROR;
+    return TRUE;
 }
 
-gint read_config_json_from_local(gchar *filename, gchar **str) {
-    if(!filename) return CONFIG_OPERATOR_ARGS_ERROR;
+gboolean read_config_json_from_local(gchar *filename, gchar **str) {
+    if(!filename) return FALSE;
     gchar *buffer = NULL;
     GError *err = NULL;
     if (!g_file_get_contents(filename, &buffer, NULL, &err)) {
         if (!g_error_matches(err, G_FILE_ERROR, G_FILE_ERROR_NOENT)) {
-            g_critical(G_STRLOC " %s", err->message);
+            g_critical(G_STRLOC "read config file failed:  %s", err->message);
         }
         g_clear_error(&err);
-        return CONFIG_OPERATOR_READFILE_ERROR;
+        return FALSE;
     }
     *str = buffer;
-    return CONFIG_OPERATOR_SUCCESS;
+    return TRUE;
 }
 
-gint write_config_json_to_local(gchar *filename, gchar *str) {
-    if(!filename) return CONFIG_OPERATOR_ARGS_ERROR;
+gboolean write_config_json_to_local(gchar *filename, gchar *str) {
+    if(!filename) return FALSE;
     FILE *fp = fopen(filename, "w");
     if (!fp) {
         g_critical(G_STRLOC "can't open file: %s for write", filename);
-        return CONFIG_OPERATOR_WRITEFILE_ERROR;
+        return FALSE;
     }
     if(str) {
         fwrite(str, 1, strlen(str), fp);
     }
     fclose(fp);
-    return CONFIG_OPERATOR_SUCCESS;
+    return  TRUE;
 }
 
-gint get_config_from_json_by_type(gchar *json, config_type_t type, gchar **str) {
-    if(!json) return CONFIG_OPERATOR_ARGS_ERROR;
+gboolean get_config_from_json_by_type(gchar *json, config_type_t type, gchar **str) {
+    if(!json) return TRUE;
     cJSON *root = cJSON_Parse(json);
     if (!root) {
-        g_critical(G_STRLOC ":json syntax error");
-        return CONFIG_OPERATOR_JSONSYNTAX_ERROR;
+        g_critical(G_STRLOC ":json syntax error in get_config_from_json_by_type()");
+        return FALSE;
     }
     switch(type) {
     case CONFIG_TYPE:{
@@ -85,22 +88,22 @@ gint get_config_from_json_by_type(gchar *json, config_type_t type, gchar **str) 
         break;
     }
     default:
-        g_critical(G_STRLOC ":type unrecognized");
-        return CONFIG_OPERATOR_ARGS_ERROR;
+        g_critical(G_STRLOC ":type unrecognized in get_config_from_json_by_type()");
+        return FALSE;
     }
     cJSON_Delete(root);
-    return CONFIG_OPERATOR_SUCCESS;
+    return TRUE;
 }
 
-gint parse_config_to_json(chassis *chas, gchar **str) {
+gboolean parse_config_to_json(chassis *chas, gchar **str) {
     cJSON *config_node = cJSON_CreateArray();
     if(!config_node) {
-        g_warning(G_STRLOC ":config cJSON_CreateArray failed");
-        return CONFIG_OPERATOR_JSONROOT_ERROR;
+        g_warning(G_STRLOC ":cJSON_CreateArray failed in parse_config_to_json()");
+        return FALSE;
     }
     GList* list = chas->options->options;
     if(!list) {
-        return CONFIG_OPERATOR_ARGS_ERROR;
+        return FALSE;
     }
     GList *l = NULL;
     for(l = list; l; l = l->next) {
@@ -117,20 +120,24 @@ gint parse_config_to_json(chassis *chas, gchar **str) {
         }
     }
     cJSON *root = cJSON_CreateObject();
+    if(!root) {
+        g_warning(G_STRLOC ":cJSON_CreateObject failed in parse_config_to_json()");
+        return FALSE;
+    }
     cJSON_AddItemToObject(root, "config", config_node);
     *str = cJSON_Print(root);
     cJSON_Delete(root);
-    return CONFIG_OPERATOR_SUCCESS;
+    return TRUE;
 }
 
 gchar* get_config_value_from_json(const gchar *key, gchar *json) {
     if(!json) {
-        g_critical(G_STRLOC ":json content is nil");
+        g_critical(G_STRLOC ":json content is nil in get_config_value_from_json()");
         return NULL;
     }
     cJSON *root = cJSON_Parse(json);
     if (!root) {
-        g_critical(G_STRLOC ":json syntax error");
+        g_critical(G_STRLOC ":json syntax error in get_config_value_from_json()");
         return NULL;
     }
     cJSON *config_node = cJSON_GetObjectItem(root, "config");
@@ -146,7 +153,7 @@ gchar* get_config_value_from_json(const gchar *key, gchar *json) {
     for(;key_node; key_node = key_node->next) {
         cJSON *keyjson = cJSON_GetObjectItem(key_node, "key");
         if (!keyjson) {
-            g_critical(G_STRLOC ": config error, no key");
+            g_critical(G_STRLOC ": config error, no key, in get_config_value_from_json()");
             break;
         }
         if(strcasecmp(key, keyjson->valuestring) == 0) {
@@ -160,11 +167,11 @@ gchar* get_config_value_from_json(const gchar *key, gchar *json) {
     return NULL;
 }
 
-gint load_temporary_from_local(chassis *chas) {
+gboolean load_temporary_from_local(chassis *chas) {
     gchar *json = NULL;
-    gint ret = read_config_json_from_local(chas->temporary_file, &json);
-    if(ret != CONFIG_OPERATOR_SUCCESS) {
-        g_critical(G_STRLOC ": load temporary from local failed");
+    gboolean ret = read_config_json_from_local(chas->temporary_file, &json);
+    if(!ret) {
+        g_critical(G_STRLOC ": read config json from local failed");
         return ret;
     }
     if(chas->temporary_json) {
@@ -172,20 +179,20 @@ gint load_temporary_from_local(chassis *chas) {
         chas->temporary_json = NULL;
     }
     chas->temporary_json = json;
-    return CONFIG_OPERATOR_SUCCESS;
+    return TRUE;
 }
 
-gint load_config_from_temporary_file(chassis *chas) {
-    gint ret = load_temporary_from_local(chas);
-    if(ret != CONFIG_OPERATOR_SUCCESS) {
+gboolean load_config_from_temporary_file(chassis *chas) {
+    gboolean ret = load_temporary_from_local(chas);
+    if(!ret) {
         return ret;
     }
     if(!chas->temporary_json) {
-        return CONFIG_OPERATOR_SUCCESS;
+        return TRUE;
     }
     gchar *json = NULL;
     ret = get_config_from_json_by_type(chas->temporary_json, CONFIG_TYPE, &json);
-    if(ret != CONFIG_OPERATOR_SUCCESS) {
+    if(!ret) {
         return ret;
     }
     GList* list = chas->options->options;
@@ -194,26 +201,27 @@ gint load_config_from_temporary_file(chassis *chas) {
         chassis_option_t *opt = l->data;
         gchar* value = get_config_value_from_json(opt->long_name, chas->temporary_json);
         if(value) {
+            gint r = 0;
             struct external_param param = {0};
             param.chas = chas;
             param.opt_type = ASSIGN_OPTS_PROPERTY;
-            ret = opt->assign_hook != NULL? opt->assign_hook(value, &param) : ASSIGN_NOT_SUPPORT;
-            if(ret != 0) {
+            r = opt->assign_hook != NULL? opt->assign_hook(value, &param) : ASSIGN_NOT_SUPPORT;
+            if(r != 0) {
                 g_critical(G_STRLOC ": load %s from temporary failed", opt->long_name);
             }
             g_free(value);
         }
     }
-    return CONFIG_OPERATOR_SUCCESS;
+    return TRUE;
 }
 
-gint save_config_to_temporary_file(chassis *chas, gchar *key, gchar *value) {
+gboolean save_config_to_temporary_file(chassis *chas, gchar *key, gchar *value) {
     cJSON *root = NULL;
     if(chas->temporary_json) {
         root = cJSON_Parse(chas->temporary_json);
         if (!root) {
-            g_critical(G_STRLOC ":json syntax error");
-            return CONFIG_OPERATOR_JSONROOT_ERROR;
+            g_critical(G_STRLOC ":json syntax error in save_config_to_temporary_file()");
+            return FALSE;
         }
     } else {
         root = cJSON_CreateObject();
@@ -231,7 +239,7 @@ gint save_config_to_temporary_file(chassis *chas, gchar *key, gchar *value) {
     cJSON *key_node = config_node->child;
     if(!key_node) {
         cJSON_Delete(root);
-        return CONFIG_OPERATOR_JSONROOT_ERROR;
+        return FALSE;
     }
     for(;key_node; key_node = key_node->next) {
         cJSON *keyjson = cJSON_GetObjectItem(key_node, "key");
@@ -247,7 +255,7 @@ gint save_config_to_temporary_file(chassis *chas, gchar *key, gchar *value) {
                 goto save;
             } else {
                 cJSON_Delete(root);
-                return CONFIG_OPERATOR_SUCCESS;
+                return TRUE;
             }
         }
     }
@@ -263,11 +271,10 @@ save:
     }
     chas->temporary_json = cJSON_Print(root);
     cJSON_Delete(root);
-    gint ret = write_config_json_to_local(chas->temporary_file, chas->temporary_json);
-    return ret;
+    return write_config_json_to_local(chas->temporary_file, chas->temporary_json);
 }
 
-gint sync_config_to_file(chassis *chas, gint *effected_rows) {
+gboolean sync_config_to_file(chassis *chas, gint *effected_rows) {
     GKeyFile *keyfile = g_key_file_new();
     g_key_file_set_list_separator(keyfile, ',');
     GString *free_path = g_string_new(NULL);
@@ -294,24 +301,24 @@ gint sync_config_to_file(chassis *chas, gint *effected_rows) {
     GError *gerr = NULL;
     if (FALSE == g_file_set_contents(chas->default_file, file_buf, file_size, &gerr)) {
         g_clear_error(&gerr);
-        return CONFIG_OPERATOR_SAVE_ERROR;
+        return FALSE;
     } else {
         if(chmod(chas->default_file, S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP)) {
             g_debug("chmod operate failed, filename:%s, errno:%d",
                     (chas->default_file == NULL? "":chas->default_file), errno);
-            return CONFIG_OPERATOR_CHMOD_ERROR;
+            return FALSE;
         }
     }
-    return CONFIG_OPERATOR_SUCCESS;
+    return TRUE;
 }
 
-gint save_users_to_temporary_file(chassis *chas) {
+gboolean save_users_to_temporary_file(chassis *chas) {
     cetus_users_t *users = chas->priv->users;
 
     cJSON *users_node = cJSON_CreateArray();
     if (!users_node) {
-        g_warning(G_STRLOC ":users_node is nil");
-        return CONFIG_OPERATOR_JSONROOT_ERROR;
+        g_warning(G_STRLOC ":users_node is nil in save_users_to_temporary_file()");
+        return FALSE;
     }
     GHashTableIter iter;
     char *username = NULL;
@@ -329,8 +336,8 @@ gint save_users_to_temporary_file(chassis *chas) {
     if(chas->temporary_json) {
         root = cJSON_Parse(chas->temporary_json);
         if (!root) {
-            g_critical(G_STRLOC ":json syntax error");
-            return CONFIG_OPERATOR_JSONROOT_ERROR;
+            g_critical(G_STRLOC ":json syntax error in save_users_to_temporary_file()");
+            return FALSE;
         }
     } else {
         root = cJSON_CreateObject();
@@ -346,21 +353,20 @@ gint save_users_to_temporary_file(chassis *chas) {
     }
     chas->temporary_json = cJSON_Print(root);
     cJSON_Delete(root);
-    gint ret = write_config_json_to_local(chas->temporary_file, chas->temporary_json);
-    return ret;
+    return write_config_json_to_local(chas->temporary_file, chas->temporary_json);
 }
 
-gint load_users_from_temporary_file(chassis *chas) {
-    gint ret = load_temporary_from_local(chas);
-    if(ret != CONFIG_OPERATOR_SUCCESS) {
+gboolean load_users_from_temporary_file(chassis *chas) {
+    gboolean ret = load_temporary_from_local(chas);
+    if(!ret) {
         return ret;
     }
     if(!chas->temporary_json) {
-        return CONFIG_OPERATOR_SUCCESS;
+        return TRUE;
     }
     gchar *json = NULL;
     ret = get_config_from_json_by_type(chas->temporary_json, USERS_TYPE, &json);
-    if(ret != CONFIG_OPERATOR_SUCCESS) {
+    if(!ret) {
         return ret;
     }
     if(json) {
@@ -371,16 +377,16 @@ gint load_users_from_temporary_file(chassis *chas) {
         cJSON_Delete(root);
         cetus_users_parse_json(chas->priv->users, users_json);
     }
-    return CONFIG_OPERATOR_SUCCESS;
+    return TRUE;
 }
 
-gint sync_users_to_file(chassis *chas, gint *effected_rows) {
+gboolean sync_users_to_file(chassis *chas, gint *effected_rows) {
     if(!chas->temporary_json) {
-        return CONFIG_OPERATOR_SUCCESS;
+        return TRUE;
     }
     gchar *json = NULL;
-    gint ret = get_config_from_json_by_type(chas->temporary_json, USERS_TYPE, &json);
-    if(ret != CONFIG_OPERATOR_SUCCESS) {
+    gboolean ret = get_config_from_json_by_type(chas->temporary_json, USERS_TYPE, &json);
+    if(!ret) {
         return ret;
     }
     if(json) {
@@ -391,20 +397,20 @@ gint sync_users_to_file(chassis *chas, gint *effected_rows) {
         cJSON_Delete(root);
         chassis_config_write_object(chas->priv->users->conf_manager, "users", users_json);
     }
-    return CONFIG_OPERATOR_SUCCESS;
+    return TRUE;
 }
 
-gint load_variables_from_temporary_file(chassis *chas) {
-    gint ret = load_temporary_from_local(chas);
-    if(ret != CONFIG_OPERATOR_SUCCESS) {
+gboolean load_variables_from_temporary_file(chassis *chas) {
+    gboolean ret = load_temporary_from_local(chas);
+    if(!ret) {
         return ret;
     }
     if(!chas->temporary_json) {
-        return CONFIG_OPERATOR_SUCCESS;
+        return TRUE;
     }
     gchar *json = NULL;
     ret = get_config_from_json_by_type(chas->temporary_json, VARIABLES_TYPE, &json);
-    if(ret != CONFIG_OPERATOR_SUCCESS) {
+    if(!ret) {
         return ret;
     }
     if(json) {
@@ -415,10 +421,10 @@ gint load_variables_from_temporary_file(chassis *chas) {
         cJSON_Delete(root);
         sql_filter_vars_load_str_rules(variables_json);
     }
-    return CONFIG_OPERATOR_SUCCESS;
+    return TRUE;
 }
 
-gint save_variables_to_temporary_file(chassis *chas) {
+gboolean save_variables_to_temporary_file(chassis *chas) {
     gchar *json = NULL;
     parse_variables_to_json(&json);
     cJSON *variables_root = cJSON_Parse(json);
@@ -428,11 +434,15 @@ gint save_variables_to_temporary_file(chassis *chas) {
     if(chas->temporary_json) {
         root = cJSON_Parse(chas->temporary_json);
         if (!root) {
-            g_critical(G_STRLOC ":json syntax error");
-            return CONFIG_OPERATOR_JSONROOT_ERROR;
+            g_critical(G_STRLOC ":json syntax error in save_variables_to_temporary_file()");
+            return FALSE;
         }
     } else {
         root = cJSON_CreateObject();
+        if(!root) {
+            g_critical(G_STRLOC ":cJSON_CreateObject failed in save_variables_to_temporary_file()");
+            return FALSE;
+        }
     }
     cJSON *variables_node_old = cJSON_GetObjectItem(root, "variables");
     if(variables_node_old) {
@@ -446,17 +456,16 @@ gint save_variables_to_temporary_file(chassis *chas) {
     chas->temporary_json = cJSON_Print(root);
     cJSON_Delete(root);
     cJSON_Delete(variables_root);
-    gint ret = write_config_json_to_local(chas->temporary_file, chas->temporary_json);
-    return ret;
+    return write_config_json_to_local(chas->temporary_file, chas->temporary_json);
 }
 
-gint sync_variables_to_file(chassis *chas, gint *effected_rows) {
+gboolean sync_variables_to_file(chassis *chas, gint *effected_rows) {
     if(!chas->temporary_json) {
-        return CONFIG_OPERATOR_SUCCESS;
+        return TRUE;
     }
     gchar *json = NULL;
-    gint ret = get_config_from_json_by_type(chas->temporary_json, VARIABLES_TYPE, &json);
-    if(ret != CONFIG_OPERATOR_SUCCESS) {
+    gboolean ret = get_config_from_json_by_type(chas->temporary_json, VARIABLES_TYPE, &json);
+    if(!ret) {
         return ret;
     }
     if(json) {
@@ -467,10 +476,10 @@ gint sync_variables_to_file(chassis *chas, gint *effected_rows) {
         cJSON_Delete(root);
         chassis_config_write_object(chas->priv->users->conf_manager, "variables", variables_json);
     }
-    return CONFIG_OPERATOR_SUCCESS;
+    return TRUE;
 }
 
-gint save_sharding_to_temporary_file(chassis *chas) {
+gboolean save_sharding_to_temporary_file(chassis *chas) {
     gchar *vdb_json = NULL;
     gchar *tables_json = NULL;
     gchar *single_tables_json = NULL;
@@ -482,11 +491,15 @@ gint save_sharding_to_temporary_file(chassis *chas) {
     if(chas->temporary_json) {
         root = cJSON_Parse(chas->temporary_json);
         if (!root) {
-            g_critical(G_STRLOC ":json syntax error");
-            return CONFIG_OPERATOR_JSONROOT_ERROR;
+            g_critical(G_STRLOC ":json syntax error in save_sharding_to_temporary_file()");
+            return FALSE;
         }
     } else {
         root = cJSON_CreateObject();
+        if(!root) {
+            g_critical(G_STRLOC ":cJSON_CreateObject failed in save_sharding_to_temporary_file()");
+            return FALSE;
+        }
     }
 
     if(vdb_json) {
@@ -536,17 +549,16 @@ gint save_sharding_to_temporary_file(chassis *chas) {
     }
     chas->temporary_json = cJSON_Print(root);
     cJSON_Delete(root);
-    gint ret = write_config_json_to_local(chas->temporary_file, chas->temporary_json);
-    return ret;
+    return write_config_json_to_local(chas->temporary_file, chas->temporary_json);
 }
 
-gint load_sharding_from_temporary_file(chassis *chas) {
-    gint ret = load_temporary_from_local(chas);
-    if(ret != CONFIG_OPERATOR_SUCCESS) {
+gboolean load_sharding_from_temporary_file(chassis *chas) {
+    gboolean ret = load_temporary_from_local(chas);
+    if(!ret) {
         return ret;
     }
     if(!chas->temporary_json) {
-        return CONFIG_OPERATOR_SUCCESS;
+        return TRUE;
     }
     gchar *vdb_json = NULL;
     gchar *tables_json = NULL;
@@ -554,7 +566,7 @@ gint load_sharding_from_temporary_file(chassis *chas) {
     cJSON *sharding_root = cJSON_CreateObject();
 
     ret = get_config_from_json_by_type(chas->temporary_json, VDB_TYPE, &vdb_json);
-    if(ret != CONFIG_OPERATOR_SUCCESS) {
+    if(!ret) {
         cJSON_Delete(sharding_root);
         return ret;
     }
@@ -566,7 +578,7 @@ gint load_sharding_from_temporary_file(chassis *chas) {
     }
 
     ret = get_config_from_json_by_type(chas->temporary_json, TABLES_TYPE, &tables_json);
-    if(ret != CONFIG_OPERATOR_SUCCESS) {
+    if(!ret) {
         cJSON_Delete(sharding_root);
         return ret;
     }
@@ -578,7 +590,7 @@ gint load_sharding_from_temporary_file(chassis *chas) {
     }
 
     ret = get_config_from_json_by_type(chas->temporary_json, SINGLE_TABLES_TYPE, &single_json);
-    if(ret != CONFIG_OPERATOR_SUCCESS) {
+    if(!ret) {
         cJSON_Delete(sharding_root);
         return ret;
     }
@@ -596,12 +608,12 @@ gint load_sharding_from_temporary_file(chassis *chas) {
         g_warning("sharding config update failed");
     }
     cJSON_Delete(sharding_root);
-    return CONFIG_OPERATOR_SUCCESS;
+    return TRUE;
 }
 
-gint sync_sharding_to_file(chassis *chas, gint *effected_rows) {
+gboolean sync_sharding_to_file(chassis *chas, gint *effected_rows) {
     if(!chas->temporary_json) {
-        return CONFIG_OPERATOR_SUCCESS;
+        return TRUE;
     }
     gchar *vdb_json = NULL;
     gchar *tables_json = NULL;
@@ -609,8 +621,8 @@ gint sync_sharding_to_file(chassis *chas, gint *effected_rows) {
     gchar *sharding_json = NULL;
     cJSON *root = cJSON_CreateObject();
 
-    gint ret = get_config_from_json_by_type(chas->temporary_json, VDB_TYPE, &vdb_json);
-    if(ret != CONFIG_OPERATOR_SUCCESS) {
+    gboolean ret = get_config_from_json_by_type(chas->temporary_json, VDB_TYPE, &vdb_json);
+    if(!ret) {
         return ret;
     }
     if(vdb_json) {
@@ -621,7 +633,7 @@ gint sync_sharding_to_file(chassis *chas, gint *effected_rows) {
     }
 
     ret = get_config_from_json_by_type(chas->temporary_json, TABLES_TYPE, &tables_json);
-    if(ret != CONFIG_OPERATOR_SUCCESS) {
+    if(!ret) {
         return ret;
     }
     if(tables_json) {
@@ -632,7 +644,7 @@ gint sync_sharding_to_file(chassis *chas, gint *effected_rows) {
     }
 
     ret = get_config_from_json_by_type(chas->temporary_json, SINGLE_TABLES_TYPE, &single_tables_json);
-    if(ret != CONFIG_OPERATOR_SUCCESS) {
+    if(!ret) {
         return ret;
     }
     if(single_tables_json) {
@@ -645,7 +657,7 @@ gint sync_sharding_to_file(chassis *chas, gint *effected_rows) {
     sharding_json = cJSON_Print(root);
     chassis_config_write_object(chas->priv->users->conf_manager, "sharding", sharding_json);
     cJSON_Delete(root);
-    return CONFIG_OPERATOR_SUCCESS;
+    return TRUE;
 }
 
 gboolean config_set_local_option_by_key(chassis *chas, gchar *key) {
@@ -662,13 +674,9 @@ gboolean config_set_local_option_by_key(chassis *chas, gchar *key) {
             if(!value) {
                 return TRUE;
             }
-            gint ret = save_config_to_temporary_file(chas, key, value);
+            gboolean ret = save_config_to_temporary_file(chas, key, value);
             g_free(value);
-            if(ret == CONFIG_OPERATOR_SUCCESS) {
-                return TRUE;
-            } else {
-                return FALSE;
-            }
+            return ret;
         }
     }
     return FALSE;

@@ -449,7 +449,12 @@ string_to_sharding_value(const char *str, int expected, struct condition_t *cond
         }
     } else if (expected == SHARD_DATA_TYPE_INT) {
         char *endptr = NULL;
-        cond->v.num = strtol(str, &endptr, 10);
+        cond->v.num = g_ascii_strtoll(str, &endptr, 10);
+        if (errno == ERANGE) {
+            g_warning(G_STRLOC ":too large for int: %s", str);
+            return PARSE_ERROR;
+        }
+
         if (str == endptr || *endptr != '\0') {
             g_warning(G_STRLOC ":cannot get INT from string token: %s", str);
             return PARSE_ERROR;

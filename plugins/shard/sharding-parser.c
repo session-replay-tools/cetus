@@ -449,6 +449,7 @@ string_to_sharding_value(const char *str, int expected, struct condition_t *cond
         }
     } else if (expected == SHARD_DATA_TYPE_INT) {
         char *endptr = NULL;
+        errno = 0;
         cond->v.num = g_ascii_strtoll(str, &endptr, 10);
         if (errno == ERANGE) {
             g_warning(G_STRLOC ":too large for int: %s", str);

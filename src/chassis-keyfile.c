@@ -55,6 +55,7 @@ chassis_keyfile_to_options_with_error(GKeyFile *keyfile,
         gchar **arg_string_array;
         gboolean arg_bool = 0;
         gint arg_int = 0;
+        gint64 arg_int64 = 0L;
         gdouble arg_double = 0;
         gsize len = 0;
 
@@ -97,6 +98,12 @@ chassis_keyfile_to_options_with_error(GKeyFile *keyfile,
             arg_int = g_key_file_get_integer(keyfile, ini_group_name, entry->long_name, &gerr);
             if (!gerr) {
                 *(gint *)(entry->arg_data) = arg_int;
+            }
+            break;
+        case OPTION_ARG_INT64:
+            arg_int64 = g_key_file_get_int64(keyfile, ini_group_name, entry->long_name, &gerr);           
+            if (!gerr) {
+                *(gint64 *)(entry->arg_data) = arg_int64;
             }
             break;
         case OPTION_ARG_DOUBLE:

@@ -164,7 +164,26 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
             if (cetus_reap) {
                 g_message("%s: cetus_reap is true", G_STRLOC);
                 cetus_reap = 0;
-                live = cetus_reap_children(cycle);
+                cycle->current_time = time(0);
+                if (cycle->child_exit_time == 0) {
+                    cycle->child_exit_time = cycle->current_time;
+                    cycle->child_instant_exit_times = 1;
+                } else {
+                    cycle->child_instant_exit_times++;
+                    int diff = cycle->current_time - cycle->child_exit_time;
+                    if (diff > 1) {
+                        cycle->child_exit_time = 0;
+                        g_message("%s: reset child_exit_time to zero", G_STRLOC);
+                    } else {
+                        if (cycle->child_instant_exit_times >= cetus_last_process) {
+                            cetus_terminate = 1;
+                            g_message("%s: set cetus_terminate is true", G_STRLOC);
+                        }
+                    }
+                }
+                if (!cetus_terminate) {
+                    live = cetus_reap_children(cycle);
+                }
             }
         }
 

@@ -156,6 +156,7 @@ struct chassis {
 
     int worker_processes;
     int cpus;
+    int child_instant_exit_times;
 
     int max_alive_time;
     int merged_output_size;
@@ -188,6 +189,7 @@ struct chassis {
     struct incremental_guid_state_t guid_state;
 #endif
     time_t startup_time;
+    time_t child_exit_time;
     time_t current_time;
     struct chassis_options_t *options;
     chassis_config_t *config_manager;

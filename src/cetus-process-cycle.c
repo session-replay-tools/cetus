@@ -177,7 +177,8 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
                     } else {
                         if (cycle->child_instant_exit_times >= cetus_last_process) {
                             cetus_terminate = 1;
-                            g_message("%s: set cetus_terminate is true", G_STRLOC);
+                            g_message("%s: set cetus_terminate is true:%d, workers:%d",
+                                    G_STRLOC, cycle->child_instant_exit_times, cetus_last_process);
                         }
                     }
                 }

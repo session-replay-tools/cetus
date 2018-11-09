@@ -28,14 +28,14 @@ cd build/
 
 ```
 读写分离版本：
-cmake ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/home/user/cetus_install -DSIMPLE_PARSER=ON
+CFLAGS='-g -Wpointer-to-int-cast' cmake ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/home/user/cetus_install -DSIMPLE_PARSER=ON
 
 分库版本：
-cmake ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/home/user/cetus_install -DSIMPLE_PARSER=OFF
+CFLAGS='-g -Wpointer-to-int-cast' cmake ../ -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX=/home/user/cetus_install -DSIMPLE_PARSER=OFF
 
 ```
 
-其中CMAKE_BUILD_TYPE变量可以选择生成 debug 版和或release 版的程序，CMAKE_INSTALL_PREFIX变量确定软件的实际安装目录的绝对路径，安装目录建议以/home/user/日期.编译版本.分支.commit_id的方式命名；SIMPLE_PARSER变量确定软件的编译版本，设置为ON则编译读写分离版本，否则编译分库版本。
+其中CFLAGS='-g -Wpointer-to-int-cast'在可执行程序中包含标准调试信息，CMAKE_BUILD_TYPE变量可以选择生成 debug 版和或release 版的程序，CMAKE_INSTALL_PREFIX变量确定软件的实际安装目录的绝对路径，安装目录建议以/home/user/日期.编译版本.分支.commit_id的方式命名；SIMPLE_PARSER变量确定软件的编译版本，设置为ON则编译读写分离版本，否则编译分库版本。
 
 该过程会检查您的系统是否缺少一些依赖库和依赖软件，可以根据错误代码安装相应依赖。
 

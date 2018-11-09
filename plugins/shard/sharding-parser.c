@@ -530,13 +530,13 @@ partitions_filter_BETWEEN_expr(GPtrArray *partitions, sql_expr_t *expr)
     if (btlist && btlist->len == 2) {
         sql_expr_t *low = g_ptr_array_index(btlist, 0);
         sql_expr_t *high = g_ptr_array_index(btlist, 1);
-        cond.op = TK_GT;
+        cond.op = TK_GE;
         int rc = expr_parse_sharding_value(low, gp->key_type, &cond);
         if (rc != PARSE_OK)
             return rc;
         partitions_filter(partitions, cond);
 
-        cond.op = TK_LT;
+        cond.op = TK_LE;
         rc = expr_parse_sharding_value(high, gp->key_type, &cond);
         if (rc != PARSE_OK)
             return rc;

@@ -103,7 +103,7 @@ ldd ${cetus_install_path}/libexec/cetus|grep tcmalloc
 
 ```
 ## 以64位  centos7.5 为例
-cd ls -alh /usr/lib64/|grep tcmalloc
+ls -alh /usr/lib64/|grep tcmalloc
 lrwxrwxrwx  1 root root   20 Sep  4 00:58 libtcmalloc.so.4 -> libtcmalloc.so.4.4.5
 -rwxr-xr-x  1 root root 295K Apr 11 01:41 libtcmalloc.so.4.4.5
 lrwxrwxrwx  1 root root   33 Sep  4 00:58 libtcmalloc_and_profiler.so.4 -> libtcmalloc_and_profiler.so.4.4.5

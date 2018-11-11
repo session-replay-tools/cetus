@@ -204,7 +204,7 @@ network_connection_pool_get(network_connection_pool *pool, GString *username, in
             g_debug("%s: conns length is zero for user '%s'", G_STRLOC, username ? username->str : "");
         }
     } else {
-        g_message("%s: conns is null for user '%s'", G_STRLOC, username ? username->str : "");
+        g_debug("%s: conns is null for user '%s'", G_STRLOC, username ? username->str : "");
     }
 
     if (!entry) {

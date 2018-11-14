@@ -93,6 +93,7 @@ CHASSIS_API gchar* show_disable_dns_cache(gpointer param);
 CHASSIS_API gchar* show_master_preferred(gpointer param);
 CHASSIS_API gchar* show_max_allowed_packet(gpointer param);
 CHASSIS_API gchar* show_remote_conf_url(gpointer param);
+CHASSIS_API gchar* show_trx_isolation_level(gpointer param);
 CHASSIS_API gchar* show_group_replication_mode(gpointer param);
 CHASSIS_API gchar* show_sql_log_bufsize(gpointer param);
 CHASSIS_API gchar* show_sql_log_switch(gpointer param);

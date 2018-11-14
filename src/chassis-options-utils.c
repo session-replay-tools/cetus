@@ -1229,6 +1229,18 @@ show_remote_conf_url(gpointer param) {
 }
 
 gchar*
+show_trx_isolation_level(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%s", srv->trx_isolation_level != NULL ? srv->trx_isolation_level: "NULL");
+    }
+    return NULL;
+}
+
+
+gchar*
 show_group_replication_mode(gpointer param) {
     struct external_param *opt_param = (struct external_param *)param;
     chassis *srv = opt_param->chas;

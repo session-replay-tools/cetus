@@ -150,6 +150,7 @@ struct chassis {
     double slave_delay_recover_threshold_sec;
     unsigned int long_query_time;
     unsigned int min_req_time_for_cache;
+    unsigned int internal_trx_isolation_level;
     int cetus_max_allowed_packet;
     int disable_dns_cache;
     int enable_admin_listen;
@@ -210,6 +211,7 @@ struct chassis {
     guint invoke_dbg_on_crash;
     gint max_files_number;
     char *remote_config_url;
+    char *trx_isolation_level;
     gchar *default_file;
     gint print_version;
 

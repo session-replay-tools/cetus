@@ -2005,7 +2005,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_init)
     sql_context_init(st->sql_context);
     st->sql_context->allow_subquery_nesting = config->allow_nested_subquery;
     st->trx_read_write = TF_READ_WRITE;
-    st->trx_isolation_level = TF_REPEATABLE_READ;
+    st->trx_isolation_level = con->srv->internal_trx_isolation_level;
 
     con->plugin_con_state = st;
 

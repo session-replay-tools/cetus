@@ -80,6 +80,7 @@
 #include "chassis-options.h"
 #include "cetus-monitor.h"
 #include "chassis-sql-log.h"
+#include "lib/sql-expression.h"
 
 #define GETTEXT_PACKAGE "cetus"
 
@@ -152,6 +153,7 @@ struct chassis_frontend_t {
     char *ifname;
 
     char *remote_config_url;
+    char *trx_isolation_level;
 
     gint group_replication_mode;
 
@@ -248,6 +250,7 @@ chassis_frontend_free(struct chassis_frontend_t *frontend)
     }
 
     g_free(frontend->remote_config_url);
+    g_free(frontend->trx_isolation_level);
     g_free(frontend->sql_log_switch);
     g_free(frontend->sql_log_prefix);
     g_free(frontend->sql_log_path);
@@ -512,6 +515,11 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                         "Remote config url, mysql://xx", "<string>",
                         NULL, show_remote_conf_url, SHOW_OPTS_PROPERTY);
     chassis_options_add(opts,
+                        "trx-isolation-level",
+                        0, 0, OPTION_ARG_STRING, &(frontend->trx_isolation_level),
+                        "transaction isolation level, default: REPEATABLE READ", "<string>",
+                        NULL, show_trx_isolation_level, SHOW_OPTS_PROPERTY);
+    chassis_options_add(opts,
                         "group-replication-mode",
                         0, 0, OPTION_ARG_INT, &(frontend->group_replication_mode),
                         "mysql group replication mode, 0:not support(defaults) 1:support single primary mode 2:support multi primary mode(not implement yet)", "<int>",
@@ -754,6 +762,33 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->cetus_max_allowed_packet = CLAMP(frontend->cetus_max_allowed_packet,
                                           MAX_ALLOWED_PACKET_FLOOR, MAX_ALLOWED_PACKET_CEIL);
     srv->check_dns = frontend->check_dns;
+
+    if (frontend->trx_isolation_level != NULL) {
+        if (strcasecmp(frontend->trx_isolation_level, "REPEATABLE READ") == 0) {
+            srv->internal_trx_isolation_level = TF_REPEATABLE_READ;
+            srv->trx_isolation_level = g_strdup("REPEATABLE READ");
+        } else if (strcasecmp(frontend->trx_isolation_level, "READ COMMITTED") == 0) {
+            srv->internal_trx_isolation_level = TF_READ_COMMITTED;
+            srv->trx_isolation_level = g_strdup("READ COMMITTED");
+        } else if (strcasecmp(frontend->trx_isolation_level, "READ UNCOMMITTED") == 0) {
+            srv->internal_trx_isolation_level = TF_READ_UNCOMMITTED;
+            srv->trx_isolation_level = g_strdup("READ UNCOMMITTED");
+        } else if (strcasecmp(frontend->trx_isolation_level, "SERIALIZABLE") == 0) {
+            srv->internal_trx_isolation_level = TF_SERIALIZABLE;
+            srv->trx_isolation_level = g_strdup("SERIALIZABLE");
+        } else {
+            srv->internal_trx_isolation_level = TF_REPEATABLE_READ;
+            g_warning("trx isolation level:%s is not expected, use REPEATABLE READ instead",
+                    frontend->trx_isolation_level);
+            srv->trx_isolation_level = g_strdup("REPEATABLE READ");
+        }
+    } else {
+        g_message("trx isolation level is not set");
+        srv->internal_trx_isolation_level = TF_REPEATABLE_READ;
+        srv->trx_isolation_level = g_strdup("REPEATABLE READ");
+    }
+    
+    g_message("trx isolation level value:%s", srv->trx_isolation_level);
 }
 
 static void

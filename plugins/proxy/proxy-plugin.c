@@ -990,7 +990,7 @@ network_mysqld_con_is_trx_feature_changed(network_mysqld_con *con)
     if (!st) {
         return FALSE;
     }
-    return st->trx_read_write != TF_READ_WRITE || st->trx_isolation_level != TF_REPEATABLE_READ;
+    return st->trx_read_write != TF_READ_WRITE || st->trx_isolation_level != con->srv->internal_trx_isolation_level;
 }
 
 void
@@ -999,7 +999,7 @@ network_mysqld_con_reset_trx_feature(network_mysqld_con *con)
     proxy_plugin_con_t *st = con->plugin_con_state;
     if (st) {
         st->trx_read_write = TF_READ_WRITE;
-        st->trx_isolation_level = TF_REPEATABLE_READ;
+        st->trx_isolation_level = con->srv->internal_trx_isolation_level;
     }
 }
 
@@ -2003,7 +2003,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_init)
     st->sql_context = g_new0(sql_context_t, 1);
     sql_context_init(st->sql_context);
     st->trx_read_write = TF_READ_WRITE;
-    st->trx_isolation_level = TF_REPEATABLE_READ;
+    st->trx_isolation_level = con->srv->internal_trx_isolation_level;
 
     con->plugin_con_state = st;
 

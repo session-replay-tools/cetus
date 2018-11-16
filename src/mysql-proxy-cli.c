@@ -777,15 +777,15 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
             srv->internal_trx_isolation_level = TF_SERIALIZABLE;
             srv->trx_isolation_level = g_strdup("SERIALIZABLE");
         } else {
-            srv->internal_trx_isolation_level = TF_REPEATABLE_READ;
-            g_warning("trx isolation level:%s is not expected, use REPEATABLE READ instead",
+            srv->internal_trx_isolation_level = TF_READ_COMMITTED;
+            g_warning("trx isolation level:%s is not expected, use READ COMMITTED instead",
                     frontend->trx_isolation_level);
-            srv->trx_isolation_level = g_strdup("REPEATABLE READ");
+            srv->trx_isolation_level = g_strdup("READ COMMITTED");
         }
     } else {
         g_message("trx isolation level is not set");
-        srv->internal_trx_isolation_level = TF_REPEATABLE_READ;
-        srv->trx_isolation_level = g_strdup("REPEATABLE READ");
+        srv->internal_trx_isolation_level = TF_READ_COMMITTED;
+        srv->trx_isolation_level = g_strdup("READ COMMITTED");
     }
     
     g_message("trx isolation level value:%s", srv->trx_isolation_level);

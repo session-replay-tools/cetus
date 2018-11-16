@@ -1347,8 +1347,8 @@ void admin_get_stats(network_mysqld_con* con, char* p)
         }
     } else if (strcasecmp(p, "server_query_details") == 0) {
         int i = 0;
-        for (i; i < network_backends_count(chas->priv->backends)
-                 && i < MAX_SERVER_NUM; ++i) {
+        int  backends_num = network_backends_count(chas->priv->backends);
+        for (i; i < backends_num && i < MAX_SERVER_NUM; ++i) {
             GPtrArray* row = g_ptr_array_new_with_free_func(g_free);
             g_ptr_array_add(row, g_strdup(buffer));
             g_ptr_array_add(row, g_strdup_printf("server_query_details.%d.ro", i+1));

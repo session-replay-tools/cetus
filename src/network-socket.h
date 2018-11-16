@@ -105,8 +105,8 @@ typedef struct network_ssl_connection_s network_ssl_connection_t;
 typedef struct {
     int socket_type; /**< SOCK_STREAM or SOCK_DGRAM for now */
     int fd;             /**< socket-fd */
-    guint32 create_time;
-    guint32 update_time;
+    time_t create_time;
+    time_t update_time;
 
     struct event event; /**< events for this fd */
 

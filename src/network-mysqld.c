@@ -4862,8 +4862,8 @@ network_connection_pool_create_conn(network_mysqld_con *con)
 
     time_t cur = time(0);
 
-    int back_num = network_backends_count(g->backends);
-    for (i = 0; i < back_num; i++) {
+    int backends_count = network_backends_count(g->backends);
+    for (i = 0; i < backends_count; i++) {
         network_backend_t *backend = network_backends_get(g->backends, i);
         if (backend != NULL) {
 
@@ -5005,7 +5005,8 @@ network_connection_pool_create_conns(chassis *srv)
     int i, j;
     chassis_private *g = srv->priv;
 
-    for (i = 0; i < network_backends_count(g->backends); i++) {
+    int backends_count = network_backends_count(g->backends);
+    for (i = 0; i < backends_count; i++) {
         network_backend_t *backend = network_backends_get(g->backends, i);
         if (backend != NULL) {
             if (backend->state != BACKEND_STATE_UP && backend->state != BACKEND_STATE_UNKNOWN) {
@@ -5106,6 +5107,50 @@ update_time_func(int fd, short what, void *arg)
     chassis_event_add_with_timeout(chas, &chas->update_timer_event, &update_time_interval);
 }
 
+
+static void
+check_old_server_connection(gpointer data, gpointer user_data)
+{
+    network_connection_pool_entry *entry = data;
+    chassis *chas = user_data;
+
+    if (chas->server_conn_refresh_time > entry->sock->create_time) {
+        chas->complement_conn_flag = 1;
+        network_connection_pool_remove(entry);
+    }
+}
+
+static void
+close_old_server_connetions(chassis *chas)
+{
+    chas->server_conn_refresh_time = time(0);
+    chassis_private *g = chas->priv;
+    int i;
+    int backends_count = network_backends_count(g->backends);
+    for (i = 0; i < backends_count; i++) {
+        network_backend_t *backend = network_backends_get(g->backends, i);
+        if (backend != NULL) {
+            if (backend->state != BACKEND_STATE_UP && backend->state != BACKEND_STATE_UNKNOWN) {
+                continue;
+            }
+
+            network_connection_pool *pool = backend->pool;
+            GHashTable *users = pool->users;
+            int total = 0;
+            if (users != NULL) {
+                GHashTableIter iter;
+                GString *key;
+                GQueue *queue;
+                g_hash_table_iter_init(&iter, users);
+                /* count all users' pooled connections */
+                while (g_hash_table_iter_next(&iter, (void **)&key, (void **)&queue)) {
+                    total += queue->length;
+                    g_queue_foreach(queue, check_old_server_connection, chas);
+                }
+            }
+        }
+    }
+}
 
 void
 check_and_create_conns_func(int fd, short what, void *arg)

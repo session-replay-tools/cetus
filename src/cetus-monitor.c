@@ -427,7 +427,8 @@ check_backend_alive(int fd, short what, void *arg)
         group_replication_detect(bs, monitor);
     }
 
-    for (i = 0; i < network_backends_count(bs); i++) {
+    int backends_num = network_backends_count(bs);
+    for (i = 0; i < backends_num; i++) {
         network_backend_t *backend = network_backends_get(bs, i);
         backend_state_t oldstate = backend->state;
         gint ret = 0;
@@ -503,7 +504,8 @@ update_master_timestamp(int fd, short what, void *arg)
      *   PRIMARY KEY (`p_id`)
      * ) ENGINE = InnoDB DEFAULT CHARSET = utf8;
      */
-    for (i = 0; i < network_backends_count(bs); i++) {
+    int backends_num = network_backends_count(bs);
+    for (i = 0; i < backends_num; i++) {
         network_backend_t *backend = network_backends_get(bs, i);
         backend_state_t oldstate = backend->state;
         gint ret = 0;
@@ -565,7 +567,9 @@ check_slave_timestamp(int fd, short what, void *arg)
     network_backends_t *bs = chas->priv->backends;
 
     /* Read delay sec and set slave UP/DOWN according to delay_secs */
-    for (i = 0; i < network_backends_count(bs); i++) {
+
+    int backends_num = network_backends_count(bs);
+    for (i = 0; i < backends_num; i++) {
         network_backend_t *backend = network_backends_get(bs, i);
         backend_state_t oldstate = backend->state;
         gint ret = 0;

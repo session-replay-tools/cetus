@@ -407,7 +407,8 @@ network_backends_load_config(network_backends_t *bs, chassis *srv)
         return -1;
     }
     int i;
-    for (i = 0; i < network_backends_count(bs); i++) {
+    int count = network_backends_count(bs);
+    for (i = 0; i < count; i++) {
         network_backend_t *backend = network_backends_get(bs, i);
         if (backend) {
             set_backend_config(backend, srv);

@@ -1566,6 +1566,7 @@ cetus_result_parse_fielddefs(cetus_result_t *res_merge, GQueue *input)
     res_merge->fielddefs = network_mysqld_proto_fielddefs_new();
     int i;
     for (i = 0; i < res_merge->field_count; ++i) {
+        /* TODO g_queue_peek_nth is not efficient*/
         packet.data = g_queue_peek_nth(input, i + 1);
         packet.offset = 0;
         network_mysqld_proto_skip_network_header(&packet);

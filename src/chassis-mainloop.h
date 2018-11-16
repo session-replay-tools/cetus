@@ -192,6 +192,7 @@ struct chassis {
     time_t startup_time;
     time_t child_exit_time;
     time_t current_time;
+    time_t server_conn_refresh_time;
     struct chassis_options_t *options;
     chassis_config_t *config_manager;
     GHashTable *query_cache_table;

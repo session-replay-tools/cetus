@@ -74,7 +74,7 @@ network_mysqld_con_idle_handle(int event_fd, short events, void *user_data)
              *
              * remove us from the connection pool and close the connection */
 
-            network_connection_pool_remove(pool, pool_entry);
+            network_connection_pool_remove(pool_entry);
             if (pool->srv) {
                 chassis *srv = pool->srv;
                 srv->complement_conn_flag = 1;
@@ -87,7 +87,7 @@ network_mysqld_con_idle_handle(int event_fd, short events, void *user_data)
             chassis *srv = pool->srv;
             srv->complement_conn_flag = 1;
         }
-        network_connection_pool_remove(pool, pool_entry);
+        network_connection_pool_remove(pool_entry);
     }
 }
 

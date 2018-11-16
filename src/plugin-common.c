@@ -375,7 +375,8 @@ do_connect_cetus(network_mysqld_con *con, network_backend_t **backend, int *back
          */
 
         int min_connected_clients = 0x7FFFFFFF;
-        for (i = 0; i < network_backends_count(g->backends); i++) {
+        int backends_count = network_backends_count(g->backends);
+        for (i = 0; i < backends_count; i++) {
             cur = network_backends_get(g->backends, i);
 
             /**
@@ -550,6 +551,7 @@ try_to_get_resp_from_query_cache(network_mysqld_con *con)
         int i;
         int len = item->queue->chunks->length;
         for (i = 0; i < len; i++) {
+            /* TODO g_queue_peek_nth is not efficient*/
             GString *packet = g_queue_peek_nth(item->queue->chunks, i);
             GString *dup_packet = g_string_new(NULL);
             g_string_append_len(dup_packet, S(packet));

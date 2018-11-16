@@ -578,6 +578,11 @@ chassis_config_parse_options(chassis_config_t *conf, GList *entries)
                     break;
                 *(int *)(entry->arg_data) = atoi(entry_value);
                 break;
+            case OPTION_ARG_INT64:
+                if (entry->arg_data == NULL)
+                    break;
+                *(gint64 *)(entry->arg_data) = g_ascii_strtoll(entry_value, NULL, 10);
+                break;
             case OPTION_ARG_STRING:{
                 if (entry->arg_data == NULL || *(char **)entry->arg_data != NULL)
                     break;

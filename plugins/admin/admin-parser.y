@@ -211,6 +211,9 @@ cmd ::= SET REDUCE_CONNS boolean(X) SEMI. {
 cmd ::= SET MAINTAIN boolean(X) SEMI. {
   admin_set_maintain(con, X);
 }
+cmd ::= REFRESH_CONNS SEMI. {
+  admin_set_server_conn_refresh(con);
+}
 cmd ::= SHOW MAINTAIN STATUS SEMI. {
   admin_show_maintain(con);
 }
@@ -487,5 +490,5 @@ cmd ::=REMOVE BACKEND WHERE equation(Z) SEMI. {
   char* val = token_strdup(Z.right);
   admin_delete_backend(con, key, val);
   free(key);
-  free(val);   
-} 
+  free(val);
+}

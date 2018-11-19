@@ -26,6 +26,7 @@ void admin_set_maintain(network_mysqld_con* con, int mode);
 void admin_show_maintain(network_mysqld_con* con);
 void admin_show_status(network_mysqld_con* con, const char* like);
 void admin_show_variables(network_mysqld_con* con, const char* like);
+void admin_set_server_conn_refresh(network_mysqld_con* con);
 void admin_select_version(network_mysqld_con* con);
 void admin_select_connection_stat(network_mysqld_con* con, int backend_ndx, char *user);
 void admin_select_user_password(network_mysqld_con* con, char* from_table, char *user);

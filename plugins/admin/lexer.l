@@ -64,6 +64,7 @@
 "deny_ip" return TK_DENY_IP;
 "conn_details" return TK_CONN_DETAILS;
 "version" return TK_VERSION;
+"refresh_conns" return TK_REFRESH_CONNS;
 "get" return TK_GET;
 "user" return TK_USER;
 "password" return TK_PASSWORD;

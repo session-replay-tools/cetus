@@ -5130,6 +5130,7 @@ check_old_server_connection(gpointer data, gpointer user_data)
 
     chas->complement_conn_flag = 1;
     network_connection_pool_remove(entry);
+    g_message("%s: call check_old_server_connection", G_STRLOC);
 }
 
 static void

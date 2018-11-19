@@ -255,7 +255,7 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
         CHECK_PENDING_EVENT(&(con->server->event));
 
         if (con->srv->server_conn_refresh_time <= con->server->create_time) {
-            g_debug("%s: add conn fd:%d to pool:%p ", G_STRLOC, con->server->fd, backend->pool);
+            g_debug("%s: add conn fd:%d to pool:%p ", G_STRLOC, con->server->fd, st->backend->pool);
             con->server->is_multi_stmt_set = con->client->is_multi_stmt_set;
             network_pool_add_idle_conn(st->backend->pool, con->srv, con->server);
         } else {

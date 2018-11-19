@@ -198,7 +198,7 @@ chassis_frontend_new(void)
     frontend->default_query_cache_timeout = 100;
     frontend->client_idle_timeout = 8 * HOURS;
     frontend->maintained_client_idle_timeout = 30;
-    frontend->long_query_time = MAX_QUERY_TIME;
+    frontend->long_query_time = 1000;
     frontend->cetus_max_allowed_packet = MAX_ALLOWED_PACKET_DEFAULT;
     frontend->disable_dns_cache = 0;
 
@@ -764,15 +764,21 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->check_dns = frontend->check_dns;
 
     if (frontend->trx_isolation_level != NULL) {
-        if (strcasecmp(frontend->trx_isolation_level, "REPEATABLE READ") == 0) {
+        if (strcasecmp(frontend->trx_isolation_level, "REPEATABLE READ") == 0 ||
+                strcasecmp(frontend->trx_isolation_level, "REPEATABLE-READ"))
+        {
             srv->internal_trx_isolation_level = TF_REPEATABLE_READ;
-            srv->trx_isolation_level = g_strdup("REPEATABLE READ");
-        } else if (strcasecmp(frontend->trx_isolation_level, "READ COMMITTED") == 0) {
+            srv->trx_isolation_level = g_strdup("REPEATABLE-READ");
+        } else if (strcasecmp(frontend->trx_isolation_level, "READ COMMITTED") == 0 ||
+                strcasecmp(frontend->trx_isolation_level, "READ-COMMITTED") == 0)
+        {
             srv->internal_trx_isolation_level = TF_READ_COMMITTED;
-            srv->trx_isolation_level = g_strdup("READ COMMITTED");
-        } else if (strcasecmp(frontend->trx_isolation_level, "READ UNCOMMITTED") == 0) {
+            srv->trx_isolation_level = g_strdup("READ-COMMITTED");
+        } else if (strcasecmp(frontend->trx_isolation_level, "READ UNCOMMITTED") == 0 ||
+                strcasecmp(frontend->trx_isolation_level, "READ-UNCOMMITTED") == 0)
+        {
             srv->internal_trx_isolation_level = TF_READ_UNCOMMITTED;
-            srv->trx_isolation_level = g_strdup("READ UNCOMMITTED");
+            srv->trx_isolation_level = g_strdup("READ-UNCOMMITTED");
         } else if (strcasecmp(frontend->trx_isolation_level, "SERIALIZABLE") == 0) {
             srv->internal_trx_isolation_level = TF_SERIALIZABLE;
             srv->trx_isolation_level = g_strdup("SERIALIZABLE");
@@ -780,12 +786,12 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
             srv->internal_trx_isolation_level = TF_READ_COMMITTED;
             g_warning("trx isolation level:%s is not expected, use READ COMMITTED instead",
                     frontend->trx_isolation_level);
-            srv->trx_isolation_level = g_strdup("READ COMMITTED");
+            srv->trx_isolation_level = g_strdup("READ-COMMITTED");
         }
     } else {
         g_message("trx isolation level is not set");
         srv->internal_trx_isolation_level = TF_READ_COMMITTED;
-        srv->trx_isolation_level = g_strdup("READ COMMITTED");
+        srv->trx_isolation_level = g_strdup("READ-COMMITTED");
     }
     
     g_message("trx isolation level value:%s", srv->trx_isolation_level);

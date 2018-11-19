@@ -55,7 +55,7 @@ typedef struct chassis chassis;
 #define MAX_SERVER_NUM_FOR_PREPARE 32
 #define MAX_WORK_PROCESSES 64
 #define MAX_WORK_PROCESSES_SHIFT 6
-#define MAX_QUERY_TIME 1000
+#define MAX_QUERY_TIME 65536
 #define MAX_WAIT_TIME 1024
 #define MAX_TRY_NUM 6
 #define MAX_CREATE_CONN_NUM 512

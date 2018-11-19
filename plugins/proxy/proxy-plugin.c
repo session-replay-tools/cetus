@@ -2678,6 +2678,7 @@ network_mysqld_proxy_plugin_apply_config(chassis *chas, chassis_plugin_config *c
         evtimer_set(&chas->auto_create_conns_event, check_and_create_conns_func, chas);
         struct timeval check_interval = {30, 0};
         chassis_event_add_with_timeout(chas, &chas->auto_create_conns_event, &check_interval);
+        g_debug("%s:set callback check_and_create_conns_func", G_STRLOC);
     }
     chassis_config_register_service(chas->config_manager, config->address, "proxy");
 

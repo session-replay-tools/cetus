@@ -262,7 +262,10 @@ network_connection_pool_add(network_connection_pool *pool, network_socket *sock)
         g_hash_table_insert(pool->users, g_string_dup(sock->response->username), conns);
     }
 
+    entry->conns = conns;
+
     g_queue_push_head(conns, entry);
+    entry->link = conns->head;
 
     pool->cur_idle_connections++;
 

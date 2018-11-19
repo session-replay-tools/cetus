@@ -5175,6 +5175,7 @@ check_and_create_conns_func(int fd, short what, void *arg)
     if (chas->need_to_refresh_server_connections) {
         close_old_server_connetions(chas);
         chas->need_to_refresh_server_connections = 0;
+        chas->is_need_to_create_conns = 1;
     }
 
     if (!chas->maintain_close_mode) {

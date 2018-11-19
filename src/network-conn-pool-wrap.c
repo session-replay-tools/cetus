@@ -220,9 +220,16 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
                 backend = network_backends_get(g->backends, i);
                 CHECK_PENDING_EVENT(&(server->event));
 
-                g_debug("%s: add conn fd:%d to pool:%p ", G_STRLOC, server->fd, backend->pool);
-                server->is_multi_stmt_set = con->client->is_multi_stmt_set;
-                network_pool_add_idle_conn(backend->pool, con->srv, server);
+                if (con->srv->server_conn_refresh_time <= server->create_time) {
+                    g_debug("%s: add conn fd:%d to pool:%p ", G_STRLOC, server->fd, backend->pool);
+                    server->is_multi_stmt_set = con->client->is_multi_stmt_set;
+                    network_pool_add_idle_conn(backend->pool, con->srv, server);
+                } else {
+                    g_message("%s: old connection for con:%p", G_STRLOC, con);
+                    network_socket_send_quit_and_free(server);
+                    con->srv->complement_conn_flag = 1;
+                }
+
                 backend->connected_clients--;
                 g_debug("%s, con:%p, backend ndx:%d:connected_clients sub, clients:%d",
                         G_STRLOC, con, st->backend_ndx_array[i], backend->connected_clients);
@@ -247,10 +254,16 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
         g_debug("%s: con:%p, set prepare_stmt_count 0", G_STRLOC, con);
         CHECK_PENDING_EVENT(&(con->server->event));
 
-        g_debug("%s: add conn fd:%d to pool:%p", G_STRLOC, con->server->fd, st->backend->pool);
-        con->server->is_multi_stmt_set = con->client->is_multi_stmt_set;
-        /* insert the server socket into the connection pool */
-        network_pool_add_idle_conn(st->backend->pool, con->srv, con->server);
+        if (con->srv->server_conn_refresh_time <= con->server->create_time) {
+            g_debug("%s: add conn fd:%d to pool:%p ", G_STRLOC, con->server->fd, backend->pool);
+            con->server->is_multi_stmt_set = con->client->is_multi_stmt_set;
+            network_pool_add_idle_conn(st->backend->pool, con->srv, con->server);
+        } else {
+            g_message("%s: old connection for con:%p", G_STRLOC, con);
+            network_socket_send_quit_and_free(con->server);
+            con->srv->complement_conn_flag = 1;
+        }
+
         st->backend->connected_clients--;
         g_debug("%s, con:%p, backend ndx:%d:connected_clients sub, clients:%d",
                 G_STRLOC, con, st->backend_ndx, st->backend->connected_clients);

@@ -779,7 +779,13 @@ remove_ro_servers(network_mysqld_con *con)
 
             CHECK_PENDING_EVENT(&(server->event));
 
-            network_pool_add_idle_conn(pool, con->srv, server);
+            if (con->srv->server_conn_refresh_time <= server->create_time) {
+                network_pool_add_idle_conn(pool, con->srv, server);
+            } else {
+                g_message("%s: old connection for con:%p", G_STRLOC, con);
+                network_socket_send_quit_and_free(server);
+                con->srv->complement_conn_flag = 1;
+            }
             ss->backend->connected_clients--;
             g_debug("%s: conn clients sub, total len:%d, back:%p, value:%d con:%p, s:%p",
                     G_STRLOC, con->servers->len, ss->backend, ss->backend->connected_clients, con, server);
@@ -1473,7 +1479,13 @@ proxy_add_server_connection_array(network_mysqld_con *con, int *server_unavailab
 
                     CHECK_PENDING_EVENT(&(server->event));
 
-                    network_pool_add_idle_conn(pool, con->srv, server);
+                    if (con->srv->server_conn_refresh_time <= server->create_time) {
+                        network_pool_add_idle_conn(pool, con->srv, server);
+                    } else {
+                        g_message("%s: old connection for con:%p", G_STRLOC, con);
+                        network_socket_send_quit_and_free(server);
+                        con->srv->complement_conn_flag = 1;
+                    }
                     ss->backend->connected_clients--;
                     g_debug("%s: conn clients sub, total len:%d, back:%p, value:%d con:%p, s:%p",
                             G_STRLOC, con->servers->len, ss->backend, ss->backend->connected_clients, con, server);

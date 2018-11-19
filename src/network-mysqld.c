@@ -2355,7 +2355,14 @@ process_service_unavailable(network_mysqld_con *con)
             server_session_t *ss = g_ptr_array_index(con->servers, i);
             if (ss->fresh) {
                 CHECK_PENDING_EVENT(&(ss->server->event));
-                network_pool_add_idle_conn(ss->backend->pool, con->srv, ss->server);
+                if (con->srv->server_conn_refresh_time <= ss->server->create_time) {
+                    network_pool_add_idle_conn(ss->backend->pool, con->srv, ss->server);
+                } else {
+                    g_message("%s: old connection for con:%p", G_STRLOC, con);
+                    network_socket_send_quit_and_free(ss->server);
+                    con->srv->complement_conn_flag = 1;
+                }
+
                 ss->backend->connected_clients--;
                 g_message("%s: connected_clients sub:%d, %d ndx for con:%p", G_STRLOC,
                           ss->backend->connected_clients, (int)i, con);
@@ -4710,7 +4717,14 @@ process_self_read_auth_result(server_connection_state_t *con)
             con->server->do_compress = 1;
         }
         CHECK_PENDING_EVENT(&(con->server->event));
-        network_pool_add_idle_conn(con->pool, con->srv, con->server);
+        if (con->srv->server_conn_refresh_time <= con->server->create_time) {
+            network_pool_add_idle_conn(con->pool, con->srv, con->server);
+        } else {
+            network_socket_send_quit_and_free(con->server);
+            con->srv->complement_conn_flag = 1;
+            g_message("%s: old connection for con:%p", G_STRLOC, con);
+        }
+
         con->server = NULL;     /* tell _self_con_free we succeed */
         network_mysqld_self_con_free(con);
 
@@ -5114,16 +5128,16 @@ check_old_server_connection(gpointer data, gpointer user_data)
     network_connection_pool_entry *entry = data;
     chassis *chas = user_data;
 
-    if (chas->server_conn_refresh_time > entry->sock->create_time) {
-        chas->complement_conn_flag = 1;
-        network_connection_pool_remove(entry);
-    }
+    chas->complement_conn_flag = 1;
+    network_connection_pool_remove(entry);
 }
 
 static void
 close_old_server_connetions(chassis *chas)
 {
-    chas->server_conn_refresh_time = time(0);
+    chas->current_time = time(0);
+    chas->server_conn_refresh_time = chas->current_time;
+
     chassis_private *g = chas->priv;
     int i;
     int backends_count = network_backends_count(g->backends);
@@ -5156,6 +5170,11 @@ void
 check_and_create_conns_func(int fd, short what, void *arg)
 {
     chassis *chas = arg;
+
+    if (chas->need_to_refresh_server_connections) {
+        close_old_server_connetions(chas);
+        chas->need_to_refresh_server_connections = 0;
+    }
 
     if (!chas->maintain_close_mode) {
         if (chas->is_need_to_create_conns) {

@@ -154,6 +154,7 @@ struct chassis {
     int cetus_max_allowed_packet;
     int disable_dns_cache;
     int enable_admin_listen;
+    int need_to_refresh_server_connections;
 
     int worker_processes;
     int cpus;

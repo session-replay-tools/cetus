@@ -627,6 +627,11 @@ proxy_put_shard_conn_to_pool(network_mysqld_con *con)
                 }
             }
 
+            if (is_put_to_pool_allowed && con->srv->server_conn_refresh_time > server->create_time) {
+                is_put_to_pool_allowed = 0;
+                g_message("%s: old connection for con:%p", G_STRLOC, con);
+            }
+
             CHECK_PENDING_EVENT(&(server->event));
 
             if (is_put_to_pool_allowed) {

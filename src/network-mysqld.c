@@ -4093,6 +4093,10 @@ network_mysqld_con_handle(int event_fd, short events, void *user_data)
                 if (events != EV_READ) {
                     g_critical(G_STRLOC " events:%d, unexpected events", events);
                 }
+            } else if (events & EV_WRITE) {
+                g_critical(G_STRLOC "write events:%d, unexpected events", events);
+            } else if (events != EV_TIMEOUT) {
+                g_critical(G_STRLOC "not rw events:%d, unexpected events", events);
             }
 
             /* TODO If config is reloaded, close all current cons */

@@ -341,7 +341,7 @@ Sharding版支持的key类型：table|group|mode|transaction，支持的value包
 
   SQL: select /\*# table=employee key=123\*/emp_no,emp_name from employee;
 
-  说明：查询表employee中分区键的值是123的记录。
+  说明：将SQL路由到key=123所在的分片上执行。
 
 **2.Key类型为group的用法**
 
@@ -373,7 +373,7 @@ Sharding版支持的key类型：table|group|mode|transaction，支持的value包
 
   SQL: select /\*# table=employee key=123\*/ /\*#mode=readwrite\*/ emp_no,emp_name from employee;
 
-  说明：查询表employee中分区键的值是123的记录，且强制从主库读取。
+  说明：将SQL路由到key=123所在的分片上执行，且强制从该分片的主库读取。
 
   注意：table、group这两个key是互斥的，即table或者group分别可以和mode/transaction共用，但它俩不能同时出现，否则会返回错误。另外，请将注释部分写到第一个关键字之后。注释一旦使用，其优先级高于后续where条件（如果有的话）中的分区路由信息。
 

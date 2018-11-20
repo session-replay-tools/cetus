@@ -28,7 +28,6 @@
 
 #define CHECK_PENDING_EVENT(ev) \
     if (event_pending((ev), EV_READ|EV_WRITE|EV_TIMEOUT, NULL)) {       \
-        g_warning(G_STRLOC ": pending ev:%p, flags:%d", (ev), (ev)->ev_flags); \
         event_del(ev);  \
     }
 

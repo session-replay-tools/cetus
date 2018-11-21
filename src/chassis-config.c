@@ -492,11 +492,15 @@ chassis_config_mysql_write_object(chassis_config_t *conf,
         g_warning("Cannot connect to mysql server.");
         status = FALSE;
     }
-    if (mysql_query(conn, sql->str)) {
+    if (status == TRUE && mysql_query(conn, sql->str)) {
         g_warning("sql failed: %s", sql->str);
         status = FALSE;
     }
-    chassis_config_object_set_cache(object, json, now);
+
+    if (status == TRUE) {
+        chassis_config_object_set_cache(object, json, now);
+    }
+
     g_string_free(sql, TRUE);
     return status;
 }

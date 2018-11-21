@@ -64,7 +64,7 @@ Cetus支持部分会话级系统变量的设置，可以通过在variables.json�
 
 variables.json同样采用键值对的结构，其中键是固定的，值是用用户自定义的。
 
-其中name的值是需要设置的会话级系统变量的名称；type的值是变量的类型，可以为string或string-csv逗号分隔的字符串值，目前尚未支持int类型；allowed_values的值是指定允许设定的变量值，可以使用通配符\*表示此变量设任意值都允许；silent_values的值是指定静默处理的值，可以使用通配符\*，表示此变量设任意值都静默处理。
+其中name的值是需要设置的会话级系统变量的名称；type的值是变量的类型，可以为int, string或string-csv逗号分隔的字符串值；allowed_values的值是指定允许设定的变量值，可以使用通配符\*表示此变量设任意值都允许；silent_values的值是指定静默处理的值，可以使用通配符\*，表示此变量设任意值都静默处理。特别值得一提，配置文件中的所有项，都需要用双引号包裹起来，否则不生效。
 
 **注意：配置过allowed_values才能走到静默处理流程**
 
@@ -83,16 +83,16 @@ variables.json同样采用键值对的结构，其中键是固定的，值是用
      ]
    },
    {
-     "name": "connect_timeout",
-     "type": "string",
-     "allowed_values": ["*"],
-     "silent_values": ["10", "100"]
+     "name": "profiling",
+     "type": "int",
+     "allowed_values": ["0", "1"],
+     "silent_values": ["*"]
    }
  ]
 }
 ```
 
-我们配置了sql_mode变量和connect_timeout变量。其中sql_mode变量的类型是string-csv（逗号分隔的字符串值），指定了允许设定的变量有STRICT_TRANS_TABLES、NO_AUTO_CREATE_USER和NO_ENGINE_SUBSTITUTION；connect_timeout变量的类型是string（字符串），此变量设任意值都允许，指定静默处理的值为10和100。
+我们配置了sql_mode变量和profiling变量。其中sql_mode变量的类型是string-csv（逗号分隔的字符串值），指定了允许设定的变量有STRICT_TRANS_TABLES、NO_AUTO_CREATE_USER和NO_ENGINE_SUBSTITUTION；profiling变量的类型是int（整型），此变量允许值是0和1，指定静默处理的值为所有，即静默处理0和1。
 
 ## 3.sharding.json
 

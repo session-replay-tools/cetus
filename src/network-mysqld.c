@@ -2905,6 +2905,7 @@ handle_dist_tran_after_read_mul_resp(network_mysqld_con *con, int *result_reserv
                     }
                 } else if (con->is_commit_or_rollback) {
                     if (con->dist_tran_failed) {
+                        network_queue_clear(con->client->send_queue);
                         g_message("%s: service unavailable for con:%p", G_STRLOC, con);
                         network_mysqld_con_send_error_full(con->client,
                                                            C("service unavailable"), ER_SERVER_SHUTDOWN, "08S01");
@@ -3371,6 +3372,17 @@ handle_read_mul_servers_resp(network_mysqld_con *con)
 
     if (srv_down_count > 0) {
         g_warning("%s: server down num:%d for con:%p", G_STRLOC, srv_down_count, con);
+        if (con->dist_tran_state <= NEXT_ST_XA_QUERY) {
+            network_queue_clear(con->client->send_queue);
+            remove_mul_server_recv_packets(con);
+            con->state = ST_SEND_QUERY_RESULT;
+            con->server_to_be_closed = 1;
+            g_message("%s: send server error to client, state:%d", G_STRLOC, con->state);
+            network_mysqld_con_send_error(con->client, C("MySQL server prematurely closed connection"));
+            network_queue_clear(con->client->recv_queue);
+            network_mysqld_queue_reset(con->client);
+            return DISP_CONTINUE;
+        }
     }
 
     g_debug("%s:resp count:%d, server num:%d, num pending:%d, state:%d for con:%p",
@@ -3697,7 +3709,7 @@ read_query_result_for_sharding(network_mysqld_con *con, network_mysqld_con_state
         remove_mul_server_recv_packets(con);
         con->state = ST_SEND_QUERY_RESULT;
         g_message("%s: send server error to client, state:%d", G_STRLOC, con->state);
-        network_mysqld_con_send_error(con->client, C("MySQL server connection closed"));
+        network_mysqld_con_send_error(con->client, C("MySQL server connection was closed"));
         network_queue_clear(con->client->recv_queue);
         network_mysqld_queue_reset(con->client);
     } else {

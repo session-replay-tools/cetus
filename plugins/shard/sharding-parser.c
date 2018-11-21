@@ -1805,8 +1805,8 @@ sharding_filter_sql(sql_context_t *context)
             char *aggr_name = NULL;
             int subquery = context->clause_flags & CF_SUBQUERY;
             if (select_has_distincted_aggregate(select, subquery, &aggr_name)) {
-                char msg[100];
-                snprintf(msg, 100, "(proxy) %s(DISTINCT ...) not supported", aggr_name);
+                char msg[128];
+                snprintf(msg, 128, "(proxy) %s(DISTINCT ...) not supported", aggr_name);
                 sql_context_set_error(context, PARSE_NOT_SUPPORT, msg);
                 return;
             }

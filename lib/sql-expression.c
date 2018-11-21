@@ -115,6 +115,7 @@ sql_expr_new(int op, const sql_token_t *token)
         if (token) {
             if (extra == 0) {
                 expr->num_value = sql_token_to_int(*token);
+                expr->token_text = token->z;
             } else {
                 expr->token_text = (char *)&expr[1];
                 assert(token != NULL);

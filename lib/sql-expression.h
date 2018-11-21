@@ -85,7 +85,7 @@ enum sql_stmt_type_t {
     STMT_SHOW_WARNINGS,
 };
 struct sql_token_t {
-    const char *z;              /* pointer to token text, not NUL-terminated */
+    char *z;              /* pointer to token text, not NUL-terminated */
     uint32_t n;                 /* length of token text in bytes */
 };
 
@@ -156,7 +156,7 @@ enum sql_aggregate_type_t {
 struct sql_expr_t {
     uint16_t op;                /* Operation performed by this node */
     char *token_text;           /* Token value. Zero terminated and dequoted */
-    uint64_t num_value;         /* Non-negative integer value */
+    int64_t num_value;
     sql_expr_t *left;
     sql_expr_t *right;
 

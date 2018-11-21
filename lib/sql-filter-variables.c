@@ -149,22 +149,26 @@ sql_filter_vars_load_str_rules(const char *json_str)
         if (silent_array) {
             cJSON *silent = silent_array->child;
             for (; silent; silent = silent->next) {
-                if (strcmp(silent->valuestring, "*") == 0) {
-                    var->silence_all = TRUE;
-                    break;
+                if (silent->valuestring) {
+                    if (strcmp(silent->valuestring, "*") == 0) {
+                        var->silence_all = TRUE;
+                        break;
+                    }
+                    var->silent_values = g_list_append(var->silent_values, g_strdup(silent->valuestring));
                 }
-                var->silent_values = g_list_append(var->silent_values, g_strdup(silent->valuestring));
             }
         }
         cJSON *allowed_array = cJSON_GetObjectItem(cur, "allowed_values");
         if (allowed_array) {
             cJSON *allowed = allowed_array->child;
             for (; allowed; allowed = allowed->next) {
-                if (strcmp(allowed->valuestring, "*") == 0) {
-                    var->allow_all = TRUE;
-                    break;
+                if (allowed->valuestring) {
+                    if (strcmp(allowed->valuestring, "*") == 0) {
+                        var->allow_all = TRUE;
+                        break;
+                    }
+                    var->allowed_values = g_list_append(var->allowed_values, g_strdup(allowed->valuestring));
                 }
-                var->allowed_values = g_list_append(var->allowed_values, g_strdup(allowed->valuestring));
             }
         }
         /* if duplicated, replace and free the old (key & value) */
@@ -191,6 +195,7 @@ sql_filter_vars_is_silent(const char *name, const char *val)
         return FALSE;
     }
     switch (var->type) {
+    case VAL_INT:
     case VAL_STRING:
         return sql_variable_is_silent_value(var, val);
     case VAL_STRING_CSV:{
@@ -229,6 +234,7 @@ sql_filter_vars_is_allowed(const char *name, const char *val)
         return FALSE;
     }
     switch (var->type) {
+    case VAL_INT:
     case VAL_STRING:
         return sql_variable_is_allowed_value(var, val);
     case VAL_STRING_CSV:{

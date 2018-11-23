@@ -455,20 +455,6 @@ network_mysqld_queue_reset(network_socket *sock)
     return 0;
 }
 
-static int
-network_mysqld_con_send_command(network_socket *con, int cmd, const char *arg)
-{
-    GString *packet = g_string_new(NULL);
-
-    network_mysqld_proto_append_int8(packet, cmd);
-    network_mysqld_proto_append_lenenc_str(packet, arg);
-
-    network_queue_append(con->send_queue, packet);
-    g_string_free(packet, TRUE);
-
-    return 0;
-}
-
 /**
  * appends a raw MySQL packet to the queue 
  *
@@ -2989,11 +2975,6 @@ read_server_resp(network_mysqld_con *con, int *disp_flag)
                 g_message("%s: fail at %d server", G_STRLOC, i + 1);
                 continue;
             } else {
-                int j;
-                for (j = 0; j < i; j++) {
-                    ss = g_ptr_array_index(con->servers, j);
-                    network_mysqld_con_send_command(ss->server, COM_STMT_RESET, "\x00\x00");
-                }
 
                 network_mysqld_con_send_error(con->client, C("server error"));
 

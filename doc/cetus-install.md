@@ -13,6 +13,15 @@
 
 centos系统可使用：yum install cmake gcc glib2-devel flex mysql-devel gperftools-libs -y 安装依赖包，请确保在编译安装Cetus前已安装好相应的依赖。
 
+**注意**如果已经安装了gperftools-libs，但是编译cetus时仍然提示找不到tcmalloc，则可以通过建立软链接的形式，解决。
+```
+# 建立软链接
+ln -s libtcmalloc.so.4 libtcmalloc.so
+# cmake的时候提示如下，便成功链接tcmalloc
+-- Looking for malloc in tcmalloc
+-- Looking for malloc in tcmalloc - found
+```
+
 ## 安装步骤
 
 Cetus利用自动化建构系统CMake进行编译安装，其中描述构建过程的构建文件CMakeLists.txt已经在源码中的主目录和子目录中，下载源码并解压后具体安装步骤如下：

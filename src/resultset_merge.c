@@ -1845,10 +1845,8 @@ heap_adjust(heap_type *heap, int s, int m, int *compare_failed)
             if (heap->element[j]->is_over) {
                 j++;
             } else if (!heap->element[j + 1]->is_over) {
-                if (!heap->element[j]->refreshed && !heap->element[j + 1]->refreshed) {
-                    if (heap->element[j]->is_prior_to == -1) {
-                        j++;
-                    }
+                if (!heap->element[j]->refreshed && !heap->element[j + 1]->refreshed && heap->element[j]->is_prior_to == -1) {
+                    j++;
                 } else {
                     is_dup = 0;
                     k = j;

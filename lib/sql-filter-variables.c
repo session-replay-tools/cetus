@@ -84,6 +84,7 @@ sql_variable_is_allowed_value(struct sql_variable_t *p, const char *value)
 {
     GList *l;
     for (l = p->allowed_values; l; l = l->next) {
+        g_debug("%s: l->data:%s, value:%s", G_STRLOC, (char *) l->data, value);
         if (strcasecmp(l->data, value) == 0) {
             return TRUE;
         }
@@ -221,16 +222,19 @@ gboolean
 sql_filter_vars_is_allowed(const char *name, const char *val)
 {
     if (!name) {
+        g_debug("%s:name is nil", G_STRLOC);
         return FALSE;
     }
     struct sql_variable_t *var = g_hash_table_lookup(cetus_variables, name);
     if (!var) {
+        g_debug("%s: name:%s and var is nil", G_STRLOC, name);
         return FALSE;
     }
     if (var->allow_all) {
         return TRUE;
     }
     if (!val) {
+        g_debug("%s: var is nil", G_STRLOC);
         return FALSE;
     }
     switch (var->type) {

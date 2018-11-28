@@ -54,11 +54,11 @@ typedef struct ORDER_BY {
 typedef struct {
     GList *record;
     int index;
+    int is_prior_to;
     unsigned int is_over:1;
     unsigned int is_err:1;
     unsigned int refreshed:1;
     unsigned int is_dup:1;
-    unsigned int is_prior_to:1;
 } heap_element;
 
 typedef struct order_by_para_s {

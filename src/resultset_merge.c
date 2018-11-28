@@ -1846,9 +1846,8 @@ heap_adjust(heap_type *heap, int s, int m, int *compare_failed)
                 j++;
             } else if (!heap->element[j + 1]->is_over) {
                 if (!heap->element[j]->refreshed && !heap->element[j + 1]->refreshed) {
-                    if (!heap->element[j]->is_prior_to) {
+                    if (heap->element[j]->is_prior_to == -1) {
                         j++;
-                    } else {
                     }
                 } else {
                     is_dup = 0;
@@ -1857,7 +1856,7 @@ heap_adjust(heap_type *heap, int s, int m, int *compare_failed)
                                      heap->element[j + 1]->record->data, &(heap->order_para),
                                      heap->element[j]->index, heap->element[j + 1]->index, &is_dup, compare_failed)) {
                         j++;
-                        heap->element[j]->is_prior_to = 0;
+                        heap->element[j]->is_prior_to = -1;
 
                     } else {
                         if (is_dup) {

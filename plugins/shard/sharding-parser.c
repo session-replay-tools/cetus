@@ -1268,6 +1268,32 @@ routing_insert(sql_context_t *context, sql_insert_t *insert, char *default_db, s
             return USE_NON_SHARDING_TABLE;
         }
 
+        if (insert->sel_val) {
+            gboolean is_success = TRUE;
+            sql_src_list_t *from = insert->sel_val->from_src;
+            if (from) {
+                char *db = default_db;
+                sql_src_item_t *table = g_ptr_array_index(from, 0);
+                if (table->dbname)
+                    db = table->dbname;
+
+                if (shard_conf_is_shard_table(db, table->table_name)) {
+                    is_success = FALSE;
+                } else if (shard_conf_is_single_table(db, table->table_name)) {
+                    is_success = FALSE;
+                }
+            } else {
+                is_success = FALSE;
+            }
+
+            if (is_success == FALSE) {
+                g_warning("%s:unsupported INSERT format", G_STRLOC);
+                sql_context_append_msg(context, "(proxy) unsupported INSERT format");
+                g_ptr_array_free(groups, TRUE);
+                return ERROR_UNPARSABLE;
+            }
+        }
+
         shard_conf_get_all_groups(groups);
         plan->table_type = GLOBAL_TABLE;
         if (groups->len > 1) {

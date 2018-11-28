@@ -72,8 +72,19 @@ sql_variable_is_silent_value(struct sql_variable_t *p, const char *value)
 {
     GList *l;
     for (l = p->silent_values; l; l = l->next) {
+        g_debug("%s: l->data:%s, value:%s", G_STRLOC, (char *) l->data, value);
         if (strcasecmp(l->data, value) == 0) {
             return TRUE;
+        } else {
+            size_t len = strlen(value);
+            if (len > 0) {
+                if (value[len - 1] == ';') {
+                    if (strncasecmp(l->data, value, len - 1) == 0) {
+                        g_debug("%s: sql_variable_is_allowed_value true", G_STRLOC);
+                        return TRUE;
+                    }
+                }
+            }
         }
     }
     return FALSE;
@@ -87,6 +98,16 @@ sql_variable_is_allowed_value(struct sql_variable_t *p, const char *value)
         g_debug("%s: l->data:%s, value:%s", G_STRLOC, (char *) l->data, value);
         if (strcasecmp(l->data, value) == 0) {
             return TRUE;
+        } else {
+            size_t len = strlen(value);
+            if (len > 0) {
+                if (value[len - 1] == ';') {
+                    if (strncasecmp(l->data, value, len - 1) == 0) {
+                        g_debug("%s: sql_variable_is_allowed_value true", G_STRLOC);
+                        return TRUE;
+                    }
+                }
+            }
         }
     }
     return FALSE;
@@ -172,6 +193,7 @@ sql_filter_vars_load_str_rules(const char *json_str)
                 }
             }
         }
+        g_debug("%s: var name:%s loaded", G_STRLOC, var->name);
         /* if duplicated, replace and free the old (key & value) */
         g_hash_table_replace(cetus_variables, var->name, var);
     }
@@ -183,16 +205,19 @@ gboolean
 sql_filter_vars_is_silent(const char *name, const char *val)
 {
     if (!name) {
+        g_debug("%s:name is nil", G_STRLOC);
         return FALSE;
     }
     struct sql_variable_t *var = g_hash_table_lookup(cetus_variables, name);
     if (!var) {
+        g_debug("%s: name:%s and var is nil", G_STRLOC, name);
         return FALSE;
     }
     if (var->silence_all) {
         return TRUE;
     }
     if (!val) {
+        g_debug("%s: val is nil", G_STRLOC);
         return FALSE;
     }
     switch (var->type) {
@@ -234,7 +259,7 @@ sql_filter_vars_is_allowed(const char *name, const char *val)
         return TRUE;
     }
     if (!val) {
-        g_debug("%s: var is nil", G_STRLOC);
+        g_debug("%s: val is nil", G_STRLOC);
         return FALSE;
     }
     switch (var->type) {

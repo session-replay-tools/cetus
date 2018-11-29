@@ -817,6 +817,10 @@ process_admin_sql(cetus_cycle_t *cycle, cetus_channel_t *ch)
         g_debug("%s: call admin:%d", G_STRLOC, retval);
         send_admin_resp(cycle, con);
     }
+
+    network_queue_clear(con->client->send_queue);
+    network_mysqld_con_free(con);
+
 }
 
 static void

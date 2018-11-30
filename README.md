@@ -112,6 +112,8 @@ Cetus分为读写分离和分库两个版本。
 
 3. [Cetus rpm说明](./doc/cetus-rpm.md)
 
+4. [Cetus Docker镜像使用](./doc/cetus-docker.md)
+
 ### Cetus测试
 
 [Cetus 测试报告](./doc/cetus-test.md)

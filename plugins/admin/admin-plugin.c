@@ -376,6 +376,9 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
         }
         g_ptr_array_free(servers, TRUE);
 
+        if (!con->data) {
+            g_ptr_array_free(recv_queues, TRUE);
+        }
         network_mysqld_con_handle(-1, 0, con);
     }
 }

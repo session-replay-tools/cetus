@@ -145,6 +145,11 @@ cetus_read_channel(int s, cetus_channel_t *ch, size_t size)
             break;
     }
 
+    if (ch->basics.command == CETUS_CMD_ADMIN) {
+        close(ch->basics.fd);
+        ch->basics.fd = 0;
+    }
+
     if (msg.msg_flags & (MSG_TRUNC|MSG_CTRUNC)) {
         g_critical("%s:recvmsg() truncated data", G_STRLOC); 
     }

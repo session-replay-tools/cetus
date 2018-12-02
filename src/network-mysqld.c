@@ -2188,11 +2188,11 @@ normal_result_merge(network_mysqld_con *con)
             g_debug_hexdump(G_STRLOC, S(con->orig_sql));
         }
         network_queue_clear(con->client->send_queue);
-        g_debug("%s: merge failed", G_STRLOC);
         if (result.detail) {
             network_mysqld_con_send_error_full(con->client, S(result.detail), ER_CETUS_RESULT_MERGE, "HY000");
             g_string_free(result.detail, TRUE);
         } else {
+            g_warning("%s: merge failed for sql:%s", G_STRLOC, con->orig_sql->str);
             network_mysqld_con_send_error_full(con->client, C("merge failed"), ER_CETUS_RESULT_MERGE, "HY000");
         }
         break;

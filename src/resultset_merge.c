@@ -1689,6 +1689,7 @@ fulfill_condi(char *aggr_value, having_condition_t *hav_condi, result_merge_t *m
         result = cmp_str_num(aggr_value, len1, hav_condi->condition_value, len2, &num_unsupported);
         if (num_unsupported) {
             merged_result->status = RM_FAIL;
+            g_warning("%s:merge_failed", G_STRLOC);
             return FALSE;
         }
 
@@ -1779,6 +1780,7 @@ aggr_by_group(aggr_by_group_para_t *para, GList **candidates, guint *pkt_count, 
 
                 if (merge_failed) {
                     merged_result->status = RM_FAIL;
+                    g_warning("%s:merge_failed", G_STRLOC);
                     return 0;
                 }
 
@@ -2470,6 +2472,7 @@ merge_for_modify(sql_context_t *context, network_queue *send_queue, GPtrArray *r
         if (!pkt || pkt->len <= NET_HEADER_SIZE) {
             cetus_result_destroy(res_merge);
             merged_result->status = RM_FAIL;
+            g_warning("%s:pkt is wrong", G_STRLOC);
             return 0;
         }
 
@@ -2492,6 +2495,7 @@ merge_for_modify(sql_context_t *context, network_queue *send_queue, GPtrArray *r
             g_queue_remove(recv_q->chunks, pkt);
             cetus_result_destroy(res_merge);
             merged_result->status = RM_FAIL;
+            g_warning("%s:MYSQLD_PACKET_ERR is met", G_STRLOC);
             return 0;
         default:
             break;
@@ -2633,6 +2637,7 @@ check_network_packet_err(network_mysqld_con *con, GList **candidates, GPtrArray 
                 g_queue_remove(recv_queue->chunks, pkt);
                 cetus_result_destroy(res_merge);
                 if (con->num_pending_servers) {
+                    g_warning("%s:MYSQLD_PACKET_ERR met, num_pending_servers:%d", G_STRLOC, con->num_pending_servers);
                     merged_result->status = RM_FAIL;
                 } else {
                     merged_result->status = RM_SUCCESS;
@@ -2640,6 +2645,7 @@ check_network_packet_err(network_mysqld_con *con, GList **candidates, GPtrArray 
                 return 0;
             }
         } else {
+            g_warning("%s:pkt is wrong", G_STRLOC);
             cetus_result_destroy(res_merge);
             merged_result->status = RM_FAIL;
             return 0;

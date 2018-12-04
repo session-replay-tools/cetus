@@ -854,7 +854,6 @@ static
 cetus_channel_t *retrieve_admin_resp(network_mysqld_con *con)
 {
     GList *chunk;
-    cetus_channel_t *ch = NULL;
     g_message("%s:call retrieve_admin_resp", G_STRLOC);
     int total = sizeof(cetus_channel_t); 
     int resp_len = 0;
@@ -867,7 +866,7 @@ cetus_channel_t *retrieve_admin_resp(network_mysqld_con *con)
 
     total = total + resp_len;
 
-    ch = (cetus_channel_t *) g_new0(char, total);
+    cetus_channel_t *ch = (cetus_channel_t *) g_new0(char, total);
     ch->admin_sql_resp_len = resp_len;
 
     unsigned char *p = ch->admin_sql_resp;
@@ -904,6 +903,7 @@ void send_admin_resp(chassis *cycle, network_mysqld_con *con)
         cetus_write_channel(cetus_processes[cetus_process_slot].parent_child_channel[1],
                 ch, sizeof(*ch) + ch->admin_sql_resp_len);
         g_debug("%s:cetus_write_channel send:%d", G_STRLOC, (int) (sizeof(*ch) + ch->admin_sql_resp_len));
+        g_free(ch);
     } else {
         con->state = ST_SEND_QUERY_RESULT;
         network_mysqld_con_handle(-1, 0, con);
@@ -939,6 +939,9 @@ process_admin_sql(cetus_cycle_t *cycle, cetus_channel_t *ch)
             send_admin_resp(cycle, con);
         }
     }
+
+    network_queue_clear(con->client->send_queue);
+    network_mysqld_con_free(con);
 }
 
 static void

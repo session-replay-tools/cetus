@@ -496,7 +496,7 @@ chassis_config_local_query_object(chassis_config_t *conf,
     }
 
     if (json_res) {
-        *json_res = g_strdup(buffer);
+        *json_res = buffer;
     }
 
     GStatBuf sta;

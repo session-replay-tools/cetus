@@ -187,6 +187,7 @@ chassis_frontend_new(void)
     frontend->xa_log_detailed = 0;
 
     frontend->default_pool_size = 10;
+    frontend->worker_processes = 1;
     frontend->max_resp_len = 10 * 1024 * 1024;  /* 10M */
     frontend->max_alive_time = DEFAULT_LIVE_TIME;
     frontend->merged_output_size = 8192;
@@ -202,6 +203,7 @@ chassis_frontend_new(void)
     frontend->cetus_max_allowed_packet = MAX_ALLOWED_PACKET_DEFAULT;
     frontend->disable_dns_cache = 0;
 
+    frontend->is_tcp_stream_enabled = 1;
     frontend->group_replication_mode = 0;
     frontend->sql_log_bufsize = 0;
     frontend->sql_log_switch = NULL;
@@ -658,7 +660,7 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
 
 #if defined(SO_REUSEPORT)
     g_message("%s:SO_REUSEPORT is defined", G_STRLOC);
-    if (frontend->worker_processes < 1) {
+    if (frontend->worker_processes < 0) {
         srv->worker_processes = 1;
     } else if (frontend->worker_processes > MAX_WORK_PROCESSES) {
         srv->worker_processes = MAX_WORK_PROCESSES;
@@ -855,8 +857,6 @@ slow_query_log_handler(const gchar *log_domain, GLogLevelFlags log_level, const 
 {
     FILE *fp = user_data;
     fwrite(message, 1, strlen(message), fp);
-    fwrite("\n", 1, 1, fp);
-    fflush(fp);
 }
 
 static FILE *
@@ -979,7 +979,7 @@ main_cmdline(int argc, char **argv)
     chassis_frontend_set_chassis_options(frontend, opts, srv);
 
     if (FALSE == chassis_options_parse_cmdline(opts, &argc, &argv, &gerr)) {
-        g_critical("%s", gerr->message);
+        g_critical("%s:%s", G_STRLOC, gerr->message);
         GOTO_EXIT(EXIT_FAILURE);
     }
 
@@ -1154,6 +1154,7 @@ main_cmdline(int argc, char **argv)
     srv->daemon_mode = frontend->daemon_mode;
 
     if (srv->daemon_mode) {
+        g_message("%s:daemon mode", G_STRLOC);
         chassis_unix_daemonize();
     }
 

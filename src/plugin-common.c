@@ -227,10 +227,11 @@ do_read_auth(network_mysqld_con *con)
         network_mysqld_con_send_error_full(recv_sock, L(ip_err_msg), 1045, "28000");
         log_sql_connect(con, ip_err_msg);
         g_free(ip_err_msg);
-        con->state = ST_SEND_ERROR;
         g_strfreev(client_addr_arr);
+        con->state = ST_SEND_ERROR;
         return NETWORK_SOCKET_SUCCESS;
     }
+
     g_strfreev(client_addr_arr);
 
     const char *client_charset = charset_get_name(auth->charset);

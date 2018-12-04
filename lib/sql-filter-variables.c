@@ -18,7 +18,6 @@
 
  $%ENDLICENSE%$ */
 
-#include "glib-ext.h"
 #include "sql-filter-variables.h"
 #include "cetus-util.h"
 

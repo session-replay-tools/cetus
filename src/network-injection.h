@@ -66,11 +66,11 @@ typedef struct {
     guint64 rows;
     guint64 bytes;
 
-    /**< flag to announce if we have to buffer the result for later processing */
-    gboolean resultset_is_needed;
-
     guint64 ts_read_query;
     guint64 ts_read_query_result_last;
+
+    /**< flag to announce if we have to buffer the result for later processing */
+    unsigned int resultset_is_needed:1;
 } injection;
 
 /**

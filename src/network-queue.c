@@ -41,11 +41,11 @@ network_queue_new()
 void
 network_queue_free(network_queue *queue)
 {
-    GString *packet;
 
     if (!queue)
         return;
 
+    GString *packet;
     while ((packet = g_queue_pop_head(queue->chunks))) {
         g_string_free(packet, TRUE);
     }
@@ -60,6 +60,7 @@ network_queue_clear(network_queue *queue)
 {
     if (!queue)
         return;
+
     GString *packet;
     while ((packet = g_queue_pop_head(queue->chunks)) != NULL) {
         g_string_free(packet, TRUE);

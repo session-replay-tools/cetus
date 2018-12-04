@@ -376,9 +376,6 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
         }
         g_ptr_array_free(servers, TRUE);
 
-        if (!con->data) {
-            g_ptr_array_free(recv_queues, TRUE);
-        }
         network_mysqld_con_handle(-1, 0, con);
     }
 }
@@ -511,7 +508,7 @@ static void visit_parser(network_mysqld_con *con, const char *sql)
         g_message("%s:syntax error", G_STRLOC);
         network_mysqld_con_send_error(con->client,
            C("syntax error, 'select help' for usage"));
-        if (con->is_admin_client) {
+        if (con->is_processed_by_subordinate) {
             con->direct_answer = 1;
         }
     }
@@ -568,6 +565,10 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
     con->admin_read_merge = 0;
 
     visit_parser(con, con->orig_sql->str);
+    if (con->srv->worker_processes == 0) {
+        con->direct_answer = 1;
+    }
+
     if (con->direct_answer) {
         return PROXY_SEND_RESULT;
     } else {
@@ -599,6 +600,12 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_query) {
     gettimeofday(&(con->req_recv_time), NULL);
 
     con->is_admin_client = 1;
+
+    if (con->srv->worker_processes == 0) {
+        con->is_processed_by_subordinate = 0;
+    } else {
+        con->is_processed_by_subordinate = 1;
+    }
     recv_sock = con->client;
 
     if (recv_sock->recv_queue->chunks->length != 1) {
@@ -638,6 +645,8 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_timeout)
 {
     con->prev_state = con->state;
     con->state = ST_SEND_ERROR;
+
+    g_debug("%s:call server_timeout", G_STRLOC);
 
     return NETWORK_SOCKET_SUCCESS;
 }
@@ -802,6 +811,7 @@ static void remove_unix_socket_if_stale(chassis *chas)
             /* no matter if it does not exist */
             unlink(chas->unix_socket_name);
         }
+        pclose(p);
     }
 }
 

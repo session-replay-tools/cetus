@@ -53,6 +53,7 @@
 #include "cetus-error.h"
 
 #define XID_LEN 128
+#define ANALYSIS_PACKET_LEN 5
 #define COMPRESS_BUF_SIZE 1048576
 
 typedef enum {
@@ -568,26 +569,57 @@ struct network_mysqld_con {
     unsigned int last_record_updated:1;
     unsigned int query_cache_judged:1;
     unsigned int is_client_compressed:1;
+    unsigned int is_processed_by_subordinate:1;
     unsigned int is_admin_client:1;
+    unsigned int is_admin_waiting_resp:1;
     unsigned int direct_answer:1;
     unsigned int admin_read_merge:1;
     unsigned int ask_one_worker:1;
     unsigned int ask_the_given_worker:1;
     unsigned int is_client_to_be_closed:1;
+    /**
+     * Flag indicating that we have received a COM_QUIT command.
+     * 
+     * This is mainly used to differentiate between the case 
+     * where the server closed the connection because of some error
+     * or if the client asked it to close its side of the connection.
+     * cetus would report spurious errors for the latter case,
+     * if we failed to track this command.
+     */
+    unsigned int com_quit_seen:1;
+
+    /** Flag indicating if we the plugin doesn't need the resultset itself.
+     * 
+     * If set to TRUE, the plugin needs to see 
+     * the entire resultset and we will buffer it.
+     * If set to FALSE, the plugin is not interested 
+     * in the content of the resultset and we'll
+     * try to forward the packets to the client directly, 
+     * even before the full resultset is parsed.
+     */
+    unsigned int resultset_is_needed:1;
     unsigned int last_backend_type:2;
+    unsigned int eof_met_cnt:4;
+    unsigned int last_payload_len:4;
     unsigned int process_index:6;
+    unsigned int last_packet_id:8;
     unsigned int all_participate_num:8;
 
     unsigned long long xa_id;
+    guint32 auth_switch_to_round;
+    guint32 partically_record_left_cnt;
 
     time_t last_check_conn_supplement_time;
 
+    unsigned char last_payload[ANALYSIS_PACKET_LEN];
     struct timeval req_recv_time;
     struct timeval resp_recv_time;
     struct timeval resp_send_time;
 
     guint64 resp_cnt;
     guint64 last_insert_id;
+    guint64 analysis_next_pos;
+    guint64 cur_resp_len;
 
     /**
      * An integer indicating the result received from a server 
@@ -600,35 +632,6 @@ struct network_mysqld_con {
 
     /* track the auth-method-switch state */
     GString *auth_switch_to_method;
-    GString *auth_switch_to_data;
-    guint32 auth_switch_to_round;
-
-    /** Flag indicating if we the plugin doesn't need the resultset itself.
-     * 
-     * If set to TRUE, the plugin needs to see 
-     * the entire resultset and we will buffer it.
-     * If set to FALSE, the plugin is not interested 
-     * in the content of the resultset and we'll
-     * try to forward the packets to the client directly, 
-     * even before the full resultset is parsed.
-     */
-    gboolean resultset_is_needed;
-    /**
-     * Flag indicating whether we have seen all parts belonging to one resultset.
-     */
-    gboolean resultset_is_finished;
-
-    /**
-     * Flag indicating that we have received a COM_QUIT command.
-     * 
-     * This is mainly used to differentiate between the case 
-     * where the server closed the connection because of some error
-     * or if the client asked it to close its side of the connection.
-     * cetus would report spurious errors for the latter case,
-     * if we failed to track this command.
-     */
-    gboolean com_quit_seen;
-
     /**
      * Contains the parsed packet.
      */

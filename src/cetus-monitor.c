@@ -667,40 +667,6 @@ struct monitored_object_t {
     void *arg;
 };
 
-struct event config_reload_timer;
-
-static void
-check_config_worker(int fd, short what, void *arg)
-{
-    cetus_monitor_t *monitor = arg;
-    chassis *chas = monitor->chas;
-    chassis_config_t *conf = chas->config_manager;
-    struct timeval timeout = { 0 };
-    GList *l;
-
-    for (l = monitor->registered_objects; l; l = l->next) {
-        struct monitored_object_t *ob = l->data;
-        if (chassis_config_is_object_outdated(conf, ob->name)) {
-            /* if (evtimer_pending(&config_reload_timer, NULL))
-               break; */
-            g_message("monitor: object `%s` is outdated, try updating...", ob->name);
-
-            /* first read in object from remote in monitor thread */
-            chassis_config_update_object_cache(conf, ob->name);
-
-            /* then switch to main thread */
-            ev_now_update((struct ev_loop *) chas->event_base);\
-            evtimer_set(&config_reload_timer, ob->func, ob->arg);
-            event_base_set(chas->event_base, &config_reload_timer);
-            evtimer_add(&config_reload_timer, &timeout);
-            break;              /* TODO: for now, only update one object each time */
-        }
-    }
-
-    timeout.tv_sec = 5;
-    ADD_MONITOR_TIMER(check_config_timer, check_config_worker, timeout);
-}
-
 void
 cetus_monitor_open(cetus_monitor_t *monitor, monitor_type_t monitor_type)
 {
@@ -717,12 +683,6 @@ cetus_monitor_open(cetus_monitor_t *monitor, monitor_type_t monitor_type)
         timeout.tv_usec = CHECK_DELAY_INTERVAL;
         ADD_MONITOR_TIMER(write_master_timer, update_master_timestamp, timeout);
         g_message("check_slave monitor open.");
-        break;
-    case MONITOR_TYPE_CHECK_CONFIG:
-        timeout.tv_sec = 5;
-        timeout.tv_usec = 0;
-        ADD_MONITOR_TIMER(check_config_timer, check_config_worker, timeout);
-        g_message("check_config monitor open.");
         break;
     default:
         break;
@@ -758,9 +718,6 @@ cetus_monitor_mainloop(void *data)
     if (chas->check_slave_delay) {
         cetus_monitor_open(monitor, MONITOR_TYPE_CHECK_DELAY);
     }
-#if 0
-    cetus_monitor_open(monitor, MONITOR_TYPE_CHECK_CONFIG);
-#endif
     chassis_event_loop(loop, NULL);
 
     g_message("monitor thread closing %d mysql conns", g_hash_table_size(monitor->backend_conns));
@@ -832,23 +789,3 @@ cetus_monitor_free(cetus_monitor_t *monitor)
     g_free(monitor);
 }
 
-void
-cetus_monitor_register_object(cetus_monitor_t *monitor, const char *name, monitor_callback_fn func, void *arg)
-{
-    GList *l;
-    struct monitored_object_t *object = NULL;
-    for (l = monitor->registered_objects; l; l = l->next) {
-        struct monitored_object_t *ob = l->data;
-        if (strcmp(ob->name, name) == 0) {
-            object = ob;
-            break;
-        }
-    }
-    if (!object) {
-        object = g_new0(struct monitored_object_t, 1);
-        strncpy(object->name, name, MON_MAX_NAME_LEN - 1);
-        monitor->registered_objects = g_list_append(monitor->registered_objects, object);
-    }
-    object->func = func;
-    object->arg = arg;
-}

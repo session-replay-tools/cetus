@@ -732,7 +732,7 @@ network_mysqld_proto_get_packet_len(GString *_header)
 {
     unsigned char *header = (unsigned char *)_header->str;
 
-    return header[0] | header[1] << 8 | header[2] << 16;
+    return (header[0]) | (header[1] << 8) | (header[2] << 16);
 }
 
 /**

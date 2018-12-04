@@ -299,7 +299,7 @@ sql_expr_is_function(const sql_expr_t *p, const char *name)
         if (func && strcasecmp(func, name) == 0) {
             return TRUE;
         }
-        if (p->alias && strcmp(p->alias, name) == 0) {
+        if (p && p->alias && strcmp(p->alias, name) == 0) {
             return TRUE;
         }
         return FALSE;

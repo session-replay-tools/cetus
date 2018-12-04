@@ -58,16 +58,28 @@ static cetus_cycle_t      cetus_exit_cycle;
 
 
 static int
-open_admin(cetus_cycle_t *cycle)
+open_plugins(cetus_cycle_t *cycle, int admin_only)
 {
     int      i;
 
+    g_message("%s: call open_plugins:%d", G_STRLOC, cycle->modules->len);
+
     for (i = 0; i < cycle->modules->len; i++) {
         chassis_plugin *p = cycle->modules->pdata[i];
-        if (strcmp(p->name, "admin") == 0) {
+        if (admin_only) {
+            g_message("%s: applying config of plugin %s", G_STRLOC, p->name);
+            if (strcmp(p->name, "admin") == 0) {
+                cycle->enable_admin_listen = 1;
+                g_assert(p->apply_config);
+                g_message("%s: call apply_config", G_STRLOC);
+                if (0 != p->apply_config(cycle, p->config)) {
+                    g_critical("%s: applying config of plugin %s failed", G_STRLOC, p->name);
+                    return -1;
+                }
+            }
+        } else {
             cycle->enable_admin_listen = 1;
-            g_assert(p->apply_config);
-            g_message("%s: call apply_config", G_STRLOC);
+            g_message("%s: applying config of plugin %s", G_STRLOC, p->name);
             if (0 != p->apply_config(cycle, p->config)) {
                 g_critical("%s: applying config of plugin %s failed", G_STRLOC, p->name);
                 return -1;
@@ -114,6 +126,90 @@ cetus_exec_new_binary(cetus_cycle_t *cycle, char **argv)
     return cetus_execute(cycle, &ctx);
 }
 
+static void retrieve_user_from_remote(chassis_config_t* conf)
+{
+    struct config_object_t *object = chassis_config_get_object(conf, "users");
+    if  (object) {
+        if (chassis_config_mysql_query_object(conf, object, "users")) {
+            conf->options_update_flag = 0;
+            conf->options_success_flag = 1;
+        } else {
+            conf->options_success_flag = 0;
+            conf->options_update_flag = 0;
+        }
+    } else {
+        conf->options_success_flag = 0;
+        conf->options_update_flag = 0;
+    }
+}
+
+gpointer retrieve_remote_config_mainloop(gpointer user_data) {
+    chassis *chas = user_data;
+    chassis_config_t* conf = chas->config_manager;
+    struct config_object_t *object;
+
+    g_message("%s: retrieve_remote_config_mainloop visited", G_STRLOC);
+    while(!chassis_is_shutdown()) {
+        if (!conf->options_update_flag) {
+            usleep(1000);
+        } else {
+            switch (chas->asynchronous_type) {
+                case ASYNCHRONOUS_RELOAD:
+                    chassis_config_load_options_mysql(conf);
+                    break;
+                case ASYNCHRONOUS_RELOAD_VARIABLES:
+                    chassis_config_reload_variables(conf, "variables");
+                    break;
+                case ASYNCHRONOUS_RELOAD_USER:
+                    retrieve_user_from_remote(conf);
+                    break;
+                case ASYNCHRONOUS_UPDATE_OR_DELETE_USER_PASSWORD:
+                    object = chassis_config_get_object(conf, "users");
+                    chassis_config_mysql_write_object(conf, object, "users", conf->user_data);
+                    g_free(conf->user_data);
+                    conf->user_data = NULL;
+                    g_message("%s: ASYNCHRONOUS_UPDATE_OR_DELETE_USER_PASSWORD visited", G_STRLOC);
+                    break;
+                case ASYNCHRONOUS_CONFIG_REMOTE_SHARD:
+                    object = chassis_config_get_object(conf, "sharding");
+                    chassis_config_mysql_write_object(conf, object, "sharding", conf->user_data);
+                    g_free(conf->user_data);
+                    conf->user_data = NULL;
+                    break;
+                case ASYNCHRONOUS_SET_CONFIG:
+                    g_message("%s: ASYNCHRONOUS_SET_CONFIG visited", G_STRLOC);
+                    chassis_config_set_remote_options(conf, conf->key, conf->value);
+                    break;
+                default:
+                    break;
+            }
+        }
+    }
+}
+
+
+static void
+cetus_remote_config_start_thread(chassis *chas)
+{
+    g_message("%s: cetus_remote_config_start_thread visited", G_STRLOC);
+
+    GThread *new_thread = NULL;
+#if !GLIB_CHECK_VERSION(2, 32, 0)
+    GError *error = NULL;
+    new_thread = g_thread_create(retrieve_remote_config_mainloop, chas, TRUE, &error);
+    if (new_thread == NULL && error != NULL) {
+        g_critical("%s:Create thread error: %s", G_STRLOC, error->message);
+        g_clear_error(&error);
+    }
+#else
+    new_thread = g_thread_new("remote-config-thread", retrieve_remote_config_mainloop, chas);
+    if (new_thread == NULL) {
+        g_critical("%s:Create thread error.", G_STRLOC);
+    }
+#endif
+}
+
+
 void
 cetus_master_process_cycle(cetus_cycle_t *cycle)
 {
@@ -124,11 +220,19 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
 
     cycle->cpus = sysconf(_SC_NPROCESSORS_ONLN);
 
-    cetus_start_worker_processes(cycle, cycle->worker_processes,
-                               CETUS_PROCESS_RESPAWN);
+    if (cycle->worker_processes) {
+        cetus_start_worker_processes(cycle, cycle->worker_processes,
+                CETUS_PROCESS_RESPAWN);
 
-    if (open_admin(cycle) == -1) {
-        return;
+        if (open_plugins(cycle, 1) == -1) {
+            return;
+        }
+    } else {
+        if (open_plugins(cycle, 0) == -1) {
+            return;
+        }
+        cetus_remote_config_start_thread(cycle);
+        cetus_sql_log_start_thread_once(cycle->sql_mgr);
     }
 
     if (cycle->pid_file) {
@@ -198,24 +302,32 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
         if (cetus_terminate) {
             if (live && try_cnt >= 10) {
                 try_cnt = 0;
-                cetus_signal_worker_processes(cycle,
-                        cetus_signal_value(CETUS_TERMINATE_SIGNAL));
+                if (cycle->worker_processes) {
+                    cetus_signal_worker_processes(cycle,
+                            cetus_signal_value(CETUS_TERMINATE_SIGNAL));
+                }
             }
             continue;
         }
 
         if (cetus_quit) {
-            cetus_signal_worker_processes(cycle,
-                                        cetus_signal_value(CETUS_SHUTDOWN_SIGNAL));
+            if (cycle->worker_processes) {
+                cetus_signal_worker_processes(cycle,
+                        cetus_signal_value(CETUS_SHUTDOWN_SIGNAL));
+            }
             live = 0;
             continue;
         }
 
         if (cetus_restart) {
             cetus_restart = 0;
-            cetus_start_worker_processes(cycle, cycle->worker_processes,
-                                       CETUS_PROCESS_RESPAWN);
-            open_admin(cycle);
+            if (cycle->worker_processes) {
+                cetus_start_worker_processes(cycle, cycle->worker_processes,
+                        CETUS_PROCESS_RESPAWN);
+                open_plugins(cycle, 1);
+            } else {
+                open_plugins(cycle, 0);
+            }
     
             live = 1;
         }
@@ -242,7 +354,9 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
                 p->stop_listening(cycle, p->config);
             }
 
-            cetus_signal_worker_processes(cycle, cetus_signal_value(CETUS_NOACCEPT_SIGNAL));
+            if (cycle->worker_processes) {
+                cetus_signal_worker_processes(cycle, cetus_signal_value(CETUS_NOACCEPT_SIGNAL));
+            }
         }
     }
 }
@@ -544,6 +658,7 @@ cetus_master_process_exit(cetus_cycle_t *cycle)
 }
 
 
+
 static void
 cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
 {
@@ -621,6 +736,7 @@ cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
 #endif
 
     cetus_monitor_start_thread(cycle->priv->monitor, cycle);
+    cetus_remote_config_start_thread(cycle);
     cetus_sql_log_start_thread_once(cycle->sql_mgr);
 
 
@@ -738,6 +854,7 @@ static
 cetus_channel_t *retrieve_admin_resp(network_mysqld_con *con)
 {
     GList *chunk;
+    cetus_channel_t *ch = NULL;
     g_message("%s:call retrieve_admin_resp", G_STRLOC);
     int total = sizeof(cetus_channel_t); 
     int resp_len = 0;
@@ -750,7 +867,7 @@ cetus_channel_t *retrieve_admin_resp(network_mysqld_con *con)
 
     total = total + resp_len;
 
-    cetus_channel_t *ch = (cetus_channel_t *) g_new0(char, total);
+    ch = (cetus_channel_t *) g_new0(char, total);
     ch->admin_sql_resp_len = resp_len;
 
     unsigned char *p = ch->admin_sql_resp;
@@ -768,26 +885,29 @@ cetus_channel_t *retrieve_admin_resp(network_mysqld_con *con)
 }
 
 
-static 
 void send_admin_resp(chassis *cycle, network_mysqld_con *con)
 {
-    g_message("%s:call send_admin_resp, cetus_process_slot:%d", G_STRLOC, cetus_process_slot);
-    cetus_channel_t  *ch = retrieve_admin_resp(con); 
-    ch->basics.command = CETUS_CMD_ADMIN_RESP;
-    ch->basics.pid = cetus_processes[cetus_process_slot].pid;
-    ch->basics.slot = cetus_process_slot;
-    ch->basics.fd = cetus_processes[cetus_process_slot].parent_child_channel[1];
+    if (cycle->worker_processes) {
+        g_message("%s:call send_admin_resp, cetus_process_slot:%d", G_STRLOC, cetus_process_slot);
+        cetus_channel_t  *ch = retrieve_admin_resp(con); 
+        ch->basics.command = CETUS_CMD_ADMIN_RESP;
+        ch->basics.pid = cetus_processes[cetus_process_slot].pid;
+        ch->basics.slot = cetus_process_slot;
+        ch->basics.fd = cetus_processes[cetus_process_slot].parent_child_channel[1];
 
-    g_message("%s:send resp to admin, cetus_process_slot:%d", G_STRLOC, cetus_process_slot);
-    g_message("%s: pass sql resp channel s:%i pid:%d to:%d, fd:%d", G_STRLOC,
-            ch->basics.slot, ch->basics.pid, cetus_processes[cetus_process_slot].pid,
-            cetus_processes[cetus_process_slot].parent_child_channel[1]);
+        g_message("%s:send resp to admin, cetus_process_slot:%d", G_STRLOC, cetus_process_slot);
+        g_message("%s: pass sql resp channel s:%i pid:%d to:%d, fd:%d", G_STRLOC,
+                ch->basics.slot, ch->basics.pid, cetus_processes[cetus_process_slot].pid,
+                cetus_processes[cetus_process_slot].parent_child_channel[1]);
 
-    /* TODO: AGAIN */
-    cetus_write_channel(cetus_processes[cetus_process_slot].parent_child_channel[1],
-            ch, sizeof(*ch) + ch->admin_sql_resp_len);
-    g_debug("%s:cetus_write_channel send:%d", G_STRLOC, (int) (sizeof(*ch) + ch->admin_sql_resp_len));
-    g_free(ch);
+        /* TODO: AGAIN */
+        cetus_write_channel(cetus_processes[cetus_process_slot].parent_child_channel[1],
+                ch, sizeof(*ch) + ch->admin_sql_resp_len);
+        g_debug("%s:cetus_write_channel send:%d", G_STRLOC, (int) (sizeof(*ch) + ch->admin_sql_resp_len));
+    } else {
+        con->state = ST_SEND_QUERY_RESULT;
+        network_mysqld_con_handle(-1, 0, con);
+    }
 }
 
 
@@ -815,12 +935,10 @@ process_admin_sql(cetus_cycle_t *cycle, cetus_channel_t *ch)
         func = plugin->con_exectute_sql;
         retval = (*func) (cycle, con);
         g_debug("%s: call admin:%d", G_STRLOC, retval);
-        send_admin_resp(cycle, con);
+        if (!con->is_admin_waiting_resp) {
+            send_admin_resp(cycle, con);
+        }
     }
-
-    network_queue_clear(con->client->send_queue);
-    network_mysqld_con_free(con);
-
 }
 
 static void

@@ -66,6 +66,15 @@ typedef struct chassis chassis;
 #define MAX_ALLOWED_PACKET_DEFAULT (32 * MB)
 #define MAX_ALLOWED_PACKET_FLOOR   (1 * KB)
 
+enum asynchronous_admin_type {
+    ASYNCHRONOUS_RELOAD = 1,
+    ASYNCHRONOUS_RELOAD_VARIABLES,
+    ASYNCHRONOUS_RELOAD_USER,
+    ASYNCHRONOUS_UPDATE_OR_DELETE_USER_PASSWORD,
+    ASYNCHRONOUS_CONFIG_REMOTE_SHARD,
+    ASYNCHRONOUS_SET_CONFIG,
+};
+
 typedef struct rw_op_t {
     uint64_t ro;
     uint64_t rw;
@@ -128,43 +137,44 @@ struct chassis {
     char *unix_socket_name;
 
     guint64 sess_key;
-    unsigned int maintain_close_mode;
-    unsigned int disable_threads;
-    int ssl;
-    unsigned int is_tcp_stream_enabled;
-    unsigned int query_cache_enabled;
-    unsigned int is_back_compressed;
-    unsigned int compress_support;
-    unsigned int client_found_rows;
-    unsigned int master_preferred;
-    unsigned int is_manual_down;
-    unsigned int is_reduce_conns;
-    unsigned int xa_log_detailed;
-    unsigned int check_slave_delay;
-    int socketpair_mutex;
-    int complement_conn_flag;
-    int default_query_cache_timeout;
-    int client_idle_timeout;
-    int maintained_client_idle_timeout;
-    double slave_delay_down_threshold_sec;
-    double slave_delay_recover_threshold_sec;
-    unsigned int long_query_time;
+
+    unsigned int maintain_close_mode:1;
+    unsigned int disable_threads:1;
+    unsigned int ssl:1;
+    unsigned int is_tcp_stream_enabled:1;
+    unsigned int query_cache_enabled:1;
+    unsigned int is_back_compressed:1;
+    unsigned int compress_support:1;
+    unsigned int client_found_rows:1;
+    unsigned int master_preferred:1;
+    unsigned int is_manual_down:1;
+    unsigned int is_reduce_conns:1;
+    unsigned int xa_log_detailed:1;
+    unsigned int check_slave_delay:1;
+    unsigned int complement_conn_flag:1;
+    unsigned int disable_dns_cache:1;
+    unsigned int enable_admin_listen:1;
+    unsigned int is_need_to_create_conns:1;
+
     unsigned int min_req_time_for_cache;
+    unsigned int long_query_time;
     unsigned int internal_trx_isolation_level;
-    int cetus_max_allowed_packet;
-    int disable_dns_cache;
-    int enable_admin_listen;
     int need_to_refresh_server_connections;
 
-    int worker_processes;
     int cpus;
+    int worker_processes;
     int child_instant_exit_times;
 
+    int cetus_max_allowed_packet;
+    int maintained_client_idle_timeout;
+    int client_idle_timeout;
+    int default_query_cache_timeout;
+    int socketpair_mutex;
     int max_alive_time;
     int merged_output_size;
     int max_header_size;
     int compressed_merged_output_size;
-    int is_need_to_create_conns;
+    int asynchronous_type;
 
     /* Conn-pool initialize settings */
     int max_idle_connections;
@@ -172,6 +182,8 @@ struct chassis {
 
     long long max_resp_len;
     unsigned long long dist_tran_id;
+    double slave_delay_recover_threshold_sec;
+    double slave_delay_down_threshold_sec;
 
     char dist_tran_prefix[MAX_DIST_TRAN_PREFIX];
 
@@ -219,6 +231,7 @@ struct chassis {
 
     gint group_replication_mode;
 
+    struct event remote_config_event;
     struct event auto_create_conns_event;
     struct event update_timer_event;
 

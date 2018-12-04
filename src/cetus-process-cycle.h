@@ -17,6 +17,7 @@
 
 
 void cetus_master_process_cycle(cetus_cycle_t *cycle);
+void send_admin_resp(chassis *cycle, network_mysqld_con *con);
 
 extern unsigned int cetus_process;
 extern unsigned int cetus_worker;

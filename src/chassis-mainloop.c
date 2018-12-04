@@ -347,11 +347,7 @@ chassis_mainloop(void *_chas)
 
 #if !GLIB_CHECK_VERSION(2, 32, 0)
     /* GLIB below 2.32 must call thread_init if multi threads */
-    if (!chas->disable_threads) {
-        g_thread_init(NULL);
-    } else {
-        g_debug("Disable threads creation.");
-    }
+    g_thread_init(NULL);
 #endif
 
     if (cetus_init_signals() == -1 ) {

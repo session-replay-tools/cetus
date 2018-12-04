@@ -246,6 +246,10 @@ network_connection_pool_add(network_connection_pool *pool, network_socket *sock)
     if (!g_queue_is_empty(sock->recv_queue->chunks)) {
         g_warning("%s: server recv queue not empty", G_STRLOC);
     }
+    if (!g_queue_is_empty(sock->recv_queue_raw->chunks)) {
+        g_warning("%s: server recv queue raw not empty", G_STRLOC);
+        network_queue_clear(sock->recv_queue_raw);
+    }
 
     network_connection_pool_entry *entry;
     entry = network_connection_pool_entry_new();

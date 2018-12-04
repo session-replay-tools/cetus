@@ -26,6 +26,7 @@
 #include "chassis-options-utils.h"
 #include "chassis-sql-log.h"
 #include "cetus-acl.h"
+#include "cetus-process-cycle.h"
 
 static gint save_setting(chassis *srv, gint *effected_rows);
 static void send_result(network_socket *client, gint ret, gint affected);
@@ -71,7 +72,7 @@ void admin_clear_error(network_mysqld_con* con)
 }
 void admin_select_all_backends(network_mysqld_con* con)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->admin_read_merge = 1;
         return;
     }
@@ -189,7 +190,7 @@ void admin_select_all_backends(network_mysqld_con* con)
 
 void admin_select_conn_details(network_mysqld_con *con)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->admin_read_merge = 1;
         return;
     }
@@ -399,7 +400,7 @@ void admin_select_conn_details(network_mysqld_con *con)
 
 void admin_show_connectionlist(network_mysqld_con *con, int show_count)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->admin_read_merge = 1;
         return;
     }
@@ -709,7 +710,7 @@ void admin_show_connectionlist(network_mysqld_con *con, int show_count)
 
 void admin_acl_show_rules(network_mysqld_con *con, gboolean is_white)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->ask_one_worker = 1;
         con->admin_read_merge = 1;
         return;
@@ -735,7 +736,7 @@ void admin_acl_show_rules(network_mysqld_con *con, gboolean is_white)
 
 void admin_acl_add_rule(network_mysqld_con *con, gboolean is_white, char *addr)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
@@ -756,7 +757,7 @@ void admin_acl_add_rule(network_mysqld_con *con, gboolean is_white, char *addr)
 
 void admin_acl_delete_rule(network_mysqld_con *con, gboolean is_white, char *addr)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
     chassis *chas = con->srv;
@@ -801,7 +802,7 @@ static GList* admin_get_all_options(chassis* chas)
 
 void admin_show_variables(network_mysqld_con* con, const char* like)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->ask_one_worker = 1; 
         con->admin_read_merge = 1;
         return;
@@ -843,7 +844,7 @@ void admin_show_variables(network_mysqld_con* con, const char* like)
 
 void admin_show_status(network_mysqld_con* con, const char* like)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->admin_read_merge = 1;
         return;
     }
@@ -879,7 +880,7 @@ void admin_show_status(network_mysqld_con* con, const char* like)
 
 void admin_set_reduce_conns(network_mysqld_con* con, int mode)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
@@ -903,7 +904,7 @@ void admin_set_reduce_conns(network_mysqld_con* con, int mode)
 void admin_set_server_conn_refresh(network_mysqld_con* con)
 {
     g_message("%s:call admin_set_server_conn_refresh", G_STRLOC);
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
@@ -914,7 +915,7 @@ void admin_set_server_conn_refresh(network_mysqld_con* con)
 
 void admin_set_maintain(network_mysqld_con* con, int mode)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
@@ -928,7 +929,7 @@ void admin_set_maintain(network_mysqld_con* con, int mode)
 
 void admin_show_maintain(network_mysqld_con* con)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->admin_read_merge = 1;
         return;
     }
@@ -971,7 +972,7 @@ void admin_select_version(network_mysqld_con* con)
 
 void admin_select_connection_stat(network_mysqld_con* con, int backend_ndx, char *user)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->admin_read_merge = 1;
         return;
     }
@@ -1024,7 +1025,7 @@ static enum cetus_pwd_type password_type(char* table)
 
 void admin_select_user_password(network_mysqld_con* con, char* from_table, char *user)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->ask_one_worker = 1;
         con->admin_read_merge = 1;
         return;
@@ -1080,33 +1081,106 @@ void admin_select_user_password(network_mysqld_con* con, char* from_table, char 
     }
 }
 
+static void admin_update_or_delete_remote_user_password_callback(int fd, short what, void *arg)
+{
+    network_mysqld_con* con = arg;
+    chassis *chas = con->srv;
+    chassis_config_t* conf = con->srv->config_manager;
+
+    if (conf->options_update_flag) {
+        conf->retries++;
+        if (conf->retries == 0) {
+            network_mysqld_con_send_error(con->client, C("update remote user password timeout"));
+            con->is_admin_waiting_resp = 0;
+            send_admin_resp(con->srv, con);
+            g_message("%s call send_admin_resp over, wait:%d", G_STRLOC, conf->ms_timeout);
+            return;
+        }
+        conf->ms_timeout = conf->ms_timeout << 1;
+        int sec = conf->ms_timeout / 1000;
+        int usec = (conf->ms_timeout - 1000 * sec) * 1000;
+        struct timeval check_interval = {sec, usec};
+        chassis_event_add_with_timeout(chas, &chas->remote_config_event, &check_interval);
+        g_message("%s call admin_update_or_delete_remote_user_password_callback, timeout:%d", G_STRLOC, conf->ms_timeout);
+        return;
+    }
+
+    if (!conf->options_success_flag) {
+        network_mysqld_con_send_error(con->client, C("update remote user password failed"));
+        con->is_admin_waiting_resp = 0;
+        send_admin_resp(con->srv, con);
+        g_message("%s call send_admin_resp over", G_STRLOC);
+        return;
+    }
+
+    network_mysqld_con_send_ok_full(con->client, 1, 0,
+                                    SERVER_STATUS_AUTOCOMMIT, 0);
+
+    con->is_admin_waiting_resp = 0;
+    send_admin_resp(con->srv, con);
+    g_message("%s call send_admin_resp over", G_STRLOC);
+}
+
+static void admin_update_or_delete_remote_user_password(network_mysqld_con* con, chassis_config_t *conf)
+{
+    g_message("%s call admin_update_or_delete_remote_user_password", G_STRLOC);
+    chassis* chas = con->srv;
+
+    conf->options_update_flag = 1;
+    chas->asynchronous_type = ASYNCHRONOUS_UPDATE_OR_DELETE_USER_PASSWORD;
+
+    evtimer_set(&chas->remote_config_event, admin_update_or_delete_remote_user_password_callback, con);
+    struct timeval check_interval = {0, 2000};
+    conf->ms_timeout = 2;
+    conf->retries = 1;
+    chassis_event_add_with_timeout(chas, &chas->remote_config_event, &check_interval);
+
+    con->is_admin_waiting_resp = 1;
+}
+
 /* update or insert */
 void admin_update_user_password(network_mysqld_con* con, char *from_table,
                                       char *user, char *password)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
     chassis_private *g = con->srv->priv;
     enum cetus_pwd_type pwd_type = password_type(from_table);
     gboolean affected = cetus_users_update_record(g->users, user, password, pwd_type);
-    if (affected)
-        cetus_users_write_json(g->users);
+    
+    g_message("%s after cetus_users_update_record", G_STRLOC);
+    if (affected) {
+        g_message("%s affected is true", G_STRLOC);
+        chassis_config_t* conf = con->srv->config_manager;
+        if (cetus_users_write_json(g->users) == FALSE) {
+            if (conf->type == CHASSIS_CONF_MYSQL) {
+                return admin_update_or_delete_remote_user_password(con, conf);
+            }
+        }
+    }
     network_mysqld_con_send_ok_full(con->client, affected?1:0, 0,
                                     SERVER_STATUS_AUTOCOMMIT, 0);
 }
 
 void admin_delete_user_password(network_mysqld_con* con, char* user)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
     chassis_private *g = con->srv->priv;
     gboolean affected = cetus_users_delete_record(g->users, user);
-    if (affected)
-        cetus_users_write_json(g->users);
+    if (affected) {
+        g_message("%s affected is true", G_STRLOC);
+        chassis_config_t* conf = con->srv->config_manager;
+        if (cetus_users_write_json(g->users) == FALSE) {
+            if (conf->type == CHASSIS_CONF_MYSQL) {
+                return admin_update_or_delete_remote_user_password(con, conf);
+            }
+        }
+    }
     network_mysqld_con_send_ok_full(con->client, affected?1:0, 0,
                                     SERVER_STATUS_AUTOCOMMIT, 0);
 }
@@ -1141,7 +1215,7 @@ static backend_state_t backend_state(const char* str)
 
 void admin_insert_backend(network_mysqld_con* con, char *addr, char *type, char *state)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
@@ -1184,7 +1258,7 @@ void admin_insert_backend(network_mysqld_con* con, char *addr, char *type, char 
 void admin_update_backend(network_mysqld_con* con, GList* equations,
                           char *cond_key, char *cond_val)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
@@ -1256,7 +1330,7 @@ void admin_update_backend(network_mysqld_con* con, GList* equations,
 
 void admin_delete_backend(network_mysqld_con* con, char *key, char *val)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
@@ -1313,7 +1387,7 @@ void admin_get_stats(network_mysqld_con* con, char* p)
         return;
     }
     
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->admin_read_merge = 1;
         return;
     }
@@ -1399,7 +1473,7 @@ static void admin_supported_config(network_mysqld_con* con)
 
 void admin_get_config(network_mysqld_con* con, char* p)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->admin_read_merge = 1;
         return;
     }
@@ -1434,10 +1508,10 @@ void admin_get_config(network_mysqld_con* con, char* p)
         snprintf(buf2, 32, "%d", chas->max_idle_connections);
         snprintf(buf3, 32, "%lld", chas->max_resp_len);
         snprintf(buf4, 32, "%d", chas->master_preferred);
-        APPEND_ROW_3_COL(rows, g_strdup(buffer), "pool.default_pool_size", buf1);
-        APPEND_ROW_3_COL(rows, g_strdup(buffer), "pool.max_pool_size", buf2);
-        APPEND_ROW_3_COL(rows, g_strdup(buffer), "pool.max_resp_len", buf3);
-        APPEND_ROW_3_COL(rows, g_strdup(buffer), "pool.master_preferred", buf4);
+        APPEND_ROW_3_COL(rows, g_strdup(buffer), "pool.default-pool-size", buf1);
+        APPEND_ROW_3_COL(rows, g_strdup(buffer), "pool.max-pool-size", buf2);
+        APPEND_ROW_3_COL(rows, g_strdup(buffer), "pool.max-resp-len", buf3);
+        APPEND_ROW_3_COL(rows, g_strdup(buffer), "pool.master-preferred", buf4);
     } else {
         APPEND_ROW_3_COL(rows, g_strdup(buffer), (char*)p, (char*)p);
     }
@@ -1447,9 +1521,66 @@ void admin_get_config(network_mysqld_con* con, char* p)
     g_ptr_array_free(rows, TRUE);
 }
 
+static void admin_set_remote_config_callback(int fd, short what, void *arg)
+{
+    g_message("%s call admin_update_or_delete_remote_user_password_callback", G_STRLOC);
+    network_mysqld_con* con = arg;
+    chassis *chas = con->srv;
+    chassis_config_t* conf = con->srv->config_manager;
+
+    if (conf->options_update_flag) {
+        conf->retries++;
+        if (conf->retries == 0) {
+            network_mysqld_con_send_error(con->client, C("update remote config timeout"));
+            con->is_admin_waiting_resp = 0;
+            send_admin_resp(con->srv, con);
+            g_message("%s call admin_set_remote_config_callback timeout, last timeout:%d", G_STRLOC, conf->ms_timeout);
+            return;
+        }
+        conf->ms_timeout = conf->ms_timeout << 1;
+        int sec = conf->ms_timeout / 1000;
+        int usec = (conf->ms_timeout - 1000 * sec) * 1000;
+        struct timeval check_interval = {sec, usec};
+        chassis_event_add_with_timeout(chas, &chas->remote_config_event, &check_interval);
+        g_message("%s call admin_set_remote_config_callback, timeout:%d", G_STRLOC, conf->ms_timeout);
+        return;
+    }
+
+    if (!conf->options_success_flag) {
+        network_mysqld_con_send_error(con->client,C("Variable is set locally but cannot replace remote settings"));
+        con->is_admin_waiting_resp = 0;
+        send_admin_resp(con->srv, con);
+        g_message("%s call send_admin_resp over", G_STRLOC);
+        return;
+    }
+
+    network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+
+    con->is_admin_waiting_resp = 0;
+    send_admin_resp(con->srv, con);
+    g_message("%s call send_admin_resp over", G_STRLOC);
+}
+
+static void admin_set_remote_config(network_mysqld_con* con, chassis_config_t *conf)
+{
+    g_message("%s call admin_set_remote_config", G_STRLOC);
+    chassis* chas = con->srv;
+
+    conf->options_update_flag = 1;
+    chas->asynchronous_type = ASYNCHRONOUS_SET_CONFIG;
+
+    evtimer_set(&chas->remote_config_event, admin_set_remote_config_callback, con);
+    struct timeval check_interval = {0, 2000};
+    conf->ms_timeout = 2;
+    conf->retries = 1;
+    chassis_event_add_with_timeout(chas, &chas->remote_config_event, &check_interval);
+
+    con->is_admin_waiting_resp = 1;
+}
+
 void admin_set_config(network_mysqld_con* con, char* key, char* value)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
@@ -1469,19 +1600,20 @@ void admin_set_config(network_mysqld_con* con, char* key, char* value)
 
     g_list_free(options);
 
-    if(0 == ret && !chassis_config_set_remote_options(con->srv->config_manager, key, value)) {
-        network_mysqld_con_send_error(con->client,C("Variable is set locally but cannot replace remote settings"));
+
+    chassis_config_t* conf = con->srv->config_manager;
+
+    if(ret == 0 && conf->type == CHASSIS_CONF_MYSQL) {
+        conf->key = key;
+        conf->value = value;
+        admin_set_remote_config(con, conf);
         return;
     }
 
     if(0 == ret) {
-        if(con->srv->config_manager->type == CHASSIS_CONF_MYSQL) {
-            network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
-        } else {
-            gint effected_rows = 0;
-            gint save_ret = save_setting(con->srv, &effected_rows);
-            send_result(con->client, save_ret, 1);
-        }
+        gint effected_rows = 0;
+        gint save_ret = save_setting(con->srv, &effected_rows);
+        send_result(con->client, save_ret, 1);
     } else if(ASSIGN_NOT_SUPPORT == ret){
         network_mysqld_con_send_error_full(con->client, C("Variable cannot be set dynamically"), 1065, "28000");
     } else if(ASSIGN_VALUE_INVALID == ret){
@@ -1491,20 +1623,41 @@ void admin_set_config(network_mysqld_con* con, char* key, char* value)
     }
 }
 
-static void admin_reload_settings(network_mysqld_con* con)
+static void admin_update_settings(int fd, short what, void *arg)
 {
-    GList *options = admin_get_all_options(con->srv);
-    gint ret = chassis_config_reload_options(con->srv->config_manager);
-    if (ret == -1) {
-        network_mysqld_con_send_error(con->client,
-                    C("Can't connect to remote or can't get config"));
-                return;
-    }
-    if (ret == -2) {
-        network_mysqld_con_send_error(con->client,
-            C("Can't load options, only support remote config"));
+    g_message("%s call admin_update_settings", G_STRLOC);
+    network_mysqld_con* con = arg;
+    chassis *chas = con->srv;
+    chassis_config_t* conf = con->srv->config_manager;
+
+    if (conf->options_update_flag) {
+        conf->retries++;
+        if (conf->retries == 0) {
+            network_mysqld_con_send_error(con->client, C("update remote settings timeout"));
+            con->is_admin_waiting_resp = 0;
+            send_admin_resp(con->srv, con);
+            g_message("%s call admin_update_settings timeout, last timeout:%d", G_STRLOC, conf->ms_timeout);
+            return;
+        }
+        conf->ms_timeout = conf->ms_timeout << 1;
+        int sec = conf->ms_timeout / 1000;
+        int usec = (conf->ms_timeout - 1000 * sec) * 1000;
+        struct timeval check_interval = {sec, usec};
+        chassis_event_add_with_timeout(chas, &chas->remote_config_event, &check_interval);
+        g_message("%s call admin_update_settings, timeout:%d", G_STRLOC, conf->ms_timeout);
         return;
     }
+
+    if (!conf->options_success_flag) {
+        network_mysqld_con_send_error(con->client, C("load config failed"));
+        con->is_admin_waiting_resp = 0;
+        send_admin_resp(con->srv, con);
+        g_message("%s call send_admin_resp over", G_STRLOC);
+        return;
+    }
+
+    GList *options = admin_get_all_options(con->srv);
+
     GHashTable *opts_table = chassis_config_get_options(con->srv->config_manager);
 
     int affected_rows = 0;
@@ -1530,11 +1683,174 @@ static void admin_reload_settings(network_mysqld_con* con)
     g_list_free(options);
     network_mysqld_con_send_ok_full(con->client, affected_rows, 0,
                                     SERVER_STATUS_AUTOCOMMIT, 0);
+    con->is_admin_waiting_resp = 0;
+    send_admin_resp(con->srv, con);
+    g_message("%s call send_admin_resp over", G_STRLOC);
+}
+
+
+static void admin_reload_settings(network_mysqld_con* con)
+{
+    chassis* chas = con->srv;
+    chassis_config_t *conf = chas->config_manager;
+
+    conf->options_update_flag = 1;
+    chas->asynchronous_type = ASYNCHRONOUS_RELOAD;
+
+    evtimer_set(&chas->remote_config_event, admin_update_settings, con);
+    struct timeval check_interval = {0, 2000};
+    conf->ms_timeout = 2;
+    conf->retries = 1;
+    chassis_event_add_with_timeout(chas, &chas->remote_config_event, &check_interval);
+
+    con->is_admin_waiting_resp = 1;
+}
+
+static void admin_update_user(int fd, short what, void *arg)
+{
+    network_mysqld_con* con = arg;
+    chassis *chas = con->srv;
+    chassis_config_t* conf = con->srv->config_manager;
+
+    if (conf->options_update_flag) {
+        conf->retries++;
+        if (conf->retries == 0) {
+            network_mysqld_con_send_error(con->client, C("update user timeout"));
+            con->is_admin_waiting_resp = 0;
+            send_admin_resp(con->srv, con);
+            g_message("%s call send_admin_resp timeout, last timeout:%d", G_STRLOC, conf->ms_timeout);
+            return;
+        }
+        conf->ms_timeout = conf->ms_timeout << 1;
+        int sec = conf->ms_timeout / 1000;
+        int usec = (conf->ms_timeout - 1000 * sec) * 1000;
+        struct timeval check_interval = {sec, usec};
+        chassis_event_add_with_timeout(chas, &chas->remote_config_event, &check_interval);
+        g_message("%s call admin_update_user, timeout:%d", G_STRLOC, conf->ms_timeout);
+        return;
+    }
+
+    if (!conf->options_success_flag) {
+        network_mysqld_con_send_error(con->client, C("update user failed"));
+        con->is_admin_waiting_resp = 0;
+        send_admin_resp(con->srv, con);
+        g_message("%s call send_admin_resp over", G_STRLOC);
+        return;
+    }
+
+    char *buffer = NULL;
+    if (chassis_config_query_object(conf, "users", &buffer, 0) == FALSE || buffer == NULL) {
+        if (buffer) {
+            g_free(buffer);
+        }
+        network_mysqld_con_send_error(con->client, C("read user failed"));
+        return;
+    }
+ 
+    cetus_users_t *users = con->srv->priv->users;
+    gboolean success = cetus_users_parse_json(users, buffer);
+    if (success) {
+        g_message("read %d users", g_hash_table_size(users->records));
+    }
+    g_free(buffer);
+
+    network_mysqld_con_send_ok(con->client);
+
+    con->is_admin_waiting_resp = 0;
+    send_admin_resp(con->srv, con);
+    g_message("%s call send_admin_resp over", G_STRLOC);
+}
+
+
+static void admin_reload_user(network_mysqld_con* con, chassis_config_t *conf)
+{
+    chassis* chas = con->srv;
+
+    conf->options_update_flag = 1;
+    chas->asynchronous_type = ASYNCHRONOUS_RELOAD_USER;
+
+    evtimer_set(&chas->remote_config_event, admin_update_user, con);
+    struct timeval check_interval = {0, 2000};
+    conf->ms_timeout = 2;
+    conf->retries = 1;
+    chassis_event_add_with_timeout(chas, &chas->remote_config_event, &check_interval);
+
+    con->is_admin_waiting_resp = 1;
+}
+
+static void admin_update_variables(int fd, short what, void *arg)
+{
+    g_message("%s call admin_update_variables", G_STRLOC);
+    network_mysqld_con* con = arg;
+    chassis *chas = con->srv;
+    chassis_config_t* conf = con->srv->config_manager;
+
+    if (conf->options_update_flag) {
+        conf->retries++;
+        if (conf->retries == 0) {
+            network_mysqld_con_send_error(con->client, C("update variables timeout"));
+            con->is_admin_waiting_resp = 0;
+            send_admin_resp(con->srv, con);
+            g_message("%s call admin_update_variables timeout, last timeout:%d", G_STRLOC, conf->ms_timeout);
+            return;
+        }
+        conf->ms_timeout = conf->ms_timeout << 1;
+        int sec = conf->ms_timeout / 1000;
+        int usec = (conf->ms_timeout - 1000 * sec) * 1000;
+        struct timeval check_interval = {sec, usec};
+        chassis_event_add_with_timeout(chas, &chas->remote_config_event, &check_interval);
+        g_message("%s call admin_update_variables, timeout:%d", G_STRLOC, conf->ms_timeout);
+        return;
+    }
+
+    if (!conf->options_success_flag) {
+        network_mysqld_con_send_error(con->client, C("load variables failed"));
+        con->is_admin_waiting_resp = 0;
+        send_admin_resp(con->srv, con);
+        g_message("%s call send_admin_resp over", G_STRLOC);
+        return;
+    }
+
+    char *buffer = NULL;
+    if (chassis_config_query_object(conf, "variables", &buffer, 0) == FALSE || buffer == NULL) {
+        if (buffer) {
+            g_free(buffer);
+        }
+        network_mysqld_con_send_error(con->client, C("read variables failed"));
+        return;
+    }
+ 
+    if (sql_filter_vars_reload_str_rules(buffer) == FALSE) {
+        g_warning("variable rule reload error");
+    }
+    g_free(buffer);
+    network_mysqld_con_send_ok(con->client);
+
+    con->is_admin_waiting_resp = 0;
+    send_admin_resp(con->srv, con);
+    g_message("%s call send_admin_resp over", G_STRLOC);
+}
+
+
+static void admin_reload_variables(network_mysqld_con* con, chassis_config_t *conf)
+{
+    chassis* chas = con->srv;
+
+    conf->options_update_flag = 1;
+    chas->asynchronous_type = ASYNCHRONOUS_RELOAD_VARIABLES;
+
+    evtimer_set(&chas->remote_config_event, admin_update_variables, con);
+    struct timeval check_interval = {0, 2000};
+    conf->ms_timeout = 2;
+    conf->retries = 1;
+    chassis_event_add_with_timeout(chas, &chas->remote_config_event, &check_interval);
+
+    con->is_admin_waiting_resp = 1;
 }
 
 void admin_config_reload(network_mysqld_con* con, char* object)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
@@ -1542,24 +1858,23 @@ void admin_config_reload(network_mysqld_con* con, char* object)
         return admin_reload_settings(con);
     } else if (strcasecmp(object, "user")==0) {
         chassis_config_t* conf = con->srv->config_manager;
-        chassis_config_update_object_cache(conf, "users");
-
-        gboolean ok = cetus_users_read_json(con->srv->priv->users, conf);
+        gboolean ok = cetus_users_read_json(con->srv->priv->users, conf, 1);
         if (ok) {
             network_mysqld_con_send_ok(con->client);
         } else {
-            network_mysqld_con_send_error(con->client, C("read user failed"));
+            if (conf->type == CHASSIS_CONF_MYSQL) {
+                return admin_reload_user(con, conf);
+            } else {
+                network_mysqld_con_send_error(con->client, C("read user failed"));
+            }
         }
     } else if (strcasecmp(object, "variables") == 0) {
         char* var_json = NULL;
-        if (chassis_config_reload_variables(con->srv->config_manager, object, &var_json)) {
-            if (sql_filter_vars_reload_str_rules(var_json) == FALSE) {
-                g_warning("variable rule reload error");
-            }
-            g_free(var_json);
-            network_mysqld_con_send_ok(con->client);
-        } else {
+        chassis_config_t* conf = con->srv->config_manager;
+        if (conf->type != CHASSIS_CONF_MYSQL) {
             network_mysqld_con_send_error(con->client, C("reload variables failed"));
+        } else {
+            return admin_reload_variables(con, conf);
         }
     } else {
         network_mysqld_con_send_error(con->client, C("wrong parameter"));
@@ -1568,7 +1883,7 @@ void admin_config_reload(network_mysqld_con* con, char* object)
 
 void admin_kill_query(network_mysqld_con* con, guint32 thread_id)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->process_index = thread_id >> 24;
 
         if (con->process_index > cetus_last_process) {
@@ -1588,7 +1903,7 @@ void admin_kill_query(network_mysqld_con* con, guint32 thread_id)
 
 void admin_reset_stats(network_mysqld_con* con)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
@@ -1600,7 +1915,7 @@ void admin_reset_stats(network_mysqld_con* con)
 
 void admin_select_all_groups(network_mysqld_con* con)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->ask_one_worker = 1;
         con->admin_read_merge = 1;
         return;
@@ -1749,7 +2064,7 @@ static void get_module_names(chassis* chas, GString* plugin_names)
 
 void admin_send_overview(network_mysqld_con* con)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->admin_read_merge = 1;
         return;
     }
@@ -1839,10 +2154,67 @@ static gboolean convert_datetime_partitions(GPtrArray *partitions, sharding_vdb_
     return TRUE;
 }
 
+static void admin_config_remote_sharding_callback(int fd, short what, void *arg)
+{
+    g_message("%s call admin_config_remote_sharding_callback", G_STRLOC);
+    network_mysqld_con* con = arg;
+    chassis *chas = con->srv;
+    chassis_config_t* conf = con->srv->config_manager;
+
+    if (conf->options_update_flag) {
+        conf->retries++;
+        if (conf->retries == 0) {
+            network_mysqld_con_send_error(con->client, C("update remote sharding timeout"));
+            con->is_admin_waiting_resp = 0;
+            send_admin_resp(con->srv, con);
+            g_message("%s call admin_config_remote_sharding_callback over, wait:%d", G_STRLOC, conf->ms_timeout);
+            return;
+        }
+        conf->ms_timeout = conf->ms_timeout << 1;
+        int sec = conf->ms_timeout / 1000;
+        int usec = (conf->ms_timeout - 1000 * sec) * 1000;
+        struct timeval check_interval = {sec, usec};
+        chassis_event_add_with_timeout(chas, &chas->remote_config_event, &check_interval);
+        g_message("%s call admin_config_remote_sharding_callback, timeout:%d", G_STRLOC, conf->ms_timeout);
+        return;
+    }
+
+    if (!conf->options_success_flag) {
+        network_mysqld_con_send_error(con->client, C("config remote sharding failed"));
+        con->is_admin_waiting_resp = 0;
+        send_admin_resp(con->srv, con);
+        g_message("%s call send_admin_resp over", G_STRLOC);
+        return;
+    }
+
+    network_mysqld_con_send_ok(con->client);
+
+    con->is_admin_waiting_resp = 0;
+    send_admin_resp(con->srv, con);
+    g_message("%s call send_admin_resp over", G_STRLOC);
+}
+
+static void admin_config_remote_sharding(network_mysqld_con* con, chassis_config_t *conf)
+{
+    g_message("%s call admin_config_remote_sharding", G_STRLOC);
+    chassis* chas = con->srv;
+
+    conf->options_update_flag = 1;
+    chas->asynchronous_type = ASYNCHRONOUS_CONFIG_REMOTE_SHARD;
+
+    evtimer_set(&chas->remote_config_event, admin_config_remote_sharding_callback, con);
+    struct timeval check_interval = {0, 2000};
+    conf->ms_timeout = 2;
+    conf->retries = 1;
+    chassis_event_add_with_timeout(chas, &chas->remote_config_event, &check_interval);
+
+    con->is_admin_waiting_resp = 1;
+}
+
 void admin_create_vdb(network_mysqld_con* con, int id, GPtrArray* partitions,
                       enum sharding_method_t method, int key_type, int shard_num)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
@@ -1880,7 +2252,12 @@ void admin_create_vdb(network_mysqld_con* con, int id, GPtrArray* partitions,
         && shard_conf_add_vdb(vdb);
     if (ok) {
         g_message("Admin: %s", con->orig_sql->str);
-        shard_conf_write_json(con->srv->config_manager);
+        chassis_config_t* conf = con->srv->config_manager;
+        if (shard_conf_write_json(conf) == FALSE) {
+            if (conf->type == CHASSIS_CONF_MYSQL) {
+                return admin_config_remote_sharding(con, conf);
+            }
+        }
         network_mysqld_con_send_ok(con->client);
     } else {
         sharding_vdb_free(vdb);
@@ -1891,7 +2268,7 @@ void admin_create_vdb(network_mysqld_con* con, int id, GPtrArray* partitions,
 void admin_create_sharded_table(network_mysqld_con* con, const char* schema,
                                 const char* table, const char* key, int vdb_id)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
@@ -1903,7 +2280,12 @@ void admin_create_sharded_table(network_mysqld_con* con, const char* schema,
     gboolean ok = shard_conf_add_sharded_table(t);
     if (ok) {
         g_message("Admin: %s", con->orig_sql->str);
-        shard_conf_write_json(con->srv->config_manager);
+        chassis_config_t* conf = con->srv->config_manager;
+        if (shard_conf_write_json(conf) == FALSE) {
+            if (conf->type == CHASSIS_CONF_MYSQL) {
+                return admin_config_remote_sharding(con, conf);
+            }
+        }
         network_mysqld_con_send_ok(con->client);
     } else {
         network_mysqld_con_send_error(con->client, C("failed to add sharded table"));
@@ -1912,7 +2294,7 @@ void admin_create_sharded_table(network_mysqld_con* con, const char* schema,
 
 void admin_select_vdb(network_mysqld_con* con)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->ask_one_worker = 1;
         con->admin_read_merge = 1;
         return;
@@ -1947,7 +2329,7 @@ void admin_select_vdb(network_mysqld_con* con)
 
 void admin_select_sharded_table(network_mysqld_con* con)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->ask_one_worker = 1;
         con->admin_read_merge = 1;
         return;
@@ -2058,7 +2440,7 @@ static void send_result(network_socket *client, gint ret, gint affected)
 
 void admin_save_settings(network_mysqld_con *con)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->ask_one_worker = 1;
         return;
     }
@@ -2099,14 +2481,19 @@ void admin_show_databases(network_mysqld_con* con)
 void admin_create_single_table(network_mysqld_con* con, const char* schema,
                                const char* table, const char* group)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
     gboolean ok = shard_conf_add_single_table(schema, table, group);
     if (ok) {
         g_message("Admin: %s", con->orig_sql->str);
-        shard_conf_write_json(con->srv->config_manager);
+        chassis_config_t* conf = con->srv->config_manager;
+        if (shard_conf_write_json(conf) == FALSE) {
+            if (conf->type == CHASSIS_CONF_MYSQL) {
+                return admin_config_remote_sharding(con, conf);
+            }
+        }
         network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
     } else {
         network_mysqld_con_send_error(con->client, C("failed to add single table"));
@@ -2115,7 +2502,7 @@ void admin_create_single_table(network_mysqld_con* con, const char* schema,
 
 void admin_select_single_table(network_mysqld_con* con)
 {
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->ask_one_worker = 1;
         con->admin_read_merge = 1;
         return;
@@ -2145,7 +2532,7 @@ void admin_sql_log_start(network_mysqld_con* con) {
         return;
     }
     
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
@@ -2167,7 +2554,7 @@ void admin_sql_log_stop(network_mysqld_con* con) {
         return;
     }
     
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         return;
     }
 
@@ -2185,7 +2572,7 @@ void admin_sql_log_status(network_mysqld_con* con) {
         return;
     }
     
-    if (con->is_admin_client) {
+    if (con->is_processed_by_subordinate) {
         con->admin_read_merge = 1;
         return;
     }

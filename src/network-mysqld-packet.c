@@ -544,7 +544,7 @@ network_mysqld_con_command_states_init(network_mysqld_con *con, network_packet *
          * b) closed the connection because the client asked it to
          * If b) we should not print a message at the next EV_READ event from the server fd
          */
-        con->com_quit_seen = TRUE;
+        con->com_quit_seen = 1;
     default:
         break;
     }

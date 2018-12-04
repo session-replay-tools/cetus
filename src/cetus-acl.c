@@ -18,6 +18,7 @@ static void acl_entry_free(gpointer entry)
 void cetus_acl_free(cetus_acl_t* acl)
 {
     g_list_free_full(acl->whitelist, acl_entry_free);
+    g_free(acl);
 }
 
 static GList* acl_add_to_list(GList* entries, const char* user,

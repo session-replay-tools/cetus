@@ -904,6 +904,9 @@ void send_admin_resp(chassis *cycle, network_mysqld_con *con)
                 ch, sizeof(*ch) + ch->admin_sql_resp_len);
         g_debug("%s:cetus_write_channel send:%d", G_STRLOC, (int) (sizeof(*ch) + ch->admin_sql_resp_len));
         g_free(ch);
+
+        network_queue_clear(con->client->send_queue);
+        network_mysqld_con_free(con);
     } else {
         con->state = ST_SEND_QUERY_RESULT;
         network_mysqld_con_handle(-1, 0, con);
@@ -938,10 +941,9 @@ process_admin_sql(cetus_cycle_t *cycle, cetus_channel_t *ch)
         if (!con->is_admin_waiting_resp) {
             send_admin_resp(cycle, con);
         }
+    } else {
+        network_mysqld_con_free(con);
     }
-
-    network_queue_clear(con->client->send_queue);
-    network_mysqld_con_free(con);
 }
 
 static void

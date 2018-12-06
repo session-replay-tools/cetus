@@ -2182,9 +2182,11 @@ normal_result_merge(network_mysqld_con *con)
 
     switch (result.status) {
     case RM_FAIL:
-        if (con->candidate_tcp_streamed) {
+        if (con->candidate_tcp_streamed || con->is_timeout) {
             con->server_to_be_closed = 1;
-            g_critical("%s: tcp streamed resultset_merge failed:%p", G_STRLOC, con);
+            if (con->candidate_tcp_streamed) {
+                g_critical("%s: tcp streamed resultset_merge failed for con:%p", G_STRLOC, con);
+            }
             g_debug_hexdump(G_STRLOC, S(con->orig_sql));
         }
         network_queue_clear(con->client->send_queue);
@@ -2193,7 +2195,11 @@ normal_result_merge(network_mysqld_con *con)
             g_string_free(result.detail, TRUE);
         } else {
             g_warning("%s: merge failed for sql:%s", G_STRLOC, con->orig_sql->str);
-            network_mysqld_con_send_error_full(con->client, C("merge failed"), ER_CETUS_RESULT_MERGE, "HY000");
+            if (con->is_timeout) {
+                network_mysqld_con_send_error_full(con->client, C("proxy timeout when merging"), ER_CETUS_RESULT_MERGE, "HY000");
+            } else {
+                network_mysqld_con_send_error_full(con->client, C("merge failed"), ER_CETUS_RESULT_MERGE, "HY000");
+            }
         }
         break;
     default:

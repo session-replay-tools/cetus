@@ -1022,7 +1022,8 @@ collate(C) ::= COLLATE ids.   {C = 1;}
 
 ///////////////////////LOCK TABLES///////////////////////////
 cmd ::= LOCK TABLES lock_tables. {
-  context->rw_flag |= CF_WRITE;
+    sql_context_set_error(context, PARSE_NOT_SUPPORT,
+                              "(cetus) LOCK TABLES not supported");
 }
 lock_tables ::= fullname as lock_type.
 lock_tables ::= lock_tables COMMA fullname as lock_type.
@@ -1033,5 +1034,19 @@ opt_local ::= .
 opt_priority ::= LOW_PRIORITY.
 opt_priority ::= .
 cmd ::= UNLOCK TABLES. {
-  context->rw_flag |= CF_WRITE;
+    sql_context_set_error(context, PARSE_NOT_SUPPORT,
+                              "(cetus) UNLOCK TABLES not supported");
 }
+
+///////////////////////FLUSH TABLES///////////////////////////
+cmd ::=FLUSH flush_tables. {
+    sql_context_set_error(context, PARSE_NOT_SUPPORT,
+                        "(cetus) FLUSH TABLES not supported");
+}
+flush_tables ::= tables_option.
+flush_tables ::= LOCAL tables_option.
+flush_tables ::= NO_WRITE_TO_BINLOG tables_option.
+tables_option ::= TABLES WITH READ LOCK.
+tables_option ::= TABLES tbl_list WITH READ LOCK.
+tbl_list ::= fullname.
+tbl_list ::= tbl_list COMMA fullname.

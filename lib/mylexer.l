@@ -231,6 +231,8 @@ HEX_DIGIT [0-9a-fA-F]
 "CETUS_SEQUENCE"      return TK_CETUS_SEQUENCE;
 "CETUS_VERSION"       return TK_CETUS_VERSION;
 "WARNINGS"            return TK_WARNINGS;
+"FLUSH"               return TK_FLUSH;
+"NO_WRITE_TO_BINLOG"  return TK_NO_WRITE_TO_BINLOG;
 "_binary"             return TK_UNDERSCORE_CHARSET;
 "_latin1"             return TK_UNDERSCORE_CHARSET;
 "_utf8"               return TK_UNDERSCORE_CHARSET;

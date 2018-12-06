@@ -42,9 +42,15 @@ string_append_quoted(GString *s, const char *p, char quote)
 static void
 sql_append_expr(GString *s, sql_expr_t *p)
 {
+    size_t len;
     switch (p->op) {
     case TK_ID:
-        g_string_append(s, " ");
+        len = s->len;
+        if (len > 0) {
+            if (s->str[len - 1] != ' ') {
+                g_string_append(s, " ");
+            }
+        }
         g_string_append(s, p->token_text);
         break;
     case TK_EQ:

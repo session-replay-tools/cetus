@@ -149,16 +149,22 @@ sql_expr_dup(const sql_expr_t *p)
     sql_expr_t *expr = g_malloc0(size);
     if (expr) {
         memcpy(expr, p, size);
-        if (p->op == TK_DOT) {
-            expr->left = sql_expr_dup(p->left);
-            expr->right = sql_expr_dup(p->right);
-        } else {
+        if(p->alias) {
+            expr->alias = g_strdup(expr->alias);
             expr->left = 0;
             expr->right = 0;
+        } else {
+            expr->alias = 0;
+            if (p->op == TK_DOT) {
+                expr->left = sql_expr_dup(p->left);
+                expr->right = sql_expr_dup(p->right);
+            } else {
+                expr->left = 0;
+                expr->right = 0;
+            }
         }
         expr->list = 0;
         expr->select = 0;
-        expr->alias = 0;
     }
     return expr;
 }

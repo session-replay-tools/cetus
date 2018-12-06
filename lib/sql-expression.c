@@ -158,7 +158,11 @@ sql_expr_dup(const sql_expr_t *p)
         }
         expr->list = 0;
         expr->select = 0;
-        expr->alias = 0;
+        if(p->alias) {
+            expr->alias = g_strdup(expr->alias);
+        } else {
+            expr->alias = 0;
+        }
     }
     return expr;
 }

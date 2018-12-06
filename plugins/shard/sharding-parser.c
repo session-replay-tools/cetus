@@ -156,14 +156,10 @@ prepare_for_sql_modify_orderby(sql_select_t *select)
             if (mcol->op != TK_FUNCTION) {
                 sql_column_t *ordcol = sql_column_new();
                 ordcol->expr = sql_expr_dup(mcol);
-                if (mcol->op == TK_CASE) {
-                    if (mcol->token_text == NULL && mcol->alias != NULL) {
-                        if (ordcol->expr->alias) {
-                            ordcol->expr->op = TK_ID;
-                            /* borrow text from alias */
-                            ordcol->expr->token_text = ordcol->expr->alias;
-                        }
-                    }
+                if (ordcol->expr->alias) {
+                    ordcol->expr->op = TK_ID;
+                    /* borrow text from alias */
+                    ordcol->expr->token_text = ordcol->expr->alias;
                 }
                 orderby = sql_column_list_append(orderby, ordcol);
             }

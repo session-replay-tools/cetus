@@ -205,7 +205,7 @@ log-file=XXXX
 log-level=XXXX
 ```
 
-shard.conf是分库版本的启动配置文件，在启动Cetus时需要加载，配置文件同样采用key＝value的形式，其中key是固定的，可参考[Cetus 启动配置选项说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-configuration.md)，value是用户自定义的。
+shard.conf是分库版本的启动配置文件，在启动Cetus时需要加载，配置文件同样采用key＝value的形式，其中key是固定的，可参考[Cetus 启动配置选项说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-configuration.md)，value是用户自定义的。其中proxy-read-only-backend-addresses只读后端（从库）的配置可根据业务需求选配。
 
 例如：
 

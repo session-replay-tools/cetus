@@ -26,7 +26,7 @@
 GString *sql_construct_expr(sql_expr_t *expr);
 
 /* TODO: don't alloc inside function */
-GString *sql_construct_select(sql_select_t *);
+GString *sql_construct_select(sql_select_t *, int);
 
 void sql_construct_insert(GString *, sql_insert_t *);
 

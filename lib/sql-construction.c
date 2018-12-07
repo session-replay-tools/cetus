@@ -150,7 +150,7 @@ sql_append_expr(GString *s, sql_expr_t *p)
                 }
             }
         } else if (p->select) {
-            GString *sel = sql_construct_select(p->select);
+            GString *sel = sql_construct_select(p->select, 0);
             if (sel) {
                 g_string_append(s, sel->str);
                 g_string_free(sel, TRUE);
@@ -161,7 +161,7 @@ sql_append_expr(GString *s, sql_expr_t *p)
     }
     case TK_EXISTS:{
         g_string_append(s, " EXISTS (");
-        GString *sel = sql_construct_select(p->select);
+        GString *sel = sql_construct_select(p->select, 0);
         if (sel) {
             g_string_append(s, sel->str);
             g_string_free(sel, TRUE);
@@ -195,7 +195,7 @@ sql_append_expr(GString *s, sql_expr_t *p)
         break;
     case TK_SELECT:{           /* subselect as an expression */
         g_string_append(s, "(");
-        GString *sel = sql_construct_select(p->select);
+        GString *sel = sql_construct_select(p->select, 0);
         if (sel) {
             g_string_append(s, sel->str);
             g_string_free(sel, TRUE);
@@ -301,10 +301,13 @@ append_sql_expr(GString *s, sql_expr_t *expr)
 }
 
 GString *
-sql_construct_select(sql_select_t *select)
+sql_construct_select(sql_select_t *select, int explain)
 {
     int i = 0;
     GString *s = g_string_new(NULL);
+    if (explain) {
+        g_string_append(s, "EXPLAIN ");
+    }
     g_string_append(s, "SELECT ");
     if (select->columns) {
         if (select->flags & SF_DISTINCT) {
@@ -333,7 +336,7 @@ sql_construct_select(sql_select_t *select)
                 g_string_append(s, src->table_name);
                 g_string_append(s, " ");
             } else if (src->select) {
-                GString *sub = sql_construct_select(src->select);
+                GString *sub = sql_construct_select(src->select, 0);
                 g_string_append_c(s, '(');
                 g_string_append_len(s, sub->str, sub->len);
                 g_string_append_c(s, ')');
@@ -443,7 +446,7 @@ sql_construct_insert(GString *s, sql_insert_t *p)
     if (p->sel_val) {
         if (p->sel_val->from_src) {
             /* select as values */
-            GString *select = sql_construct_select(p->sel_val);
+            GString *select = sql_construct_select(p->sel_val, 0);
             g_string_append(s, select->str);
             g_string_free(select, TRUE);
         } else {

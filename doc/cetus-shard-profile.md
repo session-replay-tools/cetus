@@ -189,6 +189,7 @@ worker-id=XX
 # Proxy Configuration
 proxy-address=XXX.XXX.XXX.XXX:XXXX
 proxy-backend-addresses=XXX.XXX.XXX.XXX:XXXX@XXXX1,XXX.XXX.XXX.XXX:XXXX@XXXX2,XXX.XXX.XXX.XXX:XXXX@XXXX3,XXX.XXX.XXX.XXX:XXXX@XXXX4
+proxy-read-only-backend-addresses=XXX.XXX.XXX.XXX:XXXX@XXXX1,XXX.XXX.XXX.XXX:XXXX@XXXX2,XXX.XXX.XXX.XXX:XXXX@XXXX3,XXX.XXX.XXX.XXX:XXXX@XXXX4
 
 # Admin Configuration
 admin-address=XXX.XXX.XXX.XXX:XXXX
@@ -225,6 +226,7 @@ worker-id=1
 # Proxy Configuration
 proxy-address=127.0.0.1:1234
 proxy-backend-addresses=127.0.0.1:3361@data1,127.0.0.1:3362@data2,127.0.0.1:3363@data3,127.0.0.1:3364@data4
+proxy-read-only-backend-addresses=127.0.0.1:3371@data1,127.0.0.1:3372@data2,127.0.0.1:3373@data3,127.0.0.1:3374@data4
 
 # Admin Configuration
 admin-address=127.0.0.1:5678
@@ -248,7 +250,7 @@ worker-processes为4，代表工作进程数量为4，建议设置数量小于�
 
 设置worker-id=1，主要为guid使用，当ifname设置无效时，worker-id也会起到ifname的作用，需要注意的是不同实例应该设置不一样。
 
-proxy-address的值是Proxy监听的IP和端口，我们设置为127.0.0.1:1234；proxy-backend-addresses的值是后端的IP和端口，需要同时指定group（@group），本例分为4个group，分别data1的127.0.0.1:3361、data2的127.0.0.1:3362、data3的127.0.0.1:3363、data4的127.0.0.1:3364；
+proxy-address的值是Proxy监听的IP和端口，我们设置为127.0.0.1:1234；proxy-backend-addresses的值是读写后端(主库)的IP和端口，需要同时指定group（@group），本例分为4个group，分别data1的127.0.0.1:3361、data2的127.0.0.1:3362、data3的127.0.0.1:3363、data4的127.0.0.1:3364；proxy-read-only-backend-addresses的值是只读后端(从库)的IP和端口，需要同时指定group（@group），本例分为4个group，分别data1的127.0.0.1:3371、data2的127.0.0.1:3372、data3的127.0.0.1:3373、data4的127.0.0.1:3374；
 
 admin-address的值是管理模块的IP和端口，我们设置为127.0.0.1:5678；admin-username的值是管理模块的用户名，我们设置为admin；admin-password的值是管理模块的密码明文，我们设置为admin；
 

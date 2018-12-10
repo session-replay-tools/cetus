@@ -192,8 +192,8 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_auth) {
         }
     } else {
         /* auth switch response */
-        gsize auth_data_len = packet.data->len - 4;
-        GString *auth_data = g_string_sized_new(auth_data_len);
+        gsize auth_data_len = packet.data->len - NET_HEADER_SIZE;
+        GString *auth_data = g_string_sized_new(calculate_alloc_len(auth_data_len));
         network_mysqld_proto_get_gstr_len(&packet, auth_data_len, auth_data);
         g_string_assign_len(con->client->response->auth_plugin_data, S(auth_data));
         g_string_free(auth_data, TRUE);
@@ -283,7 +283,7 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
     if (ch.basics.command == CETUS_CMD_ADMIN_RESP) {
         con->num_read_pending--;
         int  unread_len = ch.admin_sql_resp_len;
-        GString *raw_packet = g_string_sized_new(unread_len);
+        GString *raw_packet = g_string_sized_new(calculate_alloc_len(unread_len));
         unsigned char *p = raw_packet->str;
 
         do {

@@ -1142,7 +1142,7 @@ modify_record(GList *cand1, group_aggr_t * aggr,
         memcpy(buf_pos, after, (*orig_packet_len) - (after - before));
 
         *orig_packet_len = packet_len;
-        GString *packet = g_string_sized_new(NET_HEADER_SIZE + packet_len);
+        GString *packet = g_string_sized_new(calculate_alloc_len(NET_HEADER_SIZE + packet_len));
         packet->len = NET_HEADER_SIZE;
         g_string_append_len(packet, buffer, packet_len);
         network_mysqld_proto_set_packet_len(packet, packet_len);

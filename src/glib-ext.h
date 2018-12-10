@@ -49,5 +49,6 @@ CHASSIS_API gboolean strleq(const gchar *a, gsize a_len, const gchar *b, gsize b
 CHASSIS_API void ge_gtimeval_diff(GTimeVal *old, GTimeVal *new, gint64 *delay);
 CHASSIS_API GString *g_string_assign_len(GString *s, const char *, gsize);
 CHASSIS_API void g_debug_hexdump(const char *msg, const void *s, size_t len);
+CHASSIS_API int calculate_alloc_len(int orig_len);
 
 #endif

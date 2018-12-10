@@ -1410,7 +1410,7 @@ network_read_query(network_mysqld_con *con, proxy_plugin_con_t *st)
 
     /* ! Normal packets also sent out through "injection" interface */
     int payload_len = packet.data->len - NET_HEADER_SIZE;
-    GString *payload = g_string_sized_new(payload_len);
+    GString *payload = g_string_sized_new(calculate_alloc_len(payload_len));
     g_string_append_len(payload, packet.data->str + NET_HEADER_SIZE, payload_len);
     sql_context_t *context = st->sql_context;
     switch (command) {

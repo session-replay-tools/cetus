@@ -111,7 +111,7 @@ network_queue_peek_str(network_queue *queue, gsize peek_len, GString *dest)
 
     if (!dest) {
         /* no define */
-        dest = g_string_sized_new(peek_len);
+        dest = g_string_sized_new(calculate_alloc_len(peek_len));
     }
 
     g_assert_cmpint(dest->allocated_len, >, peek_len);
@@ -166,7 +166,7 @@ network_queue_pop_str(network_queue *queue, gsize steal_len, GString *dest)
 
         if (!dest) {
             /* if we don't have a dest-buffer yet, create one */
-            dest = g_string_sized_new(steal_len);
+            dest = g_string_sized_new(calculate_alloc_len(steal_len));
         }
         g_string_append_len(dest, chunk->str + queue->offset, we_have);
 

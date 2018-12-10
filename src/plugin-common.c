@@ -204,8 +204,8 @@ do_read_auth(network_mysqld_con *con)
 
     } else {
         /* auth switch response */
-        gsize auth_data_len = packet.data->len - 4;
-        GString *auth_data = g_string_sized_new(auth_data_len);
+        gsize auth_data_len = packet.data->len - NET_HEADER_SIZE;
+        GString *auth_data = g_string_sized_new(calculate_alloc_len(auth_data_len));
         network_mysqld_proto_get_gstr_len(&packet, auth_data_len, auth_data);
 
         g_string_assign_len(con->client->response->auth_plugin_data, S(auth_data));

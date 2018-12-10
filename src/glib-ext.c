@@ -160,3 +160,40 @@ g_debug_hexdump(const char *msg, const void *_s, size_t len)
 
     g_string_free(hex, TRUE);
 }
+
+int calculate_alloc_len(int orig_len)
+{
+    if (orig_len <= 16384) {
+        if (orig_len <= 128) {
+            return 128;
+        }
+
+        if (orig_len <= 256) {
+            return 256;
+        }
+
+        if (orig_len <= 512) {
+            return 512;
+        }
+
+        if (orig_len <= 1024) {
+            return 1024;
+        }
+
+        if (orig_len <= 2048) {
+            return 2048;
+        }
+
+        if (orig_len <= 4096) {
+            return 4096;
+        }
+
+        if (orig_len <= 8192) {
+            return 8192;
+        }
+
+        return 16384;
+    } else {
+        return orig_len;
+    }
+}

@@ -516,7 +516,7 @@ network_mysqld_queue_append(network_socket *sock, network_queue *queue, const ch
         GString *s;
         gsize cur_packet_len = MIN(packet_len, PACKET_LEN_MAX);
 
-        s = g_string_sized_new(packet_len + 4);
+        s = g_string_sized_new(calculate_alloc_len(packet_len + NET_HEADER_SIZE));
 
         if (sock->packet_id_is_reset) {
             sock->packet_id_is_reset = FALSE;
@@ -532,7 +532,7 @@ network_mysqld_queue_append(network_socket *sock, network_queue *queue, const ch
         network_queue_append(queue, s);
 
         if (packet_len == PACKET_LEN_MAX) {
-            s = g_string_sized_new(4);
+            s = g_string_sized_new(NET_HEADER_SIZE);
 
             network_mysqld_proto_append_packet_len(s, 0);
             network_mysqld_proto_append_packet_id(s, ++sock->last_packet_id);
@@ -609,7 +609,7 @@ network_mysqld_con_send_error_full_all(network_socket *con,
     GString *packet;
     network_mysqld_err_packet_t *err_packet;
 
-    packet = g_string_sized_new(10 + errmsg_len);
+    packet = g_string_sized_new(calculate_alloc_len(10 + errmsg_len));
 
     err_packet = network_mysqld_err_packet_new();
     err_packet->errcode = errorcode;
@@ -877,10 +877,10 @@ network_mysqld_con_get_uncompressed_packet(chassis *chas, network_socket *con)
         GString *uncompressed_packet;
         if (uncompressed_len == 0) {
             uncompressed_len = packet_len;
-            uncompressed_packet = g_string_sized_new(uncompressed_len);
+            uncompressed_packet = g_string_sized_new(calculate_alloc_len(uncompressed_len));
             g_string_append_len(uncompressed_packet, (char *)(info + COMP_HEADER_SIZE), uncompressed_len);
         } else {
-            uncompressed_packet = g_string_sized_new(uncompressed_len);
+            uncompressed_packet = g_string_sized_new(calculate_alloc_len(uncompressed_len));
             cetus_uncompress(uncompressed_packet, (unsigned char *)packet->str + header_length, packet_len);
             g_debug("%s:call cetus_uncompress for con:%p", G_STRLOC, con);
         }
@@ -1509,7 +1509,7 @@ shard_set_autocommit(network_mysqld_con *con)
 
         ss->attr_adjusted_now = 0;
         int len = con->client->charset->len + NET_HEADER_SIZE + 1 + 32;
-        GString *packet = g_string_sized_new(len);
+        GString *packet = g_string_sized_new(calculate_alloc_len(len));
         packet->len = NET_HEADER_SIZE;
         g_string_append_c(packet, (char)COM_QUERY);
 
@@ -1559,7 +1559,7 @@ shard_set_multi_stmt_consistant(network_mysqld_con *con)
         }
         if (con->client->is_multi_stmt_set != ss->server->is_multi_stmt_set) {
             int len = NET_HEADER_SIZE + 12;
-            GString *new_packet = g_string_sized_new(len);
+            GString *new_packet = g_string_sized_new(calculate_alloc_len(len));
             new_packet->len = NET_HEADER_SIZE;
             g_string_append_c(new_packet, (char)COM_SET_OPTION);
             if (con->client->is_multi_stmt_set) {
@@ -1603,7 +1603,7 @@ shard_set_charset_consistant(network_mysqld_con *con)
         }
 
         int len = con->client->charset->len + NET_HEADER_SIZE + 1 + 16;
-        GString *packet = g_string_sized_new(len);
+        GString *packet = g_string_sized_new(calculate_alloc_len(len));
         packet->len = NET_HEADER_SIZE;
         g_string_append_c(packet, (char)COM_QUERY);
         char *command = "SET NAMES ";
@@ -1662,7 +1662,7 @@ shard_set_default_db_consistant(network_mysqld_con *con)
         if (clt_default_db && clt_default_db->len > 0) {
             if (!g_string_equal(clt_default_db, srv_default_db)) {
                 int len = clt_default_db->len + NET_HEADER_SIZE + 1;
-                GString *new_packet = g_string_sized_new(len);
+                GString *new_packet = g_string_sized_new(calculate_alloc_len(len));
                 new_packet->len = NET_HEADER_SIZE;
                 g_string_append_c(new_packet, (char)COM_INIT_DB);
                 g_string_append_len(new_packet, S(clt_default_db));
@@ -3785,7 +3785,7 @@ fast_analyze_stream(network_mysqld_con *con, network_socket *server, int *send_f
             if (complete_record_len > 0) {
                 partially_diff = s->len - complete_record_len;
                 g_debug("%s: partially_diff:%d for con:%p", G_STRLOC, partially_diff, con);
-                GString *remainder = g_string_sized_new(partially_diff);
+                GString *remainder = g_string_sized_new(calculate_alloc_len(partially_diff));
                 g_string_append_len(remainder, s->str + complete_record_len, partially_diff);
                 s->len = complete_record_len;
                 queue->len -= partially_diff; 

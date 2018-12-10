@@ -605,7 +605,7 @@ network_socket_read(network_socket *sock)
     gssize len;
 
     if (sock->to_read > 0) {
-        GString *packet = g_string_sized_new(sock->to_read);
+        GString *packet = g_string_sized_new(calculate_alloc_len(sock->to_read));
 
         g_queue_push_tail(sock->recv_queue_raw->chunks, packet);
 

@@ -226,7 +226,7 @@ sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi)
         }
 
         if (need_reconstruct) {
-            new_sql = sql_construct_select(select);
+            new_sql = sql_construct_select(select, context->explain == TK_EXPLAIN ? 1:0);
             g_string_append_c(new_sql, ';');
             if (orig_offset != 0 || orig_limit != 0) {
                 select->limit->num_value = orig_limit;
@@ -238,7 +238,7 @@ sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi)
             sql_select_t *sub_select = select->prior;
             GString *union_sql = g_string_new(NULL);
             while (sub_select) {
-                GString *sql = sql_construct_select(sub_select);
+                GString *sql = sql_construct_select(sub_select, 0);
                 g_string_append(union_sql, sql->str);
                 g_string_append(union_sql, " UNION ");
                 g_string_free(sql, TRUE);

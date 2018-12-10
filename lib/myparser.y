@@ -1351,3 +1351,18 @@ precision ::= LP INTEGER COMMA INTEGER RP.
 field_length ::= LP INTEGER RP.
 opt_field_length ::= .
 opt_field_length ::= field_length.
+
+///////////////////////FLUSH TABLES///////////////////////////
+cmd ::=FLUSH flush_tables. {
+    sql_context_set_error(context, PARSE_NOT_SUPPORT,
+                        "(cetus) FLUSH TABLES not supported");
+}
+flush_tables ::= tables_option.
+flush_tables ::= LOCAL tables_option.
+flush_tables ::= NO_WRITE_TO_BINLOG tables_option.
+tables_option ::= TABLES WITH READ LOCK.
+tables_option ::= TABLES tbl_list WITH READ LOCK.
+tables_option ::= TABLE WITH READ LOCK.
+tables_option ::= TABLE tbl_list WITH READ LOCK.
+tbl_list ::= fullname.
+tbl_list ::= tbl_list COMMA fullname.

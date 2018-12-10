@@ -23,32 +23,32 @@ HEX_DIGIT [0-9a-fA-F]
 %%
 
 [ \t\r\n]+                    /* ignore whitespace */;
-";"                 return TK_SEMI;
-"("                 return TK_LP         ;
-")"                 return TK_RP         ;
-","                 return TK_COMMA      ;
-"<>"        return TK_NE         ;
-"!="        return TK_NE         ;
+";"             return TK_SEMI;
+"("             return TK_LP         ;
+")"             return TK_RP         ;
+","             return TK_COMMA      ;
+"<>"            return TK_NE         ;
+"!="            return TK_NE         ;
 "="             return TK_EQ         ;
-"=="        return TK_EQ         ;
-">"                 return TK_GT         ;
+"=="            return TK_EQ         ;
+">"             return TK_GT         ;
 "<="            return TK_LE         ;
-"<"                 return TK_LT         ;
+"<"             return TK_LT         ;
 ">="            return TK_GE         ;
-"&"                 return TK_BITAND     ;
-"|"                 return TK_BITOR      ;
-"~"                 return TK_BITNOT     ;
+"&"             return TK_BITAND     ;
+"|"             return TK_BITOR      ;
+"~"             return TK_BITNOT     ;
 "<<"            return TK_LSHIFT     ;
 ">>"            return TK_RSHIFT     ;
-"+"                 return TK_PLUS       ;
-"-"                 return TK_MINUS      ;
-"*"                 return TK_STAR       ;
-"/"                 return TK_SLASH      ;
-"%"           return TK_REM        ; /*REMAIN */
-"."                 return TK_DOT        ;
+"+"             return TK_PLUS       ;
+"-"             return TK_MINUS      ;
+"*"             return TK_STAR       ;
+"/"             return TK_SLASH      ;
+"%"             return TK_REM        ; /*REMAIN */
+"."             return TK_DOT        ;
 "?"             return TK_VARIABLE   ;
 
-"TABLE"             return TK_TABLE      ;
+"TABLE"         return TK_TABLE      ;
 "CREATE"        return TK_CREATE     ;
 "IF"            return TK_IF         ;
 "NOT"           return TK_NOT        ;
@@ -62,7 +62,7 @@ HEX_DIGIT [0-9a-fA-F]
 "AND"           return TK_AND        ;
 "&&" return TK_AND;
 "IS"            return TK_IS         ;
-"MATCH"             return TK_MATCH      ;
+"MATCH"         return TK_MATCH      ;
 "LIKE"          return TK_LIKE_KW    ;
 "REGEXP"        return TK_LIKE_KW;
 "BETWEEN"       return TK_BETWEEN    ;
@@ -71,14 +71,14 @@ HEX_DIGIT [0-9a-fA-F]
  /*"NOTNULL"       return TK_NOTNULL    ;*/
  /*"||"         return TK_CONCAT     ;*/ /*for ansi sql_mode*/
 "COLLATE"       return TK_COLLATE    ;
-"ABORT"             return TK_ABORT      ;
+"ABORT"         return TK_ABORT      ;
 "ACTION"        return TK_ACTION     ;
-"AFTER"             return TK_AFTER      ;
+"AFTER"         return TK_AFTER      ;
 "ANALYZE"       return TK_ANALYZE    ;
 "ASC"           return TK_ASC        ;
 "ATTACH"        return TK_ATTACH     ;
 "BEFORE"        return TK_BEFORE     ;
-"BEGIN"             return TK_BEGIN;
+"BEGIN"         return TK_BEGIN;
 "BY"            return TK_BY         ;
 "CASCADE"       return TK_CASCADE    ;
 "CAST"          return TK_CAST       ;
@@ -93,35 +93,35 @@ HEX_DIGIT [0-9a-fA-F]
 "FAIL"          return TK_FAIL       ;
 "FOR"           return TK_FOR        ;
 "IGNORE"        return TK_IGNORE     ;
-"INITIALLY"         return TK_INITIALLY  ;
+"INITIALLY"     return TK_INITIALLY  ;
 "INSTEAD"       return TK_INSTEAD    ;
 "NO"            return TK_NO         ;
 "PLAN"          return TK_PLAN       ;
-"QUERY"             return TK_QUERY      ;
+"QUERY"         return TK_QUERY      ;
 "KEY"           return TK_KEY        ;
 "OF"            return TK_OF         ;
 "TO"            return TK_TO;
 "OFFSET"        return TK_OFFSET     ;
 "PRAGMA"        return TK_PRAGMA     ;
-"RAISE"             return TK_RAISE      ;
-"RECURSIVE"         return TK_RECURSIVE  ;
+"RAISE"         return TK_RAISE      ;
+"RECURSIVE"     return TK_RECURSIVE  ;
 "RELEASE"       return TK_RELEASE    ;
 "REPLACE"       return TK_REPLACE    ;
 "RESTRICT"      return TK_RESTRICT   ;
 "ROW"           return TK_ROW        ;
 
 "TRANSACTION"   return TK_TRANSACTION;
-"START"             return TK_START;
+"START"         return TK_START;
 "COMMIT"        return TK_COMMIT;
 "ROLLBACK"      return TK_ROLLBACK   ;
-"SAVEPOINT"         return TK_SAVEPOINT  ;
+"SAVEPOINT"     return TK_SAVEPOINT  ;
 
 "TRIGGER"       return TK_TRIGGER    ;
 "VACUUM"        return TK_VACUUM     ;
 "VIEW"          return TK_VIEW       ;
 "VIRTUAL"       return TK_VIRTUAL    ;
 "WITH"          return TK_WITH       ;
-"INDEX"       return TK_INDEX    ;
+"INDEX"         return TK_INDEX    ;
 "RENAME"        return TK_RENAME     ;
  /*
 "DATE"          return TK_CTIME_KW   ;
@@ -131,16 +131,16 @@ HEX_DIGIT [0-9a-fA-F]
 "TIMEDIFF"      return TK_CTIME_KW   ;
  */
 "LEFT"          return TK_JOIN_KW;
-"RIGHT"             return TK_JOIN_KW;
-"INNER"             return TK_JOIN_KW;
-"OUTER"             return TK_JOIN_KW;
+"RIGHT"         return TK_JOIN_KW;
+"INNER"         return TK_JOIN_KW;
+"OUTER"         return TK_JOIN_KW;
 "FULL"          return TK_JOIN_KW;
 
 "ANY"           return TK_ANY        ;
 "CONSTRAINT"    return TK_CONSTRAINT ;
 "DEFAULT"       return TK_DEFAULT    ;
-"CHECK"             return TK_CHECK      ;
-"AUTO_INCREMENT"        return TK_AUTO_INCREMENT  ;
+"CHECK"         return TK_CHECK      ;
+"AUTO_INCREMENT" return TK_AUTO_INCREMENT  ;
 "PRIMARY"       return TK_PRIMARY    ;
 "UNIQUE"        return TK_UNIQUE     ;
 "FOREIGN"       return TK_FOREIGN    ;
@@ -150,13 +150,13 @@ HEX_DIGIT [0-9a-fA-F]
 "FROM"          return TK_FROM       ;
 "JOIN"          return TK_JOIN       ;
 "ON"            return TK_ON         ;
-"USING"             return TK_USING      ;
-"ORDER"             return TK_ORDER      ;
-"GROUP"             return TK_GROUP      ;
+"USING"         return TK_USING      ;
+"ORDER"         return TK_ORDER      ;
+"GROUP"         return TK_GROUP      ;
 "HAVING"        return TK_HAVING     ;
-"LIMIT"             return TK_LIMIT      ;
+"LIMIT"         return TK_LIMIT      ;
 "DELETE"        return TK_DELETE     ;
-"WHERE"             return TK_WHERE      ;
+"WHERE"         return TK_WHERE      ;
 "UPDATE"        return TK_UPDATE     ;
 "SET"           return TK_SET        ;
 "INTO"          return TK_INTO       ;
@@ -225,14 +225,14 @@ HEX_DIGIT [0-9a-fA-F]
 "UNSIGNED"            return TK_UNSIGNED;
 "DECIMAL"             return TK_DECIMAL;
 "BINARY"              return TK_BINARY;
+"FLUSH"               return TK_FLUSH;
+"NO_WRITE_TO_BINLOG"  return TK_NO_WRITE_TO_BINLOG;
 "NCHAR"               return TK_NCHAR;
 "INT"                 return TK_INT_SYM;
 "ESCAPE"              return TK_ESCAPE;
 "CETUS_SEQUENCE"      return TK_CETUS_SEQUENCE;
 "CETUS_VERSION"       return TK_CETUS_VERSION;
 "WARNINGS"            return TK_WARNINGS;
-"FLUSH"               return TK_FLUSH;
-"NO_WRITE_TO_BINLOG"  return TK_NO_WRITE_TO_BINLOG;
 "_binary"             return TK_UNDERSCORE_CHARSET;
 "_latin1"             return TK_UNDERSCORE_CHARSET;
 "_utf8"               return TK_UNDERSCORE_CHARSET;

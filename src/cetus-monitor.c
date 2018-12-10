@@ -612,6 +612,9 @@ hostnameloop:;
         previous_result[i] = result;
         if (result == 0) {
             MYSQL_RES *rs_set = mysql_store_result(conn);
+            if(!rs_set) {
+                g_warning("fetch heartbeat result failed, errno:%d, errmsg:%s", mysql_errno(conn), mysql_error(conn));
+            }
             MYSQL_ROW row = mysql_fetch_row(rs_set);
             double ts_slave = 0;
             if (row != NULL) {

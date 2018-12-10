@@ -348,6 +348,45 @@ sql_construct_select(sql_select_t *select, int explain)
                 g_string_append(s, src->table_alias);
                 g_string_append(s, " ");
             }
+
+            if (src->index_hint) {
+                switch (src->index_hint->type) {
+                    case IH_USE_INDEX: {
+                        g_string_append(s, " USE INDEX ( ");
+                        break;
+                    }
+                    case IH_USE_KEY: {
+                        g_string_append(s, " USE KEY ( ");
+                        break;
+                    }
+                    case IH_IGNORE_INDEX: {
+                        g_string_append(s, " IGNORE INDEX ( ");
+                        break;
+                    }
+                    case IH_IGNORE_KEY: {
+                        g_string_append(s, " IGNORE KEY ( ");
+                        break;
+                    }
+                    case IH_FORCE_INDEX: {
+                        g_string_append(s, " FORCE INDEX ( ");
+                        break;
+                    }
+                    case IH_FORCE_KEY: {
+                        g_string_append(s, " FORCE KEY ( ");
+                        break;
+                    }
+                }
+                gint len = src->index_hint->names->len;
+                gint i = 0;
+                for(i=0; i<len; i++) {
+                    g_string_append(s, g_ptr_array_index(src->index_hint->names, i));
+                    if(i != (len -1)) {
+                        g_string_append(s, " , ");
+                    }
+                }
+                g_string_append(s, " ) ");
+            }
+
             if (src->on_clause) {
                 g_string_append(s, " ON ");
                 append_sql_expr(s, src->on_clause);

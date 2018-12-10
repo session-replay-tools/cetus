@@ -153,6 +153,29 @@ enum sql_aggregate_type_t {
     FT_MIN,
 };
 
+enum sql_index_hint_type_t {
+    IH_USE_INDEX,
+    IH_USE_KEY,
+    IH_IGNORE_INDEX,
+    IH_IGNORE_KEY,
+    IH_FORCE_INDEX,
+    IH_FORCE_KEY
+};
+
+struct sql_index_hint_t {
+    uint8_t type;
+    sql_id_list_t *names;
+};
+
+typedef struct sql_index_hint_t sql_index_hint_t;
+
+struct sql_table_reference_t {
+    sql_src_list_t* table_list;
+    sql_index_hint_t *index_hint;
+};
+
+typedef struct sql_table_reference_t sql_table_reference_t;
+
 struct sql_expr_t {
     uint16_t op;                /* Operation performed by this node */
     char *token_text;           /* Token value. Zero terminated and dequoted */
@@ -204,7 +227,7 @@ struct sql_delete_t {
 };
 
 struct sql_update_t {
-    sql_src_list_t *table;
+    sql_table_reference_t *table_reference;
     sql_expr_list_t *set_list;
     sql_expr_t *where_clause;
     sql_column_list_t *orderby_clause;
@@ -233,6 +256,7 @@ struct sql_column_t {
 struct sql_src_item_t {
     char *dbname;               /* Name of database holding this table */
     char *table_name;           /* Name of the table */
+    sql_index_hint_t *index_hint;
     char *table_alias;          /* The "B" part of a "A AS B" phrase.  zName is the "A" */
     sql_select_t *select;       /* A SELECT statement used in place of a table name */
     uint8_t jointype;           /* Type of join between this table and the previous */
@@ -296,7 +320,8 @@ int sql_expr_list_find_exact_aggregate(sql_expr_list_t *list, const char *target
 void sql_expr_list_free(sql_expr_list_t *list);
 
 sql_src_list_t *sql_src_list_append(sql_src_list_t *, sql_token_t *tname,
-                                    sql_token_t *dbname, sql_token_t *alias, sql_select_t *subquery,
+                                    sql_token_t *dbname, sql_index_hint_t *index_hint,
+                                    sql_token_t *alias, sql_select_t *subquery,
                                     sql_expr_t *on_clause, sql_id_list_t *using_clause);
 
 void sql_src_list_free(sql_src_list_t *p);
@@ -340,5 +365,11 @@ gboolean sql_is_quoted_string(const char *s);
 enum sql_aggregate_type_t sql_aggregate_type(const char *s);
 
 gboolean sql_expr_equals(const sql_expr_t *, const sql_expr_t *);
+
+void sql_index_hint_free(sql_index_hint_t* p);
+sql_index_hint_t *sql_index_hint_new();
+
+void sql_table_reference_free(sql_table_reference_t* p);
+sql_table_reference_t *sql_table_reference_new();
 
 #endif /* SQL_EXPRESSION_H */

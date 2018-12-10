@@ -569,9 +569,9 @@ dotnm(A) ::= DOT nm(X). {A = X;}
 %destructor fullname { sql_src_list_free($$);}
 fullname(A) ::= nm(B) dotnm(C). {
   if (C.n)
-    A = sql_src_list_append(0,&C,&B,0,0,0,0);
+    A = sql_src_list_append(0,&C,&B,0,0,0,0,0);
   else
-    A = sql_src_list_append(0,&B,0,0,0,0,0);
+    A = sql_src_list_append(0,&B,0,0,0,0,0,0);
 }
 
 %type joinop {int}

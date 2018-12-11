@@ -200,6 +200,23 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_auth) {
         auth = con->client->response;
     }
 
+    char **client_addr_arr = g_strsplit(con->client->src->name->str, ":", -1);
+    char *client_ip = client_addr_arr[0];
+    char *client_username = con->client->response->username->str;
+
+    gboolean can_pass = cetus_acl_verify(con->srv->priv->acl, client_username, client_ip);
+    if (!can_pass) {
+        char *ip_err_msg = g_strdup_printf("Access denied for user '%s@%s'",
+                client_username, client_ip);
+        network_mysqld_con_send_error_full(recv_sock, L(ip_err_msg), 1045, "28000");
+        g_free(ip_err_msg);
+        g_strfreev(client_addr_arr);
+        con->state = ST_SEND_ERROR;
+        return NETWORK_SOCKET_SUCCESS;
+    }
+
+    g_strfreev(client_addr_arr);
+
     /* check if the password matches */
     excepted_response = g_string_new(NULL);
     hashed_pwd = g_string_new(NULL);
@@ -902,7 +919,13 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
         return -1;
     }
 
-    cetus_acl_add_rules(chas->priv->acl, ACL_WHITELIST, config->allow_ip);
+    if (config->allow_ip) {
+        cetus_acl_add_rules(chas->priv->acl, ACL_WHITELIST, config->allow_ip);
+    }
+
+    if (config->deny_ip) {
+        cetus_acl_add_rules(chas->priv->acl, ACL_BLACKLIST, config->deny_ip);
+    }
 
     con = network_mysqld_con_new();
     con->config = config;

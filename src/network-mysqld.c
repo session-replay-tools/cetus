@@ -3859,6 +3859,10 @@ network_mysqld_process_select_resp(network_mysqld_con *con, network_socket *serv
         server->recv_queue = reserved_queue;
     }
 
+    if (server->resp_len > con->srv->max_resp_len) {
+        return NETWORK_SOCKET_WAIT_FOR_EVENT;
+    }
+
 #ifdef SIMPLE_PARSER
     if (is_finished) {
         con->state = ST_SEND_QUERY_RESULT;

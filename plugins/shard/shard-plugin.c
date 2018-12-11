@@ -453,9 +453,6 @@ analysis_query(network_mysqld_con *con, mysqld_query_attr_t *query_attr)
     sql_context_t *context = st->sql_context;
     query_stats_t *stats = &(con->srv->query_stats);
 
-    con->could_be_tcp_streamed = 0;
-    con->candidate_tcp_streamed = 0;
-
     switch (context->stmt_type) {
     case STMT_SELECT:{
         if (con->srv->is_tcp_stream_enabled && !con->dist_tran) {
@@ -628,6 +625,8 @@ proxy_parse_query(network_mysqld_con *con)
     con->is_timeout = 0;
     con->is_xa_query_sent = 0;
     con->xa_query_status_error_and_abort = 0;
+    con->could_be_tcp_streamed = 0;
+    con->candidate_tcp_streamed = 0;
 
     network_packet packet;
     packet.data = g_queue_peek_head(con->client->recv_queue->chunks);

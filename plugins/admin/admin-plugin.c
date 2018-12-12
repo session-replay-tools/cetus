@@ -217,7 +217,6 @@ NETWORK_MYSQLD_PLUGIN_PROTO(server_read_auth) {
 
     g_strfreev(client_addr_arr);
 
-
     /* check if the password matches */
     excepted_response = g_string_new(NULL);
     hashed_pwd = g_string_new(NULL);
@@ -933,10 +932,10 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
         return -1;
     }
 
-    g_message("%s:allow ip:%s, deny ip:%s", G_STRLOC, config->allow_ip, config->deny_ip);
     if (config->allow_ip) {
         cetus_acl_add_rules(chas->priv->acl, ACL_WHITELIST, config->allow_ip);
     }
+
     if (config->deny_ip) {
         cetus_acl_add_rules(chas->priv->acl, ACL_BLACKLIST, config->deny_ip);
     }

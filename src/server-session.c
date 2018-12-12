@@ -208,8 +208,8 @@ process_read_part_finished(network_mysqld_con *con, server_session_t *ss)
             }
         }
     } else {
+        sock->is_closed = 1;
         if (con->num_pending_servers == 0) {
-            sock->is_closed = 1;
             network_mysqld_con_handle(-1, 0, con);
         }
     }
@@ -229,10 +229,14 @@ process_read_finished(network_mysqld_con *con, server_session_t *ss)
     if (!con->dist_tran_failed) {
         if (con->num_pending_servers == 0) {
             network_mysqld_con_handle(-1, 0, con);
+        } else if (con->num_read_pending == 0) {
+            network_mysqld_con_handle(-1, 0, con);
         }
     } else {
+        sock->is_closed = 1;
         if (con->num_pending_servers == 0) {
-            sock->is_closed = 1;
+            network_mysqld_con_handle(-1, 0, con);
+        } else if (con->num_read_pending == 0) {
             network_mysqld_con_handle(-1, 0, con);
         }
     }

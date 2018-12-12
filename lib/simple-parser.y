@@ -421,6 +421,16 @@ cmd ::= DROP TABLE ifexists nm. {
 ifexists(A) ::= IF EXISTS.   {A = 1;}
 ifexists(A) ::= .            {A = 0;}
 
+////////////////////////// The DROP DATABASE /////////////////////////////////////
+//
+%token_class db_schema DATABASE|SCHEMA.
+
+cmd ::= DROP db_schema ifexists(A) nm(B). {
+    sql_drop_database_t *p = sql_drop_database_new();
+    p->schema_name = sql_token_dup(B);
+    p->ifexists = A;
+}
+
 //////////////////////// ALTER TABLE //////////////////////////////////
 cmd ::= ALTER TABLE. {
     context->rw_flag |= CF_WRITE;

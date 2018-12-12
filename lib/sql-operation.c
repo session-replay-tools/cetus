@@ -106,6 +106,13 @@ sql_savepoint(sql_context_t *st, int tk, char *name)
     sql_context_add_stmt(st, STMT_SAVEPOINT, name);
 }
 
+void
+sql_drop_database(sql_context_t *st, sql_drop_database_t *drop_database)
+{
+    st->rw_flag |= CF_WRITE;
+    sql_context_add_stmt(st, STMT_DROP_DATABASE, drop_database);
+}
+
 static gboolean
 string_array_contains(const char **sa, int size, const char *str)
 {

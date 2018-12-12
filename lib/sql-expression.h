@@ -59,6 +59,7 @@ typedef struct sql_insert_t sql_insert_t;
 typedef enum sql_stmt_type_t sql_stmt_type_t;
 typedef struct sql_column_t sql_column_t;
 typedef GPtrArray sql_column_list_t;
+typedef struct sql_drop_database_t sql_drop_database_t;
 
 enum sql_stmt_type_t {
     STMT_UNKOWN,
@@ -83,6 +84,8 @@ enum sql_stmt_type_t {
     STMT_SHOW_COLUMNS,
     STMT_SHOW_CREATE,
     STMT_SHOW_WARNINGS,
+
+    STMT_DROP_DATABASE,
 };
 struct sql_token_t {
     char *z;              /* pointer to token text, not NUL-terminated */
@@ -243,6 +246,11 @@ struct sql_src_item_t {
     sql_expr_list_t *func_arg;  /* Arguments to table-valued-function */
 };                              /* One entry for each identifier on the list */
 
+struct sql_drop_database_t {
+    char *schema_name;
+    uint8_t ifexists;
+};
+
 typedef struct sql_set_transaction_t {
     enum sql_var_scope_t scope;
     enum sql_trx_feature_t rw_feature;
@@ -330,6 +338,9 @@ void sql_column_list_free(sql_column_list_t *);
 sql_column_t *sql_column_new();
 
 void sql_column_free(void *);
+
+sql_drop_database_t *sql_drop_database_new();
+void sql_drop_database_free(sql_drop_database_t *);
 
 int sql_join_type(sql_token_t kw);
 

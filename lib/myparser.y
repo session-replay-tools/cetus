@@ -114,6 +114,7 @@ cmdx ::= select_stmt.
 cmdx ::= update_stmt.
 cmdx ::= delete_stmt.
 cmdx ::= insert_stmt.
+cmdx ::= drop_database_stmt.
 
 ///////////////////// EXPLAIN syntax ////////////////////////////
 cmd ::= explain fullname(X) opt_col_name. {
@@ -424,7 +425,6 @@ ddl_cmd_head ::= DROP VIEW.
 
 %token_class db_schema DATABASE|SCHEMA.
 ddl_cmd_head ::= CREATE db_schema.
-ddl_cmd_head ::= DROP db_schema.
 ddl_cmd_head ::= ALTER db_schema.
 
 ddl_cmd_head ::= CREATE TABLE.
@@ -434,6 +434,18 @@ ddl_cmd_head ::= ALTER TABLE.
 
 opt_unique ::= UNIQUE.
 opt_unique ::= .
+
+////////////////////////// The DROP DATABASE /////////////////////////////////////
+//
+drop_database_stmt ::= DROP db_schema ifexists(A) nm(B). {
+    sql_drop_database_t *p = sql_drop_database_new();
+    p->schema_name = sql_token_dup(B);
+    p->ifexists = A;
+}
+
+%type ifexists {int}
+ifexists(A) ::= IF EXISTS.   {A = 1;}
+ifexists(A) ::= .            {A = 0;}
 
 //////////////////////// The SELECT statement /////////////////////////////////
 //

@@ -672,6 +672,23 @@ sql_src_item_free(void *p)
     g_free(item);
 }
 
+sql_drop_database_t *
+sql_drop_database_new()
+{
+    sql_drop_database_t *p = g_new0(sql_drop_database_t, 1);
+    return p;
+}
+
+void
+sql_drop_database_free(sql_drop_database_t *p)
+{
+    if(!p) return;
+    if(p && p->schema_name) {
+        g_free(p->schema_name);
+    }
+    g_free(p);
+}
+
 sql_src_list_t *
 sql_src_list_append(sql_src_list_t *p, sql_token_t *tname,
                     sql_token_t *dbname, sql_token_t *alias, sql_select_t *subquery,

@@ -439,6 +439,7 @@ opt_unique ::= .
 //
 drop_database_stmt ::= DROP db_schema ifexists(A) nm(B). {
     sql_drop_database_t *p = sql_drop_database_new();
+    sql_drop_database(context, p);
     p->schema_name = sql_token_dup(B);
     p->ifexists = A;
 }

@@ -1216,6 +1216,13 @@ proxy_get_server_list(network_mysqld_con *con)
         case STMT_DELETE:
             stats->com_delete_shard += 1;
             break;
+        case STMT_DROP_DATABASE: {
+            sql_drop_database_t *drop_database = st->sql_context->sql_statement;
+            if (drop_database) {
+                truncate_default_db_when_drop_database(con, drop_database->schema_name);
+            }
+            break;
+        }
         default:
             break;
         }
@@ -1577,13 +1584,15 @@ check_and_set_attr_bitmap(network_mysqld_con *con)
         } else {
             if (con->parse.command != COM_INIT_DB) {
                 /* check default db */
-                if (!g_string_equal(con->client->default_db, ss->server->default_db)) {
-                    g_debug("%s:default db for client:%s", G_STRLOC, con->client->default_db->str);
-                    ss->attr_diff = ATTR_DIF_DEFAULT_DB;
-                    result = FALSE;
-                    con->unmatched_attribute |= ATTR_DIF_DEFAULT_DB;
-                    consistant = FALSE;
-                    g_debug("%s: default db different", G_STRLOC);
+                if (con->client->default_db && con->client->default_db->len > 0) {
+                    if (!g_string_equal(con->client->default_db, ss->server->default_db)) {
+                        g_debug("%s:default db for client:%s", G_STRLOC, con->client->default_db->str);
+                        ss->attr_diff = ATTR_DIF_DEFAULT_DB;
+                        result = FALSE;
+                        con->unmatched_attribute |= ATTR_DIF_DEFAULT_DB;
+                        consistant = FALSE;
+                        g_debug("%s: default db different", G_STRLOC);
+                    }
                 }
             }
         }
@@ -1961,6 +1970,23 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
  */
 NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
 {
+    shard_plugin_con_t *st = con->plugin_con_state;
+    sql_context_t *context = st->sql_context;
+
+    if (context->stmt_type == STMT_DROP_DATABASE) {
+        network_mysqld_com_query_result_t *com_query = con->parse.data;
+        if (com_query->query_status == MYSQLD_PACKET_OK) {
+            if (con->servers != NULL) {
+                int i;
+                for (i = 0; i < con->servers->len; i++) {
+                    server_session_t *ss = g_ptr_array_index(con->servers, i);
+                    g_string_truncate(ss->server->default_db, 0);
+                    g_message("%s:truncate server database for con:%p", G_STRLOC, con);
+                }
+            }
+        }
+    }
+
     if (con->server_to_be_closed) {
         if (con->servers != NULL) {
             g_debug("%s:call proxy_put_shard_conn_to_pool for con:%p", G_STRLOC, con);

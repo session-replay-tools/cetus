@@ -948,6 +948,9 @@ sql_statement_free(void *clause, sql_stmt_type_t stmt_type)
     case STMT_ROLLBACK:
     case STMT_COMMON_DDL:
         break;
+    case STMT_DROP_DATABASE:
+        sql_drop_database_free(clause); 
+        break;
     case STMT_CALL:
         sql_expr_free(clause);
         break;

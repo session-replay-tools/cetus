@@ -1617,6 +1617,7 @@ sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t
         return USE_PREVIOUS_TRAN_CONNS;
     case STMT_CALL:
         return rc;
+    case STMT_DROP_DATABASE:
     case STMT_COMMON_DDL:      /* ddl without comments sent to all */
         shard_conf_get_all_groups(groups);
         sharding_plan_add_groups(plan, groups);

@@ -611,8 +611,8 @@ sql_update_free(sql_update_t *p)
 {
     if (!p)
         return;
-    if (p->table)
-        sql_src_list_free(p->table);
+    if (p->table_reference)
+        sql_table_reference_free(p->table_reference);
     if (p->set_list)
         sql_expr_list_free(p->set_list);
     if (p->where_clause)        /* The WHERE clause */
@@ -657,6 +657,8 @@ sql_src_item_free(void *p)
     struct sql_src_item_t *item = (struct sql_src_item_t *)p;
     if (item->table_name)
         g_free(item->table_name);
+    if (item->index_hint)
+        sql_index_hint_free(item->index_hint);
     if (item->table_alias)
         g_free(item->table_alias);
     if (item->dbname)
@@ -691,12 +693,13 @@ sql_drop_database_free(sql_drop_database_t *p)
 
 sql_src_list_t *
 sql_src_list_append(sql_src_list_t *p, sql_token_t *tname,
-                    sql_token_t *dbname, sql_token_t *alias, sql_select_t *subquery,
+                    sql_token_t *dbname, sql_index_hint_t *index_hint, sql_token_t *alias, sql_select_t *subquery,
                     sql_expr_t *on_clause, sql_id_list_t *using_clause)
 {
     struct sql_src_item_t *item = g_new0(sql_src_item_t, 1);
     if (item) {
         item->table_name = tname ? sql_token_dup(*tname) : NULL;
+        item->index_hint = index_hint;
         item->table_alias = alias ? sql_token_dup(*alias) : NULL;
         item->dbname = dbname ? sql_token_dup(*dbname) : NULL;
         item->select = subquery;
@@ -1014,4 +1017,41 @@ sql_expr_equals(const sql_expr_t *p1, const sql_expr_t *p2)
         }
     }
     return FALSE;
+}
+
+void
+sql_index_hint_free(sql_index_hint_t* p)
+{
+    if (p && p->names) {
+        sql_id_list_free(p->names);
+    }
+    if (p)
+        g_free(p);
+}
+
+sql_index_hint_t*
+sql_index_hint_new()
+{
+    return g_new0(sql_index_hint_t, 1);    
+}
+
+void
+sql_table_reference_free(sql_table_reference_t* p)
+{
+    if (!p) {
+        return;
+    }
+    if (p->table_list) {
+        sql_src_list_free(p->table_list);
+    }
+    if (p->index_hint) {
+        sql_index_hint_free(p->index_hint);
+    }
+    g_free(p);
+}
+
+sql_table_reference_t *
+sql_table_reference_new()
+{
+    return g_new0(sql_table_reference_t, 1);
 }

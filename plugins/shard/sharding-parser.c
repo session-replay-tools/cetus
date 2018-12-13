@@ -1088,7 +1088,7 @@ routing_update(sql_context_t *context, sql_update_t *update,
                char *default_db, sharding_plan_t *plan, GPtrArray *groups, guint32 fixture)
 {
     char *db = default_db;
-    sql_src_list_t *tables = update->table;
+    sql_src_list_t *tables = update->table_reference->table_list;
     sql_src_item_t *table = g_ptr_array_index(tables, 0);
     if (table->dbname) {
         db = table->dbname;

@@ -550,17 +550,6 @@ cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
 
     g_message("%s: call cetus_worker_process_cycle", G_STRLOC);
 
-    if (cycle->cpus > 0) {
-        cpu_set_t cpu_set;
-        memset(&cpu_set, 0, sizeof(cpu_set));
-        int cpu_ndx = cetus_last_process % cycle->cpus;
-        CPU_SET(cpu_ndx, &cpu_set);
-        if (sched_setaffinity(0, sizeof(cpu_set), &cpu_set) < 0) {
-            g_critical("%s: failed to pin to cpu:%s, cpu index:%d",
-                    G_STRLOC, strerror(errno), cpu_ndx);
-        }
-    }
-
     int worker = (intptr_t) data;
 
     cetus_process = CETUS_PROCESS_WORKER;
@@ -618,6 +607,19 @@ cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
     g_message("Initial dist_tran_id:%llu", cycle->dist_tran_id);
     g_message("dist_tran_prefix:%s, process id:%d", cycle->dist_tran_prefix, cetus_process_id);
     incremental_guid_init(&(cycle->guid_state));
+#endif
+
+#ifdef BPF_ENABLED
+    if (cycle->cpus > 0) {
+        cpu_set_t cpu_set;
+        memset(&cpu_set, 0, sizeof(cpu_set));
+        int cpu_ndx = cycle->guid_state.worker_id % cycle->cpus;
+        CPU_SET(cpu_ndx, &cpu_set);
+        if (sched_setaffinity(0, sizeof(cpu_set), &cpu_set) < 0) {
+            g_critical("%s: failed to pin to cpu:%s, cpu index:%d",
+                    G_STRLOC, strerror(errno), cpu_ndx);
+        }
+    }
 #endif
 
     cetus_monitor_start_thread(cycle->priv->monitor, cycle);

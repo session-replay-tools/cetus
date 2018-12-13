@@ -688,3 +688,12 @@ remove_mul_server_recv_packets(network_mysqld_con *con)
         network_mysqld_queue_reset(ss->server);
     }
 }
+
+void
+truncate_default_db_when_drop_database(network_mysqld_con *con, char *schema_name)
+{
+    if (schema_name && strcasecmp(con->client->default_db->str, schema_name) == 0) {
+        g_string_truncate(con->client->default_db, 0);
+    }
+}
+

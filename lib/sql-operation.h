@@ -48,6 +48,8 @@ void sql_rollback_transaction(sql_context_t *st);
 
 void sql_savepoint(sql_context_t *st, int, char *);
 
+void sql_drop_database(sql_context_t *st, sql_drop_database_t *drop_database);
+
 void sql_explain_table(sql_context_t *st, sql_src_list_t *table);
 
 void sql_use_database(sql_context_t *ps, char *val);

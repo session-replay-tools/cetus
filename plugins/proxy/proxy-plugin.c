@@ -1199,6 +1199,13 @@ process_query_or_stmt_prepare(network_mysqld_con *con, proxy_plugin_con_t *st,
     case STMT_DELETE:
         stats->com_delete += 1;
         break;
+    case STMT_DROP_DATABASE: {
+        sql_drop_database_t *drop_database = context->sql_statement;
+        if (drop_database) {
+            truncate_default_db_when_drop_database(con, drop_database->schema_name);
+        }
+        break;
+    }
     default:
         break;
     }
@@ -1261,6 +1268,13 @@ network_read_query(network_mysqld_con *con, proxy_plugin_con_t *st)
         g_critical("%s: chunk is null", G_STRLOC);
         network_mysqld_con_send_error(con->client, C("(proxy) unable to retrieve command"));
         return PROXY_SEND_RESULT;
+    }
+
+    if (con->client->default_db->len == 0) {
+        if (con->srv->default_db != NULL) {
+            g_string_assign(con->client->default_db, con->srv->default_db);
+            g_debug("%s:set default db:%s for con:%p", G_STRLOC, con->client->default_db->str, con);
+        }
     }
 
     packet.offset = 0;
@@ -1707,6 +1721,18 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
     network_socket *send_sock;
     injection *inj;
     proxy_plugin_con_t *st = con->plugin_con_state;
+
+    if (st->sql_context->stmt_type == STMT_DROP_DATABASE) {
+        network_mysqld_com_query_result_t *com_query = con->parse.data;
+        if (com_query->query_status == MYSQLD_PACKET_OK) {
+            if (con->servers != NULL) {
+                con->server_to_be_closed = 1;
+            } else if (con->server) {
+                g_string_truncate(con->server->default_db, 0);
+                g_message("%s:truncate server database for con:%p", G_STRLOC, con);
+            }
+        }
+    }
 
     con->server_in_tran_and_auto_commit_received = 0;
 

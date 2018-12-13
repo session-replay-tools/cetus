@@ -1665,6 +1665,8 @@ shard_set_default_db_consistant(network_mysqld_con *con)
             } else {
                 g_warning("%s:default db adjust warning:not consistant", G_STRLOC);
             }
+        } else {
+            g_warning("%s:client default db is empty ", G_STRLOC);
         }
     }
 

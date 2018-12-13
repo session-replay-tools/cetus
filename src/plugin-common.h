@@ -51,5 +51,6 @@ NETWORK_API int do_check_qeury_cache(network_mysqld_con *con);
 NETWORK_API int try_to_get_resp_from_query_cache(network_mysqld_con *con);
 NETWORK_API gboolean proxy_put_shard_conn_to_pool(network_mysqld_con *con);
 NETWORK_API void remove_mul_server_recv_packets(network_mysqld_con *con);
+NETWORK_API void truncate_default_db_when_drop_database(network_mysqld_con *con, char *);
 
 #endif

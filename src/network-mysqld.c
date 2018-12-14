@@ -990,7 +990,7 @@ network_mysqld_read_mul_packets(chassis G_GNUC_UNUSED *chas,
 
     g_debug("%s: befre checking network_mysqld_process_select_resp, resp len:%d, to read:%d",
             G_STRLOC, (int) server->resp_len, (int) to_read);
-    if (con->candidate_tcp_streamed && con->num_servers_visited == 1) {
+    if (con->candidate_fast_streamed && con->num_servers_visited == 1) {
         g_debug("%s: visit network_mysqld_process_select_resp", G_STRLOC);
         network_socket_retval_t result = network_mysqld_process_select_resp(con, server, is_finished, NULL);
         if (*is_finished) {
@@ -3313,6 +3313,10 @@ disp_attr(network_mysqld_con *con, int srv_down_count, int *disp_flag)
             /* now the attrs of all server connections are the same */
             if (con->could_be_tcp_streamed) {
                 con->candidate_tcp_streamed = 1;
+            }
+
+            if (con->could_be_fast_streamed) {
+                con->candidate_fast_streamed = 1;
             }
             disp_query_after_consistant_attr(con);
             g_debug("%s: disp_query_after_consistant_attr:%d, expected resp:%d",

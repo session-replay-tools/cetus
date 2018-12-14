@@ -537,8 +537,10 @@ struct network_mysqld_con {
     unsigned int xa_start_phase:1;
     unsigned int use_slave_forced:1;
     unsigned int multiple_server_mode:1;
+    unsigned int could_be_fast_streamed:1;
     unsigned int could_be_tcp_streamed:1;
     unsigned int candidate_tcp_streamed:1;
+    unsigned int candidate_fast_streamed:1;
     unsigned int is_new_server_added:1;
     unsigned int is_attr_adjust:1;
     unsigned int sql_modified:1;

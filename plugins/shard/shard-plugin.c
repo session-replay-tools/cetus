@@ -455,9 +455,12 @@ analysis_query(network_mysqld_con *con, mysqld_query_attr_t *query_attr)
 
     switch (context->stmt_type) {
     case STMT_SELECT:{
-        if (con->srv->is_tcp_stream_enabled && !con->dist_tran) {
-            g_debug("%s: con dist tran is false", G_STRLOC);
-            con->could_be_tcp_streamed = 1;
+        if (!con->dist_tran) {
+            if (con->srv->is_tcp_stream_enabled) {
+                g_debug("%s: con dist tran is false", G_STRLOC);
+                con->could_be_tcp_streamed = 1;
+            }
+            con->could_be_fast_streamed = 1;
         }
         stats->com_select += 1;
         sql_select_t *select = (sql_select_t *)context->sql_statement;
@@ -626,7 +629,9 @@ proxy_parse_query(network_mysqld_con *con)
     con->is_xa_query_sent = 0;
     con->xa_query_status_error_and_abort = 0;
     con->could_be_tcp_streamed = 0;
+    con->could_be_fast_streamed = 0;
     con->candidate_tcp_streamed = 0;
+    con->candidate_fast_streamed = 0;
 
     network_packet packet;
     packet.data = g_queue_peek_head(con->client->recv_queue->chunks);
@@ -1147,6 +1152,7 @@ make_decisions(network_mysqld_con *con, int rv, int *disp_flag)
         }
         con->dist_tran = 1;
         con->could_be_tcp_streamed = 0;
+        con->could_be_fast_streamed = 0;
         con->dist_tran_failed = 0;
         con->delay_send_auto_commit = 0;
         g_debug("%s: xa transaction query:%s for con:%p", G_STRLOC, con->orig_sql->str, con);
@@ -1780,6 +1786,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
             g_debug("%s: resp expect num:%d", G_STRLOC, con->resp_expected_num);
             con->resp_expected_num = 0;
             con->candidate_tcp_streamed = 0;
+            con->candidate_fast_streamed = 0;
             con->is_attr_adjust = 1;
             if (con->unmatched_attribute & ATTR_DIF_CHANGE_USER) {
                 check_user_consistant(con);
@@ -1813,6 +1820,10 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
 
         if (con->could_be_tcp_streamed) {
             con->candidate_tcp_streamed = 1;
+        }
+
+        if (con->could_be_fast_streamed) {
+            con->candidate_fast_streamed = 1;
         }
         g_debug("%s: check_and_set_attr_bitmap is the same:%p", G_STRLOC, con);
         if (con->dist_tran && !con->dist_tran_xa_start_generated) {

@@ -203,7 +203,7 @@ chassis_frontend_new(void)
     frontend->cetus_max_allowed_packet = MAX_ALLOWED_PACKET_DEFAULT;
     frontend->disable_dns_cache = 0;
 
-    frontend->is_tcp_stream_enabled = 1;
+    frontend->is_tcp_stream_enabled = 0;
     frontend->group_replication_mode = 0;
     frontend->sql_log_bufsize = 0;
     frontend->sql_log_switch = NULL;

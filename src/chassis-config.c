@@ -344,7 +344,7 @@ chassis_config_set_remote_options(chassis_config_t *conf, gchar* key, gchar* val
     gchar sql[1024] = { 0 }, real_value[1024] = { 0 };
     mysql_real_escape_string(conn, real_value, value, strlen(value));
     snprintf(sql, sizeof(sql),
-            "REPLACE INTO %s.`settings`(option_key,option_value) VALUES ('%s', '%s')", conf->schema, key, real_value);
+            "INSERT INTO %s.`settings`(option_key,option_value) VALUES ('%s', '%s') ON DUPLICATE KEY UPDATE option_value = '%s'", conf->schema, key, real_value, real_value);
     if (mysql_query(conn, sql)) {
         g_warning("sql failed: %s | error: %s", sql, mysql_error(conn));
     } else {
@@ -573,8 +573,8 @@ chassis_config_mysql_write_object(chassis_config_t *conf,
     gboolean status = TRUE;
     time_t now = time(0);
     GString *sql = g_string_new(0);
-    g_string_printf(sql, "REPLACE INTO %s.objects(object_name,object_value,mtime)"
-                    " VALUES('%s','%s', FROM_UNIXTIME(%ld))", conf->schema, name, json, now);
+    g_string_printf(sql, "INSERT INTO %s.objects(object_name,object_value,mtime)"
+                    " VALUES('%s','%s', FROM_UNIXTIME(%ld)) ON DUPLICATE KEY UPDATE object_value = '%s', mtime = FROM_UNIXTIME(%ld)", conf->schema, name, json, now, json, now);
 
     if (mysql_query(conn, sql->str)) {
         g_warning("sql failed: %s", sql->str);

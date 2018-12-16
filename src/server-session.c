@@ -324,7 +324,7 @@ process_read_server(network_mysqld_con *con, server_session_t *ss)
                 ss->state = NET_RW_STATE_PART_FINISHED;
                 g_debug("%s:tcp stream is true for:%p", G_STRLOC, con);
             } else {
-                if (con->candidate_tcp_streamed) {
+                if (con->candidate_tcp_streamed || con->could_be_fast_streamed) {
                     GString *packet;
                     while ((packet = g_queue_pop_head(ss->server->recv_queue->chunks)) != NULL) {
                         network_mysqld_queue_append_raw(con->client, con->client->send_queue, packet);
@@ -336,7 +336,7 @@ process_read_server(network_mysqld_con *con, server_session_t *ss)
                     send_part_content_to_client(con);
                 }
                 server_sess_wait_for_event(ss, EV_READ, &con->read_timeout);
-                if (con->candidate_tcp_streamed) {
+                if (con->candidate_tcp_streamed || con->could_be_fast_streamed) {
                     g_debug("%s: optimize here", G_STRLOC);
                     return 0;
                 }

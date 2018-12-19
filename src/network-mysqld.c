@@ -3853,7 +3853,7 @@ network_mysqld_process_select_resp(network_mysqld_con *con, network_socket *serv
         }
 
         queue->len += len;
-        g_message("%s:  append raw packets to send queue for con:%p", G_STRLOC, con);
+        g_message("%s: append raw packets to send queue for con:%p, len:%d, queue len:%d", G_STRLOC, con, len, (int) queue->len);
         network_queue *reserved_queue = server->recv_queue_raw;
         server->recv_queue_raw = server->recv_queue;
         server->recv_queue = reserved_queue;
@@ -5626,6 +5626,34 @@ check_and_create_conns_func(int fd, short what, void *arg)
         }
     }
 
+#if 0
+    chassis_private *priv = chas->priv;
+    int len = priv->cons->len;
+    int i;
+    for (i = 0; i < len; i++) {
+        network_mysqld_con *con = priv->cons->pdata[i];
+        if (!con->client) {
+            continue;
+        }
+        int client_send_len, client_recv_len, client_recv_raw_len;
+        client_send_len = con->client->send_queue->len;
+        client_recv_len = con->client->recv_queue->len;
+        client_recv_raw_len = con->client->recv_queue_raw->len;
+        g_message("%s: client send:%d, recv :%d, raw:%d for con:%p", G_STRLOC, client_send_len, client_recv_len, client_recv_raw_len, con);
+        if (con->servers) {
+            int j;
+            for (j = 0; j < con->servers->len; j++) {
+                server_session_t *ss = g_ptr_array_index(con->servers, j);
+                int server_send_len, server_recv_len, server_recv_raw_len;
+                server_send_len = ss->server->send_queue->len;
+                server_recv_raw_len = ss->server->recv_queue_raw->len;
+                server_recv_len = ss->server->recv_queue->len;
+                g_message("%s: server send:%d, recv:%d, raw:%d for server:%p and con:%p", G_STRLOC,
+                        server_send_len, server_recv_len, server_recv_raw_len, ss->server, con);
+            }
+        }
+    }
+#endif
     g_debug("%s: check_and_create_conns_func", G_STRLOC);
     struct timeval check_interval = {30, 0};
     chassis_event_add_with_timeout(chas, &chas->auto_create_conns_event, &check_interval);

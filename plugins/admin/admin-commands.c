@@ -926,6 +926,20 @@ void admin_set_maintain(network_mysqld_con* con, int mode)
     network_mysqld_con_send_ok_full(con->client, affected, 0,2,0);
 }
 
+void admin_set_charset_check(network_mysqld_con* con, int mode)
+{
+    if (con->is_admin_client) {
+        return;
+    }
+
+    int affected = 0;
+    if (con->srv->charset_check != mode) {
+        con->srv->charset_check = mode;
+        affected = 1;
+    }
+    network_mysqld_con_send_ok_full(con->client, affected, 0,2,0);
+}
+
 void admin_show_maintain(network_mysqld_con* con)
 {
     if (con->is_admin_client) {
@@ -1668,6 +1682,7 @@ static struct sql_help_entry_t {
     {"delete allow_ip/deny_ip '<user>@<address>'", "delete address from white list of module", ALL_HELP},
     {"set reduce_conns (true|false)", "reduce idle connections if set to true", ALL_HELP},
     {"set maintain (true|false)", "close all client connections if set to true", ALL_HELP},
+    {"set charset_check (true|false)", "check the client charset is equal to the default charset", ALL_HELP},
     {"refresh conns", "refresh all server connections", ALL_HELP},
     {"show maintain status", "show maintain status", ALL_HELP},
     {"show status [like '%pattern%']", "show select/update/insert/delete statistics", ALL_HELP},

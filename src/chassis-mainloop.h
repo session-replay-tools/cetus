@@ -139,6 +139,7 @@ struct chassis {
     unsigned int master_preferred;
     unsigned int is_manual_down;
     unsigned int is_reduce_conns;
+    unsigned int charset_check;
     unsigned int xa_log_detailed;
     unsigned int check_slave_delay;
     int socketpair_mutex;

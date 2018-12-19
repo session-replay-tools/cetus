@@ -77,6 +77,7 @@
 "master" return TK_MASTER;
 "slave" return TK_SLAVE;
 "maintain" return TK_MAINTAIN;
+"charset_check" return TK_CHARSET_CHECK;
 "status" return TK_STATUS;
 "variables" return TK_VARIABLES;
 "conn_num" return TK_CONN_NUM;

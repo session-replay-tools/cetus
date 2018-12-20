@@ -682,6 +682,7 @@ network_socket_write_writev(network_socket *con, int send_chunks)
 
     iov = g_new0(struct iovec, chunk_count);
 
+    int aggr_len = 0;
     for (chunk = send_queue->chunks->head, chunk_id = 0;
          chunk && chunk_id < chunk_count; chunk_id++, chunk = chunk->next) {
         GString *s = chunk->data;
@@ -696,6 +697,12 @@ network_socket_write_writev(network_socket *con, int send_chunks)
             iov[chunk_id].iov_len = s->len;
         }
 
+        aggr_len += iov[chunk_id].iov_len;
+        if (aggr_len >= 65536) {
+            chunk_id++;
+            break;
+        }
+
         if (s->len == 0) {
             g_warning("%s: s->len is zero", G_STRLOC);
         }
@@ -704,8 +711,8 @@ network_socket_write_writev(network_socket *con, int send_chunks)
     g_debug("%s: network socket:%p, send (src:%s, dst:%s) fd:%d",
             G_STRLOC, con, con->src->name->str, con->dst->name->str, con->fd);
 
-    len = writev(con->fd, iov, chunk_count);
-    g_debug("%s: tcp write:%d, chunk count:%d", G_STRLOC, (int)len, (int)chunk_count);
+    len = writev(con->fd, iov, chunk_id);
+    g_debug("%s: tcp write:%d, chunk count:%d", G_STRLOC, (int)len, (int)chunk_id);
     os_errno = errno;
 
     g_free(iov);

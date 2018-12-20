@@ -278,6 +278,12 @@ proxy_c_read_query_result(network_mysqld_con *con)
         break;
     }
 
+    if (inj->id > INJ_ID_COM_STMT_PREPARE && inj->id < INJ_ID_RESET_CONNECTION) {
+        if (res->qstat.query_status == MYSQLD_PACKET_ERR) {
+            con->resp_err_met = 1;
+        }
+    }
+
     if (is_continue) {
         if (res->qstat.query_status) {
             if (con->is_in_transaction) {

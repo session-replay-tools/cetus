@@ -135,7 +135,6 @@ chassis_event_loop(chassis_event_loop_t *loop, int *mutex)
         }
     }
         
-    g_debug("%s: leave chassis_event_loop", G_STRLOC);
 
     return NULL;
 }

@@ -23,6 +23,7 @@ void admin_acl_add_rule(network_mysqld_con *con, gboolean is_white, char *addr);
 void admin_acl_delete_rule(network_mysqld_con *con, gboolean is_white, char* ip);
 void admin_set_reduce_conns(network_mysqld_con* con, int mode);
 void admin_set_maintain(network_mysqld_con* con, int mode);
+void admin_set_charset_check(network_mysqld_con* con, int mode);
 void admin_show_maintain(network_mysqld_con* con);
 void admin_show_status(network_mysqld_con* con, const char* like);
 void admin_show_variables(network_mysqld_con* con, const char* like);

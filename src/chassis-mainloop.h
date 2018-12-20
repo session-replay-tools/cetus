@@ -150,6 +150,7 @@ struct chassis {
     unsigned int is_manual_down:1;
     unsigned int is_reduce_conns:1;
     unsigned int xa_log_detailed:1;
+    unsigned int charset_check:1;
     unsigned int check_slave_delay:1;
     unsigned int complement_conn_flag:1;
     unsigned int disable_dns_cache:1;

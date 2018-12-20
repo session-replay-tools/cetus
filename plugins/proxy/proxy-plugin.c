@@ -834,6 +834,13 @@ adjust_charset(network_mysqld_con *con, mysqld_query_attr_t *query_attr)
         g_string_assign_len(con->server->charset, charset->str, charset->len);
     }
 
+    if (con->srv->charset_check) {
+        if (strcmp(con->client->charset->str, con->srv->default_charset) != 0) {
+            g_message("%s: client charset:%s, default charset:%s, client address:%s", G_STRLOC,
+                    con->client->charset->str, con->srv->default_charset, con->client->src->name->str);
+        }
+    }
+    
     if (!query_attr->charset_client_set) {
         if (!g_string_equal(con->client->charset_client, con->server->charset_client)) {
             if (con->client->charset_client->len > 0) {

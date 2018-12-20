@@ -1607,6 +1607,13 @@ check_and_set_attr_bitmap(network_mysqld_con *con)
             g_warning("%s: not support different sql modes", G_STRLOC);
         }
 
+        if (con->srv->charset_check) {
+            if (strcmp(con->client->charset->str, con->srv->default_charset) != 0) {
+                g_message("%s: client charset:%s, default charset:%s, client address:%s", G_STRLOC,
+                        con->client->charset->str, con->srv->default_charset, con->client->src->name->str);
+            }
+        }
+
         if (!g_string_equal(con->client->charset, ss->server->charset)) {
             ss->attr_diff |= ATTR_DIF_CHARSET;
             con->unmatched_attribute |= ATTR_DIF_CHARSET;

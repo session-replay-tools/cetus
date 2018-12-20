@@ -211,6 +211,9 @@ cmd ::= SET REDUCE_CONNS boolean(X) SEMI. {
 cmd ::= SET MAINTAIN boolean(X) SEMI. {
   admin_set_maintain(con, X);
 }
+cmd ::= SET CHARSET_CHECK boolean(X) SEMI. {
+  admin_set_charset_check(con, X);
+}
 cmd ::= REFRESH_CONNS SEMI. {
   admin_set_server_conn_refresh(con);
 }

@@ -111,7 +111,6 @@ chassis_event_loop(chassis_event_loop_t *loop, int *mutex)
         struct timeval timeout;
         int r;
 
-        g_debug("%s: enter event_base_loopexit", G_STRLOC);
         timeout.tv_sec = 0;
         timeout.tv_usec = 256000;
 
@@ -121,9 +120,7 @@ chassis_event_loop(chassis_event_loop_t *loop, int *mutex)
             break;
         }
 
-        g_debug("%s: enter event_base_dispatch", G_STRLOC);
         r = event_base_dispatch(loop);
-        g_debug("%s: after event_base_dispatch:%d", G_STRLOC, r);
 
         if (r == -1) {
             g_debug("%s: after event_base_dispatch:%d, errno:%d, str:%s",
@@ -138,7 +135,6 @@ chassis_event_loop(chassis_event_loop_t *loop, int *mutex)
         }
     }
         
-    g_debug("%s: leave chassis_event_loop", G_STRLOC);
 
     return NULL;
 }

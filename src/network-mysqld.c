@@ -902,6 +902,8 @@ disp_err_packet(network_mysqld_con *con, network_packet *packet)
     packet->offset = NET_HEADER_SIZE;
     err_packet = network_mysqld_err_packet_new();
 
+    con->resp_err_met = 1;
+
     if (!network_mysqld_proto_get_err_packet(packet, err_packet)) {
         g_message("%s: dst:%s, sql:%s, errmsg:%s",
                   G_STRLOC, con->server->dst->name->str, con->orig_sql->str, err_packet->errmsg->str);
@@ -2724,6 +2726,8 @@ handle_send_query_to_servers(network_mysqld_con *con, network_mysqld_con_state_t
 {
     int disp_flag = 0;
 
+    con->resp_err_met = 0;
+
     /* 
      * send the query to the server
      * this state will loop until all the packets
@@ -3273,7 +3277,18 @@ disp_attr(network_mysqld_con *con, int srv_down_count, int *disp_flag)
 
                 *disp_flag = DISP_CONTINUE;
                 return 0;
-
+            } else if (con->resp_err_met) {
+                con->state = ST_SEND_QUERY_RESULT;
+                network_queue_clear(con->client->send_queue);
+                network_mysqld_con_send_error_full(con->client, C("adjust connection attribute failed"), ER_CETUS_UNKNOWN, "HY000");
+                g_warning("%s: adjust connection attribute failed for con:%p, attr state:%d, src:%s",
+                        G_STRLOC, con, con->attr_adj_state, con->client->src->name->str);
+                remove_mul_server_recv_packets(con);
+                network_queue_clear(con->client->recv_queue);
+                network_mysqld_queue_reset(con->client);
+                con->server_to_be_closed = 1;
+                *disp_flag = DISP_CONTINUE;
+                return 0;
             } else {
                 if (build_attr_statements(con)) {
                     g_debug("%s: continue here:%d", G_STRLOC, con->state);

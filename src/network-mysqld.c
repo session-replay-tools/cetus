@@ -3879,12 +3879,9 @@ network_mysqld_process_select_resp(network_mysqld_con *con, network_socket *serv
         server->recv_queue = reserved_queue;
     }
 
-    if (server->resp_len > con->srv->max_resp_len) {
-        return NETWORK_SOCKET_WAIT_FOR_EVENT;
-    }
-
 #ifdef SIMPLE_PARSER
     if (is_finished) {
+        *finish_flag = 1;
         con->state = ST_SEND_QUERY_RESULT;
         if (con->is_calc_found_rows) {
             con->client->is_server_conn_reserved = 1;
@@ -3907,12 +3904,16 @@ network_mysqld_process_select_resp(network_mysqld_con *con, network_socket *serv
             *disp_flag = DISP_CONTINUE;
         }
     } else {
-        if (send_flag)  {
-            send_part_content_to_client(con);
-        }
-        WAIT_FOR_EVENT(server, EV_READ, &(con->read_timeout));
-        if (disp_flag) {
-            *disp_flag = DISP_STOP;
+        if (server->resp_len > con->srv->max_resp_len) {
+            return NETWORK_SOCKET_WAIT_FOR_EVENT;
+        } else {
+            if (send_flag)  {
+                send_part_content_to_client(con);
+            }
+            WAIT_FOR_EVENT(server, EV_READ, &(con->read_timeout));
+            if (disp_flag) {
+                *disp_flag = DISP_STOP;
+            }
         }
 
     }
@@ -3924,6 +3925,10 @@ network_mysqld_process_select_resp(network_mysqld_con *con, network_socket *serv
         network_mysqld_queue_reset(con->client);
         network_queue_clear(server->recv_queue_raw);
         network_queue_clear(server->recv_queue);
+    } else {
+        if (server->resp_len > con->srv->max_resp_len) {
+            return NETWORK_SOCKET_WAIT_FOR_EVENT;
+        }
     }
 #endif
 

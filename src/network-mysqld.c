@@ -3881,7 +3881,9 @@ network_mysqld_process_select_resp(network_mysqld_con *con, network_socket *serv
 
 #ifdef SIMPLE_PARSER
     if (is_finished) {
-        *finish_flag = 1;
+        if (finish_flag) {
+            *finish_flag = 1;
+        }
         con->state = ST_SEND_QUERY_RESULT;
         if (con->is_calc_found_rows) {
             con->client->is_server_conn_reserved = 1;
@@ -3920,7 +3922,9 @@ network_mysqld_process_select_resp(network_mysqld_con *con, network_socket *serv
 #else
     if (is_finished) {
         g_debug("%s: we come true, packet id:%d", G_STRLOC, server->last_packet_id);
-        *finish_flag = 1;
+        if (finish_flag) {
+            *finish_flag = 1;
+        }
         con->state = ST_SEND_QUERY_RESULT;
         network_mysqld_queue_reset(con->client);
         network_queue_clear(server->recv_queue_raw);

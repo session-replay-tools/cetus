@@ -105,8 +105,7 @@ static gboolean acl_ip_contains(const gchar *cip, const gchar *hip)
 {
     gchar *client_ip = (gchar *)cip;
     gchar *host_ip = (gchar *)hip;
-    if(g_strcmp0(host_ip, "*") == 0 ||
-        g_strcmp0(host_ip, "*") == 0) {
+    if(g_strcmp0(host_ip, "*") == 0) {
         return TRUE;
     }
     gchar *wildcard_pos = g_strstr_len(host_ip, strlen(host_ip), "*");

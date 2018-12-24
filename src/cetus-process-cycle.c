@@ -185,6 +185,8 @@ gpointer retrieve_remote_config_mainloop(gpointer user_data) {
             }
         }
     }
+
+    return NULL;
 }
 
 

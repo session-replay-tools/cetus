@@ -424,7 +424,6 @@ do_connect_cetus(network_mysqld_con *con, network_backend_t **backend, int *back
     challenge->charset = 0xC0;
     GString *version = g_string_new("");
     network_backends_server_version(g->backends, version);
-    g_string_append(version, " (cetus)");
     challenge->server_version_str = version->str;
     g_string_free(version, FALSE);
     challenge->thread_id = g->thread_id++;

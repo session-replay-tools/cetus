@@ -1,5 +1,7 @@
 #include "cetus-acl.h"
 #include <string.h>
+#include <stdlib.h>
+#include <ctype.h>
 
 cetus_acl_t* cetus_acl_new()
 {
@@ -64,12 +66,70 @@ static GList* acl_delete_from_list(GList* entries, const char* user,
     return entries;
 }
 
+static gboolean is_ip_address(const gchar *ip)
+{
+    gchar *host_ip = (gchar *)ip;
+    gchar *wildcard_pos = g_strstr_len(host_ip, strlen(host_ip), "*");
+    gint cmp_size = strlen(host_ip);
+    if(wildcard_pos) {
+        cmp_size = (gint)(wildcard_pos - host_ip);
+    }
+    gint i = 0;
+    gchar *start = host_ip;
+    gchar *end = start;
+    gint dot_num = 0;
+    while(i<cmp_size) {
+        if(!isdigit(*end) && *end != '.') {
+            return FALSE;
+        }
+        if(*end == '.') {
+            dot_num ++;
+            if(dot_num > 3) {
+                return FALSE;
+            }
+            gint len = (gint)(end - start);
+            gchar num[4] = {""};
+            if(len > 0) {
+                memcpy(num, start, len);
+            }
+            if(atoi(num) > 255 || atoi(num) < 0) {
+                return FALSE;
+            }
+            start = end + 1;
+        }
+        i++;
+        end++;
+    }
+    return TRUE;
+}
+
+static gboolean acl_ip_contains(const gchar *cip, const gchar *hip)
+{
+    gchar *client_ip = (gchar *)cip;
+    gchar *host_ip = (gchar *)hip;
+    if(g_strcmp0(host_ip, "*") == 0) {
+        return TRUE;
+    }
+    gchar *wildcard_pos = g_strstr_len(host_ip, strlen(host_ip), "*");
+    gint cmp_size = 0;
+    if(wildcard_pos) {
+        cmp_size = (gint)(wildcard_pos - host_ip);
+    } else {
+        cmp_size = strlen(host_ip);
+    }
+    if(cmp_size > 0) {
+        gboolean ret = (g_ascii_strncasecmp(client_ip, host_ip, cmp_size) == 0);
+        return ret;
+    }
+    return FALSE;
+}
+
 static gboolean acl_list_contains(GList* entries, const char* user, const char* host)
 {
     GList* l;
     for (l = entries; l; l = l->next) {
         struct cetus_acl_entry_t* entry = l->data;
-        if (strcmp(entry->host, host)==0
+        if (acl_ip_contains(host, entry->host)
             && (strcmp(entry->username, user)==0 || IS_WILDCARD(entry->username))) {
             return TRUE;
         }
@@ -102,7 +162,7 @@ gboolean cetus_acl_add_rule_str(cetus_acl_t* acl, enum cetus_acl_category cate,
     } else {  /* xx.xx.xx.xx host only style */
         host = rule;
     }
-    if (!g_hostname_is_ip_address(host)) {
+    if (!is_ip_address(host)) {
         g_message(G_STRLOC "host name not ip address");
         g_free(rule);
         return FALSE;
@@ -138,7 +198,7 @@ gboolean cetus_acl_delete_rule_str(cetus_acl_t* acl, enum cetus_acl_category cat
     } else {  /* xx.xx.xx.xx host only style */
         host = rule;
     }
-    if (!g_hostname_is_ip_address(host)) {
+    if (!is_ip_address(host)) {
         g_message(G_STRLOC "host name not ip address");
         g_free(rule);
         return 0;

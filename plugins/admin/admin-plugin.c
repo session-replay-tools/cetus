@@ -833,6 +833,7 @@ static void remove_unix_socket_if_stale(chassis *chas)
         }
         pclose(p);
     }
+
 }
 
 static int

@@ -2695,12 +2695,9 @@ process_rw_write(network_mysqld_con *con, network_mysqld_con_state_t ostate, int
             g_debug("%s: set ST_CLOSE_SERVER for con:%p", G_STRLOC, con);
             con->state = ST_CLOSE_SERVER;
         }
-        if (con->client) {
-            network_mysqld_queue_reset(con->client);
-        }
-        if (con->server) {
-            network_mysqld_queue_reset(con->server);
-        }
+
+        network_mysqld_queue_reset(con->client);
+        network_mysqld_queue_reset(con->server);
 
         con->prepare_stmt_count--;
         g_debug("%s: conn:%p, sub, now prepare_stmt_count:%d", G_STRLOC, con, con->prepare_stmt_count);

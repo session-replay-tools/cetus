@@ -7,11 +7,12 @@
 - cmake
 - gcc
 - glib2-devel
+- zlib-devel
 - flex
 - mysql-devel／mariadb-devel
 - gperftools-libs (由于malloc存在着潜在的内存碎片问题，建议采用gperftools-libs中的tcmalloc)
 
-centos系统可使用：yum install cmake gcc glib2-devel flex mysql-devel gperftools-libs -y 安装依赖包，请确保在编译安装Cetus前已安装好相应的依赖。
+centos系统可使用：yum install cmake gcc glib2-devel flex mysql-devel gperftools-libs zlib-devel -y 安装依赖包，请确保在编译安装Cetus前已安装好相应的依赖。
 
 **注意**：如果已经安装了gperftools-libs，但是编译cetus时仍然提示找不到tcmalloc，则可以通过建立软链接的形式，解决。
 ```

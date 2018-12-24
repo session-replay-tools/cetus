@@ -1,5 +1,6 @@
 #include "cetus-acl.h"
 #include <string.h>
+#include <stdlib.h>
 #include <ctype.h>
 
 cetus_acl_t* cetus_acl_new()

@@ -1897,6 +1897,7 @@ void admin_config_reload(network_mysqld_con* con, char* object)
 
 void admin_kill_query(network_mysqld_con* con, guint32 thread_id)
 {
+    g_debug("%s call admin_kill_query for con:%p", G_STRLOC, con);
     if (con->is_processed_by_subordinate) {
         con->process_index = thread_id >> 24;
 
@@ -1910,6 +1911,7 @@ void admin_kill_query(network_mysqld_con* con, guint32 thread_id)
         return;
     }
 
+    g_debug("%s call admin_kill_query:%d for con:%p", G_STRLOC, thread_id, con);
     gboolean ok = network_mysqld_kill_connection(con->srv, thread_id);
     network_mysqld_con_send_ok_full(con->client, ok ? 1 : 0, 0, SERVER_STATUS_AUTOCOMMIT, 0);
 

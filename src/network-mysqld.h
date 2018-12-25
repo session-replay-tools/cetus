@@ -294,6 +294,9 @@ typedef enum {
     ST_ASYNC_READ_HANDSHAKE,
     ST_ASYNC_SEND_AUTH,
     ST_ASYNC_READ_AUTH_RESULT,
+    ST_ASYNC_SEND_QUERY,
+    ST_ASYNC_READ_QUERY_RESULT,
+    ST_ASYNC_OVER,
     ST_ASYNC_ERROR,
 } self_con_state_t;
 
@@ -344,6 +347,7 @@ struct server_connection_state_t {
     network_socket *server;
     chassis *srv;
     network_connection_pool *pool;
+    unsigned int query_id_to_be_killed;
     unsigned int is_multi_stmt_set:1;
     unsigned int retry_cnt:4;
     guint8 charset_code;
@@ -782,6 +786,7 @@ NETWORK_API int network_mysqld_queue_append_raw(network_socket *sock, network_qu
 NETWORK_API int network_mysqld_queue_reset(network_socket *sock);
 NETWORK_API void network_mysqld_con_clear_xa_env_when_not_expected(network_mysqld_con *con);
 
+NETWORK_API void network_connection_pool_create_conn_and_kill_query(network_mysqld_con *con);
 NETWORK_API void network_connection_pool_create_conn(network_mysqld_con *con);
 NETWORK_API void network_connection_pool_create_conns(chassis *srv);
 NETWORK_API void check_and_create_conns_func(int fd, short what, void *arg);

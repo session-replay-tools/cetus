@@ -427,6 +427,7 @@ do_connect_cetus(network_mysqld_con *con, network_backend_t **backend, int *back
     challenge->server_version_str = version->str;
     g_string_free(version, FALSE);
     challenge->thread_id = g->thread_id++;
+    g_debug("%s: generate thread id:%d", G_STRLOC, challenge->thread_id);
 
     if (g->thread_id > g->max_thread_id) {
         g->thread_id = 1 + (cetus_last_process << 24);

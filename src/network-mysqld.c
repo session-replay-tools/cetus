@@ -4504,6 +4504,9 @@ proxy_self_read_handshake(chassis *srv, server_connection_state_t *con)
     g_debug("%s: server version:%d", G_STRLOC, challenge->server_version);
     if (challenge->server_version >= 50700) {
         recv_sock->is_reset_conn_supported = 1;
+        if (challenge->server_version >= 80000) {
+            con->srv->is_groupby_need_reconstruct = 1;
+        }
     }
 #ifndef SIMPLE_PARSER
     if (challenge->server_version < 50707) {

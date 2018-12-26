@@ -136,6 +136,7 @@ struct chassis {
     unsigned int is_back_compressed;
     unsigned int compress_support;
     unsigned int client_found_rows;
+    unsigned int is_groupby_need_reconstruct;
     unsigned int master_preferred;
     unsigned int is_manual_down;
     unsigned int is_reduce_conns;

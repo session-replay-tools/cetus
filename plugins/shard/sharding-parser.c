@@ -169,7 +169,7 @@ prepare_for_sql_modify_orderby(sql_select_t *select)
 }
 
 GString *
-sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi)
+sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi, int is_groupby_need_reconstruct)
 {
     if (context->stmt_type == STMT_SELECT && context->sql_statement) {
         sql_select_t *select = context->sql_statement;
@@ -211,7 +211,7 @@ sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi)
             need_reconstruct = TRUE;
         }
 
-        if (select->groupby_clause != NULL && select->orderby_clause == NULL) {
+        if (is_groupby_need_reconstruct && select->groupby_clause != NULL && select->orderby_clause == NULL) {
             select->flags |= SF_REWRITE_ORDERBY;
         }
 

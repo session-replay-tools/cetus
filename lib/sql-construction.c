@@ -447,6 +447,23 @@ sql_construct_select(sql_select_t *select, int explain)
     if (select->lock_read) {
         g_string_append(s, " FOR UPDATE");
     }
+
+    if (select->prior) {
+        sql_select_t *sub_select = select->prior;
+        GString *union_sql = g_string_new(NULL);
+        while (sub_select) {
+            GString *sql = sql_construct_select(sub_select, 0);
+            g_string_append(union_sql, sql->str);
+            g_string_append(union_sql, " UNION ");
+            g_string_free(sql, TRUE);
+            sub_select = sub_select->prior;
+        }
+
+        g_string_append(union_sql, s->str);
+        g_string_free(s, TRUE);
+        s = union_sql;
+    }
+
     return s;
 }
 

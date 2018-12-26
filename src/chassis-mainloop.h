@@ -144,6 +144,7 @@ struct chassis {
     unsigned int is_tcp_stream_enabled:1;
     unsigned int query_cache_enabled:1;
     unsigned int is_back_compressed:1;
+    unsigned int is_groupby_need_reconstruct:1;
     unsigned int compress_support:1;
     unsigned int client_found_rows:1;
     unsigned int master_preferred:1;

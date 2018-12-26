@@ -2449,7 +2449,11 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
                         timeout.tv_usec = 0;
                         g_debug("%s: set a maintained client timeout:%p", G_STRLOC, con);
                     } else {
-                        timeout.tv_sec = con->srv->client_idle_timeout;
+                        if (!con->is_in_transaction) {
+                            timeout.tv_sec = con->srv->client_idle_timeout;
+                        } else {
+                            timeout.tv_sec = con->srv->incomplete_tran_idle_timeout;
+                        }
                         timeout.tv_usec = 0;
                         g_debug("%s: set a long timeout:%p", G_STRLOC, con);
                     }

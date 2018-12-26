@@ -140,6 +140,10 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
     int diff = con->srv->current_time - con->client->update_time + 1;
     int idle_timeout = con->srv->client_idle_timeout;
 
+    if (con->is_in_transaction) {
+        idle_timeout = con->srv->incomplete_tran_idle_timeout;
+    }
+
     if (con->srv->maintain_close_mode) {
         idle_timeout = con->srv->maintained_client_idle_timeout;
     }

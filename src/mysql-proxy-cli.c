@@ -117,6 +117,7 @@ struct chassis_frontend_t {
     int cetus_max_allowed_packet;
     int default_query_cache_timeout;
     int client_idle_timeout;
+    int incomplete_tran_idle_timeout;
     int maintained_client_idle_timeout;
     int query_cache_enabled;
     int disable_dns_cache;
@@ -198,6 +199,7 @@ chassis_frontend_new(void)
     frontend->slave_delay_down_threshold_sec = 10.0;
     frontend->default_query_cache_timeout = 100;
     frontend->client_idle_timeout = 8 * HOURS;
+    frontend->incomplete_tran_idle_timeout = 3600;
     frontend->maintained_client_idle_timeout = 30;
     frontend->long_query_time = 1000;
     frontend->cetus_max_allowed_packet = MAX_ALLOWED_PACKET_DEFAULT;
@@ -461,6 +463,12 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
                         0, 0, OPTION_ARG_INT, &(frontend->client_idle_timeout),
                         "set client idle timeout in seconds(default 28800 seconds)", "<integer>",
                         assign_default_client_idle_timeout, show_default_client_idle_timeout, ALL_OPTS_PROPERTY);
+
+    chassis_options_add(opts,
+                        "default-incomplete-tran-idle-timeout",
+                        0, 0, OPTION_ARG_INT, &(frontend->incomplete_tran_idle_timeout),
+                        "set client incomplete transaction idle timeout in seconds(default 3600 seconds)", "<integer>",
+                        assign_default_incomplete_tran_idle_timeout, show_default_incomplete_tran_idle_timeout, ALL_OPTS_PROPERTY);
 
     chassis_options_add(opts,
                         "default-maintained-client-idle-timeout",
@@ -759,6 +767,7 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
 
     srv->default_query_cache_timeout = MAX(frontend->default_query_cache_timeout, 1);
     srv->client_idle_timeout = MAX(frontend->client_idle_timeout, 10);
+    srv->incomplete_tran_idle_timeout = MAX(frontend->incomplete_tran_idle_timeout, 10);
     srv->maintained_client_idle_timeout = MAX(frontend->maintained_client_idle_timeout, 10);
     srv->long_query_time = MIN(frontend->long_query_time, MAX_QUERY_TIME);
     srv->cetus_max_allowed_packet = CLAMP(frontend->cetus_max_allowed_packet,

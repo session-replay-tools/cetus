@@ -169,6 +169,7 @@ struct chassis {
     int cetus_max_allowed_packet;
     int maintained_client_idle_timeout;
     int client_idle_timeout;
+    int incomplete_tran_idle_timeout;
     int default_query_cache_timeout;
     int socketpair_mutex;
     int max_alive_time;

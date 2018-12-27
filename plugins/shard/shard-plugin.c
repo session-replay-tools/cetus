@@ -300,7 +300,6 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
     if (con->srv->query_cache_enabled) {
         shard_plugin_con_t *st = con->plugin_con_state;
         if (sql_context_is_cacheable(st->sql_context)) {
-            shard_plugin_con_t *st = con->plugin_con_state;
             if (!con->is_in_transaction && !con->srv->master_preferred &&
                 !(st->sql_context->rw_flag & CF_FORCE_MASTER) && !(st->sql_context->rw_flag & CF_FORCE_SLAVE)) {
                 if (try_to_get_resp_from_query_cache(con)) {
@@ -1193,6 +1192,7 @@ proxy_get_server_list(network_mysqld_con *con)
         }
     }
 
+    con->write_flag = 0;
     con->use_all_prev_servers = 0;
 
     query_stats_t *stats = &(con->srv->query_stats);
@@ -1200,6 +1200,10 @@ proxy_get_server_list(network_mysqld_con *con)
     int rv = 0, disp_flag = 0;
 
     shard_plugin_con_t *st = con->plugin_con_state;
+
+    if (st->sql_context->rw_flag & CF_WRITE) {
+        con->write_flag = 1;
+    }
 
     switch (con->parse.command) {
     case COM_INIT_DB:
@@ -1244,7 +1248,6 @@ proxy_get_server_list(network_mysqld_con *con)
     con->server_to_be_closed = 0;
     con->server_closed = 0;
     con->resp_too_long = 0;
-    con->all_participate_num = 0;
 
     if (con->last_record_updated || con->srv->master_preferred ||
         st->sql_context->rw_flag & CF_WRITE ||
@@ -1418,6 +1421,7 @@ proxy_add_server_connection(network_mysqld_con *con, GString *group, int *server
         ss->server->last_packet_id = 0;
         ss->server->parse.qs_state = PARSE_COM_QUERY_INIT;
         ss->participated = 1;
+        ss->has_xa_write = 0;
         ss->state = NET_RW_STATE_NONE;
         ss->fresh = 1;
         ss->is_xa_over = 0;

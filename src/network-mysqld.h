@@ -575,6 +575,7 @@ struct network_mysqld_con {
     unsigned int last_record_updated:1;
     unsigned int query_cache_judged:1;
     unsigned int is_client_compressed:1;
+    unsigned int write_flag:1;
     unsigned int is_processed_by_subordinate:1;
     unsigned int is_admin_client:1;
     unsigned int is_admin_waiting_resp:1;
@@ -610,7 +611,7 @@ struct network_mysqld_con {
     unsigned int last_payload_len:4;
     unsigned int process_index:6;
     unsigned int last_packet_id:8;
-    unsigned int all_participate_num:8;
+    unsigned int write_server_num:8;
 
     unsigned long long xa_id;
     guint32 auth_switch_to_round;
@@ -693,6 +694,7 @@ typedef enum {
 typedef struct server_session_t {
     unsigned int fresh:1;
     unsigned int participated:1;
+    unsigned int has_xa_write:1;
     unsigned int xa_start_already_sent:1;
     unsigned int dist_tran_participated:1;
     unsigned int xa_query_status_error_and_abort:1;

@@ -1471,7 +1471,7 @@ record_xa_log_for_mending(network_mysqld_con *con, network_socket *sock)
             tc_log_info(LOG_WARN, 0, "XA ROLLBACK %s %s@%u failed",
                         con->xid_str, sock->dst->name->str, sock->challenge->thread_id);
         } else {
-            if (con->servers->len == 1) {
+            if (con->servers->len == 1 || con->write_server_num <= 1) {
                 tc_log_info(LOG_WARN, 0,
                             "XA COMMIT %s %s@%u ONE PHASE failed",
                             con->xid_str, sock->dst->name->str, sock->challenge->thread_id);
@@ -1788,8 +1788,11 @@ shard_build_xa_query(network_mysqld_con *con, server_session_t *ss)
     ss->state = NET_RW_STATE_NONE;
 
     con->is_xa_query_sent = 1;
-    con->all_participate_num++;
     con->resp_expected_num++;
+
+    if (con->write_flag) {
+        ss->has_xa_write = 1;
+    }
 
     return 0;
 }
@@ -1814,7 +1817,7 @@ build_xa_command(network_mysqld_con *con, server_session_t *ss, int end, char *b
 
         break;
     case NEXT_ST_XA_PREPARE:
-        if (con->servers->len == 1) {
+        if (con->servers->len == 1 || con->write_server_num <= 1) {
             snprintf(buffer, XA_CMD_BUF_LEN, "XA COMMIT %s ONE PHASE", con->xid_str);
             ss->dist_tran_state = NEXT_ST_XA_CANDIDATE_OVER;
             con->dist_tran_decided = 1;
@@ -2012,9 +2015,15 @@ build_xa_statements(network_mysqld_con *con)
     char buffer[XA_BUF_LEN] = { 0 };
     char *p_buffer = buffer;
 
+    con->write_server_num = 0;
+
     for (iter = 0; iter < len; iter++) {
         server_session_t *ss = g_ptr_array_index(con->servers, iter);
         g_debug("%s: ss %d, xa state:%d for con:%p", G_STRLOC, iter, ss->dist_tran_state, con);
+
+        if (ss->has_xa_write) {
+            con->write_server_num++;
+        }
 
         if (!con->is_commit_or_rollback && !ss->participated) {
             g_debug("%s: stop processing for this server:%d", G_STRLOC, iter);

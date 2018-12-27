@@ -108,6 +108,7 @@ struct chassis_frontend_t {
     int config_port;
     int disable_threads;
     int is_tcp_stream_enabled;
+    int is_fast_stream_enabled;
     int is_back_compressed;
     int is_client_compress_support;
     int check_slave_delay;
@@ -206,6 +207,7 @@ chassis_frontend_new(void)
     frontend->disable_dns_cache = 0;
 
     frontend->is_tcp_stream_enabled = 1;
+    frontend->is_fast_stream_enabled = 0;
     frontend->group_replication_mode = 0;
     frontend->sql_log_bufsize = 0;
     frontend->sql_log_switch = NULL;
@@ -499,6 +501,9 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
     chassis_options_add(opts, "enable-tcp-stream", 0, 0, OPTION_ARG_NONE, &(frontend->is_tcp_stream_enabled), "", NULL,
                         NULL, show_enable_tcp_stream, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
+    chassis_options_add(opts, "enable-fast-stream", 0, 0, OPTION_ARG_NONE, &(frontend->is_fast_stream_enabled), "", NULL,
+                        NULL, show_enable_tcp_stream, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
+
     chassis_options_add(opts,
                         "log-xa-in-detail",
                         0, 0, OPTION_ARG_NONE, &(frontend->xa_log_detailed), "log xa in detail", NULL,
@@ -746,6 +751,10 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->is_tcp_stream_enabled = frontend->is_tcp_stream_enabled;
     if (srv->is_tcp_stream_enabled) {
         g_message("%s:tcp stream enabled", G_STRLOC);
+    }
+    srv->is_fast_stream_enabled = frontend->is_fast_stream_enabled;
+    if (srv->is_fast_stream_enabled) {
+        g_message("%s:fast stream enabled", G_STRLOC);
     }
     srv->disable_threads = frontend->disable_threads;
     srv->is_back_compressed = frontend->is_back_compressed;

@@ -464,7 +464,9 @@ analysis_query(network_mysqld_con *con, mysqld_query_attr_t *query_attr)
                 g_debug("%s: con dist tran is false", G_STRLOC);
                 con->could_be_tcp_streamed = 1;
             }
-            con->could_be_fast_streamed = 1;
+            if (con->srv->is_fast_stream_enabled) {
+                con->could_be_fast_streamed = 1;
+            }
         }
         stats->com_select += 1;
         sql_select_t *select = (sql_select_t *)context->sql_statement;

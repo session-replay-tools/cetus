@@ -3973,7 +3973,7 @@ network_mysqld_read_rw_resp(network_mysqld_con *con, network_socket *server, int
 
     server->resp_len += read_len;
     
-    if (read_len > 0 && !con->resultset_is_needed) {
+    if (read_len > 0 && !con->resultset_is_needed && con->srv->is_fast_stream_enabled) {
         return network_mysqld_process_select_resp(con, server, NULL, disp_flag);
     }
 

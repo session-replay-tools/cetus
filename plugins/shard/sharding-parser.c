@@ -913,11 +913,11 @@ routing_select(sql_context_t *context, const sql_select_t *select,
         stats->com_select_global += 1;
         return USE_NON_SHARDING_TABLE;
     }
-    char *db = default_db;
     GPtrArray *sharding_tables = g_ptr_array_new();
     GList *single_tables = NULL;
     int i;
     for (i = 0; i < sources->len; ++i) {
+        char *db = default_db;
         sql_src_item_t *src = g_ptr_array_index(sources, i);
         char *table = NULL;
         if (src->select && sql_select_contains_sharding_table(src->select, &db, &table)) {
@@ -933,7 +933,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
         if (src->select) {      /* subquery not contain sharding table, try to find single table */
             sql_select_get_single_tables(src->select, db, &single_tables);
         }
-        db = src->dbname ? src->dbname : db;
+        db = src->dbname ? src->dbname : default_db;
         if (src->table_name) {
             if (shard_conf_is_shard_table(db, src->table_name)) {
                 g_ptr_array_add(sharding_tables, src);
@@ -955,7 +955,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
         GList *l;
         for (l = single_tables; l; l = l->next) {
             sql_src_item_t *src = l->data;
-            db = src->dbname ? src->dbname : db;
+            char *db = src->dbname ? src->dbname : default_db;
             shard_conf_get_single_table_distinct_group(groups, db, src->table_name);
         }
         if (groups->len > 1) {
@@ -975,7 +975,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
     sql_expr_find_subqueries(select->where_clause, &subqueries);
     GList *l;
     for (l = subqueries; l; l = l->next) {
-        if (sql_select_has_single_table(l->data, db)) {
+        if (sql_select_has_single_table(l->data, default_db)) {
             g_ptr_array_free(sharding_tables, TRUE);
             g_list_free(subqueries);
             sql_context_append_msg(context, "(cetus) Found single-table in subquery, not allowed");
@@ -992,7 +992,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
     }
 
     if (sharding_tables->len >= 2) {
-        if (!join_on_sharding_key(db, sharding_tables, select->where_clause)) {
+        if (!join_on_sharding_key(default_db, sharding_tables, select->where_clause)) {
             g_ptr_array_free(sharding_tables, TRUE);
             sql_context_append_msg(context, "(proxy)JOIN must inside VDB and have explicit join-on condition");
             return ERROR_UNPARSABLE;
@@ -1002,7 +1002,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
     gboolean has_sharding_key = FALSE;
     for (i = 0; i < sharding_tables->len; ++i) {
         sql_src_item_t *shard_table = g_ptr_array_index(sharding_tables, i);
-        db = shard_table->dbname ? shard_table->dbname : db;
+        char *db = shard_table->dbname ? shard_table->dbname : default_db;
 
         sharding_table_t *shard_info = shard_conf_get_info(db, shard_table->table_name);
 
@@ -1017,7 +1017,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
         GPtrArray *partitions = g_ptr_array_new();  /* GPtrArray<sharding_partition_t *> */
         for (i = 0; i < sharding_tables->len; ++i) {
             sql_src_item_t *shard_table = g_ptr_array_index(sharding_tables, 0);
-            db = shard_table->dbname ? shard_table->dbname : db;
+            char *db = shard_table->dbname ? shard_table->dbname : default_db;
 
             shard_conf_table_partitions(partitions, db, shard_table->table_name);
             int rc = partitions_filter_expr(partitions, select->where_clause);
@@ -1047,7 +1047,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
            OR sharding key filter out all groups */
         for (i = 0; i < sharding_tables->len; ++i) {
             sql_src_item_t *shard_table = g_ptr_array_index(sharding_tables, 0);
-            db = shard_table->dbname ? shard_table->dbname : db;
+            char *db = shard_table->dbname ? shard_table->dbname : default_db;
             shard_conf_get_table_groups(groups, db, shard_table->table_name);
         }
         g_ptr_array_free(sharding_tables, TRUE);

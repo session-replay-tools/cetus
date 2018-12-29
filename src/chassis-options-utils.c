@@ -339,6 +339,19 @@ assign_default_username(const gchar *newval, gpointer param) {
                 g_free(srv->default_username);
             }
             srv->default_username = g_strdup(newval);
+            network_backends_t *bs = srv->priv->backends;
+            gint count = network_backends_count(bs);
+            gint i = 0;
+            for (i = 0; i < count; i++) {
+                network_backend_t *backend = network_backends_get(bs, i);
+                if (backend) {
+                    if (backend->config->default_username) {
+                        g_string_free(backend->config->default_username, TRUE);
+                    }
+                    backend->config->default_username = g_string_new(NULL);
+                    g_string_append(backend->config->default_username, srv->default_username);
+                }
+            }
             ret = ASSIGN_OK;
         } else {
             ret = ASSIGN_VALUE_INVALID;
@@ -375,6 +388,19 @@ assign_default_db(const gchar *newval, gpointer param) {
                 g_free(srv->default_db);
             }
             srv->default_db = g_strdup(newval);
+            network_backends_t *bs = srv->priv->backends;
+            gint count = network_backends_count(bs);
+            gint i = 0;
+            for (i = 0; i < count; i++) {
+                network_backend_t *backend = network_backends_get(bs, i);
+                if (backend) {
+                    if (backend->config->default_db) {
+                        g_string_free(backend->config->default_db, TRUE);
+                    }
+                    backend->config->default_db = g_string_new(NULL);
+                    g_string_append(backend->config->default_db, srv->default_db);
+                }
+            }
             ret = ASSIGN_OK;
         } else {
             ret = ASSIGN_VALUE_INVALID;

@@ -2019,11 +2019,14 @@ build_xa_statements(network_mysqld_con *con)
 
     for (iter = 0; iter < len; iter++) {
         server_session_t *ss = g_ptr_array_index(con->servers, iter);
-        g_debug("%s: ss %d, xa state:%d for con:%p", G_STRLOC, iter, ss->dist_tran_state, con);
-
         if (ss->has_xa_write) {
             con->write_server_num++;
         }
+    }
+
+    for (iter = 0; iter < len; iter++) {
+        server_session_t *ss = g_ptr_array_index(con->servers, iter);
+        g_debug("%s: ss %d, xa state:%d for con:%p", G_STRLOC, iter, ss->dist_tran_state, con);
 
         if (!con->is_commit_or_rollback && !ss->participated) {
             g_debug("%s: stop processing for this server:%d", G_STRLOC, iter);

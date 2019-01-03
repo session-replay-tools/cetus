@@ -209,7 +209,7 @@ chassis_frontend_new(void)
 
     frontend->is_tcp_stream_enabled = 0;
     frontend->is_fast_stream_enabled = 1;
-    frontend->is_partiton_mode = 1;
+    frontend->is_partiton_mode = 0;
     frontend->group_replication_mode = 0;
     frontend->sql_log_bufsize = 0;
     frontend->sql_log_switch = NULL;
@@ -762,7 +762,6 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
         g_message("%s:fast stream enabled", G_STRLOC);
     }
     srv->is_partiton_mode = frontend->is_partiton_mode;
-    srv->is_partiton_mode = 0;
     if (srv->is_partiton_mode) {
         g_message("%s:partition mode", G_STRLOC);
     }

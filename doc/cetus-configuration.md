@@ -563,6 +563,14 @@ Default: false
 
 > enable-tcp-stream = true
 
+### enable-fast-stream
+
+Default: true
+
+采用fast stream来输出只读响应，提升响应速度
+
+> enable-fast-stream = true
+
 ### ssl
 
 Default: false

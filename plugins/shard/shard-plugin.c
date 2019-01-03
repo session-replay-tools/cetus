@@ -1492,16 +1492,21 @@ proxy_add_server_connection_array(network_mysqld_con *con, int *server_unavailab
         if (hit == plan->groups->len && con->servers->len == hit) {
             return TRUE;
         } else {
-            if (con->is_in_transaction) {
-                g_warning("%s:in single tran, but visit multi servers for con:%p, sql:%s",
-                        G_STRLOC, con, con->orig_sql->str);
-                con->xa_tran_conflict = 1;
-                return FALSE;
+            if (!con->srv->is_partiton_mode) {
+                if (con->is_in_transaction) {
+                    g_warning("%s:in single tran, but visit multi servers for con:%p, sql:%s",
+                            G_STRLOC, con, con->orig_sql->str);
+                    con->xa_tran_conflict = 1;
+                    return FALSE;
+                }
             }
             GPtrArray *new_servers = g_ptr_array_new();
             for (i = 0; i < con->servers->len; i++) {
                 server_session_t *ss = g_ptr_array_index(con->servers, i);
-                if (server_map[i] == 0) {
+                if (server_map[i] == 1 || (con->srv->is_partiton_mode && con->is_in_transaction)) {
+                    ss->server->parse.qs_state = PARSE_COM_QUERY_INIT;
+                    g_ptr_array_add(new_servers, ss);
+                } else {
                     network_connection_pool *pool = ss->backend->pool;
                     network_socket *server = ss->server;
 
@@ -1521,9 +1526,6 @@ proxy_add_server_connection_array(network_mysqld_con *con, int *server_unavailab
                     ss->sql = NULL;
                     g_free(ss);
 
-                } else {
-                    ss->server->parse.qs_state = PARSE_COM_QUERY_INIT;
-                    g_ptr_array_add(new_servers, ss);
                 }
             }
 
@@ -1647,14 +1649,22 @@ check_and_set_attr_bitmap(network_mysqld_con *con)
             g_debug("%s:set option different", G_STRLOC);
         }
 
-        if (con->is_start_trans_buffered || con->is_auto_commit_trans_buffered) {
-            if (con->is_tran_not_distributed_by_comment || con->srv->is_partiton_mode) {
-                ss->attr_diff |= ATTR_DIF_SET_AUTOCOMMIT;
-                con->unmatched_attribute |= ATTR_DIF_SET_AUTOCOMMIT;
-                result = FALSE;
-                consistant = FALSE;
-                g_debug("%s:need sending autocommit or start transaction", G_STRLOC);
+        if (!con->srv->is_partiton_mode) {
+            if (con->is_start_trans_buffered || con->is_auto_commit_trans_buffered) {
+                if (con->is_tran_not_distributed_by_comment) {
+                    ss->attr_diff |= ATTR_DIF_SET_AUTOCOMMIT;
+                    con->unmatched_attribute |= ATTR_DIF_SET_AUTOCOMMIT;
+                    result = FALSE;
+                    consistant = FALSE;
+                    g_debug("%s:need sending autocommit or start transaction", G_STRLOC);
+                }
             }
+        } else {
+            ss->attr_diff |= ATTR_DIF_SET_AUTOCOMMIT;
+            con->unmatched_attribute |= ATTR_DIF_SET_AUTOCOMMIT;
+            result = FALSE;
+            consistant = FALSE;
+            g_debug("%s:need sending autocommit or start transaction", G_STRLOC);
         }
 
         if (consistant) {

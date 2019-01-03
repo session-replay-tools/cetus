@@ -1717,6 +1717,7 @@ build_attr_statements(network_mysqld_con *con)
             g_debug("%s:need to set autocommit for con:%p", G_STRLOC, con);
         } else {
             con->attr_adj_state = ATTR_START;
+            g_debug("%s:set ATTR_START for con:%p", G_STRLOC, con);
         }
     }
 

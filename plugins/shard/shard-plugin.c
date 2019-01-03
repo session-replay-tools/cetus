@@ -926,7 +926,7 @@ process_rv_use_none(network_mysqld_con *con, sharding_plan_t *plan, int *disp_fl
 {
     /* SET AUTOCOMMIT = 0 || START TRANSACTION */
     con->delay_send_auto_commit = 1;
-    g_debug("%s: delay send autocommit 0", G_STRLOC);
+    g_debug("%s: delay send start transaction", G_STRLOC);
     network_mysqld_con_set_sharding_plan(con, plan);
     GString *packet = g_queue_pop_head(con->client->recv_queue->chunks);
     g_string_free(packet, TRUE);
@@ -976,7 +976,7 @@ process_rv_use_previous_tran_conns(network_mysqld_con *con, sharding_plan_t *pla
         g_debug("%s: buffer_and_send_fake_resp set true:%p", G_STRLOC, con);
     } else {
         if (con->servers->len > 1) {
-            if (!con->dist_tran) {
+            if (!con->dist_tran && !con->srv->is_partiton_mode) {
                 network_mysqld_con_send_ok_full(con->client, 0, 0, 0, 0);
                 g_debug("%s: set ERROR_DUP_COMMIT_OR_ROLLBACK here", G_STRLOC);
                 sharding_plan_free(plan);
@@ -988,7 +988,7 @@ process_rv_use_previous_tran_conns(network_mysqld_con *con, sharding_plan_t *pla
             }
         } else {
             if (!con->dist_tran) {
-                if (!con->is_tran_not_distributed_by_comment) {
+                if (!con->is_tran_not_distributed_by_comment && !con->srv->is_partiton_mode) {
                     network_mysqld_con_send_ok_full(con->client, 0, 0, 0, 0);
                     g_debug("%s: set ERROR_DUP_COMMIT_OR_ROLLBACK here", G_STRLOC);
                     sharding_plan_free(plan);
@@ -1074,7 +1074,6 @@ process_rv_default(network_mysqld_con *con, sharding_plan_t *plan, int *rv, int 
             } else {
                 g_debug("%s: check if it is a xa transaction", G_STRLOC);
                 if (plan->groups->len == 1 && (!con->is_auto_commit)) {
-                    con->delay_send_auto_commit = 0;
                     *rv = USE_DIS_TRAN;
                 }
             }
@@ -1151,20 +1150,26 @@ make_decisions(network_mysqld_con *con, int rv, int *disp_flag)
     }
 
     case USE_DIS_TRAN:
-        if (!con->dist_tran) {
-            con->dist_tran_state = NEXT_ST_XA_START;
-            con->dist_tran_xa_start_generated = 0;
-            stats->xa_count += 1;
+        if (!con->srv->is_partiton_mode) {
+            if (!con->dist_tran) {
+                con->dist_tran_state = NEXT_ST_XA_START;
+                con->dist_tran_xa_start_generated = 0;
+                stats->xa_count += 1;
+            }
+            con->dist_tran = 1;
+            con->dist_tran_failed = 0;
+            con->delay_send_auto_commit = 0;
+            g_debug("%s: xa transaction query:%s for con:%p", G_STRLOC, con->orig_sql->str, con);
+        } else {
+            g_debug("%s: partition transaction query:%s for con:%p", G_STRLOC, con->orig_sql->str, con);
         }
-        con->dist_tran = 1;
-        con->could_be_tcp_streamed = 0;
-        con->could_be_fast_streamed = 0;
-        con->dist_tran_failed = 0;
-        con->delay_send_auto_commit = 0;
-        g_debug("%s: xa transaction query:%s for con:%p", G_STRLOC, con->orig_sql->str, con);
+
         if (con->sharding_plan && con->sharding_plan->groups->len > 1) {
             wrap_check_sql(con, st->sql_context);
         }
+        con->could_be_tcp_streamed = 0;
+        con->could_be_fast_streamed = 0;
+
         break;
 
     default:
@@ -1643,7 +1648,7 @@ check_and_set_attr_bitmap(network_mysqld_con *con)
         }
 
         if (con->is_start_trans_buffered || con->is_auto_commit_trans_buffered) {
-            if (con->is_tran_not_distributed_by_comment) {
+            if (con->is_tran_not_distributed_by_comment || con->srv->is_partiton_mode) {
                 ss->attr_diff |= ATTR_DIF_SET_AUTOCOMMIT;
                 con->unmatched_attribute |= ATTR_DIF_SET_AUTOCOMMIT;
                 result = FALSE;

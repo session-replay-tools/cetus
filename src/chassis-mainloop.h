@@ -142,7 +142,7 @@ struct chassis {
     unsigned int disable_threads:1;
     unsigned int ssl:1;
     unsigned int is_tcp_stream_enabled:1;
-    unsigned int is_partition_enabled:1;
+    unsigned int is_partiton_mode:1;
     unsigned int is_fast_stream_enabled:1;
     unsigned int query_cache_enabled:1;
     unsigned int is_back_compressed:1;

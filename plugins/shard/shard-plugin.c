@@ -1660,11 +1660,13 @@ check_and_set_attr_bitmap(network_mysqld_con *con)
                 }
             }
         } else {
-            ss->attr_diff |= ATTR_DIF_SET_AUTOCOMMIT;
-            con->unmatched_attribute |= ATTR_DIF_SET_AUTOCOMMIT;
-            result = FALSE;
-            consistant = FALSE;
-            g_debug("%s:need sending autocommit or start transaction", G_STRLOC);
+            if (con->is_in_transaction) {
+                ss->attr_diff |= ATTR_DIF_SET_AUTOCOMMIT;
+                con->unmatched_attribute |= ATTR_DIF_SET_AUTOCOMMIT;
+                result = FALSE;
+                consistant = FALSE;
+                g_debug("%s:need sending autocommit or start transaction", G_STRLOC);
+            }
         }
 
         if (consistant) {

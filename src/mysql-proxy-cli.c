@@ -762,6 +762,7 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
         g_message("%s:fast stream enabled", G_STRLOC);
     }
     srv->is_partiton_mode = frontend->is_partiton_mode;
+    srv->is_partiton_mode = 0;
     if (srv->is_partiton_mode) {
         g_message("%s:partition mode", G_STRLOC);
     }

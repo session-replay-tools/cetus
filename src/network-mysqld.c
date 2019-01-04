@@ -108,6 +108,7 @@ static network_socket_retval_t network_mysqld_process_select_resp(network_mysqld
 
 char *generate_or_retrieve_xid_str(network_mysqld_con *con, network_socket *server, int need_generate_new)
 {
+#ifndef SIMPLE_PARSER
     if (con->srv->is_partition_mode && server) {
         if (need_generate_new) {
             server->xa_id = con->srv->dist_tran_id++;
@@ -123,6 +124,9 @@ char *generate_or_retrieve_xid_str(network_mysqld_con *con, network_socket *serv
 
         return con->xid_str;
     }
+#else
+    return con->xid_str;
+#endif
 }
 
 /**
@@ -2301,10 +2305,10 @@ disp_query_after_consistant_attr(network_mysqld_con *con)
             ss->xa_start_already_sent = 1;
             if (ss->dist_tran_state == NEXT_ST_XA_START) {
                 if (con->srv->is_partition_mode) {
-                    generate_or_retrieve_xid_str(con, ss->server, 1);
+                    char *xid_str = generate_or_retrieve_xid_str(con, ss->server, 1);
                     con->dist_tran_xa_start_generated = 1;
-                    network_mysqld_send_xa_start(ss->server, ss->server->xid_str);
-                    g_debug("%s: %s, server:%s", G_STRLOC, ss->server->xid_str, ss->server->dst->name->str);
+                    network_mysqld_send_xa_start(ss->server, xid_str);
+                    g_debug("%s: %s, server:%s", G_STRLOC, xid_str, ss->server->dst->name->str);
                 } else {
                     network_mysqld_send_xa_start(ss->server, con->xid_str);
                     g_debug("%s: %s, server:%s", G_STRLOC, con->xid_str, ss->server->dst->name->str);

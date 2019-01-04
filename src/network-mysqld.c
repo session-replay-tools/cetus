@@ -1495,7 +1495,7 @@ record_xa_log_for_mending(network_mysqld_con *con, network_socket *sock)
             tc_log_info(LOG_WARN, 0, "XA ROLLBACK %s %s@%u failed",
                         con->xid_str, sock->dst->name->str, sock->challenge->thread_id);
         } else {
-            if (con->srv->is_partition_mode || con->servers->len == 1 || con->write_server_num <= 1) {
+            if (con->servers->len == 1 || con->write_server_num <= 1) {
                 tc_log_info(LOG_WARN, 0,
                             "XA COMMIT %s %s@%u ONE PHASE failed",
                             con->xid_str, sock->dst->name->str, sock->challenge->thread_id);
@@ -1842,7 +1842,7 @@ build_xa_command(network_mysqld_con *con, server_session_t *ss, int end, char *b
 
         break;
     case NEXT_ST_XA_PREPARE:
-        if (con->srv->is_partition_mode || con->servers->len == 1 || con->write_server_num <= 1) {
+        if (con->servers->len == 1 || con->write_server_num <= 1) {
             snprintf(buffer, XA_CMD_BUF_LEN, "XA COMMIT %s ONE PHASE", xid_str);
             ss->dist_tran_state = NEXT_ST_XA_CANDIDATE_OVER;
             con->dist_tran_decided = 1;

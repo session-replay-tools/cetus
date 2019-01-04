@@ -51,8 +51,14 @@
 typedef struct chassis_private chassis_private;
 typedef struct chassis chassis;
 
+#ifdef SIMPLE_PARSER
 #define MAX_SERVER_NUM 64
-#define MAX_SERVER_NUM_FOR_PREPARE 32
+#define MAX_SERVER_NUM_FOR_PREPARE 64
+#else
+#define MAX_SERVER_NUM 1024
+#define MAX_SERVER_NUM_FOR_PREPARE 1024
+#endif
+
 #define MAX_WORK_PROCESSES 64
 #define MAX_WORK_PROCESSES_SHIFT 6
 #define MAX_QUERY_TIME 65536
@@ -142,8 +148,8 @@ struct chassis {
     unsigned int disable_threads:1;
     unsigned int ssl:1;
     unsigned int is_tcp_stream_enabled:1;
-    unsigned int is_partition_enabled:1;
     unsigned int is_fast_stream_enabled:1;
+    unsigned int is_partition_mode:1;
     unsigned int query_cache_enabled:1;
     unsigned int is_back_compressed:1;
     unsigned int is_groupby_need_reconstruct:1;

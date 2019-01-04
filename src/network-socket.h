@@ -102,6 +102,8 @@ typedef struct {
 
 typedef struct network_ssl_connection_s network_ssl_connection_t;
 
+#define XID_LEN 128
+
 typedef struct {
     int socket_type; /**< SOCK_STREAM or SOCK_DGRAM for now */
     int fd;             /**< socket-fd */
@@ -186,7 +188,12 @@ typedef struct {
     server_state_data parse;
     server_query_status qstat;
 
-    network_ssl_connection_t* ssl;
+    network_ssl_connection_t *ssl;
+
+#ifndef SIMPLE_PARSER
+    unsigned long long xa_id;
+    char xid_str[XID_LEN];
+#endif
 
 } network_socket;
 

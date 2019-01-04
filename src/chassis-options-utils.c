@@ -1208,10 +1208,10 @@ show_enable_partition(gpointer param) {
     chassis *srv = opt_param->chas;
     gint opt_type = opt_param->opt_type;
     if (CAN_SHOW_OPTS_PROPERTY(opt_type)) {
-        return g_strdup_printf("%s", srv->is_partition_enabled ? "true" : "false");
+        return g_strdup_printf("%s", srv->is_partition_mode ? "true" : "false");
     }
     if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        return srv->is_partition_enabled ? g_strdup("true") : NULL;
+        return srv->is_partition_mode ? g_strdup("true") : NULL;
     }
     return NULL;
 }

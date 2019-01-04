@@ -109,7 +109,7 @@ struct chassis_frontend_t {
     int disable_threads;
     int is_tcp_stream_enabled;
     int is_fast_stream_enabled;
-    int is_partition_enabled;
+    int is_partition_mode;
     int is_back_compressed;
     int is_client_compress_support;
     int check_slave_delay;
@@ -209,7 +209,7 @@ chassis_frontend_new(void)
 
     frontend->is_tcp_stream_enabled = 0;
     frontend->is_fast_stream_enabled = 1;
-    frontend->is_partition_enabled = 1;
+    frontend->is_partition_mode = 0;
     frontend->group_replication_mode = 0;
     frontend->sql_log_bufsize = 0;
     frontend->sql_log_switch = NULL;
@@ -506,7 +506,7 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
     chassis_options_add(opts, "enable-fast-stream", 0, 0, OPTION_ARG_NONE, &(frontend->is_fast_stream_enabled), "", NULL,
                         NULL, show_enable_fast_stream, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
-    chassis_options_add(opts, "enable-partition", 0, 0, OPTION_ARG_NONE, &(frontend->is_partition_enabled), "", NULL,
+    chassis_options_add(opts, "enable-partition", 0, 0, OPTION_ARG_NONE, &(frontend->is_partition_mode), "", NULL,
                         NULL, show_enable_partition, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
     chassis_options_add(opts,
@@ -760,6 +760,10 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->is_fast_stream_enabled = frontend->is_fast_stream_enabled;
     if (srv->is_fast_stream_enabled) {
         g_message("%s:fast stream enabled", G_STRLOC);
+    }
+    srv->is_partition_mode = frontend->is_partition_mode;
+    if (srv->is_partition_mode) {
+        g_message("%s:partition mode", G_STRLOC);
     }
     srv->disable_threads = frontend->disable_threads;
     srv->is_back_compressed = frontend->is_back_compressed;

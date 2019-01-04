@@ -1734,7 +1734,8 @@ build_xa_end_command(network_mysqld_con *con, server_session_t *ss, int first)
 {
     char buffer[XA_CMD_BUF_LEN];
 
-    snprintf(buffer, sizeof(buffer), "XA END %s", con->xid_str);
+    char *xid_str = generate_or_retrieve_xid_str(con, ss->server, 0);
+    snprintf(buffer, sizeof(buffer), "XA END %s", xid_str);
 
     if (con->dist_tran_failed || con->is_rollback) {
         ss->dist_tran_state = NEXT_ST_XA_ROLLBACK;
@@ -1754,7 +1755,7 @@ build_xa_end_command(network_mysqld_con *con, server_session_t *ss, int first)
         return;
     }
 
-    g_debug("%s:XA END %s, server:%s", G_STRLOC, con->xid_str, ss->server->dst->name->str);
+    g_debug("%s:XA END %s, server:%s", G_STRLOC, xid_str, ss->server->dst->name->str);
 
     ss->server->parse.qs_state = PARSE_COM_QUERY_INIT;
 
@@ -1846,16 +1847,12 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
         g_debug("%s: check_and_set_attr_bitmap is the same:%p", G_STRLOC, con);
         if (con->dist_tran && !con->dist_tran_xa_start_generated) {
             /* append xa query to send queue */
-            chassis *srv = con->srv;
             con->dist_tran_state = NEXT_ST_XA_QUERY;
-            con->xa_id = srv->dist_tran_id++;
-            snprintf(con->xid_str, XID_LEN, "'%s_%02d_%llu'", srv->dist_tran_prefix, tc_get_log_hour(), con->xa_id);
+            char *xid_str = generate_or_retrieve_xid_str(con, NULL, 1);
+            g_debug("%s:xa start:%s for con:%p", G_STRLOC, xid_str, con);
             con->dist_tran_xa_start_generated = 1;
-
             con->is_start_trans_buffered = 0;
             con->is_auto_commit_trans_buffered = 0;
-
-            g_debug("%s:xa start:%s for con:%p", G_STRLOC, con->xid_str, con);
         }
 
         size_t i;
@@ -1904,7 +1901,13 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
                 }
 
                 if (ss->dist_tran_state == NEXT_ST_XA_START) {
-                    network_mysqld_send_xa_start(ss->server, con->xid_str);
+                    if (con->srv->is_partition_mode) {
+                        generate_or_retrieve_xid_str(con, ss->server, 1);
+                        con->dist_tran_xa_start_generated = 1;
+                        network_mysqld_send_xa_start(ss->server, ss->server->xid_str);
+                    } else {
+                        network_mysqld_send_xa_start(ss->server, con->xid_str);
+                    }
                     ss->dist_tran_state = NEXT_ST_XA_QUERY;
                     ss->xa_start_already_sent = 0;
                     con->xa_start_phase = 1;
@@ -1975,7 +1978,8 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
 
         if (is_xa_query) {
             if (con->srv->xa_log_detailed) {
-                tc_log_info(LOG_INFO, 0, "XA QUERY %s %s %s", con->xid_str, xa_log_buffer, con->orig_sql->str);
+                tc_log_info(LOG_INFO, 0, "XA QUERY %s %s %s", con->xid_str, 0,
+                        xa_log_buffer, con->orig_sql->str);
             }
             network_queue_clear(con->client->recv_queue);
         } else {

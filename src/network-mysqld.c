@@ -105,6 +105,26 @@ static void network_mysqld_self_con_handle(int event_fd, short events, void *use
 static network_socket_retval_t network_mysqld_process_select_resp(network_mysqld_con *con, 
         network_socket *server, int *finish_flag, int *disp_flag);
 
+
+char *generate_or_retrieve_xid_str(network_mysqld_con *con, network_socket *server, int need_generate_new)
+{
+    if (con->srv->is_partition_mode && server) {
+        if (need_generate_new) {
+            server->xa_id = con->srv->dist_tran_id++;
+            snprintf(server->xid_str, XID_LEN, "'%s_%02d_%llu'", 
+                    con->srv->dist_tran_prefix, tc_get_log_hour(), server->xa_id);
+        }
+        return server->xid_str;
+    } else {
+        if (need_generate_new) {
+            con->xa_id = con->srv->dist_tran_id++;
+            snprintf(con->xid_str, XID_LEN, "'%s_%02d_%llu'", con->srv->dist_tran_prefix, tc_get_log_hour(), con->xa_id);
+        }
+
+        return con->xid_str;
+    }
+}
+
 /**
  * call the cleanup callback for the current connection
  *
@@ -1471,7 +1491,7 @@ record_xa_log_for_mending(network_mysqld_con *con, network_socket *sock)
             tc_log_info(LOG_WARN, 0, "XA ROLLBACK %s %s@%u failed",
                         con->xid_str, sock->dst->name->str, sock->challenge->thread_id);
         } else {
-            if (con->servers->len == 1 || con->write_server_num <= 1) {
+            if (con->srv->is_partition_mode || con->servers->len == 1 || con->write_server_num <= 1) {
                 tc_log_info(LOG_WARN, 0,
                             "XA COMMIT %s %s@%u ONE PHASE failed",
                             con->xid_str, sock->dst->name->str, sock->challenge->thread_id);
@@ -1508,7 +1528,7 @@ shard_set_autocommit(network_mysqld_con *con)
         }
 
         ss->attr_adjusted_now = 0;
-        int len = con->client->charset->len + NET_HEADER_SIZE + 1 + 32;
+        int len = NET_HEADER_SIZE + 1 + 32;
         GString *packet = g_string_sized_new(calculate_alloc_len(len));
         packet->len = NET_HEADER_SIZE;
         g_string_append_c(packet, (char)COM_QUERY);
@@ -1802,9 +1822,10 @@ build_xa_command(network_mysqld_con *con, server_session_t *ss, int end, char *b
 {
     char buffer[XA_CMD_BUF_LEN];
 
+    char *xid_str = generate_or_retrieve_xid_str(con, ss->server, 0);
     switch (ss->dist_tran_state) {
     case NEXT_ST_XA_END:
-        snprintf(buffer, XA_CMD_BUF_LEN, "XA END %s", con->xid_str);
+        snprintf(buffer, XA_CMD_BUF_LEN, "XA END %s", xid_str);
         if (con->dist_tran_failed) {
             ss->dist_tran_state = NEXT_ST_XA_ROLLBACK;
             con->is_commit_or_rollback = 1;
@@ -1813,16 +1834,16 @@ build_xa_command(network_mysqld_con *con, server_session_t *ss, int end, char *b
             ss->dist_tran_state = NEXT_ST_XA_PREPARE;
         }
 
-        g_debug("%s:XA END %s, server:%s", G_STRLOC, con->xid_str, ss->server->dst->name->str);
+        g_debug("%s:XA END %s, server:%s", G_STRLOC, xid_str, ss->server->dst->name->str);
 
         break;
     case NEXT_ST_XA_PREPARE:
-        if (con->servers->len == 1 || con->write_server_num <= 1) {
-            snprintf(buffer, XA_CMD_BUF_LEN, "XA COMMIT %s ONE PHASE", con->xid_str);
+        if (con->srv->is_partition_mode || con->servers->len == 1 || con->write_server_num <= 1) {
+            snprintf(buffer, XA_CMD_BUF_LEN, "XA COMMIT %s ONE PHASE", xid_str);
             ss->dist_tran_state = NEXT_ST_XA_CANDIDATE_OVER;
             con->dist_tran_decided = 1;
         } else {
-            snprintf(buffer, XA_CMD_BUF_LEN, "XA PREPARE %s", con->xid_str);
+            snprintf(buffer, XA_CMD_BUF_LEN, "XA PREPARE %s", xid_str);
             ss->dist_tran_state = NEXT_ST_XA_COMMIT;
         }
         if (buffer_log) {
@@ -1830,7 +1851,7 @@ build_xa_command(network_mysqld_con *con, server_session_t *ss, int end, char *b
         }
         break;
     case NEXT_ST_XA_COMMIT:
-        snprintf(buffer, XA_CMD_BUF_LEN, "XA COMMIT %s", con->xid_str);
+        snprintf(buffer, XA_CMD_BUF_LEN, "XA COMMIT %s", xid_str);
         ss->dist_tran_state = NEXT_ST_XA_CANDIDATE_OVER;
         if (buffer_log) {
             strcpy(buffer_log, buffer);
@@ -1838,7 +1859,7 @@ build_xa_command(network_mysqld_con *con, server_session_t *ss, int end, char *b
         con->dist_tran_decided = 1;
         break;
     case NEXT_ST_XA_ROLLBACK:
-        snprintf(buffer, XA_CMD_BUF_LEN, "XA ROLLBACK %s", con->xid_str);
+        snprintf(buffer, XA_CMD_BUF_LEN, "XA ROLLBACK %s", xid_str);
         if (buffer_log) {
             strcpy(buffer_log, buffer);
         }
@@ -2258,13 +2279,11 @@ disp_query_after_consistant_attr(network_mysqld_con *con)
         /* append xa query to send queue */
         chassis *srv = con->srv;
         con->dist_tran_state = NEXT_ST_XA_QUERY;
-        con->xa_id = srv->dist_tran_id++;
-        snprintf(con->xid_str, XID_LEN, "'%s_%02d_%llu'", srv->dist_tran_prefix, tc_get_log_hour(), con->xa_id);
-
+        char *xid_str = generate_or_retrieve_xid_str(con, NULL, 1);
+        g_debug("%s:xa start:%s for con:%p", G_STRLOC, xid_str, con);
         con->dist_tran_xa_start_generated = 1;
         con->is_start_trans_buffered = 0;
         con->is_auto_commit_trans_buffered = 0;
-        g_debug("%s:xa start:%s for con:%p", G_STRLOC, con->xid_str, con);
     }
 
     size_t i;
@@ -2281,8 +2300,15 @@ disp_query_after_consistant_attr(network_mysqld_con *con)
         if (con->dist_tran) {
             ss->xa_start_already_sent = 1;
             if (ss->dist_tran_state == NEXT_ST_XA_START) {
-                network_mysqld_send_xa_start(ss->server, con->xid_str);
-                g_debug("%s: %s, server:%s", G_STRLOC, con->xid_str, ss->server->dst->name->str);
+                if (con->srv->is_partition_mode) {
+                    generate_or_retrieve_xid_str(con, ss->server, 1);
+                    con->dist_tran_xa_start_generated = 1;
+                    network_mysqld_send_xa_start(ss->server, ss->server->xid_str);
+                    g_debug("%s: %s, server:%s", G_STRLOC, ss->server->xid_str, ss->server->dst->name->str);
+                } else {
+                    network_mysqld_send_xa_start(ss->server, con->xid_str);
+                    g_debug("%s: %s, server:%s", G_STRLOC, con->xid_str, ss->server->dst->name->str);
+                }
                 con->resp_expected_num++;
                 ss->dist_tran_state = NEXT_ST_XA_QUERY;
                 ss->xa_start_already_sent = 0;

@@ -1508,7 +1508,7 @@ shard_set_autocommit(network_mysqld_con *con)
         }
 
         ss->attr_adjusted_now = 0;
-        int len = con->client->charset->len + NET_HEADER_SIZE + 1 + 32;
+        int len = NET_HEADER_SIZE + 1 + 32;
         GString *packet = g_string_sized_new(calculate_alloc_len(len));
         packet->len = NET_HEADER_SIZE;
         g_string_append_c(packet, (char)COM_QUERY);
@@ -1534,6 +1534,51 @@ shard_set_autocommit(network_mysqld_con *con)
 
     return TRUE;
 }
+
+gboolean
+shard_set_commit_or_rollback(network_mysqld_con *con)
+{
+    size_t i;
+
+    char *command;
+    if (con->dist_tran_failed) {
+        command = "commit";
+    } else {
+        command = "rollback";
+    }
+
+    con->supplement_commit_or_rollback = 0;
+
+    con->resp_expected_num = 0;
+    g_debug("%s: set commit or rollbackc here", G_STRLOC);
+    for (i = 0; i < con->servers->len; i++) {
+        server_session_t *ss = g_ptr_array_index(con->servers, i);
+        int len = NET_HEADER_SIZE + 1 + 32;
+        GString *packet = g_string_sized_new(calculate_alloc_len(len));
+        packet->len = NET_HEADER_SIZE;
+        g_string_append_c(packet, (char)COM_QUERY);
+
+        if (con->is_start_trans_buffered) {
+            con->is_start_trans_buffered = 0;
+            g_debug("%s: start transaction for con:%p", G_STRLOC, con);
+        } else {
+            con->is_auto_commit_trans_buffered = 0;
+        }
+        g_string_append(packet, command);
+
+        network_mysqld_proto_set_packet_len(packet, 1 + strlen(command));
+        network_mysqld_proto_set_packet_id(packet, 0);
+        g_queue_push_tail(ss->server->send_queue->chunks, packet);
+
+        ss->server->parse.qs_state = PARSE_COM_QUERY_INIT;
+        con->resp_expected_num++;
+    }
+
+    con->state = ST_SEND_QUERY;
+
+    return TRUE;
+}
+
 
 gboolean
 shard_set_multi_stmt_consistant(network_mysqld_con *con)
@@ -1711,6 +1756,7 @@ build_attr_statements(network_mysqld_con *con)
 
     con->attr_adj_state = next_attribute(con->unmatched_attribute, con->attr_adj_state);
 
+    g_debug("%s:build_attr_statements here, after call next_attribute, attr state:%d", G_STRLOC, con->attr_adj_state);
     if (con->attr_adj_state == ATTR_DIF_SET_AUTOCOMMIT) {
         if (!con->dist_tran && con->delay_send_auto_commit) {
             con->delay_send_auto_commit = 0;
@@ -2913,6 +2959,22 @@ static int
 handle_dist_tran_after_read_mul_resp(network_mysqld_con *con, int *result_reserve, int *skip, int *disp_flag)
 {
     g_debug("%s: con dist tran here:%p", G_STRLOC, con);
+    if (con->supplement_commit_or_rollback) {
+        shard_set_commit_or_rollback(con);
+        g_debug("%s: visit here", G_STRLOC);
+        if (con->dist_tran_failed && con->dist_tran_state == NEXT_ST_XA_ROLLBACK) {
+            g_debug("%s: visit here", G_STRLOC);
+            if (con->xa_query_status_error_and_abort) {
+                retrieve_error_info_for_xa_trans(con);
+            } else {
+                retrieve_one_resp_for_xa_trans(con);
+            }
+        }
+        remove_mul_server_recv_packets(con);
+        *disp_flag = DISP_CONTINUE;
+        return 1;
+    } 
+
     if (con->is_timeout || con->is_auto_commit || !con->is_xa_query_sent || con->xa_query_status_error_and_abort) {
         g_debug("%s: call before, con dist tan state:%d for con:%p", G_STRLOC, con->dist_tran_state, con);
         build_xa_statements(con);
@@ -3371,7 +3433,7 @@ disp_after_resp(network_mysqld_con *con, int srv_down_count, int srv_response_co
         }
     }
 
-    if (con->dist_tran) {
+    if (con->dist_tran || con->supplement_commit_or_rollback) {
         if (handle_dist_tran_after_read_mul_resp(con, &result_reserve, &skip, disp_flag)) {
             return 0;
         }

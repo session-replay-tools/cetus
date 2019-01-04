@@ -1161,6 +1161,12 @@ make_decisions(network_mysqld_con *con, int rv, int *disp_flag)
             con->delay_send_auto_commit = 0;
             g_debug("%s: xa transaction query:%s for con:%p", G_STRLOC, con->orig_sql->str, con);
         } else {
+            if (!(con->is_start_trans_buffered || con->is_auto_commit_trans_buffered)) {
+                con->delay_send_auto_commit = 1;
+                con->is_commit_or_rollback = 1;
+                con->supplement_commit_or_rollback = 1;
+                con->is_in_transaction = 1;
+            }
             g_debug("%s: partition transaction query:%s for con:%p", G_STRLOC, con->orig_sql->str, con);
         }
 

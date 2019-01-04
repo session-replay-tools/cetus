@@ -537,6 +537,7 @@ struct network_mysqld_con {
     unsigned int is_start_trans_buffered:1;
     unsigned int is_auto_commit_trans_buffered:1;
     unsigned int is_commit_or_rollback:1;
+    unsigned int supplement_commit_or_rollback:1;
     unsigned int is_rollback:1;
     unsigned int xa_start_phase:1;
     unsigned int use_slave_forced:1;

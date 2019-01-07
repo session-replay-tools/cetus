@@ -2342,7 +2342,7 @@ disp_query_after_consistant_attr(network_mysqld_con *con)
     }
 }
 
-void log_slowquery(int interval_ms, char* host, char* user, char* sql)
+void log_slowquery(int interval_ms, char*ip, char* domain, char* user, char* sql)
 {
     uint64_t usec;
     struct timeval t;
@@ -2354,9 +2354,9 @@ void log_slowquery(int interval_ms, char* host, char* user, char* sql)
     float interval = interval_ms / 1000.0;
     g_log("slowquery", G_LOG_LEVEL_MESSAGE,
           "# Time: %s\n"
-          "# User@Host: %s @ %s Id: 0\n"
+          "# User@Host: %s[%s] @ %s[%s] Id: 0\n"
           "# Query_time: %f Lock_time: 0.000000 Rows_sent: 0 Rows_examined: 0\n"
-          "SET timestamp=%ld;\n%s;\n", time_str, user, host, interval, t.tv_sec, sql);
+          "SET timestamp=%ld;\n%s;\n", time_str, user, user, domain == NULL? " ":domain, ip == NULL? " ":ip, interval, t.tv_sec, sql);
 }
 
 static void
@@ -2367,8 +2367,18 @@ handle_query_time_stats(network_mysqld_con *con)
 
     diff = MAX(0, diff);
     if (diff >= con->srv->long_query_time) {
-        log_slowquery(diff, con->client->src->name->str,
+        gchar **ip = g_strsplit_set(con->client->src->name->str, ":", -1);
+        struct sockaddr_in addr;
+        memset(&addr,0,sizeof(addr));
+        addr.sin_addr.s_addr = inet_addr(ip[0]);
+        struct hostent *host = gethostbyaddr((char*)&addr.sin_addr,4,AF_INET);
+        gchar *domain = NULL;
+        if(host) {
+            domain = host->h_name;
+        }
+        log_slowquery(diff, ip[0], domain,
                       con->client->response->username->str, con->orig_sql->str);
+        g_strfreev(ip);
         diff = con->srv->long_query_time - 1;
     }
     con->srv->query_stats.query_time_table[diff]++;

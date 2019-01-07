@@ -333,7 +333,14 @@ sql_construct_select(sql_select_t *select, int explain)
                     g_string_append(s, src->dbname);
                     g_string_append(s, ".");
                 }
-                g_string_append(s, src->table_name);
+                if (src->groups && src->groups->len > 0) {
+                    g_string_append(s, src->table_name);
+                    GString *group_name = src->groups->pdata[0];
+                    g_string_append(s, "_");
+                    g_string_append(s, group_name->str);
+                } else {
+                    g_string_append(s, src->table_name);
+                }
                 g_string_append(s, " ");
             } else if (src->select) {
                 GString *sub = sql_construct_select(src->select, 0);

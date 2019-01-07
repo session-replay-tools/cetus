@@ -1162,14 +1162,14 @@ make_decisions(network_mysqld_con *con, int rv, int *disp_flag)
         con->dist_tran_failed = 0;
         con->delay_send_auto_commit = 0;
         g_debug("%s: xa transaction query:%s for con:%p", G_STRLOC, con->orig_sql->str, con);
-        if (con->sharding_plan && con->sharding_plan->groups->len > 1) {
+        if (con->sharding_plan && con->sharding_plan->groups->len > 0) {
             wrap_check_sql(con, st->sql_context);
         }
         break;
 
     default:
         con->dist_tran_failed = 0;
-        if (con->sharding_plan && con->sharding_plan->groups->len > 1) {
+        if (con->sharding_plan && con->sharding_plan->groups->len > 0) {
             wrap_check_sql(con, st->sql_context);
         }
         break;

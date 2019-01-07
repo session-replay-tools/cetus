@@ -259,6 +259,7 @@ struct sql_column_t {
 struct sql_src_item_t {
     char *dbname;               /* Name of database holding this table */
     char *table_name;           /* Name of the table */
+    GPtrArray *groups;
     sql_index_hint_t *index_hint;
     char *table_alias;          /* The "B" part of a "A AS B" phrase.  zName is the "A" */
     sql_select_t *select;       /* A SELECT statement used in place of a table name */

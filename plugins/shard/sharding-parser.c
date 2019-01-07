@@ -1732,6 +1732,32 @@ select_has_distincted_aggregate(sql_select_t *select, int has_subquery, char **a
 }
 
 static gboolean
+select_has_sub_select_aggregate(sql_select_t *select, int is_analyze)
+{
+    int i;
+    if (is_analyze) {
+        for (i = 0; select->columns && i < select->columns->len; ++i) {
+            sql_expr_t *expr = g_ptr_array_index(select->columns, i);
+            if (expr->op == TK_FUNCTION && expr->flags & EP_AGGREGATE) {
+                if (strcasecmp(expr->token_text, "count") == 0
+                        || strcasecmp(expr->token_text, "sum") == 0 || strcasecmp(expr->token_text, "avg") == 0) {
+                    return TRUE;
+                }
+            }
+        }
+    }
+    if (select->from_src) {
+        for (i = 0; i < select->from_src->len; ++i) {
+            sql_src_item_t *src = g_ptr_array_index(select->from_src, i);
+            if (src->select)
+                return select_has_sub_select_aggregate(src->select, 1);
+        }
+    }
+
+    return FALSE;
+}
+
+static gboolean
 select_has_AVG(sql_select_t *select)
 {
     int i;
@@ -1838,6 +1864,13 @@ sharding_filter_sql(sql_context_t *context)
                 char msg[128];
                 snprintf(msg, 128, "(proxy) %s(DISTINCT ...) not supported", aggr_name);
                 sql_context_set_error(context, PARSE_NOT_SUPPORT, msg);
+                return;
+            }
+        }
+
+        if ((!context->allow_subquery_nesting) && (context->clause_flags & CF_SUBQUERY)) {
+            if (select_has_sub_select_aggregate(select, 0) == TRUE) {
+                sql_context_set_error(context, PARSE_NOT_SUPPORT, "(proxy) sub select aggregate functions not supported");
                 return;
             }
         }

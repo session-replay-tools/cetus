@@ -910,6 +910,8 @@ void send_admin_resp(chassis *cycle, network_mysqld_con *con)
         g_free(ch);
 
         network_queue_clear(con->client->send_queue);
+        g_free(con->plugin_con_state);
+        con->plugin_con_state = NULL;
         network_mysqld_con_free(con);
     } else {
         con->state = ST_SEND_QUERY_RESULT;
@@ -946,6 +948,8 @@ process_admin_sql(cetus_cycle_t *cycle, cetus_channel_t *ch)
             send_admin_resp(cycle, con);
         }
     } else {
+        g_free(con->plugin_con_state);
+        con->plugin_con_state = NULL;
         network_mysqld_con_free(con);
     }
 }

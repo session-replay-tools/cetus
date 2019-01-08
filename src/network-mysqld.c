@@ -3929,7 +3929,7 @@ network_mysqld_process_select_resp(network_mysqld_con *con, network_socket *serv
     } else {
         network_queue *reserved_queue = con->client->send_queue;
         con->client->send_queue = server->recv_queue_raw;
-        server->recv_queue_raw = server->recv_queue;;
+        server->recv_queue_raw = server->recv_queue;
         server->recv_queue = reserved_queue;
     }
 

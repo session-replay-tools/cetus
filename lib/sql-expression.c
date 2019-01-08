@@ -671,6 +671,9 @@ sql_src_item_free(void *p)
         sql_id_list_free(item->pUsing);
     if (item->func_arg)
         sql_expr_list_free(item->func_arg);
+    if (item->groups) {
+        g_ptr_array_free(item->groups, TRUE);
+    }
     g_free(item);
 }
 

@@ -1038,9 +1038,14 @@ routing_select(sql_context_t *context, const sql_select_t *select,
             }
             partitions_get_group_names(partitions, groups);
             g_ptr_array_free(partitions, TRUE);
-            shard_table->groups = groups;
-        }
+            shard_table->groups = g_ptr_array_new();
 
+            int i;
+            for (i = 0; i < groups->len; i++) {
+                GString *group = g_ptr_array_index(groups, i);
+                g_ptr_array_add(shard_table->groups, group);
+            }
+        }
     }
 
     if (groups->len > 0) {
@@ -1546,7 +1551,7 @@ sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t
             select = select->prior; /* select->prior UNION select */
         }
         sharding_plan_add_groups(plan, groups);
-        //g_ptr_array_free(groups, TRUE);
+        g_ptr_array_free(groups, TRUE);
 
         if ((rc == USE_SHARDING || rc == USE_ALL_SHARDINGS) && plan->groups->len > 1) {
             sharding_filter_sql(context);   /* only filter queries with sharding table */

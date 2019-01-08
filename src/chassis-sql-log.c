@@ -80,7 +80,7 @@ static void get_current_time_str(GString *str) {
 }
 
 static struct rfifo *rfifo_alloc(guint size) {
-    struct rfifo *ret = (struct rfifo *)g_malloc0(sizeof(struct rfifo));;
+    struct rfifo *ret = (struct rfifo *)g_malloc0(sizeof(struct rfifo));
 
     if (!ret) {
         return NULL;

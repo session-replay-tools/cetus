@@ -1386,7 +1386,7 @@ ecb_binary32_to_binary16 (uint32_t x)
 
       m = frexp (x, &e) * 0x20000000000000U;
 
-      r = m & 0x8000000000000000;;
+      r = m & 0x8000000000000000;
 
       if (r)
         m = -m;

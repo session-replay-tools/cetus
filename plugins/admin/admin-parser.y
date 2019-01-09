@@ -266,6 +266,7 @@ cmd ::= UPDATE BACKENDS SET equations(X) WHERE equation(Z) SEMI. {
   char* cond_val = token_strdup(Z.right);
   admin_update_backend(con, X, cond_key, cond_val);
   free(cond_key); free(cond_val);
+  g_list_free_full(X, free);
 }
 cmd ::= DELETE FROM BACKENDS WHERE equation(Z) SEMI. {
   char* key = token_strdup(Z.left);

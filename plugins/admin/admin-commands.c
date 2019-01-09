@@ -2434,7 +2434,11 @@ static gint save_setting(chassis *srv, gint *effected_rows)
                 ret = CHMOD_ERROR;
             }
         }
+        g_free(file_buf);
     }
+
+    g_key_file_free(keyfile);
+
     return ret;
 }
 

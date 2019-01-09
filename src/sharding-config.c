@@ -82,11 +82,20 @@ schema_table_equal(gconstpointer v1,
       && strcmp(st1->table, st2->table) == 0;
 }
 
+gboolean
+shard_conf_table_cmp(gpointer key, gpointer value, gpointer user_data)
+{
+    const struct schema_table_t *st1 = key;
+    const struct schema_table_t *st2 = user_data;
+    return (strcasecmp(st1->schema, st2->schema) == 0) &&\
+        (strcasecmp(st1->table, st2->table) == 0);
+}
+
 static sharding_table_t *
 sharding_tables_get(const char *schema, const char *table)
 {
     struct schema_table_t st = {schema, table};
-    gpointer tinfo = g_hash_table_lookup(shard_conf_tables, &st);
+    gpointer tinfo = g_hash_table_find(shard_conf_tables, shard_conf_table_cmp, &st);
     return tinfo;
 }
 

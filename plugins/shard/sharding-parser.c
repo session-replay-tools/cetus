@@ -168,93 +168,104 @@ prepare_for_sql_modify_orderby(sql_select_t *select)
     select->orderby_clause = orderby;
 }
 
+static GString *modify_select()
+{
+    sql_select_t *select = context->sql_statement;
+
+    sql_expr_t *having = select->having_clause;
+    if (having) {
+        if (is_compare_op(having->op)) {
+            sql_expr_t* hav_name = having->left;
+            hav_condi->column_index =
+                sql_expr_list_find_exact_aggregate(select->columns,
+                        hav_name->start,
+                        hav_name->end - hav_name->start);
+            hav_condi->rel_type = having->op;
+            sql_expr_t *val = having->right;
+            if (hav_condi->condition_value) {
+                g_free(hav_condi->condition_value);
+                hav_condi->condition_value = NULL;
+            }
+
+            char *val_str = g_strndup(val->start, val->end - val->start);
+            sql_string_dequote(val_str);
+            hav_condi->condition_value = val_str;
+            if (val->op == TK_UMINUS || val->op == TK_UPLUS) {
+                hav_condi->data_type = TK_INTEGER;
+            } else {
+                hav_condi->data_type = val->op;
+            }
+        }
+        select->having_clause = NULL;   /* temporarily remove HAVING */
+    }
+
+    gboolean need_reconstruct = FALSE;
+    guint64 orig_offset = 0;
+    guint64 orig_limit = 0;
+
+    /* (LIMIT a, b) ==> (LIMIT 0, a+b) */
+    if (select->offset && select->offset->num_value > 0 && select->limit) {
+        prepare_for_sql_modify_limit(select, &orig_limit, &orig_offset);
+        need_reconstruct = TRUE;
+    }
+
+    if (is_groupby_need_reconstruct && select->groupby_clause != NULL && select->orderby_clause == NULL) {
+        select->flags |= SF_REWRITE_ORDERBY;
+    }
+
+    if (select->flags & SF_REWRITE_ORDERBY) {
+        prepare_for_sql_modify_orderby(select);
+        need_reconstruct = TRUE;
+    }
+
+    GString *new_sql = NULL;
+    if (having) {
+        need_reconstruct = TRUE;
+    }
+
+    need_reconstruct = TRUE;
+
+    if (need_reconstruct) {
+        new_sql = sql_construct_select(select, context->explain == TK_EXPLAIN ? 1:0);
+        g_string_append_c(new_sql, ';');
+        if (orig_offset != 0 || orig_limit != 0) {
+            select->limit->num_value = orig_limit;
+            select->offset->num_value = orig_offset;
+        }
+    }
+
+    if (new_sql && select->prior) {
+        sql_select_t *sub_select = select->prior;
+        GString *union_sql = g_string_new(NULL);
+        while (sub_select) {
+            GString *sql = sql_construct_select(sub_select, 0);
+            g_string_append(union_sql, sql->str);
+            g_string_append(union_sql, " UNION ");
+            g_string_free(sql, TRUE);
+            sub_select = sub_select->prior;
+        }
+        g_string_append(union_sql, new_sql->str);
+        g_string_free(new_sql, TRUE);
+        new_sql = union_sql;
+    }
+
+    select->having_clause = having; /* get HAVING back */
+
+    return new_sql;
+}
+
 GString *
 sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi, int is_groupby_need_reconstruct)
 {
-    if (context->stmt_type == STMT_SELECT && context->sql_statement) {
-        sql_select_t *select = context->sql_statement;
-
-        sql_expr_t *having = select->having_clause;
-        if (having) {
-            if (is_compare_op(having->op)) {
-                sql_expr_t* hav_name = having->left;
-                hav_condi->column_index =
-                    sql_expr_list_find_exact_aggregate(select->columns,
-                                                 hav_name->start,
-                                                 hav_name->end - hav_name->start);
-                hav_condi->rel_type = having->op;
-                sql_expr_t *val = having->right;
-                if (hav_condi->condition_value) {
-                    g_free(hav_condi->condition_value);
-                    hav_condi->condition_value = NULL;
-                }
-
-                char *val_str = g_strndup(val->start, val->end - val->start);
-                sql_string_dequote(val_str);
-                hav_condi->condition_value = val_str;
-                if (val->op == TK_UMINUS || val->op == TK_UPLUS) {
-                    hav_condi->data_type = TK_INTEGER;
-                } else {
-                    hav_condi->data_type = val->op;
-                }
+    switch (context->stmt_type) {
+        case STMT_SELECT:
+            if (context->sql_statement) {
             }
-            select->having_clause = NULL;   /* temporarily remove HAVING */
-        }
-
-        gboolean need_reconstruct = FALSE;
-        guint64 orig_offset = 0;
-        guint64 orig_limit = 0;
-
-        /* (LIMIT a, b) ==> (LIMIT 0, a+b) */
-        if (select->offset && select->offset->num_value > 0 && select->limit) {
-            prepare_for_sql_modify_limit(select, &orig_limit, &orig_offset);
-            need_reconstruct = TRUE;
-        }
-
-        if (is_groupby_need_reconstruct && select->groupby_clause != NULL && select->orderby_clause == NULL) {
-            select->flags |= SF_REWRITE_ORDERBY;
-        }
-
-        if (select->flags & SF_REWRITE_ORDERBY) {
-            prepare_for_sql_modify_orderby(select);
-            need_reconstruct = TRUE;
-        }
-
-        GString *new_sql = NULL;
-        if (having) {
-            need_reconstruct = TRUE;
-        }
-
-        need_reconstruct = TRUE;
-
-        if (need_reconstruct) {
-            new_sql = sql_construct_select(select, context->explain == TK_EXPLAIN ? 1:0);
-            g_string_append_c(new_sql, ';');
-            if (orig_offset != 0 || orig_limit != 0) {
-                select->limit->num_value = orig_limit;
-                select->offset->num_value = orig_offset;
-            }
-        }
-
-        if (new_sql && select->prior) {
-            sql_select_t *sub_select = select->prior;
-            GString *union_sql = g_string_new(NULL);
-            while (sub_select) {
-                GString *sql = sql_construct_select(sub_select, 0);
-                g_string_append(union_sql, sql->str);
-                g_string_append(union_sql, " UNION ");
-                g_string_free(sql, TRUE);
-                sub_select = sub_select->prior;
-            }
-            g_string_append(union_sql, new_sql->str);
-            g_string_free(new_sql, TRUE);
-            new_sql = union_sql;
-        }
-
-        select->having_clause = having; /* get HAVING back */
-
-        return new_sql;
+        case STMT_UPDATE:
+        default:
+            break;
     }
+
     return NULL;
 }
 

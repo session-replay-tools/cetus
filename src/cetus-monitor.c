@@ -68,6 +68,8 @@ struct cetus_monitor_t {
 
     GList *registered_objects;
     char *config_id;
+
+    unsigned int mysql_init_called:1;
 };
 
 static void
@@ -106,6 +108,7 @@ get_mysql_connection(cetus_monitor_t *monitor, char *addr)
     }
 
     conn = mysql_init(NULL);
+    monitor->mysql_init_called = 1;
     if (!conn)
         return NULL;
 
@@ -676,14 +679,14 @@ cetus_monitor_open(cetus_monitor_t *monitor, monitor_type_t monitor_type)
     struct timeval timeout;
     switch (monitor_type) {
     case MONITOR_TYPE_CHECK_ALIVE:
-        timeout.tv_sec = CHECK_ALIVE_INTERVAL;
-        timeout.tv_usec = 0;
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 1000;
         ADD_MONITOR_TIMER(check_alive_timer, check_backend_alive, timeout);
         g_message("check_alive monitor open.");
         break;
     case MONITOR_TYPE_CHECK_DELAY:
         timeout.tv_sec = 0;
-        timeout.tv_usec = CHECK_DELAY_INTERVAL;
+        timeout.tv_usec = 1000;
         ADD_MONITOR_TIMER(write_master_timer, update_master_timestamp, timeout);
         g_message("check_slave monitor open.");
         break;
@@ -725,7 +728,11 @@ cetus_monitor_mainloop(void *data)
 
     g_message("monitor thread closing %d mysql conns", g_hash_table_size(monitor->backend_conns));
     g_hash_table_destroy(monitor->backend_conns);
-    mysql_thread_end();
+
+    if (monitor->mysql_init_called) {
+        mysql_thread_end();
+        g_message("%s:mysql_thread_end is called", G_STRLOC);
+    }
 
     g_debug("exiting monitor loop");
     chassis_event_loop_free(loop);

@@ -994,10 +994,8 @@ main_cmdline(int argc, char **argv)
     opts = chassis_options_new();
     opts->ignore_unknown = TRUE;
     srv->options = opts;
-    srv->argv = argv;
     srv->argc = argc;
-
-    srv->argv = g_new0(char *, argc + 1);
+    srv->argv = g_new0(char *, argc);
     int i;
     for (i = 0; i < argc; i++) {
         srv->argv[i] = g_strdup(argv[i]);

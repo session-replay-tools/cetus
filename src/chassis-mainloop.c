@@ -257,6 +257,13 @@ chassis_free(chassis *chas)
         sql_log_free(chas->sql_mgr);
     }
 
+    if (chas->argv) {
+        for (i = 0; i < chas->argc; i++) {
+            free(chas->argv[i]);
+        }
+        free(chas->argv);
+    }
+
     g_free(chas);
 }
 

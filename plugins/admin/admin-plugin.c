@@ -373,7 +373,6 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
             network_socket *worker = g_ptr_array_index(con->servers, i);
             g_ptr_array_add(recv_queues, worker->recv_queue);
         }
-        /*TODO free all servers here */
 
         GPtrArray *servers = con->servers;
         con->servers = NULL;

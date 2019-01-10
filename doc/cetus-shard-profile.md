@@ -170,6 +170,8 @@ sharding.json是分库版本的分库规则配置文件，同样采用键值对�
 
 单点全局表single_tables有两个，分别为employees_hash的regioncode表和employees_range的countries表，设置默认分给第一组。
 
+**注意**：分片规则中的库名和表名，是**大小写不敏感**的。
+
 ##  4.shard.conf
 
 ```

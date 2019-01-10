@@ -143,6 +143,8 @@ chassis_config_get_mysql_connection(chassis_config_t *conf)
 
     g_debug("%s:call mysql_init", G_STRLOC);
     MYSQL *conn = mysql_init(NULL);
+    conf->mysql_init_called = 1;
+
     if (!conn)
         return NULL;
 
@@ -260,8 +262,9 @@ chassis_config_free(chassis_config_t *p)
     if (p->mysql_conn) {
         mysql_close(p->mysql_conn);
     }
-    if (p->type == CHASSIS_CONF_MYSQL) {
+    if (p->type == CHASSIS_CONF_MYSQL && p->mysql_init_called) {
         mysql_thread_end();
+        g_message("%s:mysql_thread_end is called", G_STRLOC);
     }
     g_free(p);
 }

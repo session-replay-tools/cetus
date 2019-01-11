@@ -926,6 +926,16 @@ sql_select_has_single_table(sql_select_t *select, char *current_db)
     return FALSE;
 }
 
+static void
+dup_groups(sql_src_item_t *table, GPtrArray *groups)
+{
+    int i;
+    for (i = 0; i < groups->len; i++) {
+        GString *group = g_ptr_array_index(groups, i);
+        g_ptr_array_add(table->groups, group);
+    }
+}
+
 static int
 routing_select(sql_context_t *context, const sql_select_t *select,
                char *default_db, guint32 fixture, query_stats_t *stats, GPtrArray *groups /* out */ )
@@ -1061,11 +1071,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
             g_ptr_array_free(partitions, TRUE);
             shard_table->groups = g_ptr_array_new();
 
-            int i;
-            for (i = 0; i < groups->len; i++) {
-                GString *group = g_ptr_array_index(groups, i);
-                g_ptr_array_add(shard_table->groups, group);
-            }
+            dup_groups(shard_table, groups);
         }
     }
 
@@ -1173,14 +1179,17 @@ routing_update(sql_context_t *context, sql_update_t *update,
     partitions_get_group_names(partitions, groups);
     g_ptr_array_free(partitions, TRUE);
 
+    int ret = USE_DIS_TRAN;
     if (groups->len == 1) {
-        return USE_SHARDING;
+        ret = USE_SHARDING;
     } else if (groups->len == 0) {
         shard_conf_get_table_groups(groups, db, table->table_name);
-        return USE_DIS_TRAN;
-    } else {
-        return USE_DIS_TRAN;
     }
+
+    table->groups = g_ptr_array_new();
+    dup_groups(table, groups);
+
+    return ret;
 }
 
 static void
@@ -1338,6 +1347,8 @@ routing_insert(sql_context_t *context, sql_insert_t *insert, char *default_db, s
         g_ptr_array_free(groups, TRUE);
         return USE_NON_SHARDING_TABLE;
     }
+
+    src->groups = g_ptr_array_new();
     plan->table_type = SHARDED_TABLE;
     sql_id_list_t *cols = insert->columns;
     if (cols == NULL) {
@@ -1392,6 +1403,8 @@ routing_insert(sql_context_t *context, sql_insert_t *insert, char *default_db, s
 
     GPtrArray *groups = g_ptr_array_new();
     partitions_get_group_names(partitions, groups);
+    dup_groups(src, groups);
+
     g_ptr_array_free(partitions, TRUE);
     sharding_plan_add_groups(plan, groups);
     g_ptr_array_free(groups, TRUE);
@@ -1436,6 +1449,8 @@ routing_delete(sql_context_t *context, sql_delete_t *delete,
         }
         return USE_NON_SHARDING_TABLE;
     }
+
+    table->groups = g_ptr_array_new();
     plan->table_type = SHARDED_TABLE;
     if (!delete->where_clause) {
         shard_conf_get_table_groups(groups, db, table->table_name);
@@ -1464,17 +1479,16 @@ routing_delete(sql_context_t *context, sql_delete_t *delete,
     partitions_get_group_names(partitions, groups);
     g_ptr_array_free(partitions, TRUE);
 
+    int ret = USE_DIS_TRAN;
     if (groups->len == 1) {
-        return USE_SHARDING;
+        ret = USE_SHARDING;
     } else if (groups->len == 0) {
         shard_conf_get_table_groups(groups, db, table->table_name);
-        return USE_DIS_TRAN;
-    } else if (groups->len > 1) {
-        return USE_DIS_TRAN;
     }
 
-    g_warning(G_STRLOC ":error reach here");
-    return ERROR_UNPARSABLE;
+    dup_groups(table, groups);
+
+    return ret;
 }
 
 int

@@ -390,7 +390,8 @@ explain_shard_sql(network_mysqld_con *con, sharding_plan_t *plan)
 
     shard_plugin_con_t *st = con->plugin_con_state;
 
-    rv = sharding_parse_groups(con->client->default_db, st->sql_context, &(con->srv->query_stats), con->key, plan);
+    rv = sharding_parse_groups(con->client->default_db, st->sql_context, &(con->srv->query_stats),
+            con->key, plan, con->srv->is_partition_mode);
 
     con->modified_sql = sharding_modify_sql(st->sql_context, &(con->hav_condi), con->srv->is_groupby_need_reconstruct);
     if (con->modified_sql) {
@@ -1215,7 +1216,7 @@ proxy_get_server_list(network_mysqld_con *con)
         break;
     default:
         rv = sharding_parse_groups(con->client->default_db, st->sql_context,
-                                   stats, con->key, plan);
+                                   stats, con->key, plan, con->srv->is_partition_mode);
         break;
     }
 

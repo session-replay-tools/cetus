@@ -209,7 +209,7 @@ chassis_frontend_new(void)
 
     frontend->is_tcp_stream_enabled = 0;
     frontend->is_fast_stream_enabled = 1;
-    frontend->is_partition_mode = 1;
+    frontend->is_partition_mode = 0;
     frontend->group_replication_mode = 0;
     frontend->sql_log_bufsize = 0;
     frontend->sql_log_switch = NULL;

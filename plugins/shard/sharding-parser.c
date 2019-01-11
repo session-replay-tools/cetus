@@ -224,8 +224,6 @@ modify_select(sql_context_t *context, having_condition_t *hav_condi, int is_grou
         need_reconstruct = TRUE;
     }
 
-    need_reconstruct = TRUE;
-
     if (need_reconstruct) {
         new_sql = sql_construct_select(select, context->explain == TK_EXPLAIN ? 1:0);
         g_string_append_c(new_sql, ';');

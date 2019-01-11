@@ -256,24 +256,32 @@ modify_select(sql_context_t *context, having_condition_t *hav_condi, int is_grou
 }
 
 GString *
-sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi, int is_groupby_need_reconstruct)
+sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi, int is_groupby_need_reconstruct, int partition_mode)
 {
-    switch (context->stmt_type) {
-        case STMT_SELECT:
+    if (!partition_mode) {
+        if (context->stmt_type == STMT_SELECT) {
             if (context->sql_statement) {
                 return modify_select(context, hav_condi, is_groupby_need_reconstruct);
             }
-        case STMT_UPDATE:
-            return sql_construct_update(context->sql_statement);
-        case STMT_DELETE:
-            return sql_construct_delete(context->sql_statement);
-        case STMT_INSERT: {
-            GString *s = g_string_sized_new(512);
-            sql_construct_insert(s , context->sql_statement);
-            return s;
         }
-        default:
-            break;
+    } else {
+        switch (context->stmt_type) {
+            case STMT_SELECT:
+                if (context->sql_statement) {
+                    return modify_select(context, hav_condi, is_groupby_need_reconstruct);
+                }
+            case STMT_UPDATE:
+                return sql_construct_update(context->sql_statement);
+            case STMT_DELETE:
+                return sql_construct_delete(context->sql_statement);
+            case STMT_INSERT: {
+                GString *s = g_string_sized_new(512);
+                sql_construct_insert(s , context->sql_statement);
+                return s;
+            }
+            default:
+                break;
+        }
     }
 
     return NULL;

@@ -168,7 +168,8 @@ prepare_for_sql_modify_orderby(sql_select_t *select)
     select->orderby_clause = orderby;
 }
 
-static GString *modify_select()
+static GString *
+modify_select(sql_context_t *context, having_condition_t *hav_condi, int is_groupby_need_reconstruct)
 {
     sql_select_t *select = context->sql_statement;
 
@@ -260,8 +261,17 @@ sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi, int i
     switch (context->stmt_type) {
         case STMT_SELECT:
             if (context->sql_statement) {
+                return modify_select(context, hav_condi, is_groupby_need_reconstruct);
             }
         case STMT_UPDATE:
+            return sql_construct_update(context->sql_statement);
+        case STMT_DELETE:
+            return sql_construct_delete(context->sql_statement);
+        case STMT_INSERT: {
+            GString *s = g_string_sized_new(512);
+            sql_construct_insert(s , context->sql_statement);
+            return s;
+        }
         default:
             break;
     }

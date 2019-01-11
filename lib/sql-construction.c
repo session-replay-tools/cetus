@@ -304,7 +304,7 @@ GString *
 sql_construct_select(sql_select_t *select, int explain)
 {
     int i = 0;
-    GString *s = g_string_new(NULL);
+    GString *s = g_string_sized_new(512);
     if (explain) {
         g_string_append(s, "EXPLAIN ");
     }
@@ -334,6 +334,7 @@ sql_construct_select(sql_select_t *select, int explain)
                     g_string_append(s, ".");
                 }
                 if (src->groups && src->groups->len > 0) {
+                    /* TODO support multiple groups */
                     g_string_append(s, src->table_name);
                     GString *group_name = src->groups->pdata[0];
                     g_string_append(s, "_");
@@ -498,7 +499,14 @@ sql_construct_insert(GString *s, sql_insert_t *p)
             g_string_append(s, src->dbname);
             g_string_append_c(s, '.');
         }
-        g_string_append(s, src->table_name);
+        if (src->groups && src->groups->len > 0) {
+            g_string_append(s, src->table_name);
+            GString *group_name = src->groups->pdata[0];
+            g_string_append(s, "_");
+            g_string_append(s, group_name->str);
+        } else {
+            g_string_append(s, src->table_name);
+        }
         g_string_append_c(s, ' ');
     }
     if (p->columns && p->columns->len > 0) {
@@ -530,3 +538,69 @@ sql_construct_insert(GString *s, sql_insert_t *p)
         sql_append_expr_list(s, p->update_list);
     }
 }
+    
+GString *
+sql_construct_update(sql_update_t *p)
+{
+    GString *s = g_string_sized_new(512);
+
+    g_string_append(s, "UPDATE ");
+
+    sql_src_list_t *tables = p->table_reference->table_list;
+    sql_src_item_t *src = g_ptr_array_index(tables, 0);
+
+    if (src->dbname) {
+        g_string_append(s, src->dbname);
+        g_string_append_c(s, '.');
+    }
+    if (src->groups && src->groups->len > 0) {
+        g_string_append(s, src->table_name);
+        GString *group_name = src->groups->pdata[0];
+        g_string_append(s, "_");
+        g_string_append(s, group_name->str);
+    } else {
+        g_string_append(s, src->table_name);
+    }
+
+    g_string_append(s, " SET ");
+
+    int i;
+    for (i = 0; p->set_list && i < p->set_list->len; ++i) {
+        sql_expr_t *expr = g_ptr_array_index(p->set_list, i);
+        append_sql_expr(s, expr);
+    }
+
+    if (p->where_clause) {
+        g_string_append(s, " WHERE ");
+        append_sql_expr(s, p->where_clause);
+    }
+}
+
+GString *
+sql_construct_delete(sql_delete_t *p)
+{
+    GString *s = g_string_new(NULL);
+
+    g_string_append(s, "DELETE FROM ");
+
+    sql_src_item_t *src = g_ptr_array_index(p->from_src, 0);
+
+    if (src->dbname) {
+        g_string_append(s, src->dbname);
+        g_string_append_c(s, '.');
+    }
+    if (src->groups && src->groups->len > 0) {
+        g_string_append(s, src->table_name);
+        GString *group_name = src->groups->pdata[0];
+        g_string_append(s, "_");
+        g_string_append(s, group_name->str);
+    } else {
+        g_string_append(s, src->table_name);
+    }
+
+    if (p->where_clause) {
+        g_string_append(s, " WHERE ");
+        append_sql_expr(s, p->where_clause);
+    }
+}
+

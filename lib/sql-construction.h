@@ -29,5 +29,7 @@ GString *sql_construct_expr(sql_expr_t *expr);
 GString *sql_construct_select(sql_select_t *, int);
 
 void sql_construct_insert(GString *, sql_insert_t *);
+GString *sql_construct_update(sql_update_t *);
+GString *sql_construct_delete(sql_delete_t *);
 
 #endif /*_SQL_CONSTRUCTION_*/

@@ -169,7 +169,7 @@ prepare_for_sql_modify_orderby(sql_select_t *select)
 }
 
 static GString *
-modify_select(sql_context_t *context, having_condition_t *hav_condi, int is_groupby_need_reconstruct)
+modify_select(sql_context_t *context, having_condition_t *hav_condi, int is_groupby_need_reconstruct, int groups)
 {
     sql_select_t *select = context->sql_statement;
 
@@ -205,7 +205,7 @@ modify_select(sql_context_t *context, having_condition_t *hav_condi, int is_grou
     guint64 orig_limit = 0;
 
     /* (LIMIT a, b) ==> (LIMIT 0, a+b) */
-    if (select->offset && select->offset->num_value > 0 && select->limit) {
+    if (groups > 1 && select->offset && select->offset->num_value > 0 && select->limit) {
         prepare_for_sql_modify_limit(select, &orig_limit, &orig_offset);
         need_reconstruct = TRUE;
     }
@@ -254,19 +254,19 @@ modify_select(sql_context_t *context, having_condition_t *hav_condi, int is_grou
 }
 
 GString *
-sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi, int is_groupby_need_reconstruct, int partition_mode)
+sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi, int is_groupby_need_reconstruct, int partition_mode, int groups)
 {
     if (!partition_mode) {
         if (context->stmt_type == STMT_SELECT) {
             if (context->sql_statement) {
-                return modify_select(context, hav_condi, is_groupby_need_reconstruct);
+                return modify_select(context, hav_condi, is_groupby_need_reconstruct, groups);
             }
         }
     } else {
         switch (context->stmt_type) {
             case STMT_SELECT:
                 if (context->sql_statement) {
-                    return modify_select(context, hav_condi, is_groupby_need_reconstruct);
+                    return modify_select(context, hav_condi, is_groupby_need_reconstruct, groups);
                 }
             case STMT_UPDATE:
                 return sql_construct_update(context->sql_statement);

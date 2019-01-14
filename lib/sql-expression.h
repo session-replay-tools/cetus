@@ -263,12 +263,13 @@ struct sql_src_item_t {
     sql_index_hint_t *index_hint;
     char *table_alias;          /* The "B" part of a "A AS B" phrase.  zName is the "A" */
     sql_select_t *select;       /* A SELECT statement used in place of a table name */
-    uint8_t jointype;           /* Type of join between this table and the previous */
 
     sql_expr_t *on_clause;      /* The ON clause of a join */
     sql_id_list_t *pUsing;      /* The USING clause of a join */
 
     sql_expr_list_t *func_arg;  /* Arguments to table-valued-function */
+    int group_index;
+    uint8_t jointype;           /* Type of join between this table and the previous */
 };                              /* One entry for each identifier on the list */
 
 struct sql_drop_database_t {

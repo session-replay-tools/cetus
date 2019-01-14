@@ -334,9 +334,10 @@ sql_construct_select(sql_select_t *select, int explain)
                     g_string_append(s, ".");
                 }
                 if (src->groups && src->groups->len > 0) {
-                    /* TODO support multiple groups */
                     g_string_append(s, src->table_name);
-                    GString *group_name = src->groups->pdata[0];
+                    int index = src->group_index++;
+                    index = index % src->groups->len;
+                    GString *group_name = src->groups->pdata[index];
                     g_string_append(s, "_");
                     g_string_append(s, group_name->str);
                 } else {
@@ -501,7 +502,9 @@ sql_construct_insert(GString *s, sql_insert_t *p)
         }
         if (src->groups && src->groups->len > 0) {
             g_string_append(s, src->table_name);
-            GString *group_name = src->groups->pdata[0];
+            int index = src->group_index++;
+            index = index % src->groups->len;
+            GString *group_name = src->groups->pdata[index];
             g_string_append(s, "_");
             g_string_append(s, group_name->str);
         } else {
@@ -555,7 +558,9 @@ sql_construct_update(sql_update_t *p)
     }
     if (src->groups && src->groups->len > 0) {
         g_string_append(s, src->table_name);
-        GString *group_name = src->groups->pdata[0];
+        int index = src->group_index++;
+        index = index % src->groups->len;
+        GString *group_name = src->groups->pdata[index];
         g_string_append(s, "_");
         g_string_append(s, group_name->str);
     } else {
@@ -591,7 +596,9 @@ sql_construct_delete(sql_delete_t *p)
     }
     if (src->groups && src->groups->len > 0) {
         g_string_append(s, src->table_name);
-        GString *group_name = src->groups->pdata[0];
+        int index = src->group_index++;
+        index = index % src->groups->len;
+        GString *group_name = src->groups->pdata[index];
         g_string_append(s, "_");
         g_string_append(s, group_name->str);
     } else {

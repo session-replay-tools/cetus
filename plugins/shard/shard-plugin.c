@@ -376,6 +376,24 @@ mysqld_con_send_sequence(network_mysqld_con *con)
     g_ptr_array_free(rows, TRUE);
 }
 
+static const GString *
+sharding_get_sql(network_mysqld_con *con, const GString *group)
+{
+    if (!con->srv->is_partition_mode) {
+        return sharding_plan_get_sql(con->sharding_plan, group);
+    } else {
+        if (g_string_equal(con->first_group, group)) {
+            return sharding_plan_get_sql(con->sharding_plan, group);
+        } else {
+            shard_plugin_con_t *st = con->plugin_con_state;
+            sql_context_t *context = st->sql_context;
+            GString *new_sql = sharding_modify_sql(context, &(con->hav_condi),
+                    con->srv->is_groupby_need_reconstruct, con->srv->is_partition_mode, con->sharding_plan->groups->len);
+            return new_sql;
+        }
+    }
+}
+
 static int
 explain_shard_sql(network_mysqld_con *con, sharding_plan_t *plan)
 {
@@ -433,17 +451,24 @@ proxy_generate_shard_explain_packet(network_mysqld_con *con)
     GPtrArray *rows;
     rows = g_ptr_array_new_with_free_func((void *)network_mysqld_mysql_field_row_free);
 
+    con->sharding_plan = plan;
+
     int i;
     for (i = 0; i < plan->groups->len; i++) {
         GPtrArray *row = g_ptr_array_new();
 
         GString *group = g_ptr_array_index(plan->groups, i);
+        if  (i == 0) {
+            con->first_group = group;
+        }
         g_ptr_array_add(row, group->str);
-        const GString *sql = sharding_plan_get_sql(plan, group);
+        const GString *sql = sharding_get_sql(con, group);
         g_ptr_array_add(row, sql->str);
 
         g_ptr_array_add(rows, row);
     }
+
+    con->sharding_plan = NULL;
 
     network_mysqld_con_send_resultset(con->client, fields, rows);
 
@@ -1381,7 +1406,7 @@ proxy_add_server_connection(network_mysqld_con *con, GString *group, int *server
                 if (g_string_equal(ss->server->group, group)) {
                     ss->participated = 1;
                     ss->state = NET_RW_STATE_NONE;
-                    ss->sql = sharding_plan_get_sql(con->sharding_plan, group);
+                    ss->sql = sharding_get_sql(con, group);
                     if (con->dist_tran) {
                         if (con->dist_tran_state == NEXT_ST_XA_START) {
                             ss->dist_tran_state = NEXT_ST_XA_START;
@@ -1420,7 +1445,7 @@ proxy_add_server_connection(network_mysqld_con *con, GString *group, int *server
         ss->backend = st->backend;
         ss->server = server;
         server->group = group;
-        ss->sql = sharding_plan_get_sql(con->sharding_plan, group);
+        ss->sql = sharding_get_sql(con, group);
         ss->attr_consistent_checked = 0;
         ss->attr_consistent = 0;
         ss->server->last_packet_id = 0;
@@ -1479,9 +1504,12 @@ proxy_add_server_connection_array(network_mysqld_con *con, int *server_unavailab
                 } else if (!con->is_read_ro_server_allowed && ss->server->is_read_only) {
                     g_debug("%s: should release ro server to pool", G_STRLOC);
                 } else {
+                    if (hit == 0) {
+                        con->first_group = group;
+                    }
                     hit++;
                     server_map[i] = 1;
-                    ss->sql = sharding_plan_get_sql(con->sharding_plan, group);
+                    ss->sql = sharding_get_sql(con, group);
                     g_debug("%s: hit server", G_STRLOC);
                 }
             }
@@ -1544,6 +1572,9 @@ proxy_add_server_connection_array(network_mysqld_con *con, int *server_unavailab
 
     for (i = 0; i < plan->groups->len; i++) {
         GString *group = g_ptr_array_index(plan->groups, i);
+        if (i == 0) {
+            con->first_group = group;
+        }
 
         if (!proxy_add_server_connection(con, group, server_unavailable)) {
             return FALSE;

@@ -658,6 +658,7 @@ struct network_mysqld_con {
      * in admin-plugin, not used
      */
     void *plugin_con_state;
+    const GString *first_group;
     /* connection specific timeouts */
     struct timeval connect_timeout; /* default = 2 s */
     struct timeval read_timeout;    /* default = 10 min */

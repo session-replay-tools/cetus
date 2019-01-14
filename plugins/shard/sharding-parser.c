@@ -222,6 +222,8 @@ modify_select(sql_context_t *context, having_condition_t *hav_condi, int is_grou
     GString *new_sql = NULL;
     if (having) {
         need_reconstruct = TRUE;
+    } else if (context->sql_needs_reconstruct) {
+        need_reconstruct = TRUE;
     }
 
     if (need_reconstruct) {
@@ -1039,6 +1041,10 @@ routing_select(sql_context_t *context, const sql_select_t *select,
         }
     }
 
+    if (partition_mode) {
+        context->sql_needs_reconstruct = 1;
+    }
+
     gboolean has_sharding_key = FALSE;
     for (i = 0; i < sharding_tables->len; ++i) {
         sql_src_item_t *shard_table = g_ptr_array_index(sharding_tables, i);
@@ -1092,6 +1098,9 @@ routing_select(sql_context_t *context, const sql_select_t *select,
             sql_src_item_t *shard_table = g_ptr_array_index(sharding_tables, 0);
             char *db = shard_table->dbname ? shard_table->dbname : default_db;
             shard_conf_get_table_groups(groups, db, shard_table->table_name);
+            if (partition_mode) {
+                dup_groups(shard_table, groups);
+            }
         }
         g_ptr_array_free(sharding_tables, TRUE);
         return USE_ALL_SHARDINGS;
@@ -1150,6 +1159,10 @@ routing_update(sql_context_t *context, sql_update_t *update,
             return USE_DIS_TRAN;
         }
         return USE_NON_SHARDING_TABLE;
+    }
+
+    if (partition_mode) {
+        context->sql_needs_reconstruct = 1;
     }
     plan->table_type = SHARDED_TABLE;
     sharding_table_t *shard_info = shard_conf_get_info(db, table->table_name);
@@ -1356,6 +1369,9 @@ routing_insert(sql_context_t *context, sql_insert_t *insert, char *default_db, s
         return USE_NON_SHARDING_TABLE;
     }
 
+    if (partition_mode) {
+        context->sql_needs_reconstruct = 1;
+    }
     plan->table_type = SHARDED_TABLE;
     sql_id_list_t *cols = insert->columns;
     if (cols == NULL) {
@@ -1459,6 +1475,9 @@ routing_delete(sql_context_t *context, sql_delete_t *delete,
         return USE_NON_SHARDING_TABLE;
     }
 
+    if (partition_mode) {
+        context->sql_needs_reconstruct = 1;
+    }
     table->groups = g_ptr_array_new();
     plan->table_type = SHARDED_TABLE;
     if (!delete->where_clause) {
@@ -1566,6 +1585,8 @@ int
 sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t *stats,
                       guint64 fixture, sharding_plan_t *plan, int partition_mode)
 {
+    context->sql_needs_reconstruct = 0;
+
     GPtrArray *groups = g_ptr_array_new();
     if (context == NULL) {
         g_warning("%s:sql is not parsed", G_STRLOC);

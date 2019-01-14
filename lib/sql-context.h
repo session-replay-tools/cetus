@@ -59,8 +59,9 @@ typedef struct sql_context_t {
     enum sql_parsing_place_t parsing_place;
 
     struct sql_property_t *property;
-    int is_parsing_subquery;
-    int allow_subquery_nesting;
+    unsigned int is_parsing_subquery:1;
+    unsigned int allow_subquery_nesting:1;
+    unsigned int sql_needs_reconstruct:1;
 } sql_context_t;
 
 void sql_context_init(sql_context_t *);

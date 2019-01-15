@@ -1147,6 +1147,12 @@ routing_update(sql_context_t *context, sql_update_t *update,
     }
 
     if (!shard_conf_is_shard_table(db, table->table_name)) {
+        if (partition_mode) {
+            plan->table_type = GLOBAL_TABLE;
+            sharding_plan_add_group(plan, g_string_new(PARTITION_SUPER_GROUP));
+            return USE_NON_SHARDING_TABLE;
+        }
+
         if (shard_conf_is_single_table(db, table->table_name)) {
             plan->table_type = SINGLE_TABLE;
             shard_conf_get_single_table_distinct_group(groups, db, table->table_name);
@@ -1324,6 +1330,11 @@ routing_insert(sql_context_t *context, sql_insert_t *insert, char *default_db, s
 
     sharding_table_t *shard_info = shard_conf_get_info(db, table);
     if (shard_info == NULL) {
+        if (partition_mode) {
+            plan->table_type = GLOBAL_TABLE;
+            sharding_plan_add_group(plan, g_string_new(PARTITION_SUPER_GROUP));
+            return USE_NON_SHARDING_TABLE;
+        }
         GPtrArray *groups = g_ptr_array_new();
         if (shard_conf_is_single_table(db, table)) {
             shard_conf_get_single_table_distinct_group(groups, db, table);
@@ -1461,6 +1472,12 @@ routing_delete(sql_context_t *context, sql_delete_t *delete,
         db = table->dbname;
 
     if (!shard_conf_is_shard_table(db, table->table_name)) {
+        if (partition_mode) {
+            plan->table_type = GLOBAL_TABLE;
+            sharding_plan_add_group(plan, g_string_new(PARTITION_SUPER_GROUP));
+            return USE_NON_SHARDING_TABLE;
+        }
+
         if (shard_conf_is_single_table(db, table->table_name)) {
             shard_conf_get_single_table_distinct_group(groups, db, table->table_name);
             plan->table_type = SINGLE_TABLE;

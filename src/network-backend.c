@@ -427,7 +427,7 @@ network_backends_get_group(network_backends_t *bs, const GString *name)
     for (i = 0; i < bs->groups->len; ++i) {
         network_group_t *group = g_ptr_array_index(bs->groups, i);
         if (bs->is_partition_mode) {
-            if (strcmp(group->name->str, "super") == 0) {
+            if (strcmp(group->name->str, PARTITION_SUPER_GROUP) == 0) {
                 return group;
             }
         } else {
@@ -445,7 +445,7 @@ network_backends_add_group(network_backends_t *bs, const char *name)
     GString *gp_name;
 
     if (bs->is_partition_mode) {
-        gp_name = g_string_new("super");
+        gp_name = g_string_new(PARTITION_SUPER_GROUP);
     } else {
         gp_name = g_string_new(name);
     }

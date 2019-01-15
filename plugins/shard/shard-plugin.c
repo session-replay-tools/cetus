@@ -2670,7 +2670,7 @@ network_mysqld_shard_plugin_apply_config(chassis *chas, chassis_plugin_config *c
     char *shard_json = NULL;
     gboolean ok = chassis_config_query_object(chas->config_manager,
                                               "sharding", &shard_json, 0);
-    if (!ok || !shard_json || !shard_conf_load(shard_json, g->backends->groups->len)) {
+    if (!ok || !shard_json || !shard_conf_load(chas->is_partition_mode, shard_json, g->backends->groups->len)) {
         g_critical("sharding configuration load error, exit program.");
         exit(0);
     }

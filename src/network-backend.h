@@ -95,6 +95,7 @@ NETWORK_API int network_backend_conns_count(network_backend_t *b);
 NETWORK_API int network_backend_init_extra(network_backend_t *b, chassis *chas);
 
 typedef struct {
+    int is_partition_mode;
     unsigned int ro_server_num;
     unsigned int read_count;
     GPtrArray *backends;

@@ -239,11 +239,14 @@ void sharding_vdb_free(sharding_vdb_t *vdb)
     g_free(vdb);
 }
 
-gboolean sharding_vdb_is_valid(sharding_vdb_t *vdb, int num_groups)
+gboolean sharding_vdb_is_valid(int is_partition_mode, sharding_vdb_t *vdb, int num_groups)
 {
-    if (vdb->partitions->len != num_groups) {
-        g_critical("vdb-%d partition count not equal to number of groups", vdb->id);
-        return FALSE;
+    if (!is_partition_mode) {
+        if (vdb->partitions->len != num_groups) {
+            g_critical("vdb-%d partition count not equal to number of groups, vdb partition len:%d, groups:%d",
+                    vdb->id, vdb->partitions->len, num_groups);
+            return FALSE;
+        }
     }
     if (vdb->method == SHARD_METHOD_HASH) {
         if (vdb->logic_shard_num <= 0 || vdb->logic_shard_num > MAX_HASH_VALUE_COUNT) {
@@ -488,7 +491,7 @@ string_list_distinct_append(GList *strlist, const GString *str)
  * setup index & validate configurations
  */
 static gboolean
-shard_conf_try_setup(GList *vdbs, GList *tables, GList *single_tables, int num_groups)
+shard_conf_try_setup(int is_partition_mode, GList *vdbs, GList *tables, GList *single_tables, int num_groups)
 {
     if (!vdbs || !tables) {
         g_critical("empty vdb/table list");
@@ -497,7 +500,7 @@ shard_conf_try_setup(GList *vdbs, GList *tables, GList *single_tables, int num_g
     GList *l = vdbs;
     for (; l != NULL; l = l->next) {
         sharding_vdb_t *vdb = l->data;
-        if (!sharding_vdb_is_valid(vdb, num_groups)) {
+        if (!sharding_vdb_is_valid(is_partition_mode, vdb, num_groups)) {
             g_warning("invalid vdb config");
             return FALSE;
         }
@@ -559,7 +562,7 @@ shard_conf_destroy(void)
 static GHashTable *load_shard_from_json(gchar *json_str);
 
 gboolean
-shard_conf_load(char *json_str, int num_groups)
+shard_conf_load(int partition_mode, char *json_str, int num_groups)
 {
     GHashTable *ht = load_shard_from_json(json_str);
     if (!ht)
@@ -568,7 +571,7 @@ shard_conf_load(char *json_str, int num_groups)
     GList *tables = g_hash_table_lookup(ht, "table_list");
     GList *vdbs = g_hash_table_lookup(ht, "vdb_list");
     GList *single_tables = g_hash_table_lookup(ht, "single_tables");
-    gboolean success = shard_conf_try_setup(vdbs, tables, single_tables, num_groups);
+    gboolean success = shard_conf_try_setup(partition_mode, vdbs, tables, single_tables, num_groups);
     if (!success) {
         g_list_free_full(vdbs, (GDestroyNotify) sharding_vdb_free);
         g_list_free_full(tables, (GDestroyNotify) sharding_table_free);
@@ -923,7 +926,7 @@ load_shard_from_json(gchar *json_str)
 {
     cJSON *root = cJSON_Parse(json_str);
     if (!root) {
-        g_critical("JSON format is not correct!");
+        g_critical("JSON format is not correct:%s", json_str);
         return NULL;
     }
 

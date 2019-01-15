@@ -124,14 +124,14 @@ GPtrArray *shard_conf_table_partitions(GPtrArray *partitions, const char *db, co
  */
 void shard_conf_find_groups(GPtrArray *groups, const char *match);
 
-gboolean shard_conf_load(char *, int);
+gboolean shard_conf_load(int, char *, int);
 
 void shard_conf_destroy(void);
 
 gboolean shard_conf_add_vdb(sharding_vdb_t* vdb);
 
 sharding_vdb_t *sharding_vdb_new();
-gboolean sharding_vdb_is_valid(sharding_vdb_t *vdb, int num_groups);
+gboolean sharding_vdb_is_valid(int is_partition_mode, sharding_vdb_t *vdb, int num_groups);
 void sharding_vdb_free(sharding_vdb_t *vdb);
 
 gboolean shard_conf_add_sharded_table(sharding_table_t* t);

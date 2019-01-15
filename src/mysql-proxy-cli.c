@@ -1107,6 +1107,9 @@ main_cmdline(int argc, char **argv)
 
     srv->ssl = frontend->ssl;
 
+    init_parameters(frontend, srv);
+
+    printf("partition mode here before init:%d\n", srv->is_partition_mode);
     if (network_mysqld_init(srv) == -1) {
         g_print("network_mysqld_init failed\n");
         GOTO_EXIT(EXIT_FAILURE);
@@ -1213,7 +1216,6 @@ main_cmdline(int argc, char **argv)
         GOTO_EXIT(EXIT_FAILURE);
     }
 
-    init_parameters(frontend, srv);
 
 #ifndef SIMPLE_PARSER
     if (!frontend->log_xa_filename)

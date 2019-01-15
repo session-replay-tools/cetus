@@ -2265,7 +2265,7 @@ void admin_create_vdb(network_mysqld_con* con, int id, GPtrArray* partitions,
         }
     }
     chassis_private *g = con->srv->priv;
-    gboolean ok = sharding_vdb_is_valid(vdb, g->backends->groups->len)
+    gboolean ok = sharding_vdb_is_valid(con->srv->is_partition_mode, vdb, g->backends->groups->len)
         && shard_conf_add_vdb(vdb);
     if (ok) {
         g_message("Admin: %s", con->orig_sql->str);

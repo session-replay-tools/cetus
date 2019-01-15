@@ -192,7 +192,7 @@ plugin_call_timeout(chassis *srv, network_mysqld_con *con)
 }
 
 chassis_private *
-network_mysqld_priv_init(void)
+network_mysqld_priv_init(int is_partition_mode)
 {
     chassis_private *priv;
 
@@ -200,6 +200,7 @@ network_mysqld_priv_init(void)
 
     priv->cons = g_ptr_array_new();
     priv->backends = network_backends_new();
+    priv->backends->is_partition_mode = is_partition_mode;
     priv->users = cetus_users_new();
     priv->monitor = cetus_monitor_new();
     priv->acl = cetus_acl_new();
@@ -265,7 +266,7 @@ network_mysqld_init(chassis *srv)
     srv->priv_free = network_mysqld_priv_free;
     srv->priv_shutdown = network_mysqld_priv_shutdown;
     srv->priv_finally_free_shared = network_mysqld_priv_finally_free_shared;
-    srv->priv = network_mysqld_priv_init();
+    srv->priv = network_mysqld_priv_init(srv->is_partition_mode);
 
     cetus_users_read_json(srv->priv->users, srv->config_manager, 0);
     cetus_variables_init_stats(&srv->priv->stats_variables, srv);
@@ -2342,7 +2343,7 @@ disp_query_after_consistant_attr(network_mysqld_con *con)
     }
 }
 
-void log_slowquery(int interval_ms, char*ip, char* domain, char* user, char* sql)
+void log_slowquery(int interval_ms, char* ip, char* domain, char* user, char* sql)
 {
     uint64_t usec;
     struct timeval t;

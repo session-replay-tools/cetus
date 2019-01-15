@@ -209,7 +209,7 @@ chassis_frontend_new(void)
 
     frontend->is_tcp_stream_enabled = 0;
     frontend->is_fast_stream_enabled = 1;
-    frontend->is_partition_mode = 0;
+    frontend->is_partition_mode = 1;
     frontend->group_replication_mode = 0;
     frontend->sql_log_bufsize = 0;
     frontend->sql_log_switch = NULL;
@@ -1109,7 +1109,6 @@ main_cmdline(int argc, char **argv)
 
     init_parameters(frontend, srv);
 
-    printf("partition mode here before init:%d\n", srv->is_partition_mode);
     if (network_mysqld_init(srv) == -1) {
         g_print("network_mysqld_init failed\n");
         GOTO_EXIT(EXIT_FAILURE);

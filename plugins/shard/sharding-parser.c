@@ -1103,6 +1103,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
             }
         }
         g_ptr_array_free(sharding_tables, TRUE);
+
         return USE_ALL_SHARDINGS;
     }
 }

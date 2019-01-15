@@ -754,7 +754,10 @@ proxy_parse_query(network_mysqld_con *con)
 static int
 wrap_check_sql(network_mysqld_con *con, struct sql_context_t *sql_context)
 {
-    if (con->srv->is_partition_mode && con->sharding_plan->table_type == GLOBAL_TABLE) {
+    if (con->srv->is_partition_mode && sql_context->stmt_type != STMT_SELECT &&
+            con->sharding_plan->table_type == GLOBAL_TABLE)
+    {
+        g_debug("don't change sql for: %s", con->orig_sql->str);
         return 0;
     }
 

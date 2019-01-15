@@ -276,7 +276,7 @@ sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi, int i
                 return sql_construct_delete(context->sql_statement);
             case STMT_INSERT: {
                 GString *s = g_string_sized_new(512);
-                sql_construct_insert(s , context->sql_statement);
+                sql_construct_insert(partition_mode, s, context->sql_statement, NULL);
                 return s;
             }
             default:
@@ -1138,7 +1138,7 @@ expr_same_with_sharding_cond(sql_expr_t *equation, sql_expr_t *where)
 
 static int
 routing_update(sql_context_t *context, sql_update_t *update,
-               char *default_db, sharding_plan_t *plan, GPtrArray *groups, guint32 fixture, int partition_mode)
+               char *default_db, sharding_plan_t *plan, GPtrArray *groups, guint32 fixture)
 {
     char *db = default_db;
     sql_src_list_t *tables = update->table_reference->table_list;
@@ -1148,7 +1148,7 @@ routing_update(sql_context_t *context, sql_update_t *update,
     }
 
     if (!shard_conf_is_shard_table(db, table->table_name)) {
-        if (partition_mode) {
+        if (plan->is_partition_mode) {
             plan->table_type = GLOBAL_TABLE;
             sharding_plan_add_group(plan, g_string_new(PARTITION_SUPER_GROUP));
             return USE_NON_SHARDING_TABLE;
@@ -1168,7 +1168,7 @@ routing_update(sql_context_t *context, sql_update_t *update,
         return USE_NON_SHARDING_TABLE;
     }
 
-    if (partition_mode) {
+    if (plan->is_partition_mode) {
         context->sql_needs_reconstruct = 1;
     }
     plan->table_type = SHARDED_TABLE;
@@ -1213,7 +1213,7 @@ routing_update(sql_context_t *context, sql_update_t *update,
         shard_conf_get_table_groups(groups, db, table->table_name);
     }
 
-    if (partition_mode) {
+    if (plan->is_partition_mode) {
         dup_groups(table, groups);
     }
 
@@ -1305,10 +1305,11 @@ insert_multi_value(sql_context_t *context, sql_insert_t *insert,
     while (g_hash_table_iter_next(&iter, (void **)&part, (void **)&values_list)) {
         GString *sql = g_string_new(NULL);
         insert->sel_val = values_list;
-        sql_construct_insert(sql, insert);
+        sql_construct_insert(plan->is_partition_mode, sql, insert, part->group_name);
         sharding_plan_add_group_sql(plan, part->group_name, sql);
     }
     rc = plan->groups->len > 1 ? USE_DIS_TRAN : USE_NON_SHARDING_TABLE;
+    plan->is_sql_rewrite_completely = 1;
 
   out:
     /* restore the INSERT-AST */
@@ -1320,7 +1321,7 @@ insert_multi_value(sql_context_t *context, sql_insert_t *insert,
 }
 
 static int
-routing_insert(sql_context_t *context, sql_insert_t *insert, char *default_db, sharding_plan_t *plan, guint32 fixture, int partition_mode)
+routing_insert(sql_context_t *context, sql_insert_t *insert, char *default_db, sharding_plan_t *plan, guint32 fixture)
 {
     sql_src_list_t *src_list = insert->table;
     assert(src_list && src_list->len > 0);
@@ -1331,7 +1332,7 @@ routing_insert(sql_context_t *context, sql_insert_t *insert, char *default_db, s
 
     sharding_table_t *shard_info = shard_conf_get_info(db, table);
     if (shard_info == NULL) {
-        if (partition_mode) {
+        if (plan->is_partition_mode) {
             plan->table_type = GLOBAL_TABLE;
             sharding_plan_add_group(plan, g_string_new(PARTITION_SUPER_GROUP));
             return USE_NON_SHARDING_TABLE;
@@ -1381,7 +1382,7 @@ routing_insert(sql_context_t *context, sql_insert_t *insert, char *default_db, s
         return USE_NON_SHARDING_TABLE;
     }
 
-    if (partition_mode) {
+    if (plan->is_partition_mode) {
         context->sql_needs_reconstruct = 1;
     }
     plan->table_type = SHARDED_TABLE;
@@ -1438,7 +1439,7 @@ routing_insert(sql_context_t *context, sql_insert_t *insert, char *default_db, s
 
     GPtrArray *groups = g_ptr_array_new();
     partitions_get_group_names(partitions, groups);
-    if (partition_mode) {
+    if (plan->is_partition_mode) {
         dup_groups(src, groups);
     }
 
@@ -1459,7 +1460,7 @@ routing_insert(sql_context_t *context, sql_insert_t *insert, char *default_db, s
 
 static int
 routing_delete(sql_context_t *context, sql_delete_t *delete,
-               char *default_db, sharding_plan_t *plan, GPtrArray *groups, guint32 fixture, int partition_mode)
+               char *default_db, sharding_plan_t *plan, GPtrArray *groups, guint32 fixture)
 {
     if (!delete) {
         g_warning(G_STRLOC ":delete ast error");
@@ -1473,7 +1474,7 @@ routing_delete(sql_context_t *context, sql_delete_t *delete,
         db = table->dbname;
 
     if (!shard_conf_is_shard_table(db, table->table_name)) {
-        if (partition_mode) {
+        if (plan->is_partition_mode) {
             plan->table_type = GLOBAL_TABLE;
             sharding_plan_add_group(plan, g_string_new(PARTITION_SUPER_GROUP));
             return USE_NON_SHARDING_TABLE;
@@ -1493,7 +1494,7 @@ routing_delete(sql_context_t *context, sql_delete_t *delete,
         return USE_NON_SHARDING_TABLE;
     }
 
-    if (partition_mode) {
+    if (plan->is_partition_mode) {
         context->sql_needs_reconstruct = 1;
     }
     table->groups = g_ptr_array_new();
@@ -1532,7 +1533,7 @@ routing_delete(sql_context_t *context, sql_delete_t *delete,
         shard_conf_get_table_groups(groups, db, table->table_name);
     }
 
-    if (partition_mode) {
+    if (plan->is_partition_mode) {
         dup_groups(table, groups);
     }
 
@@ -1601,7 +1602,7 @@ routing_by_property(sql_context_t *context, sql_property_t *property, char *defa
 
 int
 sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t *stats,
-                      guint64 fixture, sharding_plan_t *plan, int partition_mode)
+                      guint64 fixture, sharding_plan_t *plan)
 {
     context->sql_needs_reconstruct = 0;
 
@@ -1629,7 +1630,7 @@ sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t
     case STMT_SELECT:{
         sql_select_t *select = context->sql_statement;
         while (select) {
-            rc = routing_select(context, select, db, fixture, stats, groups, partition_mode);
+            rc = routing_select(context, select, db, fixture, stats, groups, plan->is_partition_mode);
             if (rc < 0) {
                 break;
             }
@@ -1648,16 +1649,16 @@ sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t
         return rc;              /* TODO: result of first select */
     }
     case STMT_UPDATE:
-        rc = routing_update(context, context->sql_statement, db, plan, groups, fixture, partition_mode);
+        rc = routing_update(context, context->sql_statement, db, plan, groups, fixture);
         sharding_plan_add_groups(plan, groups);
         g_ptr_array_free(groups, TRUE);
         return rc;
     case STMT_INSERT:
-        rc = routing_insert(context, context->sql_statement, db, plan, fixture, partition_mode);
+        rc = routing_insert(context, context->sql_statement, db, plan, fixture);
         g_ptr_array_free(groups, TRUE);
         return rc;
     case STMT_DELETE:
-        rc = routing_delete(context, context->sql_statement, db, plan, groups, fixture, partition_mode);
+        rc = routing_delete(context, context->sql_statement, db, plan, groups, fixture);
         sharding_plan_add_groups(plan, groups);
         g_ptr_array_free(groups, TRUE);
         return rc;

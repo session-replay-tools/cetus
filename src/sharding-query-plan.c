@@ -148,7 +148,7 @@ sharding_plan_get_sql(sharding_plan_t *plan, const GString *group)
 void
 sharding_plan_set_modified_sql(sharding_plan_t *plan, GString *sql)
 {
-    plan->is_modified = TRUE;
+    plan->is_modified = 1;
     plan->modified_sql = sql;
 }
 

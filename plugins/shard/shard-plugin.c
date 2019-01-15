@@ -379,7 +379,7 @@ mysqld_con_send_sequence(network_mysqld_con *con)
 static const GString *
 sharding_get_sql(network_mysqld_con *con, const GString *group)
 {
-    if (!con->srv->is_partition_mode) {
+    if (!con->srv->is_partition_mode || con->sharding_plan->is_sql_rewrite_completely) {
         return sharding_plan_get_sql(con->sharding_plan, group);
     } else {
         g_message("%s: first group:%s, now group:%s for con:%p", G_STRLOC, con->first_group->str, group->str, con);
@@ -411,7 +411,7 @@ explain_shard_sql(network_mysqld_con *con, sharding_plan_t *plan)
     shard_plugin_con_t *st = con->plugin_con_state;
 
     rv = sharding_parse_groups(con->client->default_db, st->sql_context, &(con->srv->query_stats),
-            con->key, plan, con->srv->is_partition_mode);
+            con->key, plan);
 
     con->modified_sql = sharding_modify_sql(st->sql_context, &(con->hav_condi),
             con->srv->is_groupby_need_reconstruct, con->srv->is_partition_mode, plan->groups->len);
@@ -434,6 +434,7 @@ static void
 proxy_generate_shard_explain_packet(network_mysqld_con *con)
 {
     sharding_plan_t *plan = sharding_plan_new(con->orig_sql);
+    plan->is_partition_mode = con->srv->is_partition_mode;
     if (explain_shard_sql(con, plan) != 0) {
         sharding_plan_free(plan);
         return;
@@ -757,7 +758,12 @@ wrap_check_sql(network_mysqld_con *con, struct sql_context_t *sql_context)
     if (con->srv->is_partition_mode && sql_context->stmt_type != STMT_SELECT &&
             con->sharding_plan->table_type == GLOBAL_TABLE)
     {
-        g_debug("don't change sql for: %s", con->orig_sql->str);
+        g_debug("%s:don't change sql for: %s", G_STRLOC, con->orig_sql->str);
+        return 0;
+    }
+
+    if (con->sharding_plan->is_sql_rewrite_completely) {
+        g_debug("%s:don't change sql for: %s", G_STRLOC, con->orig_sql->str);
         return 0;
     }
 
@@ -1236,6 +1242,7 @@ proxy_get_server_list(network_mysqld_con *con)
 
     query_stats_t *stats = &(con->srv->query_stats);
     sharding_plan_t *plan = sharding_plan_new(con->orig_sql);
+    plan->is_partition_mode = con->srv->is_partition_mode;
     int rv = 0, disp_flag = 0;
 
     shard_plugin_con_t *st = con->plugin_con_state;
@@ -1252,7 +1259,7 @@ proxy_get_server_list(network_mysqld_con *con)
         break;
     default:
         rv = sharding_parse_groups(con->client->default_db, st->sql_context,
-                                   stats, con->key, plan, con->srv->is_partition_mode);
+                                   stats, con->key, plan);
         break;
     }
 

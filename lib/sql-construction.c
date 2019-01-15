@@ -491,7 +491,7 @@ sql_append_expr_list(GString *s, sql_expr_list_t *exprlist)
 }
 
 void
-sql_construct_insert(GString *s, sql_insert_t *p)
+sql_construct_insert(int is_partition_mode, GString *s, sql_insert_t *p, GString *group)
 {
     g_string_append(s, "INSERT INTO ");
     if (p->table && p->table->len > 0) {
@@ -500,15 +500,19 @@ sql_construct_insert(GString *s, sql_insert_t *p)
             g_string_append(s, src->dbname);
             g_string_append_c(s, '.');
         }
-        if (src->groups && src->groups->len > 0) {
-            g_string_append(s, src->table_name);
-            int index = src->group_index++;
-            index = index % src->groups->len;
-            GString *group_name = src->groups->pdata[index];
-            g_string_append(s, "_");
-            g_string_append(s, group_name->str);
-        } else {
-            g_string_append(s, src->table_name);
+
+        g_string_append(s, src->table_name);
+        if (is_partition_mode) {
+            if (group) {
+                g_string_append(s, "_");
+                g_string_append(s, group->str);
+            } else if (src->groups && src->groups->len > 0) {
+                int index = src->group_index++;
+                index = index % src->groups->len;
+                GString *group_name = src->groups->pdata[index];
+                g_string_append(s, "_");
+                g_string_append(s, group_name->str);
+            }
         }
         g_string_append_c(s, ' ');
     }

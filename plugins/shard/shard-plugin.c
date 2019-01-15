@@ -390,7 +390,9 @@ sharding_get_sql(network_mysqld_con *con, const GString *group)
             sql_context_t *context = st->sql_context;
             GString *new_sql = sharding_modify_sql(context, &(con->hav_condi),
                     con->srv->is_groupby_need_reconstruct, con->srv->is_partition_mode, con->sharding_plan->groups->len);
-            g_message("%s: new sql:%s for con:%p", G_STRLOC, new_sql->str, con);
+            if (new_sql) {
+                g_message("%s: new sql:%s for con:%p", G_STRLOC, new_sql->str, con);
+            }
             return new_sql;
         }
     }

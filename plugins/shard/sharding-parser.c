@@ -1501,6 +1501,10 @@ routing_delete(sql_context_t *context, sql_delete_t *delete,
     plan->table_type = SHARDED_TABLE;
     if (!delete->where_clause) {
         shard_conf_get_table_groups(groups, db, table->table_name);
+        if (plan->is_partition_mode) {
+            dup_groups(table, groups);
+        }
+
         if (groups->len == 1) {
             return USE_SHARDING;
         } else if (groups->len > 1) {

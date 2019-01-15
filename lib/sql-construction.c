@@ -583,6 +583,8 @@ sql_construct_update(sql_update_t *p)
         g_string_append(s, " WHERE ");
         append_sql_expr(s, p->where_clause);
     }
+
+    return s;
 }
 
 GString *
@@ -613,5 +615,7 @@ sql_construct_delete(sql_delete_t *p)
         g_string_append(s, " WHERE ");
         append_sql_expr(s, p->where_clause);
     }
+
+    return s;
 }
 

@@ -969,6 +969,9 @@ routing_select(sql_context_t *context, const sql_select_t *select,
                 return ERROR_UNPARSABLE;
             }
             shard_conf_get_table_groups(groups, db, table);
+            if (partition_mode) {
+                dup_groups(src, groups);
+            }
             g_ptr_array_free(sharding_tables, TRUE);
             return USE_ALL_SHARDINGS;
         }
@@ -1062,7 +1065,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
     if (has_sharding_key) {
         for (i = 0; i < sharding_tables->len; ++i) {
             GPtrArray *partitions = g_ptr_array_new();  /* GPtrArray<sharding_partition_t *> */
-            sql_src_item_t *shard_table = g_ptr_array_index(sharding_tables, 0);
+            sql_src_item_t *shard_table = g_ptr_array_index(sharding_tables, i);
             char *db = shard_table->dbname ? shard_table->dbname : default_db;
 
             shard_conf_table_partitions(partitions, db, shard_table->table_name);
@@ -1095,7 +1098,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
         /* has sharding table, but no sharding key
            OR sharding key filter out all groups */
         for (i = 0; i < sharding_tables->len; ++i) {
-            sql_src_item_t *shard_table = g_ptr_array_index(sharding_tables, 0);
+            sql_src_item_t *shard_table = g_ptr_array_index(sharding_tables, i);
             char *db = shard_table->dbname ? shard_table->dbname : default_db;
             shard_conf_get_table_groups(groups, db, shard_table->table_name);
             if (partition_mode) {

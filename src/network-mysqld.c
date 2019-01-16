@@ -3793,8 +3793,6 @@ fast_analyze_stream(network_mysqld_con *con, network_socket *server, int *send_f
                 con->eof_met_cnt++;
                 con->eof_met_cnt++;
             }
-            g_debug("%s: packet id here:%d, packet len:%d, eof flag:%d for con:%p, con->analysis_next_pos:%d, con->cur_resp_len:%d",
-                    G_STRLOC, header[NET_HEADER_SIZE - 1], packet_len,  header[NET_HEADER_SIZE], con, (int) con->analysis_next_pos, (int) con->cur_resp_len);
             header = header + packet_len;
             if (header <= end) {
                 complete_record_len = diff + packet_len;
@@ -3824,8 +3822,6 @@ fast_analyze_stream(network_mysqld_con *con, network_socket *server, int *send_f
                         con->eof_met_cnt++;
                         con->eof_met_cnt++;
                     }
-                    g_debug("%s: packet id here:%d, packet len:%d, eof flag:%d, complete_record_len:%d for con:%p",
-                            G_STRLOC, header[NET_HEADER_SIZE - 1], packet_len, header[NET_HEADER_SIZE], complete_record_len, con);
                     header = header + packet_len;
                     con->analysis_next_pos += packet_len;
                     if (header < end) {

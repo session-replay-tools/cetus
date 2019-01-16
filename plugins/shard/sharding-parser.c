@@ -1622,11 +1622,13 @@ sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t
     char *db = default_db->str;
     g_debug(G_STRLOC ":default db:%s", db);
 
-    if (sql_context_has_sharding_property(context)) {
-        int rc = routing_by_property(context, context->property, db, groups);
-        sharding_plan_add_groups(plan, groups);
-        g_ptr_array_free(groups, TRUE);
-        return rc;
+    if (!plan->is_partition_mode) {
+        if (sql_context_has_sharding_property(context)) {
+            int rc = routing_by_property(context, context->property, db, groups);
+            sharding_plan_add_groups(plan, groups);
+            g_ptr_array_free(groups, TRUE);
+            return rc;
+        }
     }
 
     int rc = ERROR_UNPARSABLE;

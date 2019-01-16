@@ -384,7 +384,12 @@ sharding_get_sql(network_mysqld_con *con, const GString *group)
     } else {
         g_message("%s: first group:%s, now group:%s for con:%p", G_STRLOC, con->first_group->str, group->str, con);
         if (g_string_equal(con->first_group, group)) {
-            return sharding_plan_get_sql(con->sharding_plan, group);
+            const GString *new_sql = sharding_plan_get_sql(con->sharding_plan, group);
+            if (new_sql == NULL) {
+                new_sql = con->orig_sql;
+            }
+            return new_sql;
+
         } else {
             shard_plugin_con_t *st = con->plugin_con_state;
             sql_context_t *context = st->sql_context;
@@ -392,6 +397,8 @@ sharding_get_sql(network_mysqld_con *con, const GString *group)
                     con->srv->is_groupby_need_reconstruct, con->srv->is_partition_mode, con->sharding_plan->groups->len);
             if (new_sql) {
                 g_message("%s: new sql:%s for con:%p", G_STRLOC, new_sql->str, con);
+            } else {
+                new_sql = con->orig_sql;
             }
             return new_sql;
         }

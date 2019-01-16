@@ -1718,10 +1718,15 @@ sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t
         return rc;
     case STMT_DROP_DATABASE:
     case STMT_COMMON_DDL:      /* ddl without comments sent to all */
-        shard_conf_get_all_groups(groups);
-        sharding_plan_add_groups(plan, groups);
-        g_ptr_array_free(groups, TRUE);
-        return USE_ALL;
+        if (plan->is_partition_mode) {
+            sql_context_set_error(context, PARSE_NOT_SUPPORT, "(cetus) DDL is not allowed for partition until now");
+            return ERROR_UNPARSABLE;
+        } else {
+            shard_conf_get_all_groups(groups);
+            sharding_plan_add_groups(plan, groups);
+            g_ptr_array_free(groups, TRUE);
+            return USE_ALL;
+        }
     case STMT_SHOW:
         shard_conf_get_fixed_group(groups, fixture);
         sharding_plan_add_groups(plan, groups);

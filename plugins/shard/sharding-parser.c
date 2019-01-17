@@ -945,6 +945,18 @@ dup_groups(sql_src_item_t *table, GPtrArray *groups)
     }
 }
 
+static void
+dup_groups_for_partition(sql_src_list_t *sources, GPtrArray *groups)
+{
+    int i;
+    for (i = 0; i < sources->len; ++i) {
+        sql_src_item_t *src = g_ptr_array_index(sources, i);
+        if (src->groups  == NULL || src->groups->len == 0) {
+            dup_groups(src, groups);
+        }
+    }
+}
+
 static int
 routing_select(sql_context_t *context, const sql_select_t *select,
                char *default_db, guint32 fixture, query_stats_t *stats, GPtrArray *groups /* out */, int partition_mode)
@@ -970,7 +982,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
             }
             shard_conf_get_table_groups(groups, db, table);
             if (partition_mode) {
-                dup_groups(src, groups);
+                dup_groups_for_partition(sources, groups);
             }
             g_ptr_array_free(sharding_tables, TRUE);
             return USE_ALL_SHARDINGS;
@@ -1081,6 +1093,9 @@ routing_select(sql_context_t *context, const sql_select_t *select,
                 g_ptr_array_free(sharding_tables, TRUE);
                 shard_conf_get_table_groups(groups, db, shard_table->table_name);
                 stats->com_select_bad_key += 1;
+                if (partition_mode) {
+                    dup_groups_for_partition(sources, groups);
+                }
                 return USE_ALL_SHARDINGS;
             }
             partitions_get_group_names(partitions, groups);

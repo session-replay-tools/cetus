@@ -953,7 +953,9 @@ sql_select_check_and_set_shard_table(sql_expr_t *where, sql_select_t *select, ch
             }
             if (src->table_name && shard_conf_is_shard_table(db, src->table_name)) {
                 dup_groups(src, groups);
-                where->modify_flag = 1;
+                if (where) {
+                    where->modify_flag = 1;
+                }
             }
         }
         select = select->prior;
@@ -984,7 +986,8 @@ sql_select_has_single_table(sql_select_t *select, char *current_db)
 
 
 static void
-dup_groups_for_partition(sql_expr_t *where, sql_src_list_t *sources, GList *subqueries, char *default_db, GPtrArray *groups)
+dup_groups_for_partition(sql_expr_t *where, sql_src_list_t *sources, GList *subqueries,
+        sql_select_t * prior, char *default_db, GPtrArray *groups)
 {
     if (sources) {
         int i;
@@ -999,6 +1002,10 @@ dup_groups_for_partition(sql_expr_t *where, sql_src_list_t *sources, GList *subq
     GList *l;
     for (l = subqueries; l; l = l->next) {
         sql_select_check_and_set_shard_table(where, l->data, default_db, groups);
+    }
+
+    if (prior) {
+        sql_select_check_and_set_shard_table(NULL, prior, default_db, groups);
     }
 }
 
@@ -1032,7 +1039,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
             }
             shard_conf_get_table_groups(groups, db, table);
             if (partition_mode) {
-                dup_groups_for_partition(select->where_clause, sources, subqueries, default_db, groups);
+                dup_groups_for_partition(select->where_clause, sources, subqueries, select->prior, default_db, groups);
                 context->sql_needs_reconstruct = 1;
             }
             g_list_free(subqueries);
@@ -1145,7 +1152,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
                 shard_conf_get_table_groups(groups, db, shard_table->table_name);
                 stats->com_select_bad_key += 1;
                 if (partition_mode) {
-                    dup_groups_for_partition(select->where_clause, sources, subqueries, default_db, groups);
+                    dup_groups_for_partition(select->where_clause, sources, subqueries, select->prior, default_db, groups);
                     context->sql_needs_reconstruct = 1;
                 }
                 g_list_free(subqueries);
@@ -1162,7 +1169,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
     if (groups->len > 0) {
         g_ptr_array_free(sharding_tables, TRUE);
         if (partition_mode) {
-            dup_groups_for_partition(select->where_clause, NULL, subqueries, default_db, groups);
+            dup_groups_for_partition(select->where_clause, NULL, subqueries, select->prior, default_db, groups);
             context->sql_needs_reconstruct = 1;
         }
         g_list_free(subqueries);
@@ -1180,7 +1187,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
         }
         g_ptr_array_free(sharding_tables, TRUE);
         if (partition_mode) {
-            dup_groups_for_partition(select->where_clause, NULL, subqueries, default_db, groups);
+            dup_groups_for_partition(select->where_clause, NULL, subqueries, select->prior, default_db, groups);
             context->sql_needs_reconstruct = 1;
         }
         g_list_free(subqueries);

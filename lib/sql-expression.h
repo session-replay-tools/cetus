@@ -180,7 +180,9 @@ struct sql_table_reference_t {
 typedef struct sql_table_reference_t sql_table_reference_t;
 
 struct sql_expr_t {
+    uint16_t height;                 /* Height of the tree headed by this node */
     uint16_t op;                /* Operation performed by this node */
+    unsigned int modify_flag:1;
     char *token_text;           /* Token value. Zero terminated and dequoted */
     int64_t num_value;
     sql_expr_t *left;
@@ -189,7 +191,6 @@ struct sql_expr_t {
     sql_expr_list_t *list;      /* op = IN, EXISTS, SELECT, CASE, FUNCTION, BETWEEN */
     sql_select_t *select;       /* EP_xIsSelect and op = IN, EXISTS, SELECT */
 
-    int height;                 /* Height of the tree headed by this node */
     char *alias;
     enum sql_expr_flags_t flags;
     enum sql_var_scope_t var_scope; /* variable scope: SESSION(default) or GLOBAL */

@@ -408,7 +408,12 @@ sql_construct_select(sql_select_t *select, int explain)
     }
     if (select->where_clause) {
         g_string_append(s, " WHERE ");
-        append_sql_expr(s, select->where_clause);
+        sql_expr_t *expr = select->where_clause;
+        if (expr->modify_flag) {
+            sql_expr_traverse(s, expr);
+        } else {
+            append_sql_expr(s, expr);
+        }
     }
     if (select->groupby_clause) {
         sql_expr_list_t *groupby = select->groupby_clause;

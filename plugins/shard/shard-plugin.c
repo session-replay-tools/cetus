@@ -443,10 +443,6 @@ explain_shard_sql(network_mysqld_con *con, sharding_plan_t *plan)
 static void
 proxy_generate_shard_explain_packet(network_mysqld_con *con)
 {
-    if (con->sharding_plan) {
-        sharding_plan_free(con->sharding_plan);
-        g_message(G_STRLOC ": shard plan is not empty:%s", con->orig_sql->str);
-    }
     sharding_plan_t *plan = sharding_plan_new(con->orig_sql);
     plan->is_partition_mode = con->srv->is_partition_mode;
     if (explain_shard_sql(con, plan) != 0) {

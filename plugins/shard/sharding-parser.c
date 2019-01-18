@@ -1616,6 +1616,7 @@ sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t
         g_ptr_array_free(groups, TRUE);
         return USE_PREVIOUS_TRAN_CONNS;
     case STMT_CALL:
+        g_ptr_array_free(groups, TRUE);
         return rc;
     case STMT_DROP_DATABASE:
     case STMT_COMMON_DDL:      /* ddl without comments sent to all */

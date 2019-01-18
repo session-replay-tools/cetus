@@ -216,6 +216,7 @@ modify_select(sql_context_t *context, having_condition_t *hav_condi, int is_grou
 
     if (select->flags & SF_REWRITE_ORDERBY) {
         prepare_for_sql_modify_orderby(select);
+        select->flags = select->flags ^ SF_REWRITE_ORDERBY;
         need_reconstruct = TRUE;
     }
 
@@ -1585,7 +1586,6 @@ routing_delete(sql_context_t *context, sql_delete_t *delete,
     if (plan->is_partition_mode) {
         context->sql_needs_reconstruct = 1;
     }
-    table->groups = g_ptr_array_new();
     plan->table_type = SHARDED_TABLE;
     if (!delete->where_clause) {
         shard_conf_get_table_groups(groups, db, table->table_name);

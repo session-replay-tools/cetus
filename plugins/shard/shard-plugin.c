@@ -377,7 +377,7 @@ mysqld_con_send_sequence(network_mysqld_con *con)
 }
 
 static const GString *
-sharding_get_sql(network_mysqld_con *con, const GString *group)
+sharding_get_sql(network_mysqld_con *con, GString *group)
 {
     if (!con->srv->is_partition_mode || con->sharding_plan->is_sql_rewrite_completely) {
         return sharding_plan_get_sql(con->sharding_plan, group);
@@ -396,6 +396,7 @@ sharding_get_sql(network_mysqld_con *con, const GString *group)
             GString *new_sql = sharding_modify_sql(context, &(con->hav_condi),
                     con->srv->is_groupby_need_reconstruct, con->srv->is_partition_mode, con->sharding_plan->groups->len);
             if (new_sql) {
+                sharding_plan_add_group_sql(con->sharding_plan, group, new_sql);
                 g_message("%s: new sql:%s for con:%p", G_STRLOC, new_sql->str, con);
             } else {
                 new_sql = con->orig_sql;
@@ -442,6 +443,10 @@ explain_shard_sql(network_mysqld_con *con, sharding_plan_t *plan)
 static void
 proxy_generate_shard_explain_packet(network_mysqld_con *con)
 {
+    if (con->sharding_plan) {
+        sharding_plan_free(con->sharding_plan);
+        g_message(G_STRLOC ": shard plan is not empty:%s", con->orig_sql->str);
+    }
     sharding_plan_t *plan = sharding_plan_new(con->orig_sql);
     plan->is_partition_mode = con->srv->is_partition_mode;
     if (explain_shard_sql(con, plan) != 0) {

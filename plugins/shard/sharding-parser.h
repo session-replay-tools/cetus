@@ -39,7 +39,7 @@
 
 NETWORK_API int sharding_parse_groups(GString *, sql_context_t *, query_stats_t *, guint64, sharding_plan_t *);
 
-NETWORK_API GString *sharding_modify_sql(sql_context_t *, having_condition_t *, int);
+NETWORK_API GString *sharding_modify_sql(sql_context_t *, having_condition_t *, int, int);
 
 NETWORK_API void sharding_filter_sql(sql_context_t *);
 

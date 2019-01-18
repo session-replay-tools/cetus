@@ -392,7 +392,8 @@ explain_shard_sql(network_mysqld_con *con, sharding_plan_t *plan)
 
     rv = sharding_parse_groups(con->client->default_db, st->sql_context, &(con->srv->query_stats), con->key, plan);
 
-    con->modified_sql = sharding_modify_sql(st->sql_context, &(con->hav_condi), con->srv->is_groupby_need_reconstruct);
+    con->modified_sql = sharding_modify_sql(st->sql_context, &(con->hav_condi),
+            con->srv->is_groupby_need_reconstruct, plan->groups->len);
     if (con->modified_sql) {
         sharding_plan_set_modified_sql(plan, con->modified_sql);
     }
@@ -725,7 +726,8 @@ proxy_parse_query(network_mysqld_con *con)
 static int
 wrap_check_sql(network_mysqld_con *con, struct sql_context_t *sql_context)
 {
-    con->modified_sql = sharding_modify_sql(sql_context, &(con->hav_condi), con->srv->is_groupby_need_reconstruct);
+    con->modified_sql = sharding_modify_sql(sql_context, &(con->hav_condi),
+            con->srv->is_groupby_need_reconstruct, con->sharding_plan->groups->len);
     if (con->modified_sql) {
         g_message("orig_sql: %s", con->orig_sql->str);
         g_message("modified:  %s", con->modified_sql->str);

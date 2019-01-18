@@ -169,7 +169,7 @@ prepare_for_sql_modify_orderby(sql_select_t *select)
 }
 
 GString *
-sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi, int is_groupby_need_reconstruct)
+sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi, int is_groupby_need_reconstruct, int groups)
 {
     if (context->stmt_type == STMT_SELECT && context->sql_statement) {
         sql_select_t *select = context->sql_statement;
@@ -206,7 +206,7 @@ sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi, int i
         guint64 orig_limit = 0;
 
         /* (LIMIT a, b) ==> (LIMIT 0, a+b) */
-        if (select->offset && select->offset->num_value > 0 && select->limit) {
+        if (groups > 1 && select->offset && select->offset->num_value > 0 && select->limit) {
             prepare_for_sql_modify_limit(select, &orig_limit, &orig_offset);
             need_reconstruct = TRUE;
         }

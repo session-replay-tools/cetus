@@ -803,6 +803,21 @@ record_last_backends_type(network_mysqld_con *con)
 }
 
 static void
+generate_sql(network_mysqld_con *con)
+{
+    size_t i;
+
+    for (i = 0; i < con->servers->len; i++) {
+        server_session_t *ss = g_ptr_array_index(con->servers, i);
+        if (!con->is_commit_or_rollback && !ss->participated) {
+            continue;
+        } 
+        ss->sql = sharding_get_sql(con, ss->server->group);
+    }
+}
+
+
+static void
 remove_ro_servers(network_mysqld_con *con)
 {
     int has_rw_server = 0;
@@ -1431,7 +1446,6 @@ proxy_add_server_connection(network_mysqld_con *con, GString *group, int *server
                 if (g_string_equal(ss->server->group, group)) {
                     ss->participated = 1;
                     ss->state = NET_RW_STATE_NONE;
-                    ss->sql = sharding_get_sql(con, group);
                     if (con->dist_tran) {
                         if (con->dist_tran_state == NEXT_ST_XA_START) {
                             ss->dist_tran_state = NEXT_ST_XA_START;
@@ -1470,7 +1484,6 @@ proxy_add_server_connection(network_mysqld_con *con, GString *group, int *server
         ss->backend = st->backend;
         ss->server = server;
         server->group = group;
-        ss->sql = sharding_get_sql(con, group);
         ss->attr_consistent_checked = 0;
         ss->attr_consistent = 0;
         ss->server->last_packet_id = 0;
@@ -1534,7 +1547,6 @@ proxy_add_server_connection_array(network_mysqld_con *con, int *server_unavailab
                     }
                     hit++;
                     server_map[i] = 1;
-                    ss->sql = sharding_get_sql(con, group);
                     g_debug("%s: hit server", G_STRLOC);
                 }
             }
@@ -1860,6 +1872,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
 
         do_query = check_and_set_attr_bitmap(con);
         if (do_query == FALSE) {
+            generate_sql(con);
             g_debug("%s: check_and_set_attr_bitmap is different", G_STRLOC);
             g_debug("%s: resp expect num:%d", G_STRLOC, con->resp_expected_num);
             con->resp_expected_num = 0;
@@ -1949,6 +1962,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_get_server_conn_list)
 
             g_debug("%s:packet id:%d when get server", G_STRLOC, ss->server->last_packet_id);
 
+            ss->sql = sharding_get_sql(con, ss->server->group);
             ss->server->parse.qs_state = PARSE_COM_QUERY_INIT;
 
             if (con->dist_tran) {

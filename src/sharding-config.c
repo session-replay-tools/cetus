@@ -35,6 +35,8 @@ static GList *shard_conf_single_tables = NULL;
 
 static GList *shard_conf_all_groups = NULL;
 
+static GString *parition_super_group = NULL;
+
 struct schema_table_t {
     const char *schema;
     const char *table;
@@ -462,6 +464,11 @@ GList* shard_conf_get_single_tables()
     return shard_conf_single_tables;
 }
 
+GString *partition_get_super_group()
+{
+    return parition_super_group; 
+}
+
 static void
 shard_conf_set_single_tables(GList *tables)
 {
@@ -539,6 +546,9 @@ shard_conf_try_setup(int is_partition_mode, GList *vdbs, GList *tables, GList *s
     shard_conf_set_tables(table_dict);
     shard_conf_set_single_tables(single_tables);
     shard_conf_set_all_groups(all_groups);
+
+    parition_super_group = g_string_new(PARTITION_SUPER_GROUP);
+
     return TRUE;
 }
 
@@ -547,6 +557,9 @@ shard_conf_destroy(void)
 {
     if (shard_conf_vdbs) {
         g_list_free_full(shard_conf_vdbs, (GDestroyNotify) sharding_vdb_free);
+    }
+    if (parition_super_group) {
+        g_string_free(parition_super_group, TRUE);
     }
     if (shard_conf_tables) {
         g_hash_table_destroy(shard_conf_tables);

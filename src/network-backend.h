@@ -125,7 +125,6 @@ int network_backends_find_address(network_backends_t *bs, const char *);
 void network_backends_server_version(network_backends_t *b, GString* version);
 
 #define MAX_GROUP_SLAVES 4
-#define PARTITION_SUPER_GROUP "super"
 
 typedef struct network_group_t {
     GString *name;

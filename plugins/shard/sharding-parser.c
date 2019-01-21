@@ -1239,7 +1239,7 @@ routing_update(sql_context_t *context, sql_update_t *update,
     if (!shard_conf_is_shard_table(db, table->table_name)) {
         if (plan->is_partition_mode) {
             plan->table_type = GLOBAL_TABLE;
-            sharding_plan_add_group(plan, g_string_new(PARTITION_SUPER_GROUP));
+            sharding_plan_add_group(plan, partition_get_super_group());
             return USE_NON_SHARDING_TABLE;
         }
 
@@ -1423,7 +1423,7 @@ routing_insert(sql_context_t *context, sql_insert_t *insert, char *default_db, s
     if (shard_info == NULL) {
         if (plan->is_partition_mode) {
             plan->table_type = GLOBAL_TABLE;
-            sharding_plan_add_group(plan, g_string_new(PARTITION_SUPER_GROUP));
+            sharding_plan_add_group(plan, partition_get_super_group());
             return USE_NON_SHARDING_TABLE;
         }
         GPtrArray *groups = g_ptr_array_new();
@@ -1565,7 +1565,7 @@ routing_delete(sql_context_t *context, sql_delete_t *delete,
     if (!shard_conf_is_shard_table(db, table->table_name)) {
         if (plan->is_partition_mode) {
             plan->table_type = GLOBAL_TABLE;
-            sharding_plan_add_group(plan, g_string_new(PARTITION_SUPER_GROUP));
+            sharding_plan_add_group(plan, partition_get_super_group());
             return USE_NON_SHARDING_TABLE;
         }
 

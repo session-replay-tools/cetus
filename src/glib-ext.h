@@ -25,6 +25,8 @@
 #include "config.h"
 #include "chassis-exports.h"
 
+#define PARTITION_SUPER_GROUP "super"
+
 #ifndef USE_GLIB_DEBUG_LOG
 
 /* default: define g_debug() to nothing */

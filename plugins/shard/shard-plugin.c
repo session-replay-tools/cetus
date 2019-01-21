@@ -464,6 +464,7 @@ proxy_generate_shard_explain_packet(network_mysqld_con *con)
     GPtrArray *rows;
     rows = g_ptr_array_new_with_free_func((void *)network_mysqld_mysql_field_row_free);
 
+    struct sharding_plan_t *sharding_plan = con->sharding_plan;
     con->sharding_plan = plan;
 
     int i;
@@ -481,13 +482,13 @@ proxy_generate_shard_explain_packet(network_mysqld_con *con)
         g_ptr_array_add(rows, row);
     }
 
-    con->sharding_plan = NULL;
-
     network_mysqld_con_send_resultset(con->client, fields, rows);
 
     network_mysqld_proto_fielddefs_free(fields);
     g_ptr_array_free(rows, TRUE);
     sharding_plan_free(plan);
+    con->sharding_plan = sharding_plan;
+
 }
 
 static int

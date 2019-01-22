@@ -1635,29 +1635,28 @@ proxy_add_server_connection_array(network_mysqld_con *con, int *server_unavailab
             g_debug("%s: groups:%d for con:%p", G_STRLOC, groups, con);
             if (con->srv->is_partition_mode) {
                 if (groups == 1) {
-                    for (i = 0; i < con->servers->len; i++) {
-                        server_session_t *ss = g_ptr_array_index(con->servers, i);
-                        ss->server->group = last_group;
-                    }
-
-                    if (con->servers->len > 1) {
-                        g_critical("%s: crazy, server num is not equal to 1 for con:%p", G_STRLOC, con);
-                    }
-                    for (i = 0; i < plan->groups->len; i++) {
-                        GString *group = g_ptr_array_index(plan->groups, i);
-                        if (g_string_equal(group, super_group)) {
-                            g_ptr_array_remove_fast(plan->groups, group);
-                            g_ptr_array_add(plan->groups, last_group);
+                    if (plan->groups->len == 1) {
+                        GString *new_group = g_ptr_array_index(plan->groups, 0);
+                        for (i = 0; i < con->servers->len; i++) {
+                            server_session_t *ss = g_ptr_array_index(con->servers, i);
+                            ss->server->group = new_group;
+                        }
+                        if (con->servers->len > 1) {
+                            g_critical("%s: crazy, server num is not equal to 1 for con:%p", G_STRLOC, con);
+                        }
+                    } else {
+                        for (i = 0; i < plan->groups->len; i++) {
+                            GString *group = g_ptr_array_index(plan->groups, i);
+                            if (g_string_equal(group, super_group)) {
+                                g_ptr_array_remove_fast(plan->groups, group);
+                                g_ptr_array_add(plan->groups, last_group);
+                            }
                         }
                     }
                 } else {
                     if (groups == 0 && con->servers->len > 0) {
                         GString *group = NULL;
-                        for (i = 0; i < plan->groups->len; i++) {
-                            group = g_ptr_array_index(plan->groups, i);
-                            break;
-                        }
-
+                        group = g_ptr_array_index(plan->groups, 0);
                         if (group) {
                             for (i = 0; i < con->servers->len; i++) {
                                 server_session_t *ss = g_ptr_array_index(con->servers, i);

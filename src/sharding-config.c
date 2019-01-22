@@ -396,16 +396,20 @@ shard_conf_is_shard_table(const char *db, const char *table)
 }
 
 GPtrArray *
-shard_conf_get_fixed_group(GPtrArray *groups, guint64 fixture)
+shard_conf_get_fixed_group(int partition, GPtrArray *groups, guint64 fixture)
 {
-    int len = g_list_length(shard_conf_all_groups);
-    if (len == 0) {
+    if (partition) {
+        g_ptr_array_add(groups, parition_super_group);
+    } else {
+        int len = g_list_length(shard_conf_all_groups);
+        if (len == 0) {
+            return groups;
+        }
+        int index = fixture % len;
+        GString *grp = g_list_nth_data(shard_conf_all_groups, index);
+        g_ptr_array_add(groups, grp);
         return groups;
     }
-    int index = fixture % len;
-    GString *grp = g_list_nth_data(shard_conf_all_groups, index);
-    g_ptr_array_add(groups, grp);
-    return groups;
 }
 
 void
@@ -607,10 +611,14 @@ shard_conf_get_single_table(const char *db, const char *name)
 }
 
 gboolean
-shard_conf_is_single_table(const char *db, const char *name)
+shard_conf_is_single_table(int partition_mode, const char *db, const char *name)
 {
-    struct single_table_t *t = shard_conf_get_single_table(db, name);
-    return t != NULL;
+    if (!partition_mode) {
+        struct single_table_t *t = shard_conf_get_single_table(db, name);
+        return t != NULL;
+    } else {
+        return FALSE;
+    }
 }
 
 static gboolean
@@ -1089,7 +1097,7 @@ gboolean shard_conf_add_single_table(const char* schema,
                                      const char* table, const char* group)
 {
     g_assert(schema && table && group);
-    if (shard_conf_is_single_table(schema, table)) {
+    if (shard_conf_is_single_table(0, schema, table)) {
         g_critical("try adding duplicate single table %s.%s", schema, table);
         return FALSE;
     }

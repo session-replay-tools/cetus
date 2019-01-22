@@ -906,7 +906,7 @@ sql_select_get_single_tables(sql_select_t *select, char *current_db, GList **sin
             if (src->dbname) {
                 db = src->dbname;
             }
-            if (src->table_name && shard_conf_is_single_table(db, src->table_name)) {
+            if (src->table_name && shard_conf_is_single_table(0, db, src->table_name)) {
                 *single_tables = g_list_append(*single_tables, src);
             }
         }
@@ -976,7 +976,7 @@ sql_select_has_single_table(sql_select_t *select, char *current_db)
             if (src->dbname) {
                 db = src->dbname;
             }
-            if (src->table_name && shard_conf_is_single_table(db, src->table_name)) {
+            if (src->table_name && shard_conf_is_single_table(0, db, src->table_name)) {
                 return TRUE;
             }
         }
@@ -1016,7 +1016,7 @@ routing_select(sql_context_t *context, const sql_select_t *select,
 {
     sql_src_list_t *sources = select->from_src;
     if (!sources) {
-        shard_conf_get_fixed_group(groups, fixture);
+        shard_conf_get_fixed_group(partition_mode, groups, fixture);
         stats->com_select_global += 1;
         return USE_NON_SHARDING_TABLE;
     }
@@ -1047,14 +1047,14 @@ routing_select(sql_context_t *context, const sql_select_t *select,
             g_ptr_array_free(sharding_tables, TRUE);
             return USE_ALL_SHARDINGS;
         }
-        if (src->select) {      /* subquery not contain sharding table, try to find single table */
+        if (!partition_mode && src->select) {      /* subquery not contain sharding table, try to find single table */
             sql_select_get_single_tables(src->select, db, &single_tables);
         }
         db = src->dbname ? src->dbname : default_db;
         if (src->table_name) {
             if (shard_conf_is_shard_table(db, src->table_name)) {
                 g_ptr_array_add(sharding_tables, src);
-            } else if (shard_conf_is_single_table(db, src->table_name)) {
+            } else if ((!partition_mode) && shard_conf_is_single_table(0, db, src->table_name)) {
                 single_tables = g_list_append(single_tables, src);
             }
         }
@@ -1091,18 +1091,20 @@ routing_select(sql_context_t *context, const sql_select_t *select,
     }
 
     /* handle subquery in where clause */
-    GList *l;
-    for (l = subqueries; l; l = l->next) {
-        if (sql_select_has_single_table(l->data, default_db)) {
-            g_ptr_array_free(sharding_tables, TRUE);
-            g_list_free(subqueries);
-            sql_context_append_msg(context, "(cetus) Found single-table in subquery, not allowed");
-            return ERROR_UNPARSABLE;
+    if (!partition_mode) {
+        GList *l;
+        for (l = subqueries; l; l = l->next) {
+            if (sql_select_has_single_table(l->data, default_db)) {
+                g_ptr_array_free(sharding_tables, TRUE);
+                g_list_free(subqueries);
+                sql_context_append_msg(context, "(cetus) Found single-table in subquery, not allowed");
+                return ERROR_UNPARSABLE;
+            }
         }
     }
 
     if (sharding_tables->len == 0) {
-        shard_conf_get_fixed_group(groups, fixture);
+        shard_conf_get_fixed_group(partition_mode, groups, fixture);
         g_ptr_array_free(sharding_tables, TRUE);
         stats->com_select_global += 1;
         g_list_free(subqueries);
@@ -1243,7 +1245,7 @@ routing_update(sql_context_t *context, sql_update_t *update,
             return USE_NON_SHARDING_TABLE;
         }
 
-        if (shard_conf_is_single_table(db, table->table_name)) {
+        if (shard_conf_is_single_table(0, db, table->table_name)) {
             plan->table_type = SINGLE_TABLE;
             shard_conf_get_single_table_distinct_group(groups, db, table->table_name);
             return USE_NON_SHARDING_TABLE;
@@ -1427,7 +1429,7 @@ routing_insert(sql_context_t *context, sql_insert_t *insert, char *default_db, s
             return USE_NON_SHARDING_TABLE;
         }
         GPtrArray *groups = g_ptr_array_new();
-        if (shard_conf_is_single_table(db, table)) {
+        if (shard_conf_is_single_table(0, db, table)) {
             shard_conf_get_single_table_distinct_group(groups, db, table);
             sharding_plan_add_groups(plan, groups);
             plan->table_type = SINGLE_TABLE;
@@ -1446,7 +1448,7 @@ routing_insert(sql_context_t *context, sql_insert_t *insert, char *default_db, s
 
                 if (shard_conf_is_shard_table(db, table->table_name)) {
                     is_success = FALSE;
-                } else if (shard_conf_is_single_table(db, table->table_name)) {
+                } else if ((!plan->is_partition_mode) && shard_conf_is_single_table(0, db, table->table_name)) {
                     is_success = FALSE;
                 }
             }
@@ -1569,7 +1571,7 @@ routing_delete(sql_context_t *context, sql_delete_t *delete,
             return USE_NON_SHARDING_TABLE;
         }
 
-        if (shard_conf_is_single_table(db, table->table_name)) {
+        if (shard_conf_is_single_table(0, db, table->table_name)) {
             shard_conf_get_single_table_distinct_group(groups, db, table->table_name);
             plan->table_type = SINGLE_TABLE;
             return USE_NON_SHARDING_TABLE;
@@ -1701,7 +1703,7 @@ sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t
     GPtrArray *groups = g_ptr_array_new();
     if (context == NULL) {
         g_warning("%s:sql is not parsed", G_STRLOC);
-        shard_conf_get_fixed_group(groups, fixture);
+        shard_conf_get_fixed_group(plan->is_partition_mode, groups, fixture);
         sharding_plan_add_groups(plan, groups);
         g_ptr_array_free(groups, TRUE);
         return USE_NON_SHARDING_TABLE;
@@ -1773,13 +1775,13 @@ sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t
             g_ptr_array_free(groups, TRUE);
             return USE_ANY_SHARDINGS;
         }
-        if (shard_conf_is_single_table(db, src_item->table_name)) {
+        if ((!plan->is_partition_mode) && shard_conf_is_single_table(0, db, src_item->table_name)) {
             shard_conf_get_single_table_distinct_group(groups, db, src_item->table_name);
             sharding_plan_add_groups(plan, groups);
             g_ptr_array_free(groups, TRUE);
             return USE_NON_SHARDING_TABLE;
         }
-        shard_conf_get_fixed_group(groups, fixture);
+        shard_conf_get_fixed_group(plan->is_partition_mode, groups, fixture);
         sharding_plan_add_groups(plan, groups);
         g_ptr_array_free(groups, TRUE);
         return USE_NON_SHARDING_TABLE;
@@ -1820,13 +1822,13 @@ sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t
             return USE_ALL;
         }
     case STMT_SHOW:
-        shard_conf_get_fixed_group(groups, fixture);
+        shard_conf_get_fixed_group(plan->is_partition_mode, groups, fixture);
         sharding_plan_add_groups(plan, groups);
         g_ptr_array_free(groups, TRUE);
         return USE_NON_SHARDING_TABLE;
     default:
         g_debug("unrecognized query, using default master db, sql:%s", plan->orig_sql->str);
-        shard_conf_get_fixed_group(groups, fixture);
+        shard_conf_get_fixed_group(plan->is_partition_mode, groups, fixture);
         sharding_plan_add_groups(plan, groups);
         g_ptr_array_free(groups, TRUE);
         return USE_NON_SHARDING_TABLE;

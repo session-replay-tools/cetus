@@ -2506,6 +2506,11 @@ void admin_create_single_table(network_mysqld_con* con, const char* schema,
         return;
     }
 
+    if (con->srv->is_partition_mode) {
+        network_mysqld_con_send_error(con->client, C("no single table for partition"));
+        return;
+    }
+
     gboolean ok = shard_conf_add_single_table(schema, table, group);
     if (ok) {
         g_message("Admin: %s", con->orig_sql->str);

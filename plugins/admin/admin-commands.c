@@ -602,7 +602,7 @@ void admin_show_connectionlist(network_mysqld_con *con, int show_count)
             if (con->state == ST_READ_QUERY) {
                 g_ptr_array_add(row, NULL);
             } else {
-                g_ptr_array_add(row, g_strdup(con->orig_sql->str));
+                g_ptr_array_add(row, g_strndup(con->orig_sql->str, 1024));
             }
         } else {
             g_ptr_array_add(row, NULL);

@@ -4717,6 +4717,9 @@ accept_new_conns(chassis *chas, const gboolean do_accept)
     GList *l;
     for (l = chas->priv->listen_conns; l; l = l->next) {
         network_mysqld_con *con = l->data;
+        if (con->server == NULL) {
+            continue;
+        }
         if (do_accept) {
             update_accept_event(con, EV_READ | EV_PERSIST);
             if (listen(con->server->fd, 128) != 0) {

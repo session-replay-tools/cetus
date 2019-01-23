@@ -939,7 +939,6 @@ network_mysqld_admin_plugin_apply_config(chassis *chas,
     if (config->deny_ip) {
         cetus_acl_add_rules(chas->priv->acl, ACL_BLACKLIST, config->deny_ip);
     }
-
     con = network_mysqld_con_new();
     con->config = config;
     network_mysqld_add_connection(chas, con, TRUE);

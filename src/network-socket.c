@@ -728,7 +728,7 @@ network_socket_write_writev(network_socket *con, int send_chunks)
                 /** remote side closed the connection */
             return NETWORK_SOCKET_ERROR;
         default:
-            g_message("%s: writev(%s, ...) failed: %s", G_STRLOC, con->dst->name->str, g_strerror(errno));
+            g_message("%s: writev(%s, ...) failed: %s", G_STRLOC, con->dst->name->str, g_strerror(os_errno));
             return NETWORK_SOCKET_ERROR;
         }
     } else if (len == 0) {

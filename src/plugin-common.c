@@ -419,6 +419,11 @@ do_connect_cetus(network_mysqld_con *con, network_backend_t **backend, int *back
     else
         challenge->capabilities &= ~CLIENT_SSL;
 #endif
+
+    if (con->srv->compress_support) {
+        challenge->capabilities &= CLIENT_COMPRESS;
+    }
+
     network_mysqld_auth_challenge_set_challenge(challenge);
     challenge->server_status |= SERVER_STATUS_AUTOCOMMIT;
     challenge->charset = 0xC0;

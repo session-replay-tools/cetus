@@ -1224,6 +1224,7 @@ make_decisions(network_mysqld_con *con, int rv, int *disp_flag)
             con->dist_tran_state = NEXT_ST_XA_START;
             con->dist_tran_xa_start_generated = 0;
             stats->xa_count += 1;
+            con->partition_dist_tran = 0;
         }
         con->dist_tran = 1;
         con->could_be_tcp_streamed = 0;
@@ -1607,6 +1608,11 @@ proxy_add_server_connection_array(network_mysqld_con *con, int *server_unavailab
                 super_group = partition_get_super_group();
                 last_group = NULL;
                 groups = 0;
+                if (plan->groups->len > 1) {
+                    if (!con->is_read_ro_server_allowed) {
+                        con->partition_dist_tran = 1;
+                    }
+                }
             }
 
             for (i = 0; i < con->servers->len; i++) {

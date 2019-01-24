@@ -548,6 +548,7 @@ struct network_mysqld_con {
     unsigned int is_attr_adjust:1;
     unsigned int sql_modified:1;
     unsigned int dist_tran:1;
+    unsigned int partition_dist_tran:1;
     unsigned int is_tran_not_distributed_by_comment:1;
     unsigned int dist_tran_xa_start_generated:1;
     unsigned int dist_tran_failed:1;

@@ -421,7 +421,7 @@ do_connect_cetus(network_mysqld_con *con, network_backend_t **backend, int *back
 #endif
 
     if (con->srv->compress_support) {
-        challenge->capabilities &= CLIENT_COMPRESS;
+        challenge->capabilities |= CLIENT_COMPRESS;
     }
 
     network_mysqld_auth_challenge_set_challenge(challenge);

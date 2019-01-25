@@ -2347,6 +2347,7 @@ disp_query_after_consistant_attr(network_mysqld_con *con)
     }
 }
 
+static
 void log_slowquery(int interval_ms, char* ip, char* domain, char* user, char* sql)
 {
     uint64_t usec;
@@ -2373,15 +2374,7 @@ handle_query_time_stats(network_mysqld_con *con)
     diff = MAX(0, diff);
     if (diff >= con->srv->long_query_time) {
         gchar **ip = g_strsplit_set(con->client->src->name->str, ":", -1);
-        struct sockaddr_in addr;
-        memset(&addr,0,sizeof(addr));
-        addr.sin_addr.s_addr = inet_addr(ip[0]);
-        struct hostent *host = gethostbyaddr((char*)&addr.sin_addr,4,AF_INET);
-        gchar *domain = NULL;
-        if(host) {
-            domain = host->h_name;
-        }
-        log_slowquery(diff, ip[0], domain,
+        log_slowquery(diff, ip[0], NULL,
                       con->client->response->username->str, con->orig_sql->str);
         g_strfreev(ip);
         diff = con->srv->long_query_time - 1;

@@ -1605,11 +1605,13 @@ proxy_add_server_connection_array(network_mysqld_con *con, int *server_unavailab
             GString *super_group;
 
             if (con->srv->is_partition_mode) {
+                shard_plugin_con_t *st = con->plugin_con_state;
+                sql_context_t *context = st->sql_context;
                 super_group = partition_get_super_group();
                 last_group = NULL;
                 groups = 0;
                 if (plan->groups->len > 1) {
-                    if (!con->is_read_ro_server_allowed) {
+                    if (context->stmt_type != STMT_SELECT) {
                         con->partition_dist_tran = 1;
                     }
                 }

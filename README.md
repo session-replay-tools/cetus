@@ -118,6 +118,8 @@ Cetus分为读写分离和分库两个版本。
 
 4. [Cetus Docker镜像使用](./doc/cetus-docker.md)
 
+5. [Cetus GUI项目](https://github.com/Lede-Inc/Cetus-GUI)
+
 ### Cetus测试
 
 [Cetus 测试报告](./doc/cetus-test.md)

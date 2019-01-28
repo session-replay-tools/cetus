@@ -382,7 +382,7 @@ sharding_get_sql(network_mysqld_con *con, GString *group)
     if (!con->srv->is_partition_mode || con->sharding_plan->is_sql_rewrite_completely) {
         return sharding_plan_get_sql(con->sharding_plan, group);
     } else {
-        g_message("%s: first group:%s, now group:%s for con:%p", G_STRLOC, con->first_group->str, group->str, con);
+        g_debug("%s: first group:%s, now group:%s for con:%p", G_STRLOC, con->first_group->str, group->str, con);
         if (g_string_equal(con->first_group, group)) {
             const GString *new_sql = sharding_plan_get_sql(con->sharding_plan, group);
             if (new_sql == NULL) {
@@ -781,8 +781,8 @@ wrap_check_sql(network_mysqld_con *con, struct sql_context_t *sql_context)
     con->modified_sql = sharding_modify_sql(sql_context, &(con->hav_condi),
             con->srv->is_groupby_need_reconstruct, con->srv->is_partition_mode, con->sharding_plan->groups->len);
     if (con->modified_sql) {
-        g_message("orig_sql: %s", con->orig_sql->str);
-        g_message("modified:  %s", con->modified_sql->str);
+        g_debug("orig_sql: %s", con->orig_sql->str);
+        g_debug("modified:  %s", con->modified_sql->str);
     }
     if (con->modified_sql) {
         con->sql_modified = 1;

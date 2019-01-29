@@ -284,4 +284,4 @@ log-file的值是日志文件路径，我们设置为当前安装路径下的cet
 
 **9）enable-fast-stream=\[true\|false\]，启动fast stream，快速处理只读响应，默认为true**
 
-**10) partition-mode=\[true\|false\]，如果设置true，cetus为分表模式；如果为false，则分片模式
+**10) partition-mode=\[true\|false\]，如果设置true，cetus为分表模式；如果为false，则分片模式**

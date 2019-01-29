@@ -2286,7 +2286,6 @@ disp_query_after_consistant_attr(network_mysqld_con *con)
     con->is_attr_adjust = 0;
     if (con->dist_tran && !con->dist_tran_xa_start_generated) {
         /* append xa query to send queue */
-        chassis *srv = con->srv;
         con->dist_tran_state = NEXT_ST_XA_QUERY;
         char *xid_str = generate_or_retrieve_xid_str(con, NULL, 1);
         g_debug("%s:xa start:%s for con:%p", G_STRLOC, xid_str, con);
@@ -5024,7 +5023,6 @@ static retval_t
 proxy_self_create_kill_query(server_connection_state_t *con)
 {
     char buffer[32];
-    network_socket *send_sock = con->server;
 
     GString *packet = g_string_sized_new(32);
     packet->len = NET_HEADER_SIZE;
@@ -5490,8 +5488,6 @@ network_connection_pool_create_conn_and_kill_query(network_mysqld_con *con)
         return;
     }
 
-    time_t cur = time(0);
-
     for (i = 0; i < con->servers->len; i++) {
         server_session_t *ss = g_ptr_array_index(con->servers, i);
 
@@ -5831,7 +5827,6 @@ static void
 check_old_server_connection(gpointer data, gpointer user_data)
 {
     network_connection_pool_entry *entry = data;
-    chassis *chas = user_data;
 
     network_connection_pool_remove(entry);
     g_message("%s: call check_old_server_connection", G_STRLOC);
@@ -5855,7 +5850,6 @@ close_old_server_connetions(chassis *chas)
 
             network_connection_pool *pool = backend->pool;
             GHashTable *users = pool->users;
-            int total = 0;
             if (users != NULL) {
                 GHashTableIter iter;
                 GString *key;
@@ -5863,7 +5857,6 @@ close_old_server_connetions(chassis *chas)
                 g_hash_table_iter_init(&iter, users);
                 /* count all users' pooled connections */
                 while (g_hash_table_iter_next(&iter, (void **)&key, (void **)&queue)) {
-                    total += queue->length;
                     g_queue_foreach(queue, check_old_server_connection, chas);
                 }
             }

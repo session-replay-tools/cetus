@@ -1698,8 +1698,6 @@ int
 sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t *stats,
                       guint64 fixture, sharding_plan_t *plan)
 {
-    context->sql_needs_reconstruct = 0;
-
     GPtrArray *groups = g_ptr_array_new();
     if (context == NULL) {
         g_warning("%s:sql is not parsed", G_STRLOC);
@@ -1708,6 +1706,8 @@ sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t
         g_ptr_array_free(groups, TRUE);
         return USE_NON_SHARDING_TABLE;
     }
+
+    context->sql_needs_reconstruct = 0;
 
     char *db = default_db->str;
     g_debug(G_STRLOC ":default db:%s", db);

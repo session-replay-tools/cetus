@@ -127,6 +127,10 @@ Default: 127.0.0.1:3306
 
 > proxy-backend-addresses = 10.120.12.12:3306
 
+分表（分库模式下partition-mode=true）
+
+> proxy-backend-addresses = 10.120.12.12:3306
+
 若是分库模式，需要同时指定group
 
 > proxy-backend-addresses = 10.120.12.12:3306@data1
@@ -136,6 +140,10 @@ Default: 127.0.0.1:3306
 `可多项`
 
 只读后端(从库)的IP和端口
+
+> proxy-read-only-backend-addresses = 10.120.12.13:3307
+
+分表（分库模式下partition-mode=true）
 
 > proxy-read-only-backend-addresses = 10.120.12.13:3307
 

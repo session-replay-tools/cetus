@@ -100,6 +100,8 @@ Cetus分为读写分离和分库（分表是分库的一种特殊形式）两个
 
 12. [Cetus 路由策略介绍](./doc/cetus-routing-strategy.md)
 
+13. [Cetus 分表使用说明](./doc/cetus-partition-profile.md)
+
 ### Cetus架构与设计
 
 [Cetus 架构和实现](./doc/cetus-architecture.md)

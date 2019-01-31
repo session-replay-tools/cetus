@@ -106,8 +106,10 @@ static void rfifo_free(struct rfifo *fifo) {
 }
 
 static guint rfifo_write(struct rfifo *fifo, guchar *buffer, guint len) {
+    g_critical("==rfifo_write enter==");
     if (!fifo) {
         g_critical("struct fifo is NULL when call rfifo_write()");
+        g_critical("==rfifo_write end==");
         return -1;
     }
     guint l;
@@ -116,22 +118,28 @@ static guint rfifo_write(struct rfifo *fifo, guchar *buffer, guint len) {
     memcpy(fifo->buffer + (fifo->in & (fifo->size -1)), buffer, l);//g_strlcpy
     memcpy(fifo->buffer, buffer + l, len - l);
     fifo->in += len;
+    g_critical("==== len = %u", len);
+    g_critical("==rfifo_write end==");
     return len;
 }
 
 static guint rfifo_flush(struct sql_log_mgr *mgr) {
+    g_critical("==rfifo_flush enter==");
     if (!mgr) {
         g_critical("struct mgr is NULL when call rfifo_flush()");
+        g_critical("==rfifo_flush end==");
         return -1;
     }
 
     struct rfifo *fifo = mgr->fifo;
     if (!fifo) {
         g_critical("struct fifo is NULL when call rfifo_flush()");
+        g_critical("==rfifo_flush end==");
         return -1;
     }
     if (!mgr->sql_log_fp) {
         g_critical("sql_log_fp is NULL when call rfifo_flush()");
+        g_critical("==rfifo_flush end==");
         return -1;
     }
 
@@ -146,8 +154,11 @@ static guint rfifo_flush(struct sql_log_mgr *mgr) {
     mgr->sql_log_cursize += s2;
     fifo->out += s2;
     if(mgr->sql_log_switch == REALTIME) {
+        g_critical("====fsync into disk");
         fsync(fd);
     }
+    g_critical("====len = %u", (s1+s2));
+    g_critical("==rfifo_flush end==");
     return (s1 + s2);
 }
 
@@ -402,18 +413,22 @@ log_sql_client(network_mysqld_con *con)
  void
 log_sql_backend(network_mysqld_con *con, injection *inj)
 {
+     g_critical("==log_sql_backend start==");
      if (!con || !con->srv || !inj) {
          g_critical("con or con->srv or inj is NULL when call log_sql_backend()");
+         g_critical("==log_sql_backend end==");
          return;
      }
      struct sql_log_mgr *mgr = con->srv->sql_mgr;
      if (!mgr) {
          g_critical("sql mgr is NULL when call log_sql_backend()");
+         g_critical("==log_sql_backend end==");
          return;
      }
      if (mgr->sql_log_switch == OFF ||
          !(mgr->sql_log_mode & BACKEND) ||
          (mgr->sql_log_action != SQL_LOG_START)) {
+         g_critical("==log_sql_backend end==");
          return;
      }
      gdouble latency_ms = (inj->ts_read_query_result_last - inj->ts_read_query)/1000.0;
@@ -435,8 +450,10 @@ log_sql_backend(network_mysqld_con *con, injection *inj)
                                               GET_COM_NAME(con->parse.command),//type
                                               con->parse.command == COM_STMT_EXECUTE ? "" : (inj->query != NULL ? GET_COM_STRING(inj->query) : ""));//sql
 
+     g_critical("==== message->len = %u", message->len);
      rfifo_write(mgr->fifo, message->str, message->len);
      g_string_free(message, TRUE);
+     g_critical("==log_sql_backend end==");
 }
 
 void

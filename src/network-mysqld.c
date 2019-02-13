@@ -2141,7 +2141,7 @@ build_xa_statements(network_mysqld_con *con)
                 tc_log_info(LOG_INFO, 0, "XA QUERY %s %s %s", con->xid_str, buffer, con->orig_sql->str);
             }
         } else if (is_xa_cmd_met) {
-            if (con->srv->xa_log_detailed || con->dist_tran_decided) {
+            if (con->srv->xa_log_detailed || (con->dist_tran_decided && con->write_server_num > 1)) {
                 tc_log_info(LOG_INFO, 0, "%s", buffer);
             }
         }

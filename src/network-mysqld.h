@@ -614,6 +614,9 @@ struct network_mysqld_con {
     unsigned int write_server_num:8;
 
     unsigned long long xa_id;
+#ifndef SIMPLE_PARSER
+    unsigned long long internal_xa_id;
+#endif
     guint32 auth_switch_to_round;
     guint32 partically_record_left_cnt;
 

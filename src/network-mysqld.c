@@ -109,13 +109,24 @@ static network_socket_retval_t network_mysqld_process_select_resp(network_mysqld
 char *generate_or_retrieve_xid_str(network_mysqld_con *con, network_socket *server, int need_generate_new)
 {
 #ifndef SIMPLE_PARSER
-    if (con->srv->is_partition_mode && server) {
+    if (con->srv->is_partition_mode) {
         if (need_generate_new) {
-            server->xa_id = con->srv->dist_tran_id++;
-            snprintf(server->xid_str, XID_LEN, "'%s_%02d_%llu'", 
-                    con->srv->dist_tran_prefix, tc_get_log_hour(), server->xa_id);
+            if (server == NULL) {
+                con->xa_id = con->srv->dist_tran_id++;
+                snprintf(con->xid_str, XID_LEN, "'%s_%02d_%llu@%llu'",
+                        con->srv->dist_tran_prefix, tc_get_log_hour(), con->xa_id, con->internal_xa_id++);
+            } else {
+                server->xa_id = con->internal_xa_id++;
+                snprintf(server->xid_str, XID_LEN, "'%s_%02d_%llu@%llu'", 
+                        con->srv->dist_tran_prefix, tc_get_log_hour(), con->xa_id, server->xa_id);
+            }
         }
-        return server->xid_str;
+
+        if (server) {
+            return server->xid_str;
+        } else {
+            return con->xid_str;
+        }
     } else {
         if (need_generate_new) {
             con->xa_id = con->srv->dist_tran_id++;
@@ -2141,7 +2152,11 @@ build_xa_statements(network_mysqld_con *con)
                 tc_log_info(LOG_INFO, 0, "XA QUERY %s %s %s", con->xid_str, buffer, con->orig_sql->str);
             }
         } else if (is_xa_cmd_met) {
-            if (con->srv->xa_log_detailed || (con->dist_tran_decided && con->write_server_num > 1)) {
+            if (con->srv->xa_log_detailed || (con->dist_tran_decided && con->write_server_num > 1 &&
+                        ((!con->srv->is_partition_mode) ||  len > 1)))
+            {
+                g_debug("%s:xa sql:%s for con:%p, server num:%d, write num:%d, partition_dist_tran:%d", G_STRLOC, 
+                        buffer, con, len, con->write_server_num, con->partition_dist_tran);
                 tc_log_info(LOG_INFO, 0, "%s", buffer);
             }
         }

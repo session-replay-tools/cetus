@@ -397,7 +397,7 @@ sharding_get_sql(network_mysqld_con *con, GString *group)
                     con->srv->is_groupby_need_reconstruct, con->srv->is_partition_mode, con->sharding_plan->groups->len);
             if (new_sql) {
                 sharding_plan_add_group_sql(con->sharding_plan, group, new_sql);
-                g_message("%s: new sql:%s for con:%p", G_STRLOC, new_sql->str, con);
+                g_debug("%s: new sql:%s for con:%p", G_STRLOC, new_sql->str, con);
             } else {
                 new_sql = con->orig_sql;
             }

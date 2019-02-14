@@ -113,8 +113,9 @@ char *generate_or_retrieve_xid_str(network_mysqld_con *con, network_socket *serv
         if (need_generate_new) {
             if (server == NULL) {
                 con->xa_id = con->srv->dist_tran_id++;
-                snprintf(con->xid_str, XID_LEN, "'%s_%02d_%llu@%llu'",
-                        con->srv->dist_tran_prefix, tc_get_log_hour(), con->xa_id, con->internal_xa_id++);
+                snprintf(con->xid_str, XID_LEN, "'%s_%02d_%llu'",
+                        con->srv->dist_tran_prefix, tc_get_log_hour(), con->xa_id);
+                con->internal_xa_id = 0;
             } else {
                 server->xa_id = con->internal_xa_id++;
                 snprintf(server->xid_str, XID_LEN, "'%s_%02d_%llu@%llu'", 
@@ -1874,14 +1875,22 @@ build_xa_command(network_mysqld_con *con, server_session_t *ss, int end, char *b
         snprintf(buffer, XA_CMD_BUF_LEN, "XA COMMIT %s", xid_str);
         ss->dist_tran_state = NEXT_ST_XA_CANDIDATE_OVER;
         if (buffer_log) {
-            strcpy(buffer_log, buffer);
+            if (!con->srv->is_partition_mode) {
+                strcpy(buffer_log, buffer);
+            } else {
+                snprintf(buffer_log, XA_CMD_BUF_LEN, "XA COMMIT %s", con->xid_str);
+            }
         }
         con->dist_tran_decided = 1;
         break;
     case NEXT_ST_XA_ROLLBACK:
         snprintf(buffer, XA_CMD_BUF_LEN, "XA ROLLBACK %s", xid_str);
         if (buffer_log) {
-            strcpy(buffer_log, buffer);
+            if (!con->srv->is_partition_mode) {
+                strcpy(buffer_log, buffer);
+            } else {
+                snprintf(buffer_log, XA_CMD_BUF_LEN, "XA COMMIT %s", con->xid_str);
+            }
         }
         con->dist_tran_decided = 1;
         ss->dist_tran_state = NEXT_ST_XA_CANDIDATE_OVER;

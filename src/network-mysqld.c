@@ -5760,8 +5760,12 @@ network_connection_pool_create_conns(chassis *srv)
 
             allowd_conn_num = allowd_conn_num - total;
 
-            if (allowd_conn_num > MAX_CREATE_CONN_NUM) {
-                allowd_conn_num = MAX_CREATE_CONN_NUM;
+            if (allowd_conn_num > srv->connections_created_per_time) {
+                allowd_conn_num = srv->connections_created_per_time;
+            }
+
+            if (allowd_conn_num > 0) {
+                srv->is_need_to_create_conns = 1;
             }
 
             for (j = 0; j < allowd_conn_num; j++) {
@@ -5901,8 +5905,8 @@ check_and_create_conns_func(int fd, short what, void *arg)
 
     if (!chas->maintain_close_mode) {
         if (chas->is_need_to_create_conns) {
-            network_connection_pool_create_conns(chas);
             chas->is_need_to_create_conns = 0;
+            network_connection_pool_create_conns(chas);
         } else {
             if (chas->complement_conn_flag) {
                 network_connection_pool_create_conns(chas);
@@ -5940,7 +5944,7 @@ check_and_create_conns_func(int fd, short what, void *arg)
     }
 #endif
     g_debug("%s: check_and_create_conns_func", G_STRLOC);
-    struct timeval check_interval = {30, 0};
+    struct timeval check_interval = {10, 0};
     chassis_event_add_with_timeout(chas, &chas->auto_create_conns_event, &check_interval);
 }
 

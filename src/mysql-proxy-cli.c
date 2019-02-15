@@ -704,6 +704,13 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
     srv->mid_idle_connections = frontend->default_pool_size;
     g_message("set default pool size:%d", srv->mid_idle_connections);
 
+    int connections_created_per_time = srv->mid_idle_connections / srv->worker_processes;
+    if (connections_created_per_time > MAX_CREATE_CONN_NUM) {
+        srv->connections_created_per_time = MAX_CREATE_CONN_NUM;
+    } else {
+        srv->connections_created_per_time = connections_created_per_time;
+    }
+
     if (frontend->max_pool_size >= srv->mid_idle_connections) {
         srv->max_idle_connections = frontend->max_pool_size;
     } else {

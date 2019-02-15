@@ -64,7 +64,7 @@ typedef struct chassis chassis;
 #define MAX_QUERY_TIME 65536
 #define MAX_WAIT_TIME 1024
 #define MAX_TRY_NUM 6
-#define MAX_CREATE_CONN_NUM 512
+#define MAX_CREATE_CONN_NUM 64 
 #define MAX_DIST_TRAN_PREFIX 64
 #define DEFAULT_LIVE_TIME 7200
 

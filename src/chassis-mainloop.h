@@ -150,6 +150,7 @@ struct chassis {
     unsigned int is_tcp_stream_enabled:1;
     unsigned int is_fast_stream_enabled:1;
     unsigned int is_partition_mode:1;
+    unsigned int is_sql_special_processed:1;
     unsigned int query_cache_enabled:1;
     unsigned int is_back_compressed:1;
     unsigned int is_groupby_need_reconstruct:1;

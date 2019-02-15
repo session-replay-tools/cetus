@@ -1635,6 +1635,25 @@ routing_delete(sql_context_t *context, sql_delete_t *delete,
 }
 
 int
+check_property_has_groups(sql_context_t *context)
+{
+    sql_property_t *property = context->property;
+
+    if (!property) {
+        return FALSE;
+    }
+    if (!sql_property_is_valid(property)) {
+        return FALSE;
+    }
+
+    if (property->group) {
+        return TRUE;
+    } else {
+        return FALSE;
+    }
+}
+
+int
 routing_by_property(sql_context_t *context, sql_property_t *property, char *default_db, GPtrArray *groups /* out */ )
 {
     if (property->table) {
@@ -1693,6 +1712,21 @@ routing_by_property(sql_context_t *context, sql_property_t *property, char *defa
     sql_context_append_msg(context, "(proxy)comment error, unknown property");
     return ERROR_UNPARSABLE;
 }
+
+int
+sharding_parse_groups_by_property(GString *default_db, sql_context_t *context, sharding_plan_t *plan)
+{
+    GPtrArray *groups = g_ptr_array_new();
+
+    context->sql_needs_reconstruct = 0;
+
+    int rc = routing_by_property(context, context->property, default_db->str, groups);
+    sharding_plan_add_groups(plan, groups);
+    g_ptr_array_free(groups, TRUE);
+
+    return rc;
+}
+
 
 int
 sharding_parse_groups(GString *default_db, sql_context_t *context, query_stats_t *stats,

@@ -1217,6 +1217,21 @@ show_enable_partition(gpointer param) {
 }
 
 gchar*
+show_enable_sql_special_processed(gpointer param) {
+    struct external_param *opt_param = (struct external_param *)param;
+    chassis *srv = opt_param->chas;
+    gint opt_type = opt_param->opt_type;
+    if (CAN_SHOW_OPTS_PROPERTY(opt_type)) {
+        return g_strdup_printf("%s", srv->is_sql_special_processed ? "true" : "false");
+    }
+    if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
+        return srv->is_sql_special_processed ? g_strdup("true") : NULL;
+    }
+    return NULL;
+}
+
+
+gchar*
 show_enable_tcp_stream(gpointer param) {
     struct external_param *opt_param = (struct external_param *)param;
     chassis *srv = opt_param->chas;

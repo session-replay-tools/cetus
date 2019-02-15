@@ -679,6 +679,7 @@ proxy_parse_query(network_mysqld_con *con)
     con->could_be_fast_streamed = 0;
     con->candidate_tcp_streamed = 0;
     con->candidate_fast_streamed = 0;
+    con->process_through_special_tunnel = 0;
 
     network_packet packet;
     packet.data = g_queue_peek_head(con->client->recv_queue->chunks);
@@ -705,6 +706,12 @@ proxy_parse_query(network_mysqld_con *con)
             sql_context_parse_len(context, con->orig_sql);
 
             if (context->rc == PARSE_SYNTAX_ERR) {
+                if (con->srv->is_sql_special_processed) {
+                    if (check_property_has_groups(context)) {
+                        con->process_through_special_tunnel = 1;
+                        return PROXY_NO_DECISION;
+                    }
+                }
                 char *msg = context->message;
                 g_message("%s SQL syntax error: %s. while parsing: %s", G_STRLOC, msg, con->orig_sql->str);
                 network_mysqld_con_send_error_full(con->client, msg, strlen(msg), ER_SYNTAX_ERROR, "42000");
@@ -1274,20 +1281,25 @@ proxy_get_server_list(network_mysqld_con *con)
 
     shard_plugin_con_t *st = con->plugin_con_state;
 
-    if (st->sql_context->rw_flag & CF_WRITE) {
-        con->write_flag = 1;
-    }
+    if (con->process_through_special_tunnel) {
+        rv = sharding_parse_groups_by_property(con->client->default_db, st->sql_context, plan);
+    } else {
 
-    switch (con->parse.command) {
-    case COM_INIT_DB:
-        if (!process_init_db_when_get_server_list(con, plan, &rv, &disp_flag)) {
-            return disp_flag;
+        if (st->sql_context->rw_flag & CF_WRITE) {
+            con->write_flag = 1;
         }
-        break;
-    default:
-        rv = sharding_parse_groups(con->client->default_db, st->sql_context,
-                                   stats, con->key, plan);
-        break;
+
+        switch (con->parse.command) {
+            case COM_INIT_DB:
+                if (!process_init_db_when_get_server_list(con, plan, &rv, &disp_flag)) {
+                    return disp_flag;
+                }
+                break;
+            default:
+                rv = sharding_parse_groups(con->client->default_db, st->sql_context,
+                        stats, con->key, plan);
+                break;
+        }
     }
 
     if (plan->groups->len > 1) {

@@ -542,6 +542,7 @@ struct network_mysqld_con {
     unsigned int multiple_server_mode:1;
     unsigned int could_be_fast_streamed:1;
     unsigned int could_be_tcp_streamed:1;
+    unsigned int process_through_special_tunnel:1;
     unsigned int candidate_tcp_streamed:1;
     unsigned int candidate_fast_streamed:1;
     unsigned int is_new_server_added:1;

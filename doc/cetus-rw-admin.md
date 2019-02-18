@@ -320,7 +320,7 @@ update后端的state只包括up|down|maintaining三种状态，delete/remove后�
 `show allow_ip`
 
 查看proxy模块的IP白名单。
-若列表为空，则代表没有任何限制。
+若列表为空或为\*，则代表没有任何限制。
 
 ### 增加Proxy端口的IP白名单
 

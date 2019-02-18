@@ -101,7 +101,7 @@ print "maintain status: %s" % data
 
 ## MGR 支持
 
-目前Cetus支持**单主模式**的MGR集群。对MGR支持通过在*.conf文件中设置参数：`group-replication-mode = 1`来实现，默认该参数为0，即只支持普通MySQL主从复制的集群。
+目前Cetus支持**单主模式**的MGR集群。对MGR支持通过在*.conf文件中设置参数：`group-replication-mode = 1`来实现，默认该参数为0，即只支持普通MySQL主从复制的集群。该参数支持通过admin端口动态的设置。
 
 特别注意，*.conf文件中配置的参数default-username在开启MGR模式后，需要对performance_schema.global_status和performance_schema.replication_group_members表进行查询从而获得MGR集群相关信息，因此在对default-username授权时候，需要特别注意。例如授权可以参考：
 

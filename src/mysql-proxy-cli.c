@@ -208,7 +208,11 @@ chassis_frontend_new(void)
     frontend->cetus_max_allowed_packet = MAX_ALLOWED_PACKET_DEFAULT;
     frontend->disable_dns_cache = 0;
 
+#ifndef SIMPLE_PARSER
     frontend->is_tcp_stream_enabled = 0;
+#else
+    frontend->is_tcp_stream_enabled = 1;
+#endif
     frontend->is_fast_stream_enabled = 1;
     frontend->is_partition_mode = 0;
     frontend->is_sql_special_processed = 0;

@@ -343,7 +343,7 @@ update后端的state只包括up|down|maintaining三种状态，delete/remove后�
 
 ### 删除Proxy端口IP白名单
 
-`Ddelete allow_ip <address>`
+`delete allow_ip <address>`
 
 删除Proxy端口的白名单中的一个IP许可。（IP需要加引号）
 

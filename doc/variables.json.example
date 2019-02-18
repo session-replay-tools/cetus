@@ -1,6 +1,12 @@
 {
     "variables": [
         {
+            "name": "profiling",
+            "type": "int",
+            "allowed_values": ["*"],
+            "silent_values": ["*"]
+        },
+        {
             "name": "sql_mode",
             "type": "string-csv",
             "allowed_values":  ["STRICT_TRANS_TABLES",

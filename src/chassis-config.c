@@ -369,6 +369,69 @@ recycle_mysql_resources:
     return status;
 }
 
+gboolean
+chassis_config_set_remote_backends(chassis_config_t *conf, gchar* key1, gchar* value1, gchar* key2, gchar* value2)
+{
+    if(conf->type != CHASSIS_CONF_MYSQL){
+        return TRUE;
+    }
+
+    MYSQL *conn = chassis_config_get_mysql_connection(conf);
+    if (!conn) {
+        g_warning("%s:Cannot connect to mysql server.", G_STRLOC);
+        conf->options_update_flag = 0;
+        conf->options_success_flag = 0;
+        return FALSE;
+    }
+    gboolean status = FALSE, status1 = FALSE, status2 = FALSE;
+    gchar sql1[1024] = { 0 }, real_value1[1024] = { 0 };
+    gchar sql2[1024] = { 0 }, real_value2[1024] = { 0 };
+    if (key1) {
+        if (value1) {
+            mysql_real_escape_string(conn, real_value1, value1, strlen(value1));
+            snprintf(sql1, sizeof(sql1),
+                "INSERT INTO %s.`settings`(option_key,option_value) VALUES ('%s', '%s') ON DUPLICATE KEY UPDATE option_value = '%s'", conf->schema, key1, real_value1, real_value1);
+        } else {
+            snprintf(sql1, sizeof(sql1),
+                "DELETE FROM %s.`settings` where option_key = '%s'", conf->schema, key1);
+        }
+        if (mysql_query(conn, sql1)) {
+            g_warning("sql failed: %s | error: %s", sql1, mysql_error(conn));
+        } else {
+            status1 = TRUE;
+        }
+    }
+    if (status1 && key2) {
+        if (value2) {
+            mysql_real_escape_string(conn, real_value2, value2, strlen(value2));
+            snprintf(sql2, sizeof(sql2),
+                "INSERT INTO %s.`settings`(option_key,option_value) VALUES ('%s', '%s') ON DUPLICATE KEY UPDATE option_value = '%s'", conf->schema, key2, real_value2, real_value2);
+        } else {
+            snprintf(sql2, sizeof(sql2),
+                "DELETE FROM %s.`settings` where option_key = '%s'", conf->schema, key2);
+        }
+        if (mysql_query(conn, sql2)) {
+            g_warning("sql failed: %s | error: %s", sql1, mysql_error(conn));
+        } else {
+            status2 = TRUE;
+        }
+    } 
+    status = status1 && (key2 == NULL? TRUE:status2);
+
+recycle_mysql_resources:
+    if (status) {
+        conf->options_update_flag = 0;
+        conf->options_success_flag = 1;
+
+    } else {
+        conf->options_success_flag = 0;
+        conf->options_update_flag = 0;
+    }
+    mysql_close(conf->mysql_conn);
+    conf->mysql_conn = NULL;
+    return status;
+}
+
 gint chassis_config_reload_options(chassis_config_t *conf)
 {
     switch (conf->type) {

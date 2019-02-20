@@ -30,6 +30,7 @@
 
 static gint save_setting(chassis *srv, gint *effected_rows);
 static void send_result(network_socket *client, gint ret, gint affected);
+static void admin_update_remote_backend(network_mysqld_con* con, chassis_config_t *conf);
 
 static const char *get_conn_xa_state_name(network_mysqld_con_dist_tran_state_t state) {
     switch (state) {
@@ -1242,8 +1243,24 @@ void admin_insert_backend(network_mysqld_con* con, char *addr, char *type, char 
         case BACKEND_OPERATE_SUCCESS:
         {
             if(con->srv->config_manager->type == CHASSIS_CONF_MYSQL) {
-                network_mysqld_con_send_ok_full(con->client, 1, 0,
-                                                SERVER_STATUS_AUTOCOMMIT, 0);
+                chassis_config_t* conf = con->srv->config_manager;
+                if(backend_type(type) == BACKEND_TYPE_RO) {
+                    conf->key = g_strdup("proxy-read-only-backend-addresses");
+                    conf->value = admin_get_value_by_key(con, conf->key);
+                    conf->reserve1 = NULL;
+                    conf->reserve2 = NULL;
+                    admin_update_remote_backend(con, conf);
+                    return;
+                } else if (backend_type(type) == BACKEND_TYPE_RW) {
+                    conf->key = g_strdup("proxy-backend-addresses");
+                    conf->value = admin_get_value_by_key(con, conf->key);
+                    conf->reserve1 = NULL;
+                    conf->reserve2 = NULL;
+                    admin_update_remote_backend(con, conf);
+                    return;
+                } else {
+                    network_mysqld_con_send_error(con->client, C("insert backend succeed, but save to remote failed."));
+                }
             } else {
                 gint effected_rows = 0;
                 ret = save_setting(con->srv, &effected_rows);
@@ -1331,8 +1348,13 @@ void admin_update_backend(network_mysqld_con* con, GList* equations,
     }
     int affected = (network_backends_modify(g->backends, backend_ndx, type, state, NO_PREVIOUS_STATE)==0)?1:0;
     if(con->srv->config_manager->type == CHASSIS_CONF_MYSQL) {
-        network_mysqld_con_send_ok_full(con->client, affected,
-                                        0, SERVER_STATUS_AUTOCOMMIT, 0);
+        chassis_config_t* conf = con->srv->config_manager;
+        conf->key = g_strdup("proxy-read-only-backend-addresses");
+        conf->value = admin_get_value_by_key(con, conf->key);
+        conf->reserve1 = g_strdup("proxy-backend-addresses");
+        conf->reserve2 = admin_get_value_by_key(con, conf->reserve1);
+        admin_update_remote_backend(con, conf);
+        return;
     } else {
         gint ret = CHANGE_SAVE_ERROR;
         gint effected_rows = 0;
@@ -1363,8 +1385,13 @@ void admin_delete_backend(network_mysqld_con* con, char *key, char *val)
     if (backend_ndx >= 0 && backend_ndx < network_backends_count(g->backends)) {
         network_backends_remove(g->backends, backend_ndx);/*TODO: just change state? */
         if(con->srv->config_manager->type == CHASSIS_CONF_MYSQL) {
-            network_mysqld_con_send_ok_full(con->client, 1, 0,
-                                            SERVER_STATUS_AUTOCOMMIT, 0);
+            chassis_config_t* conf = con->srv->config_manager;
+            conf->key = g_strdup("proxy-read-only-backend-addresses");
+            conf->value = admin_get_value_by_key(con, conf->key);
+            conf->reserve1 = g_strdup("proxy-backend-addresses");
+            conf->reserve2 = admin_get_value_by_key(con, conf->reserve1);
+            admin_update_remote_backend(con, conf);
+            return;
         } else {
             gint effected_rows = 0;
             gint ret = save_setting(con->srv, &effected_rows);
@@ -1584,6 +1611,80 @@ static void admin_set_remote_config(network_mysqld_con* con, chassis_config_t *c
     chas->asynchronous_type = ASYNCHRONOUS_SET_CONFIG;
 
     evtimer_set(&chas->remote_config_event, admin_set_remote_config_callback, con);
+    struct timeval check_interval = {0, 2000};
+    conf->ms_timeout = 2;
+    conf->retries = 1;
+    chassis_event_add_with_timeout(chas, &chas->remote_config_event, &check_interval);
+
+    con->is_admin_waiting_resp = 1;
+}
+
+void admin_update_remote_backend_callback(int fd, short what, void *arg)
+{
+    g_message("%s call admin_update_remote_backend_callback", G_STRLOC);
+    network_mysqld_con* con = arg;
+    chassis *chas = con->srv;
+    chassis_config_t* conf = con->srv->config_manager;
+
+    if (conf->options_update_flag) {
+        conf->retries++;
+        if (conf->retries == 0) {
+            network_mysqld_con_send_error(con->client, C("update remote backend timeout"));
+            con->is_admin_waiting_resp = 0;
+            send_admin_resp(con->srv, con);
+            g_message("%s call admin_update_remote_backend_callback timeout, last timeout:%d", G_STRLOC, conf->ms_timeout);
+            goto fun_end;
+        }
+        conf->ms_timeout = conf->ms_timeout << 1;
+        int sec = conf->ms_timeout / 1000;
+        int usec = (conf->ms_timeout - 1000 * sec) * 1000;
+        struct timeval check_interval = {sec, usec};
+        chassis_event_add_with_timeout(chas, &chas->remote_config_event, &check_interval);
+        g_message("%s call admin_update_remote_backend_callback, timeout:%d", G_STRLOC, conf->ms_timeout);
+        return;
+    }
+
+    if (!conf->options_success_flag) {
+        network_mysqld_con_send_error(con->client,C("backend is set locally but cannot replace remote"));
+        con->is_admin_waiting_resp = 0;
+        send_admin_resp(con->srv, con);
+        g_message("%s call send_admin_resp over", G_STRLOC);
+        goto fun_end;
+    }
+
+    network_mysqld_con_send_ok_full(con->client, 1, 0, SERVER_STATUS_AUTOCOMMIT, 0);
+
+    con->is_admin_waiting_resp = 0;
+    send_admin_resp(con->srv, con);
+    g_message("%s call send_admin_resp over", G_STRLOC);
+fun_end:
+    if (conf->key) {
+        g_free(conf->key);
+        conf->key = NULL;
+    }
+    if (conf->value) {
+        g_free(conf->value);
+        conf->value = NULL;
+    }
+    if (conf->reserve1) {
+        g_free(conf->reserve1);
+        conf->reserve1 = NULL;
+    }
+    if (conf->reserve2) {
+        g_free(conf->reserve2);
+        conf->reserve2 = NULL;
+    }
+}
+
+static void admin_update_remote_backend(network_mysqld_con* con, chassis_config_t *conf)
+{
+    g_message("%s call admin_update_remote_backend", G_STRLOC);
+    chassis* chas = con->srv;
+
+    conf->options_update_flag = 1;
+    chas->asynchronous_type = ASYNCHRONOUS_UPDATE_BACKENDS;
+
+    evtimer_set(&chas->remote_config_event, admin_update_remote_backend_callback, con);
     struct timeval check_interval = {0, 2000};
     conf->ms_timeout = 2;
     conf->retries = 1;
@@ -2679,4 +2780,22 @@ void admin_select_version_comment(network_mysqld_con* con) {
 
     network_mysqld_proto_fielddefs_free(fields);
     g_ptr_array_free(rows, TRUE);
+}
+
+char* admin_get_value_by_key(network_mysqld_con* con, const char *key) {
+    GList *options = admin_get_all_options(con->srv);
+
+    GList *l = NULL;
+    for (l = options; l; l = l->next) {
+        chassis_option_t *opt = l->data;
+        if (g_strcasecmp(key, opt->long_name) == 0) {
+            struct external_param param = {0};
+            param.chas = con->srv;
+            param.opt_type = opt->opt_property;
+            char *value = opt->show_hook != NULL? opt->show_hook(&param) : NULL;
+            return value;
+        }
+    }
+    g_list_free(options);
+    return NULL;
 }

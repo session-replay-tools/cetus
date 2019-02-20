@@ -66,4 +66,5 @@ void admin_sql_log_status(network_mysqld_con* con);
 void admin_kill_query(network_mysqld_con* con, guint32);
 void admin_comment_handle(network_mysqld_con* con);
 void admin_select_version_comment(network_mysqld_con* con);
+char* admin_get_value_by_key(network_mysqld_con* con, const char *key);
 #endif // ADMIN_COMMANDS_H

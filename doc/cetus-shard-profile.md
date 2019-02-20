@@ -285,3 +285,7 @@ log-file的值是日志文件路径，我们设置为当前安装路径下的cet
 **9）enable-fast-stream=\[true\|false\]，启动fast stream，快速处理只读响应，默认为true**
 
 **10) partition-mode=\[true\|false\]，如果设置true，cetus为分表模式；如果为false，则分片模式**
+
+**11) enable-sql-special-processed=\[true\|false\]，如果遇到Cetus解析器不支持的SQL（通常报错：near "xx":syntax error），可以通过设置该参数为true，跳过解析器解析，并通过注释的形式，告诉Cetus 该SQL的路由方法**。
+例如，通过上述配置，该SQL可以正常支持：
+/\*#group=data1\*/update test1 a join test2 b on a.id=b.id set a.name='test';

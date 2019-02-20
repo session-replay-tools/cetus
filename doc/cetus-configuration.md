@@ -253,7 +253,7 @@ Proxy在读写分离时可以指定访问的库
 
 Default: false
 
-允许客户端使用FOUND_ROWS标志
+允许客户端使用CLIENT_FOUND_ROWS标志
 
 > enable-client-found-rows = true
 

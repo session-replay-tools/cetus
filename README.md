@@ -102,6 +102,8 @@ Cetus分为读写分离和分库（分表是分库的一种特殊形式）两个
 
 13. [Cetus 分表使用说明](./doc/cetus-partition-profile.md)
 
+14. [Cetus数据迁移追数工具使用手册](./dumpbinlog-tool/readme.md)
+
 ### Cetus架构与设计
 
 [Cetus 架构和实现](./doc/cetus-architecture.md)

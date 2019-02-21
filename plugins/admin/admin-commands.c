@@ -1998,11 +1998,9 @@ static struct sql_help_entry_t {
     {"cetus", "Show overall status of Cetus", ALL_HELP},
     {"config get [item]", "show config", ALL_HELP},
     {"config set key=value", "e.g. config set log-level = message; ", ALL_HELP},
-#ifndef SIMPLE_PARSER
     {"create sharded table schema.table vdb id shardkey key", "e.g. create sharded table test.tb1 vdb 1 shardkey id; ", SHARD_HELP},
     {"create single table schema.table on group", "e.g. create single table test.tb1 on data1; ", SHARD_HELP},
     {"create vdb id (groupA:xx, groupB:xx) using method", "Method example: hash(int,4) range(str)", SHARD_HELP},
-#endif
     {"delete allow_ip|deny_ip 'user@address'", "delete address from white or black list", ALL_HELP},
     {"delete from user_pwd where user='name'", "delete from user_pwd where user='lede'; ", ALL_HELP},
     {"delete from app_user_pwd where user='name'", "delete from user_pwd where user='lede'; ", ALL_HELP},
@@ -2016,21 +2014,15 @@ static struct sql_help_entry_t {
     {"save settings", "save the current running configuration to files. e.g. save settings; ", ALL_HELP},
     {"select help", "show this help", ALL_HELP},
     {"select conn_details from backends", "display the idle conns", ALL_HELP},
-#ifndef SIMPLE_PARSER
     {"select sharded table", "Show all sharded table", SHARD_HELP},
     {"select single table", "Show single tables. e.g. select single table; ", SHARD_HELP},
-#endif
     {"select version", "cetus version. e.g. select version; ", ALL_HELP},
     {"select * from help", "show this help", ALL_HELP},
     {"select * from backends", "list the backends and their state", ALL_HELP},
-#ifndef SIMPLE_PARSER
     {"select * from groups","list the backends and their groups", SHARD_HELP},
-#endif
     {"select * from user_pwd [where user='name']", "e.g. select * from user_pwd; ", ALL_HELP},
     {"select * from app_user_pwd [where user='name']", "e.g. select * from app_user_pwd where user='lede'; ", ALL_HELP},
-#ifndef SIMPLE_PARSER
     {"select * from vdb", "Show all vdb", SHARD_HELP},
-#endif
     {"set reduce_conns [true|false]", "reduce idle connections if set to true. e.g. set reduce_conns true; ", ALL_HELP},
     {"set maintain [true|false]", "close all client connections if set to true. e.g. set maintain false; ", ALL_HELP},
     {"set charset_check [true|false]", "check the client charset is equal to the default charset", ALL_HELP},

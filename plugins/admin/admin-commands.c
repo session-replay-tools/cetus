@@ -2002,6 +2002,7 @@ static struct sql_help_entry_t {
     {"set charset_check [true|false]", "check the client charset is equal to the default charset", ALL_HELP},
     {"refresh conns", "refresh all server connections. e.g. refresh conns; ", ALL_HELP},
     {"show maintain status", "e.g. show maintain status; ", ALL_HELP},
+    {"save settings", "save the current running configuration to files. e.g. save settings; ", ALL_HELP},
     {"show status [like '%pattern%']", "show select/update/insert/delete statistics", ALL_HELP},
     {"show variables [like '%pattern%']", "e.g. show variables like '%proxy%'; ", ALL_HELP},
     {"select version", "cetus version. e.g. select version; ", ALL_HELP},

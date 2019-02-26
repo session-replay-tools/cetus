@@ -64,6 +64,8 @@ struct chassis_config_t {
     void *user_data;
     void *key;
     void *value;
+    void *reserve1;
+    void *reserve2;
 };
 
 /**
@@ -83,6 +85,8 @@ gint chassis_config_reload_options(chassis_config_t *conf);
 gboolean chassis_config_load_options_mysql(chassis_config_t *conf);
 
 gboolean chassis_config_set_remote_options(chassis_config_t *conf, gchar* key, gchar* value);
+
+gboolean chassis_config_set_remote_backends(chassis_config_t *conf, gchar* key1, gchar* value1, gchar* key2, gchar* value2);
 
 GHashTable *chassis_config_get_options(chassis_config_t *);
 

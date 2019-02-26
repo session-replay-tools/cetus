@@ -180,6 +180,10 @@ gpointer retrieve_remote_config_mainloop(gpointer user_data) {
                     g_message("%s: ASYNCHRONOUS_SET_CONFIG visited", G_STRLOC);
                     chassis_config_set_remote_options(conf, conf->key, conf->value);
                     break;
+                case ASYNCHRONOUS_UPDATE_BACKENDS:
+                    g_message("%s: ASYNCHRONOUS_UPDATE_BACKENDS visited", G_STRLOC);
+                    chassis_config_set_remote_backends(conf, conf->key, conf->value, conf->reserve1, conf->reserve2);
+                    break;
                 default:
                     break;
             }

@@ -2786,7 +2786,7 @@ char* admin_get_value_by_key(network_mysqld_con* con, const char *key) {
     GList *l = NULL;
     for (l = options; l; l = l->next) {
         chassis_option_t *opt = l->data;
-        if (g_strcasecmp(key, opt->long_name) == 0) {
+        if (strcasecmp(key, opt->long_name) == 0) {
             struct external_param param = {0};
             param.chas = con->srv;
             param.opt_type = opt->opt_property;

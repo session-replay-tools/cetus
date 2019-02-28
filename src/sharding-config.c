@@ -649,7 +649,7 @@ struct code_map_t {
     int code;
 } key_type_map[] = {
     {"INT", SHARD_DATA_TYPE_INT},
-    {"STR", SHARD_DATA_TYPE_STR},
+    {"CHAR", SHARD_DATA_TYPE_STR},
     {"DATE", SHARD_DATA_TYPE_DATE},
     {"DATETIME", SHARD_DATA_TYPE_DATETIME},
 };

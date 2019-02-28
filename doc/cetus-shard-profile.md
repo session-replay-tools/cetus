@@ -129,7 +129,7 @@ variables.json同样采用键值对的结构，其中键是固定的，值是用
 
 sharding.json是分库版本的分库规则配置文件，同样采用键值对的结构，其中键是固定的，值是由用户自定义。
 
-其中vdb逻辑db，包含属性有id、type、method、num和partitions，id的值是逻辑db的id，type的值是分片键的类型，method的值是分片方式，num的值是hash分片的底数（range分片的num为0），partitions是分组名和分片范围的键值对,其中键和值都是用户自定义的；table是分片表，包含属性有vdb、db、table和pkey，vdb的值是逻辑db的id，db的值是物理db名，table的是分片表名，pkey的值是分片键；single_tables是单点全局表，包含属性有table、db和group，table的值是表名，db的值是物理db名，group的值是单点全局表的默认分组，可由用户自定义设置。
+其中vdb逻辑db，包含属性有id、type、method、num和partitions，id的值是逻辑db的id，type的值是分片键的类型(int,char,date或者datetime)，method的值是分片方式，num的值是hash分片的底数（range分片的num为0），partitions是分组名和分片范围的键值对,其中键和值都是用户自定义的；table是分片表，包含属性有vdb、db、table和pkey，vdb的值是逻辑db的id，db的值是物理db名，table的是分片表名，pkey的值是分片键；single_tables是单点全局表，包含属性有table、db和group，table的值是表名，db的值是物理db名，group的值是单点全局表的默认分组，可由用户自定义设置。
 
 例如：
 
@@ -138,7 +138,7 @@ sharding.json是分库版本的分库规则配置文件，同样采用键值对�
  "vdb": [
    {
      "id": 1,
-     "type": "int",
+     "type": "char",
      "method": "hash",
      "num": 8,
      "partitions": {"data1": [0,1], "data2": [2,3], "data3": [4,5], "data4": [6,7]}
@@ -164,7 +164,7 @@ sharding.json是分库版本的分库规则配置文件，同样采用键值对�
 }
 ```
 
-我们配置了两种vbd分片规则，第一种规则的id为1，分片键类型是int，分片方法是hash，hash分片的底数为8，一共分了4组，分组名为data1的分片范围为0和1，分组名为data2的分片范围为2和3，分组名为data3的分片范围为4和5，分组名为data4的分片范围为6和7；第二种规则的id为2，分片键类型是int，分片方法是range，range无底数num设为0，一共分了4组，分组名为data1的分片范围为0-124999，分组名为data2的分片范围为125000-249999，分组名为data3的分片范围为250000-374999，分组名为data4的分片范围为37500-499999；
+我们配置了两种vbd分片规则，第一种规则的id为1，分片键类型是char，分片方法是hash，hash分片的底数为8，一共分了4组，分组名为data1的分片范围为0和1，分组名为data2的分片范围为2和3，分组名为data3的分片范围为4和5，分组名为data4的分片范围为6和7；第二种规则的id为2，分片键类型是int，分片方法是range，range无底数num设为0，一共分了4组，分组名为data1的分片范围为0-124999，分组名为data2的分片范围为125000-249999，分组名为data3的分片范围为250000-374999，分组名为data4的分片范围为37500-499999；
 
 分片表table涉及两个物理db，为employees_hash和employees_range，其中employees_hash采用第一种分片规则，表dept_emp的分片键为emp_no，表employees的分片键为emp_no，employees_range采用第二种分片规则，表dept_emp的分片键为emp_no，表employees的分片键为emp_no；
 

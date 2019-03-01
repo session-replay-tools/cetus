@@ -400,6 +400,7 @@ shard_conf_get_fixed_group(int partition, GPtrArray *groups, guint64 fixture)
 {
     if (partition) {
         g_ptr_array_add(groups, parition_super_group);
+        return groups;
     } else {
         int len = g_list_length(shard_conf_all_groups);
         if (len == 0) {

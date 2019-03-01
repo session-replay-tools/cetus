@@ -271,14 +271,24 @@ sharding_modify_sql(sql_context_t *context, having_condition_t *hav_condi, int i
                 if (context->sql_statement) {
                     return modify_select(context, hav_condi, is_groupby_need_reconstruct, groups);
                 }
+                break;
             case STMT_UPDATE:
-                return sql_construct_update(context->sql_statement);
+                if (context->sql_statement) {
+                    return sql_construct_update(context->sql_statement);
+                }
+                break;
             case STMT_DELETE:
-                return sql_construct_delete(context->sql_statement);
+                if (context->sql_statement) {
+                    return sql_construct_delete(context->sql_statement);
+                }
+                break;
             case STMT_INSERT: {
-                GString *s = g_string_sized_new(512);
-                sql_construct_insert(partition_mode, s, context->sql_statement, NULL);
-                return s;
+                if (context->sql_statement) {
+                    GString *s = g_string_sized_new(512);
+                    sql_construct_insert(partition_mode, s, context->sql_statement, NULL);
+                    return s;
+                }
+                break;
             }
             default:
                 break;

@@ -61,7 +61,7 @@ MySQL和Cetus可以部署在同一台服务器上，也可以部署在各自独�
 Cetus可以利用bin/cetus启动
 
 ```
-bin/cetus --defaults-file=conf/proxy.conf [--conf-dir＝/home/user/cetus_install/conf/]
+bin/cetus --defaults-file=conf/proxy.conf [--conf-dir=/home/user/cetus_install/conf/]
 ```
 
 其中Cetus启动时可以添加命令行选项，--defaults-file选项用来加载启动配置文件，且在启动前保证启动配置文件的权限为660；--conf-dir是可选项，用来加载其他配置文件(.json文件)，默认为当前目录下conf文件夹。

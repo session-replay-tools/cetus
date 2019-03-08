@@ -529,7 +529,7 @@ Default: false
 
 启用后端传给Cetus的结果集压缩，一般不启用
 
-> enable-back-compress ＝ true
+> enable-back-compress = true
 
 ### merged-output-size
 

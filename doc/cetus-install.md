@@ -75,10 +75,10 @@ vi XXX.conf
 
 ```
 读写分离版本：
-bin/cetus --defaults-file=conf/proxy.conf [--conf-dir＝/home/user/cetus_install/conf/]
+bin/cetus --defaults-file=conf/proxy.conf [--conf-dir=/home/user/cetus_install/conf/]
 
 分库版本：
-bin/cetus --defaults-file=conf/shard.conf [--conf-dir＝/home/user/cetus_install/conf/]
+bin/cetus --defaults-file=conf/shard.conf [--conf-dir=/home/user/cetus_install/conf/]
 
 ```
 

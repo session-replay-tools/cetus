@@ -21,7 +21,7 @@ chmod 660 proxy.conf
 
 ### 1. 命令行启动
 ```
-bin/cetus --defaults-file=conf/proxy.conf|shard.conf [--conf-dir＝/home/user/cetus_install/conf/]
+bin/cetus --defaults-file=conf/proxy.conf|shard.conf [--conf-dir=/home/user/cetus_install/conf/]
 ```
 
 ### 2. service命令启动

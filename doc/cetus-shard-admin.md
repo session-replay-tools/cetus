@@ -460,7 +460,7 @@ XO:     处于XA OVER状态。
 
 `reload shard`
 
-需要"remote-conf-url ＝ \<url>"和"disable-threads = false"启动选项。
+需要"remote-conf-url = \<url>"和"disable-threads = false"启动选项。
 从远端配置库中重载Shard配置。
 
 ### 保存最新配置

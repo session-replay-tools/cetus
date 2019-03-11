@@ -294,7 +294,7 @@ XO:     处于XA OVER状态。
 
 减少空闲连接。
 
-### 设置是否关闭所有客户端连接
+### 设置是否加速关闭所有客户端连接
 
 `set maintain (true|false)`
 
@@ -302,7 +302,7 @@ XO:     处于XA OVER状态。
 
 >set maintain true;
 
-加速关闭客户端与Cetus的连接。
+加速关闭客户端与Cetus的连接，该参数通常与LVS配合使用。
 
 ### 查询是否关闭所有客户端连接
 

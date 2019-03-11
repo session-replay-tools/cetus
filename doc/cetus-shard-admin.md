@@ -21,7 +21,7 @@
 | add allow\_ip/deny\_ip '\<user\>@\<address\>'                                            | add address to white list of module                        |
 | delete allow\_ip/deny\_ip '\<user\>@\<address\>'                                         | delete address from white list of module                   |
 | set reduce\_conns (true\|false)                                                      | reduce idle connections if set to true                     |
-| set maintain (true\|false)                                                          | close all client connections if set to true                |
+| set maintain (true\|false)                                                          | Accelerate to close the connection                |
 | set charset_check (true\|false)                                                     | check the client charset is equal to the default charset   |
 | refresh conns                                                                      | refresh all server connections                             |
 | show maintain status                                                               | show maintain status                                       |
@@ -302,7 +302,7 @@ XO:     处于XA OVER状态。
 
 >set maintain true;
 
-关闭所有客户端连接。
+加速关闭客户端与Cetus的连接。
 
 ### 查询是否关闭所有客户端连接
 

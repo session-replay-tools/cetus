@@ -1429,10 +1429,10 @@ network_read_query(network_mysqld_con *con, proxy_plugin_con_t *st)
     } else {
         if (backend->type == BACKEND_TYPE_RW) {
             con->srv->query_stats.proxyed_query.rw++;
-            con->srv->query_stats.server_query_details[st->backend_ndx].ro++;
+            con->srv->query_stats.server_query_details[st->backend_ndx].rw++;
         } else {
             con->srv->query_stats.proxyed_query.ro++;
-            con->srv->query_stats.server_query_details[st->backend_ndx].rw++;
+            con->srv->query_stats.server_query_details[st->backend_ndx].ro++;
             con->server->is_read_only = 1;
         }
     }

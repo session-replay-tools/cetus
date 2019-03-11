@@ -20,7 +20,7 @@
 | add allow\_ip/deny\_ip '\<user\>@\<address\>'                                            | add address to white list of module                        |
 | delete allow\_ip/deny\_ip '\<user\>@\<address\>'                                         | delete address from white list of module                   |
 | set reduce\_conns (true\|false)                                                      | reduce idle connections if set to true                     |
-| set maintain (true\|false)                                                          | close all client connections if set to true                |
+| set maintain (true\|false)                                                          | Accelerate to close the connection                |
 | refresh conns                                                                      | refresh all server connections                             |
 | show maintain status                                                               | show maintain status                                       |
 | show status [like '%pattern%']                                                     | show select/update/insert/delete statistics                |
@@ -249,7 +249,7 @@ update后端的state只包括up|down|maintaining三种状态，delete/remove后�
 
 减少空闲连接。
 
-### 设置是否关闭所有客户端连接
+### 设置是否加速关闭所有客户端连接
 
 `set maintain (true|false)`
 
@@ -257,13 +257,13 @@ update后端的state只包括up|down|maintaining三种状态，delete/remove后�
 
 >set maintain true;
 
-关闭所有客户端连接。
+加速关闭客户端与Cetus的连接，该参数通常与LVS配合使用。
 
-### 查询是否关闭所有客户端连接
+### 查询是否加速关闭所有客户端连接
 
 `show maintain status`
 
-查询是否关闭所有客户端连接。
+查询是否加速关闭所有客户端连接。
 
 ## 用户/密码管理
 

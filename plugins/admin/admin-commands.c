@@ -565,7 +565,7 @@ void admin_show_connectionlist(network_mysqld_con *con, int show_count)
             }
         }
 
-        if (con->servers != NULL) {
+#ifndef SIMPLE_PARSER
             int j;
             GString *servers = g_string_new(NULL);
             for (j = 0; j < con->servers->len; j++) {
@@ -583,7 +583,7 @@ void admin_show_connectionlist(network_mysqld_con *con, int show_count)
             g_ptr_array_add(row, g_strdup(servers->str));
             g_string_free(servers, TRUE);
 
-        } else {
+#else
             if (con->server != NULL) {
                 GString *server = g_string_new(NULL);
                 if (con->server->src) {
@@ -597,7 +597,7 @@ void admin_show_connectionlist(network_mysqld_con *con, int show_count)
             } else {
                 g_ptr_array_add(row, NULL);
             }
-        }
+#endif
 
         if (con->orig_sql->len) {
             if (con->state == ST_READ_QUERY) {

@@ -666,6 +666,10 @@ proxy_put_shard_conn_to_pool(network_mysqld_con *con)
 
     g_ptr_array_free(con->servers, TRUE);
     con->servers = NULL;
+    if (con->server) {
+        g_message("%s: con server is not NULL when having freed servers", G_STRLOC);
+        con->server = NULL;
+    }
     con->client->is_server_conn_reserved = 0;
     con->attr_adj_state = ATTR_START;
 

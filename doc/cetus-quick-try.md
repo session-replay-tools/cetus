@@ -120,7 +120,7 @@ GRANT SELECT ON `performance_schema`.`global_status` TO 'cetus_app'@'172.17.0.*'
 
 ## MySQL8 支持
 
-由于MySQL8.0用户权限认证插件新增了caching\_sha2\_password，并且默认创建的用户权限认证插件为该插件，MySQL55/56/57不支持该认证方式。因此在使用MySQL55/56/57库编译的Cetus时，配置default\-username账号，应该在MySQL上创建时指定插件为mysql|_native|_password，否则Cetus的监控线程无法工作，影响Cetus的正常使用。
+由于MySQL8.0用户权限认证插件新增了caching\_sha2\_password，并且默认创建的用户权限认证插件为该插件，MySQL55/56/57不支持该认证方式。因此在使用MySQL55/56/57库编译的Cetus时，配置default\-username账号，应该在MySQL上创建时指定插件为mysql_native_password，否则Cetus的监控线程无法工作，影响Cetus的正常使用。
 
 配置方法示例如下：
 

@@ -233,7 +233,7 @@ network_connection_pool_get(network_connection_pool *pool, GString *username, in
     }
 
     pool->cur_idle_connections--;
-    g_message("%s: cur_idle_connections sub:%d for sock:%p", G_STRLOC, pool->cur_idle_connections, sock);
+    g_debug("%s: cur_idle_connections sub:%d for sock:%p", G_STRLOC, pool->cur_idle_connections, sock);
 
     return sock;
 }
@@ -273,7 +273,7 @@ network_connection_pool_add(network_connection_pool *pool, network_socket *sock)
     entry->link = conns->head;
 
     pool->cur_idle_connections++;
-    g_message("%s: add cur_idle_connections:%d for sock:%p", G_STRLOC, pool->cur_idle_connections, sock);
+    g_debug("%s: add cur_idle_connections:%d for sock:%p", G_STRLOC, pool->cur_idle_connections, sock);
 
     return entry;
 }

@@ -566,6 +566,7 @@ void admin_show_connectionlist(network_mysqld_con *con, int show_count)
         }
 
 #ifndef SIMPLE_PARSER
+        if (con->servers) {
             int j;
             GString *servers = g_string_new(NULL);
             for (j = 0; j < con->servers->len; j++) {
@@ -582,6 +583,9 @@ void admin_show_connectionlist(network_mysqld_con *con, int show_count)
             }
             g_ptr_array_add(row, g_strdup(servers->str));
             g_string_free(servers, TRUE);
+        } else {
+            g_ptr_array_add(row, NULL);
+        }
 
 #else
             if (con->server != NULL) {

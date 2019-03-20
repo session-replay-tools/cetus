@@ -50,7 +50,7 @@ shard_plugin_con_free(network_mysqld_con *con, shard_plugin_con_t *st)
         con->server = NULL;
     } else {
         if (con->server) {
-            st->backend->connected_clients--;
+            g_warning("%s: not expected here, connected_clients--for con:%p", G_STRLOC, con);
         }
     }
     g_free(st);

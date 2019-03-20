@@ -5512,6 +5512,10 @@ network_connection_pool_create_conn_and_kill_query(network_mysqld_con *con)
         return;
     }
 
+    if (con->servers == NULL) {
+        return;
+    }
+
     for (i = 0; i < con->servers->len; i++) {
         server_session_t *ss = g_ptr_array_index(con->servers, i);
 

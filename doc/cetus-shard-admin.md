@@ -25,7 +25,6 @@
 | set charset_check (true\|false)                                                     | check the client charset is equal to the default charset   |
 | refresh conns                                                                      | refresh all server connections                             |
 | show maintain status                                                               | show maintain status                                       |
-| show status [like '%pattern%']                                                     | show select/update/insert/delete statistics                |
 | show variables [like '%pattern%']                                                  |                                                            |
 | select version                                                                     | cetus version                                              |
 | select * from user\_pwd [where user='<name>']                                       |                                                            |
@@ -512,23 +511,6 @@ stats reset：重置统计信息
 
 包括程序版本、连接数量、QPS、TPS等信息
 
-### 查看各类SQL统计
-
-`show status [like '%<pattern>%']`
-
-```
-pattern参数说明
-Com_select         总的SELECT数量
-Com_insert         总的INSERT数量
-Com_update         总的UPDATE数量
-Com_delete         总的DELETE数量
-Com_select_shard   走多个节点的SELECT数量
-Com_insert_shard   走多个节点的INSERT数量
-Com_update_shard   走多个节点的UPDATE数量
-Com_delete_shard   走多个节点的DELETE数量
-Com_select_gobal   仅涉及公共表的SELECT数量
-Com_select_bad_key 分库键未识别导致走全库的SELECT数量
-```
 ### 查看当前cetus版本
 
 `select version`

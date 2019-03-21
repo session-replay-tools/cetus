@@ -847,41 +847,6 @@ void admin_show_variables(network_mysqld_con* con, const char* like)
     g_list_free(options);
 }
 
-void admin_show_status(network_mysqld_con* con, const char* like)
-{
-    if (con->is_processed_by_subordinate) {
-        con->admin_read_merge = 1;
-        return;
-    }
-
-    const char* pattern = like ? like : "%";
-    cetus_variable_t* variables = con->srv->priv->stats_variables;
-
-    GPtrArray *fields = network_mysqld_proto_fielddefs_new();
-    MAKE_FIELD_DEF_3_COL(fields, "PID", "Variable_name", "Value");
-
-    GPtrArray *rows = g_ptr_array_new_with_free_func(
-        (void*)network_mysqld_mysql_field_row_free);
-
-    char buffer[32];
-    cetus_pid_t process_id = getpid();
-    sprintf(buffer, "%d", process_id);
-
-    GList *freelist = NULL;
-    int i = 0;
-    for (i = 0; variables[i].name; ++i) {
-        if (sql_pattern_like(pattern, variables[i].name)) {
-            char* value = cetus_variable_get_value_str(&variables[i]);
-            freelist = g_list_append(freelist, value);
-            APPEND_ROW_3_COL(rows, g_strdup(buffer), variables[i].name, value);
-        }
-    }
-    network_mysqld_con_send_resultset(con->client, fields, rows);
-
-    network_mysqld_proto_fielddefs_free(fields);
-    g_ptr_array_free(rows, TRUE);
-    g_list_free_full(freelist, g_free);
-}
 
 void admin_set_reduce_conns(network_mysqld_con* con, int mode)
 {
@@ -2134,7 +2099,6 @@ static struct sql_help_entry_t {
     {"show allow_ip|deny_ip", "show allow_ip|deny_ip rules. e.g. show allow_ip; ", ALL_HELP},
     {"show connectionlist [num]", "show num connections. e.g. show connectionlist; ", ALL_HELP},
     {"show maintain status", "e.g. show maintain status; ", ALL_HELP},
-    {"show status [like '%pattern%']", "show select/update/insert/delete statistics", ALL_HELP},
     {"show variables [like '%pattern%']", "e.g. show variables like '%proxy%'; ", ALL_HELP},
     {"sql log status", "show sql log status", ALL_HELP},
     {"sql log start", "start sql log thread", ALL_HELP},

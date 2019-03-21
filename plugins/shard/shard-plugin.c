@@ -496,7 +496,6 @@ analysis_query(network_mysqld_con *con, mysqld_query_attr_t *query_attr)
 {
     shard_plugin_con_t *st = con->plugin_con_state;
     sql_context_t *context = st->sql_context;
-    query_stats_t *stats = &(con->srv->query_stats);
 
     switch (context->stmt_type) {
     case STMT_SELECT:{
@@ -509,7 +508,6 @@ analysis_query(network_mysqld_con *con, mysqld_query_attr_t *query_attr)
                 con->could_be_fast_streamed = 1;
             }
         }
-        stats->com_select += 1;
         sql_select_t *select = (sql_select_t *)context->sql_statement;
 
         if (con->could_be_tcp_streamed) {
@@ -535,15 +533,6 @@ analysis_query(network_mysqld_con *con, mysqld_query_attr_t *query_attr)
         }
         break;
     }
-    case STMT_UPDATE:
-        stats->com_update += 1;
-        break;
-    case STMT_INSERT:
-        stats->com_insert += 1;
-        break;
-    case STMT_DELETE:
-        stats->com_delete += 1;
-        break;
     case STMT_SET_NAMES:{
         char *charset_name = (char *)context->sql_statement;
         process_set_names(con, charset_name, query_attr);
@@ -1304,18 +1293,6 @@ proxy_get_server_list(network_mysqld_con *con)
 
     if (plan->groups->len > 1) {
         switch (st->sql_context->stmt_type) {
-        case STMT_SELECT:
-            stats->com_select_shard += 1;
-            break;
-        case STMT_INSERT:
-            stats->com_insert_shard += 1;
-            break;
-        case STMT_UPDATE:
-            stats->com_update_shard += 1;
-            break;
-        case STMT_DELETE:
-            stats->com_delete_shard += 1;
-            break;
         case STMT_DROP_DATABASE: {
             sql_drop_database_t *drop_database = st->sql_context->sql_statement;
             if (drop_database) {

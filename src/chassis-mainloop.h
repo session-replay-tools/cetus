@@ -90,16 +90,6 @@ typedef struct rw_op_t {
 typedef struct query_stats_t {
     rw_op_t client_query;
     rw_op_t proxyed_query;
-    uint64_t com_select;
-    uint64_t com_insert;
-    uint64_t com_update;
-    uint64_t com_delete;
-    uint64_t com_select_shard;
-    uint64_t com_insert_shard;
-    uint64_t com_update_shard;
-    uint64_t com_delete_shard;
-    uint64_t com_select_global;
-    uint64_t com_select_bad_key;
     uint64_t xa_count;
     uint64_t query_time_table[MAX_QUERY_TIME];
     uint64_t query_wait_table[MAX_WAIT_TIME];

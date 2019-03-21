@@ -1027,7 +1027,6 @@ routing_select(sql_context_t *context, const sql_select_t *select,
     sql_src_list_t *sources = select->from_src;
     if (!sources) {
         shard_conf_get_fixed_group(partition_mode, groups, fixture);
-        stats->com_select_global += 1;
         return USE_NON_SHARDING_TABLE;
     }
     
@@ -1116,7 +1115,6 @@ routing_select(sql_context_t *context, const sql_select_t *select,
     if (sharding_tables->len == 0) {
         shard_conf_get_fixed_group(partition_mode, groups, fixture);
         g_ptr_array_free(sharding_tables, TRUE);
-        stats->com_select_global += 1;
         g_list_free(subqueries);
         return USE_NON_SHARDING_TABLE;
     }
@@ -1163,7 +1161,6 @@ routing_select(sql_context_t *context, const sql_select_t *select,
                 g_ptr_array_free(partitions, TRUE);
                 g_ptr_array_free(sharding_tables, TRUE);
                 shard_conf_get_table_groups(groups, db, shard_table->table_name);
-                stats->com_select_bad_key += 1;
                 if (partition_mode) {
                     dup_groups_for_partition(select->where_clause, sources, subqueries, select->prior, default_db, groups);
                     context->sql_needs_reconstruct = 1;

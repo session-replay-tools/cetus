@@ -1228,17 +1228,6 @@ process_query_or_stmt_prepare(network_mysqld_con *con, proxy_plugin_con_t *st,
             g_debug("%s: show warnings is met", G_STRLOC);
             return 1;
         }
-    case STMT_SELECT:
-        stats->com_select += 1;
-        break;
-    case STMT_UPDATE:
-        stats->com_update += 1;
-        break;
-    case STMT_INSERT:
-        stats->com_insert += 1;
-        break;
-    case STMT_DELETE:
-        stats->com_delete += 1;
         break;
     case STMT_DROP_DATABASE: {
         sql_drop_database_t *drop_database = context->sql_statement;

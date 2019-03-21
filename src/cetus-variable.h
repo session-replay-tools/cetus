@@ -37,8 +37,6 @@ typedef struct cetus_variable_t {
     enum cetus_variable_type_t type;
 } cetus_variable_t;
 
-void cetus_variables_init_stats( /* out */ cetus_variable_t **vars, struct chassis *);
-
 /**
  @return newly allocated string, must be freed
  */

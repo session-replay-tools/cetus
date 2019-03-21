@@ -220,10 +220,6 @@ cmd ::= REFRESH_CONNS SEMI. {
 cmd ::= SHOW MAINTAIN STATUS SEMI. {
   admin_show_maintain(con);
 }
-cmd ::= SHOW STATUS opt_like(X) SEMI. {
-  admin_show_status(con, X);
-  if (X) free(X);
-}
 cmd ::= SHOW VARIABLES opt_like(X) SEMI. {
   admin_show_variables(con, X);
   if (X) free(X);

@@ -509,9 +509,9 @@ Default: false
 
 ### long-query-time
 
-Default: 65536 (millisecond)
+Default: 1000 (millisecond)
 
-慢查询记录阈值(毫秒)
+慢查询记录阈值(毫秒)，最大65536ms
 
 > long-query-time = 500
 

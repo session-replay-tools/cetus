@@ -4167,7 +4167,7 @@ normal_read_query_result(network_mysqld_con *con, network_mysqld_con_state_t ost
             return DISP_STOP;
         case NETWORK_SOCKET_ERROR_RETRY:
         case NETWORK_SOCKET_ERROR:
-            g_critical("%s: read(READ_QUERY_RESULT) error:%p", G_STRLOC, con);
+            g_critical("%s: read(READ_QUERY_RESULT) error:%p, sql:%s", G_STRLOC, con, con->orig_sql->str);
             con->prev_state = con->state;
             con->state = ST_ERROR;
             break;

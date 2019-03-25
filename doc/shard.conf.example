@@ -47,7 +47,7 @@ log-backtrace-on-crash=true
 
 # For performance
 enable-tcp-stream=false
-enable-fast-stream=true
+enable-fast-stream=false
 
 #For MGR
 group-replication-mode=0

@@ -188,4 +188,4 @@ log-file的值是日志文件路径，我们设置为当前安装路径下的cet
 
 **8）max-alive-time=\<num\>，设置后端连接最大存活时间**
 
-**9）enable-fast-stream=\[true\|false\]，启动fast stream，快速处理只读响应，默认为true**
+**9）enable-fast-stream=\[true\|false\]，启动fast stream，快速处理只读响应，release版本默认为false，开发版本默认为true**

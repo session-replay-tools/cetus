@@ -573,9 +573,9 @@ Default: false
 
 ### enable-fast-stream
 
-Default: true
+Default(release版本): false
 
-采用fast stream来输出只读响应，提升响应速度
+采用fast stream来输出只读响应，提升响应速度，release版本默认为false，开发版本默认为true
 
 > enable-fast-stream = true
 

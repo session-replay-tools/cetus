@@ -1240,7 +1240,7 @@ show_enable_tcp_stream(gpointer param) {
         return g_strdup_printf("%s", srv->is_tcp_stream_enabled ? "true" : "false");
     }
     if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        return srv->is_tcp_stream_enabled ? g_strdup("true") : NULL;
+        return srv->is_tcp_stream_enabled ? g_strdup("true") : g_strdup("false");
     }
     return NULL;
 }

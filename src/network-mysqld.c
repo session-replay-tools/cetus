@@ -2750,6 +2750,14 @@ process_rw_write(network_mysqld_con *con, network_mysqld_con_state_t ostate, int
     con->server->resp_len = 0;
     con->server->compressed_packet_id = 0;
 
+    if (con->client->last_packet_id > 0) {
+        g_warning("%s: last packet id:%d for con:%p", G_STRLOC, con->client->last_packet_id, con);
+    }
+
+    if (con->client->send_queue->chunks->length > 0) {
+        g_warning("%s: client-send-queue-len = %d", G_STRLOC, con->client->send_queue->chunks->length);
+    }
+
     switch (network_mysqld_write(con->server)) {
     case NETWORK_SOCKET_SUCCESS:
         break;
@@ -3987,7 +3995,6 @@ network_mysqld_process_select_resp(network_mysqld_con *con, network_socket *serv
                 *disp_flag = DISP_STOP;
             }
         }
-
     }
 #else
     if (is_finished) {

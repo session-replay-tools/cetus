@@ -1523,7 +1523,7 @@ void admin_get_config(network_mysqld_con* con, char* p)
         APPEND_ROW_3_COL(rows, g_strdup(buffer), "pool.max-resp-len", buf3);
         APPEND_ROW_3_COL(rows, g_strdup(buffer), "pool.master-preferred", buf4);
     } else {
-        APPEND_ROW_3_COL(rows, g_strdup(buffer), (char*)p, (char*)p);
+        APPEND_ROW_3_COL(rows, g_strdup(buffer), (char*)p, "please check config file");
     }
     network_mysqld_con_send_resultset(con->client, fields, rows);
 

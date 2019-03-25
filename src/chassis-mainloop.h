@@ -68,6 +68,7 @@ typedef struct chassis chassis;
 #define MAX_DIST_TRAN_PREFIX 64
 #define DEFAULT_LIVE_TIME 7200
 
+#define DEFAULT_POOL_SIZE 10
 #define MAX_ALLOWED_PACKET_CEIL    (1 * GB)
 #define MAX_ALLOWED_PACKET_DEFAULT (32 * MB)
 #define MAX_ALLOWED_PACKET_FLOOR   (1 * KB)

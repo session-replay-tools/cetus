@@ -454,7 +454,7 @@ show_default_pool_size(gpointer param) {
         return g_strdup_printf("%d", srv->mid_idle_connections);
     }
     if (CAN_SAVE_OPTS_PROPERTY(opt_type)) {
-        if (srv->mid_idle_connections == 100) {
+        if (srv->mid_idle_connections == DEFAULT_POOL_SIZE) {
             return NULL;
         }
         return g_strdup_printf("%d", srv->mid_idle_connections);
@@ -473,8 +473,8 @@ assign_default_pool_size(const gchar *newval, gpointer param) {
             gint value = 0;
                 if (try_get_int_value(newval, &value)) {
                     if (value >= 0) {
-                        if (value < 10) {
-                            value = 10;
+                        if (value < DEFAULT_POOL_SIZE) {
+                            value = DEFAULT_POOL_SIZE;
                         }
                         srv->mid_idle_connections = value;
 

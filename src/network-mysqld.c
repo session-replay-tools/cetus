@@ -3920,6 +3920,11 @@ fast_analyze_stream(network_mysqld_con *con, network_socket *server, int *send_f
     if (total_output > 0) {
         *send_flag = 1;
     }
+
+    if (con->partically_record_left_cnt > 1) {
+        g_warning("%s: partically_record_left_cnt:%d for con:%p", G_STRLOC, con->partically_record_left_cnt, con);
+    }
+
     if (con->eof_met_cnt > 1 && !need_more) {
         g_debug("%s: finished true for con:%p", G_STRLOC, con);
         return TRUE;
@@ -3962,6 +3967,12 @@ network_mysqld_process_select_resp(network_mysqld_con *con, network_socket *serv
         if (finish_flag) {
             *finish_flag = 1;
         }
+
+        if (server->recv_queue_raw->chunks->length > 0) {
+            g_warning("%s: server raw recv queue still has contents:%d for con:%p", G_STRLOC,
+                    server->recv_queue_raw->chunks->length, con);
+        }
+
         con->state = ST_SEND_QUERY_RESULT;
         if (con->is_calc_found_rows) {
             con->client->is_server_conn_reserved = 1;

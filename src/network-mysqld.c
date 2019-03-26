@@ -1026,7 +1026,7 @@ network_mysqld_read_mul_packets(chassis G_GNUC_UNUSED *chas,
 
     g_debug("%s: befre checking network_mysqld_process_select_resp, resp len:%d, to read:%d",
             G_STRLOC, (int) server->resp_len, (int) to_read);
-    if (con->candidate_fast_streamed && con->num_servers_visited == 1) {
+    if (con->candidate_fast_streamed && con->num_servers_visited == 1 && (!server->do_compress)) {
         g_debug("%s: visit network_mysqld_process_select_resp", G_STRLOC);
         network_socket_retval_t result = network_mysqld_process_select_resp(con, server, is_finished, NULL);
         if (*is_finished) {
@@ -2731,6 +2731,15 @@ process_shard_write(network_mysqld_con *con, int *disp_flag)
 static int
 process_rw_write(network_mysqld_con *con, network_mysqld_con_state_t ostate, int *disp_flag)
 {
+    /* Add check for abnormal response processing */
+    if (con->srv->is_fast_stream_enabled && (!con->server->do_compress)) {
+        if (con->server->recv_queue_raw->chunks->length > 0) {
+            g_warning("%s: server raw recv queue has contents:%d for con:%p when writing sql to server",
+                    G_STRLOC, con->server->recv_queue_raw->chunks->length, con);
+        }
+    }
+
+
     if (con->server->send_queue->offset == 0) {
         /* only parse the packets once */
         network_packet packet;
@@ -4050,11 +4059,10 @@ network_mysqld_read_rw_resp(network_mysqld_con *con, network_socket *server, int
 
     server->resp_len += read_len;
     
-    if (read_len > 0 && !con->resultset_is_needed && con->srv->is_fast_stream_enabled) {
-        return network_mysqld_process_select_resp(con, server, NULL, disp_flag);
-    }
-
     if (!server->do_compress) {
+        if (read_len > 0 && !con->resultset_is_needed && con->srv->is_fast_stream_enabled) {
+            return network_mysqld_process_select_resp(con, server, NULL, disp_flag);
+        }
         ret = network_mysqld_con_get_packet(chas, server);
     } else {
         ret = network_mysqld_con_get_uncompressed_packet(chas, server);

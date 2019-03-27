@@ -1980,7 +1980,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query_result)
             default:
                 g_debug("%s: no chance to get server status", G_STRLOC);
         }
-        if (con->srv->sql_mgr && con->srv->sql_mgr->sql_log_switch == ON) {
+        if (con->srv->sql_mgr && (con->srv->sql_mgr->sql_log_switch == ON || con->srv->sql_mgr->sql_log_switch == REALTIME)) {
             inj->ts_read_query_result_last = get_timer_microseconds();
             log_sql_backend(con, inj);
         }

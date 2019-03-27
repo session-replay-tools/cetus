@@ -310,7 +310,7 @@ process_read_server(network_mysqld_con *con, server_session_t *ss)
             ss->state = NET_RW_STATE_FINISHED;
             ss->server->is_read_finished = 1;
             ss->server->is_waiting = 0;
-            if (con->srv->sql_mgr && con->srv->sql_mgr->sql_log_switch == ON) {
+            if (con->srv->sql_mgr && (con->srv->sql_mgr->sql_log_switch == ON || con->srv->sql_mgr->sql_log_switch == REALTIME)) {
                 ss->ts_read_query_result_last = get_timer_microseconds();
                 network_mysqld_com_query_result_t *query = con->parse.data;
                 if (query && query->query_status == MYSQLD_PACKET_ERR) {

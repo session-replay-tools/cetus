@@ -2912,7 +2912,7 @@ shard_read_response(network_mysqld_con *con, server_session_t *ss)
             ss->state = NET_RW_STATE_FINISHED;
             ss->server->is_read_finished = 1;
             ss->server->is_waiting = 0;
-            if (con->srv->sql_mgr && con->srv->sql_mgr->sql_log_switch == ON) {
+            if (con->srv->sql_mgr && (con->srv->sql_mgr->sql_log_switch == ON || con->srv->sql_mgr->sql_log_switch == REALTIME)) {
                 ss->ts_read_query_result_last = get_timer_microseconds();
                 network_mysqld_com_query_result_t *query = con->parse.data;
                 if (query && query->query_status == MYSQLD_PACKET_ERR) {
@@ -4061,7 +4061,11 @@ network_mysqld_read_rw_resp(network_mysqld_con *con, network_socket *server, int
     
     if (!server->do_compress) {
         if (read_len > 0 && !con->resultset_is_needed && con->srv->is_fast_stream_enabled) {
-            return network_mysqld_process_select_resp(con, server, NULL, disp_flag);
+            if ((!con->srv->sql_mgr) ||
+                    (con->srv->sql_mgr->sql_log_switch != ON && con->srv->sql_mgr->sql_log_switch != REALTIME))
+            {
+                return network_mysqld_process_select_resp(con, server, NULL, disp_flag);
+            }
         }
         ret = network_mysqld_con_get_packet(chas, server);
     } else {

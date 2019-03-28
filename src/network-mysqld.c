@@ -2739,7 +2739,6 @@ process_rw_write(network_mysqld_con *con, network_mysqld_con_state_t ostate, int
         }
     }
 
-
     if (con->server->send_queue->offset == 0) {
         /* only parse the packets once */
         network_packet packet;
@@ -4060,12 +4059,9 @@ network_mysqld_read_rw_resp(network_mysqld_con *con, network_socket *server, int
     server->resp_len += read_len;
     
     if (!server->do_compress) {
-        if (read_len > 0 && !con->resultset_is_needed && con->srv->is_fast_stream_enabled) {
-            if ((!con->srv->sql_mgr) ||
-                    (con->srv->sql_mgr->sql_log_switch != ON && con->srv->sql_mgr->sql_log_switch != REALTIME))
-            {
-                return network_mysqld_process_select_resp(con, server, NULL, disp_flag);
-            }
+        if (read_len > 0 && !con->resultset_is_needed && con->candidate_fast_streamed) {
+            g_debug("%s: visit network_mysqld_process_select_resp for con:%p", G_STRLOC, con);
+            return network_mysqld_process_select_resp(con, server, NULL, disp_flag);
         }
         ret = network_mysqld_con_get_packet(chas, server);
     } else {

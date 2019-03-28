@@ -122,7 +122,7 @@ opt_where_user(A) ::= WHERE USER EQ STRING(E). {A = token_strdup(E);}
 opt_where_user(A) ::= . {A = NULL;}
 
 %type equation {equation_t}
-equation(A) ::= ID(X) EQ STRING|ID|INTEGER|FLOAT(Y). {
+equation(A) ::= ID(X) EQ STRING|ID|INTEGER|FLOAT(Y)|ON. {
   A.left = X;
   A.right = Y;
 }

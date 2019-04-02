@@ -6,7 +6,7 @@
 
 - cmake
 - gcc
-- glib2-devel
+- glib2-devel （version >= 2.56)
 - zlib-devel
 - flex
 - mysql-devel／mariadb-devel

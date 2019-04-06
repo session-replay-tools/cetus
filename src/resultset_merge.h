@@ -54,11 +54,11 @@ typedef struct ORDER_BY {
 typedef struct {
     GList *record;
     int index;
+    int is_prior_to;
     unsigned int is_over:1;
     unsigned int is_err:1;
     unsigned int refreshed:1;
     unsigned int is_dup:1;
-    unsigned int is_prior_to:1;
 } heap_element;
 
 typedef struct order_by_para_s {
@@ -88,6 +88,7 @@ typedef struct aggr_by_group_para_s {
 
 NETWORK_API int callback_merge(network_mysqld_con *, merge_parameters_t *, int);
 NETWORK_API void resultset_merge(network_queue *, GPtrArray *, network_mysqld_con *, uint64_t *, result_merge_t *);
+NETWORK_API void admin_resultset_merge(network_mysqld_con *, network_queue *, GPtrArray *, result_merge_t *);
 
 NETWORK_API gint check_dist_tran_resultset(network_queue *recv_queue, network_mysqld_con *);
 

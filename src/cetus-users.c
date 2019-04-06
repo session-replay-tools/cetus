@@ -107,7 +107,7 @@ cetus_users_set_records(cetus_users_t *users, GHashTable *new_records)
     users->records = new_records;
 }
 
-static gboolean
+gboolean
 cetus_users_parse_json(cetus_users_t *users, char *buffer)
 {
     cJSON *root = cJSON_Parse(buffer);
@@ -155,13 +155,17 @@ cetus_users_parse_json(cetus_users_t *users, char *buffer)
 }
 
 gboolean
-cetus_users_read_json(cetus_users_t *users, chassis_config_t *conf)
+cetus_users_read_json(cetus_users_t *users, chassis_config_t *conf, int refresh)
 {
     users->conf_manager = conf;
     char *buffer = NULL;
-    chassis_config_query_object(conf, "users", &buffer);
+    if (!chassis_config_query_object(conf, "users", &buffer, refresh)) {
+        return FALSE;
+    }
+
     if (!buffer)
         return FALSE;
+
     gboolean success = cetus_users_parse_json(users, buffer);
     if (success) {
         g_message("read %d users", g_hash_table_size(users->records));
@@ -221,11 +225,15 @@ cetus_users_write_json(cetus_users_t *users)
     cJSON_AddItemToObject(root, "users", users_node);
     char *json_str = cJSON_Print(root);
 
-    chassis_config_write_object(users->conf_manager, "users", json_str);
-    cJSON_Delete(root);
-    g_free(json_str);
-
-    return TRUE;
+    if (chassis_config_write_object(users->conf_manager, "users", json_str)) {
+        cJSON_Delete(root);
+        g_free(json_str);
+        return TRUE;
+    } else {
+        cJSON_Delete(root);
+        g_free(json_str);
+        return FALSE;
+    }
 }
 
 gboolean
@@ -310,11 +318,3 @@ cetus_users_contains(cetus_users_t *users, const char *user_name)
     return g_hash_table_lookup(users->records, user_name) ? TRUE : FALSE;
 }
 
-void
-cetus_users_reload_callback(int fd, short what, void *arg)
-{
-    cetus_users_t *users = arg;
-    gboolean ok = cetus_users_read_json(users, users->conf_manager);
-    if (!ok)
-        g_warning("reloading users failed");
-}

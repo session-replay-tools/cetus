@@ -54,6 +54,7 @@
 static void
 network_mysqld_con_idle_handle(int event_fd, short events, void *user_data)
 {
+    g_debug("%s:visit network_mysqld_con_idle_handle", G_STRLOC);
     network_connection_pool_entry *pool_entry = user_data;
     network_connection_pool *pool = pool_entry->pool;
 
@@ -73,20 +74,23 @@ network_mysqld_con_idle_handle(int event_fd, short events, void *user_data)
              *
              * remove us from the connection pool and close the connection */
 
-            network_connection_pool_remove(pool, pool_entry);
+            network_connection_pool_remove(pool_entry);
             if (pool->srv) {
                 chassis *srv = pool->srv;
                 srv->complement_conn_flag = 1;
             }
 
-            g_message("%s:the server decided to close the connection", G_STRLOC);
+            g_message("%s:the server decided to close the connection:%d for sock:%p",
+                    G_STRLOC, pool_entry->pool->cur_idle_connections, pool_entry->sock);
         }
     } else if (events == EV_TIMEOUT) {
         if (pool->srv) {
             chassis *srv = pool->srv;
             srv->complement_conn_flag = 1;
         }
-        network_connection_pool_remove(pool, pool_entry);
+        network_connection_pool_remove(pool_entry);
+        g_message("%s:idle connection timeout:%d for sock:%p", G_STRLOC,
+                pool_entry->pool->cur_idle_connections, pool_entry->sock);
     }
 }
 
@@ -187,7 +191,7 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
 
         st->backend->connected_clients--;
 
-        network_socket_free(con->server);
+        network_socket_send_quit_and_free(con->server);
 
         st->backend = NULL;
         st->backend_ndx = -1;
@@ -219,9 +223,16 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
                 backend = network_backends_get(g->backends, i);
                 CHECK_PENDING_EVENT(&(server->event));
 
-                g_debug("%s: add conn fd:%d to pool:%p ", G_STRLOC, server->fd, backend->pool);
-                server->is_multi_stmt_set = con->client->is_multi_stmt_set;
-                network_pool_add_idle_conn(backend->pool, con->srv, server);
+                if (con->srv->server_conn_refresh_time <= server->create_time) {
+                    g_debug("%s: add conn fd:%d to pool:%p ", G_STRLOC, server->fd, backend->pool);
+                    server->is_multi_stmt_set = con->client->is_multi_stmt_set;
+                    network_pool_add_idle_conn(backend->pool, con->srv, server);
+                } else {
+                    g_message("%s: old connection for con:%p", G_STRLOC, con);
+                    network_socket_send_quit_and_free(server);
+                    con->srv->complement_conn_flag = 1;
+                }
+
                 backend->connected_clients--;
                 g_debug("%s, con:%p, backend ndx:%d:connected_clients sub, clients:%d",
                         G_STRLOC, con, st->backend_ndx_array[i], backend->connected_clients);
@@ -246,10 +257,16 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
         g_debug("%s: con:%p, set prepare_stmt_count 0", G_STRLOC, con);
         CHECK_PENDING_EVENT(&(con->server->event));
 
-        g_debug("%s: add conn fd:%d to pool:%p", G_STRLOC, con->server->fd, st->backend->pool);
-        con->server->is_multi_stmt_set = con->client->is_multi_stmt_set;
-        /* insert the server socket into the connection pool */
-        network_pool_add_idle_conn(st->backend->pool, con->srv, con->server);
+        if (con->srv->server_conn_refresh_time <= con->server->create_time) {
+            g_debug("%s: add conn fd:%d to pool:%p ", G_STRLOC, con->server->fd, st->backend->pool);
+            con->server->is_multi_stmt_set = con->client->is_multi_stmt_set;
+            network_pool_add_idle_conn(st->backend->pool, con->srv, con->server);
+        } else {
+            g_message("%s: old connection for con:%p", G_STRLOC, con);
+            network_socket_send_quit_and_free(con->server);
+            con->srv->complement_conn_flag = 1;
+        }
+
         st->backend->connected_clients--;
         g_debug("%s, con:%p, backend ndx:%d:connected_clients sub, clients:%d",
                 G_STRLOC, con, st->backend_ndx, st->backend->connected_clients);
@@ -336,7 +353,7 @@ network_connection_pool_swap(network_mysqld_con *con, int backend_ndx)
             g_debug("%s: server switch is true", G_STRLOC);
         } else {
             if (backend->type == BACKEND_TYPE_RO) {
-                g_message("%s: use orig server", G_STRLOC);
+                g_debug("%s: use orig server", G_STRLOC);
                 return NULL;
             }
         }

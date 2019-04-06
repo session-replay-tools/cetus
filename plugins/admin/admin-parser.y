@@ -122,7 +122,7 @@ opt_where_user(A) ::= WHERE USER EQ STRING(E). {A = token_strdup(E);}
 opt_where_user(A) ::= . {A = NULL;}
 
 %type equation {equation_t}
-equation(A) ::= ID(X) EQ STRING|ID|INTEGER|FLOAT(Y). {
+equation(A) ::= ID(X) EQ STRING|ID|INTEGER|FLOAT(Y)|ON. {
   A.left = X;
   A.right = Y;
 }
@@ -211,12 +211,14 @@ cmd ::= SET REDUCE_CONNS boolean(X) SEMI. {
 cmd ::= SET MAINTAIN boolean(X) SEMI. {
   admin_set_maintain(con, X);
 }
+cmd ::= SET CHARSET_CHECK boolean(X) SEMI. {
+  admin_set_charset_check(con, X);
+}
+cmd ::= REFRESH_CONNS SEMI. {
+  admin_set_server_conn_refresh(con);
+}
 cmd ::= SHOW MAINTAIN STATUS SEMI. {
   admin_show_maintain(con);
-}
-cmd ::= SHOW STATUS opt_like(X) SEMI. {
-  admin_show_status(con, X);
-  if (X) free(X);
 }
 cmd ::= SHOW VARIABLES opt_like(X) SEMI. {
   admin_show_variables(con, X);
@@ -260,6 +262,7 @@ cmd ::= UPDATE BACKENDS SET equations(X) WHERE equation(Z) SEMI. {
   char* cond_val = token_strdup(Z.right);
   admin_update_backend(con, X, cond_key, cond_val);
   free(cond_key); free(cond_val);
+  g_list_free_full(X, free);
 }
 cmd ::= DELETE FROM BACKENDS WHERE equation(Z) SEMI. {
   char* key = token_strdup(Z.left);
@@ -470,4 +473,22 @@ cmd ::= SQL LOG STOP SEMI. {
 }
 cmd ::= KILL QUERY INTEGER(X) SEMI. {
   admin_kill_query(con, token2int(X));
+}
+cmd ::= STARTCOM ENDCOM SEMI. {
+  admin_comment_handle(con);
+}
+cmd ::= SELECT GLOBAL VERSION_COMMENT LIMIT INTEGER SEMI. {
+  admin_select_version_comment(con);
+}
+cmd ::= REMOVE BACKEND INTEGER(X) SEMI. {
+  char* val = token_strdup(X);
+  admin_delete_backend(con, "backend_ndx", val);
+  free(val);
+}
+cmd ::=REMOVE BACKEND WHERE equation(Z) SEMI. {
+  char* key = token_strdup(Z.left);
+  char* val = token_strdup(Z.right);
+  admin_delete_backend(con, key, val);
+  free(key);
+  free(val);
 }

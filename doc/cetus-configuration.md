@@ -1,6 +1,13 @@
 # 启动配置选项
 
 ## 常规配置
+### worker-processes
+
+Default: 1
+
+启动worker进程的数量，启动的数量最好小于等于cpu数目
+
+> worker-processes = 4
 
 ### daemon
 
@@ -120,6 +127,10 @@ Default: 127.0.0.1:3306
 
 > proxy-backend-addresses = 10.120.12.12:3306
 
+分表（分库模式下partition-mode=true）
+
+> proxy-backend-addresses = 10.120.12.12:3306
+
 若是分库模式，需要同时指定group
 
 > proxy-backend-addresses = 10.120.12.12:3306@data1
@@ -129,6 +140,10 @@ Default: 127.0.0.1:3306
 `可多项`
 
 只读后端(从库)的IP和端口
+
+> proxy-read-only-backend-addresses = 10.120.12.13:3307
+
+分表（分库模式下partition-mode=true）
 
 > proxy-read-only-backend-addresses = 10.120.12.13:3307
 
@@ -176,7 +191,9 @@ Default: : 600 (seconds)
 
 Default: 100
 
+每个worker进程启动时允许创建的连接数
 当前连接数不足此值时，会自动创建连接
+最小只能设置为10，如果设置小于10，则实际该值为10
 
 > default-pool-size = 200
 
@@ -184,7 +201,7 @@ Default: 100
 
 Default: default-pool-size * 2
 
-每个MySQL实例的最大连接数，包括连接池里的空闲连接和正在使用的连接
+每个worker进程允许创建的最大连接数，包括连接池里的空闲连接和正在使用的连接
 
 > max-pool-size = 300
 
@@ -236,15 +253,16 @@ Proxy在读写分离时可以指定访问的库
 
 Default: false
 
-允许客户端使用FOUND_ROWS标志
+允许客户端使用CLIENT_FOUND_ROWS标志
 
 > enable-client-found-rows = true
 
 ### worker_id
 
-自增guid的worker id，最大值为63最小值为1
+只针对分库版本有效
+不同cetus实例的id号必须是不一样，否则容易有冲突
 
-> worker_id = 4
+> worker_id = 1
 
 ## Admin配置
 
@@ -396,8 +414,9 @@ mysql> select * from services;
 
 当修改表`settings`中的配置信息时，可以通过在Cetus的admin端口执行`config reload`命令，使Cetus重新从配置中心拉取配置信息，使得配置中心新修改的配置在Cetus上生效。
 
-当修改表`objects`中的账号信息时，可以通过在Cetus的admin端口执行`config reload user`命令，使Cetus重新从配置中心拉取账号信息，使得配置中心修改的账号信息在Cetus上生效。
+当修改表`objects`中的账号信息时，可以通过在Cetus的admin端口执行`config reload user`、`config reload variables`命令，使Cetus重新从配置中心拉取账号信息、静默处理的变量信息，使其在Cetus上生效。
 
+**注意** ：目前cetus执行reload操作与远程配置库进行交互时，连接、读、写超时均为1秒，即如果由于远程配置库负载过大、网络抖动等原因导致超时超过1秒，会reload操作失败。与此同时，reload操作目前和SQL处理的线程为同一个线程，所以尽量少用该命令，或是业务低峰期使用该命令，后续会将其修改成异步形式，彻底不影响SQL的处理。
 
 
 ## 辅助线程配置
@@ -414,7 +433,7 @@ Default: false
 
 Default: true
 
-是否检查从库延迟
+是否检查从库延迟。注意，cetus的延迟检测只单纯检测主从之间的延迟毫秒数（主库写入时间戳，从库读取时间戳，与本地时间做差值，计算主从延迟），而非检测io_thread/sql_thread是否正常工作。
 
 > check-slave-delay = false
 
@@ -490,9 +509,9 @@ Default: false
 
 ### long-query-time
 
-Default: 65536 (millisecond)
+Default: 1000 (millisecond)
 
-慢查询记录阈值(毫秒)
+慢查询记录阈值(毫秒)，最大65536ms
 
 > long-query-time = 500
 
@@ -510,7 +529,7 @@ Default: false
 
 启用后端传给Cetus的结果集压缩，一般不启用
 
-> enable-back-compress ＝ true
+> enable-back-compress = true
 
 ### merged-output-size
 
@@ -551,3 +570,21 @@ Default: false
 采用tcp stream来输出响应，规避内存炸裂等问题
 
 > enable-tcp-stream = true
+
+### enable-fast-stream
+
+Default(release版本): false
+
+采用fast stream来输出只读响应，提升响应速度，release版本默认为false，开发版本默认为true
+
+> enable-fast-stream = true
+
+### ssl
+
+Default: false
+
+前端支持SSL连接。需要在 `--conf-dir` 中提供：
+- 私钥：`server-key.pem`
+- 公钥证书：`server-cert.pem`
+这两个文件可以使用[mysql工具生成](https://dev.mysql.com/doc/refman/8.0/en/creating-ssl-rsa-files-using-mysql.html)，
+生成之后拷贝到`conf-dir`目录，程序会按照这两个固定名称加载文件。

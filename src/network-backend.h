@@ -38,6 +38,7 @@ typedef enum {
     BACKEND_STATE_DOWN,
     BACKEND_STATE_MAINTAINING,
     BACKEND_STATE_DELETED,
+    BACKEND_STATE_OFFLINE
 } backend_state_t;
 
 #define NO_PREVIOUS_STATE -1
@@ -45,8 +46,15 @@ typedef enum {
 typedef enum {
     BACKEND_TYPE_UNKNOWN,
     BACKEND_TYPE_RW,
-    BACKEND_TYPE_RO,
+    BACKEND_TYPE_RO
 } backend_type_t;
+
+typedef enum {
+    BACKEND_OPERATE_SUCCESS,
+    BACKEND_OPERATE_NETERR,
+    BACKEND_OPERATE_DUPLICATE,
+    BACKEND_OPERATE_2MASTER
+} backend_operate_t;
 
 typedef struct backend_config {
     GString *default_username;
@@ -74,9 +82,6 @@ typedef struct {
     /**< number of open connections to this backend for SQF */
     int connected_clients;
 
-    /**< the UUID of the backend */
-    GString *uuid;
-
     backend_config *config;
 
     time_t last_check_time;
@@ -90,6 +95,7 @@ NETWORK_API int network_backend_conns_count(network_backend_t *b);
 NETWORK_API int network_backend_init_extra(network_backend_t *b, chassis *chas);
 
 typedef struct {
+    int is_partition_mode;
     unsigned int ro_server_num;
     unsigned int read_count;
     GPtrArray *backends;
@@ -124,7 +130,9 @@ typedef struct network_group_t {
     GString *name;
     network_backend_t *master;
     network_backend_t *slaves[MAX_GROUP_SLAVES];
-    int nslaves;
+    gint nslaves;
+    network_backend_t *unknown[MAX_GROUP_SLAVES];
+    gint nunknown;
     unsigned int slave_visit_cnt;
 } network_group_t;
 
@@ -141,5 +149,7 @@ int network_backends_get_rw_ndx(network_backends_t *);
 
 int network_backends_idle_conns(network_backends_t *);
 int network_backends_used_conns(network_backends_t *);
+
+int network_backend_check_available_rw(network_backends_t *, GString *);
 
 #endif /* _BACKEND_H_ */

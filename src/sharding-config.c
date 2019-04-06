@@ -35,6 +35,8 @@ static GList *shard_conf_single_tables = NULL;
 
 static GList *shard_conf_all_groups = NULL;
 
+static GString *parition_super_group = NULL;
+
 struct schema_table_t {
     const char *schema;
     const char *table;
@@ -82,11 +84,20 @@ schema_table_equal(gconstpointer v1,
       && strcmp(st1->table, st2->table) == 0;
 }
 
+gboolean
+shard_conf_table_cmp(gpointer key, gpointer value, gpointer user_data)
+{
+    const struct schema_table_t *st1 = key;
+    const struct schema_table_t *st2 = user_data;
+    return (strcasecmp(st1->schema, st2->schema) == 0) &&
+               (strcasecmp(st1->table, st2->table) == 0);
+}
+
 static sharding_table_t *
 sharding_tables_get(const char *schema, const char *table)
 {
     struct schema_table_t st = {schema, table};
-    gpointer tinfo = g_hash_table_lookup(shard_conf_tables, &st);
+    gpointer tinfo = g_hash_table_find(shard_conf_tables, shard_conf_table_cmp, &st);
     return tinfo;
 }
 
@@ -230,11 +241,14 @@ void sharding_vdb_free(sharding_vdb_t *vdb)
     g_free(vdb);
 }
 
-gboolean sharding_vdb_is_valid(sharding_vdb_t *vdb, int num_groups)
+gboolean sharding_vdb_is_valid(int is_partition_mode, sharding_vdb_t *vdb, int num_groups)
 {
-    if (vdb->partitions->len != num_groups) {
-        g_critical("vdb-%d partition count not equal to number of groups", vdb->id);
-        return FALSE;
+    if (!is_partition_mode) {
+        if (vdb->partitions->len != num_groups) {
+            g_critical("vdb-%d partition count not equal to number of groups, vdb partition len:%d, groups:%d",
+                    vdb->id, vdb->partitions->len, num_groups);
+            return FALSE;
+        }
     }
     if (vdb->method == SHARD_METHOD_HASH) {
         if (vdb->logic_shard_num <= 0 || vdb->logic_shard_num > MAX_HASH_VALUE_COUNT) {
@@ -382,16 +396,21 @@ shard_conf_is_shard_table(const char *db, const char *table)
 }
 
 GPtrArray *
-shard_conf_get_fixed_group(GPtrArray *groups, guint64 fixture)
+shard_conf_get_fixed_group(int partition, GPtrArray *groups, guint64 fixture)
 {
-    int len = g_list_length(shard_conf_all_groups);
-    if (len == 0) {
+    if (partition) {
+        g_ptr_array_add(groups, parition_super_group);
+        return groups;
+    } else {
+        int len = g_list_length(shard_conf_all_groups);
+        if (len == 0) {
+            return groups;
+        }
+        int index = fixture % len;
+        GString *grp = g_list_nth_data(shard_conf_all_groups, index);
+        g_ptr_array_add(groups, grp);
         return groups;
     }
-    int index = fixture % len;
-    GString *grp = g_list_nth_data(shard_conf_all_groups, index);
-    g_ptr_array_add(groups, grp);
-    return groups;
 }
 
 void
@@ -450,6 +469,11 @@ GList* shard_conf_get_single_tables()
     return shard_conf_single_tables;
 }
 
+GString *partition_get_super_group()
+{
+    return parition_super_group; 
+}
+
 static void
 shard_conf_set_single_tables(GList *tables)
 {
@@ -479,7 +503,7 @@ string_list_distinct_append(GList *strlist, const GString *str)
  * setup index & validate configurations
  */
 static gboolean
-shard_conf_try_setup(GList *vdbs, GList *tables, GList *single_tables, int num_groups)
+shard_conf_try_setup(int is_partition_mode, GList *vdbs, GList *tables, GList *single_tables, int num_groups)
 {
     if (!vdbs || !tables) {
         g_critical("empty vdb/table list");
@@ -488,7 +512,7 @@ shard_conf_try_setup(GList *vdbs, GList *tables, GList *single_tables, int num_g
     GList *l = vdbs;
     for (; l != NULL; l = l->next) {
         sharding_vdb_t *vdb = l->data;
-        if (!sharding_vdb_is_valid(vdb, num_groups)) {
+        if (!sharding_vdb_is_valid(is_partition_mode, vdb, num_groups)) {
             g_warning("invalid vdb config");
             return FALSE;
         }
@@ -527,6 +551,9 @@ shard_conf_try_setup(GList *vdbs, GList *tables, GList *single_tables, int num_g
     shard_conf_set_tables(table_dict);
     shard_conf_set_single_tables(single_tables);
     shard_conf_set_all_groups(all_groups);
+
+    parition_super_group = g_string_new(PARTITION_SUPER_GROUP);
+
     return TRUE;
 }
 
@@ -535,6 +562,9 @@ shard_conf_destroy(void)
 {
     if (shard_conf_vdbs) {
         g_list_free_full(shard_conf_vdbs, (GDestroyNotify) sharding_vdb_free);
+    }
+    if (parition_super_group) {
+        g_string_free(parition_super_group, TRUE);
     }
     if (shard_conf_tables) {
         g_hash_table_destroy(shard_conf_tables);
@@ -550,7 +580,7 @@ shard_conf_destroy(void)
 static GHashTable *load_shard_from_json(gchar *json_str);
 
 gboolean
-shard_conf_load(char *json_str, int num_groups)
+shard_conf_load(int partition_mode, char *json_str, int num_groups)
 {
     GHashTable *ht = load_shard_from_json(json_str);
     if (!ht)
@@ -559,7 +589,7 @@ shard_conf_load(char *json_str, int num_groups)
     GList *tables = g_hash_table_lookup(ht, "table_list");
     GList *vdbs = g_hash_table_lookup(ht, "vdb_list");
     GList *single_tables = g_hash_table_lookup(ht, "single_tables");
-    gboolean success = shard_conf_try_setup(vdbs, tables, single_tables, num_groups);
+    gboolean success = shard_conf_try_setup(partition_mode, vdbs, tables, single_tables, num_groups);
     if (!success) {
         g_list_free_full(vdbs, (GDestroyNotify) sharding_vdb_free);
         g_list_free_full(tables, (GDestroyNotify) sharding_table_free);
@@ -582,10 +612,14 @@ shard_conf_get_single_table(const char *db, const char *name)
 }
 
 gboolean
-shard_conf_is_single_table(const char *db, const char *name)
+shard_conf_is_single_table(int partition_mode, const char *db, const char *name)
 {
-    struct single_table_t *t = shard_conf_get_single_table(db, name);
-    return t != NULL;
+    if (!partition_mode) {
+        struct single_table_t *t = shard_conf_get_single_table(db, name);
+        return t != NULL;
+    } else {
+        return FALSE;
+    }
 }
 
 static gboolean
@@ -616,6 +650,7 @@ struct code_map_t {
     int code;
 } key_type_map[] = {
     {"INT", SHARD_DATA_TYPE_INT},
+    {"CHAR", SHARD_DATA_TYPE_STR},
     {"STR", SHARD_DATA_TYPE_STR},
     {"DATE", SHARD_DATA_TYPE_DATE},
     {"DATETIME", SHARD_DATA_TYPE_DATETIME},
@@ -914,7 +949,7 @@ load_shard_from_json(gchar *json_str)
 {
     cJSON *root = cJSON_Parse(json_str);
     if (!root) {
-        g_critical("JSON format is not correct!");
+        g_critical("JSON format is not correct:%s", json_str);
         return NULL;
     }
 
@@ -967,6 +1002,8 @@ gboolean shard_conf_add_sharded_table(sharding_table_t* t)
 {
     sharding_vdb_t* vdb = shard_vdbs_get_by_id(shard_conf_vdbs, t->vdb_id);
     if (vdb) {
+        t->vdb_ref = vdb;
+        t->shard_key_type = vdb->key_type;
         return sharding_tables_add(t);
     } else {
         return FALSE;
@@ -1052,6 +1089,7 @@ gboolean shard_conf_write_json(chassis_config_t* conf_manager)
 
     char* json_str = cJSON_Print(root);
     chassis_config_write_object(conf_manager, "sharding", json_str);
+    g_message("Update sharding.json");
     cJSON_Delete(root);
     g_free(json_str);
     return TRUE;
@@ -1061,7 +1099,7 @@ gboolean shard_conf_add_single_table(const char* schema,
                                      const char* table, const char* group)
 {
     g_assert(schema && table && group);
-    if (shard_conf_is_single_table(schema, table)) {
+    if (shard_conf_is_single_table(0, schema, table)) {
         g_critical("try adding duplicate single table %s.%s", schema, table);
         return FALSE;
     }

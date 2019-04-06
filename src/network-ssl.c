@@ -145,6 +145,7 @@ gboolean network_ssl_init(char* conf_dir)
 {
 #if OPENSSL_VERSION_NUMBER >= 0x10100003L
 
+    g_message("%s: OPENSSL_VERSION_NUMBER:%d", G_STRLOC,  OPENSSL_VERSION_NUMBER);
     if (OPENSSL_init_ssl(OPENSSL_INIT_LOAD_CONFIG, NULL) == 0) {
         g_critical(G_STRLOC " OPENSSL_init_ssl() failed");
         return FALSE;
@@ -159,6 +160,7 @@ gboolean network_ssl_init(char* conf_dir)
 
 #else
 
+    g_message("%s: call old ssl fun", G_STRLOC);
     OPENSSL_config(NULL);
 
     SSL_library_init();

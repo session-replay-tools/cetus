@@ -64,7 +64,7 @@ network_connection_pool_entry_free(network_connection_pool_entry *e, gboolean fr
 
     if (e->sock && free_sock) {
         network_socket *sock = e->sock;
-        network_socket_free(sock);
+        network_socket_send_quit_and_free(sock);
     }
 
     g_free(e);
@@ -204,7 +204,7 @@ network_connection_pool_get(network_connection_pool *pool, GString *username, in
             g_debug("%s: conns length is zero for user '%s'", G_STRLOC, username ? username->str : "");
         }
     } else {
-        g_message("%s: conns is null for user '%s'", G_STRLOC, username ? username->str : "");
+        g_debug("%s: conns is null for user '%s'", G_STRLOC, username ? username->str : "");
     }
 
     if (!entry) {
@@ -233,6 +233,7 @@ network_connection_pool_get(network_connection_pool *pool, GString *username, in
     }
 
     pool->cur_idle_connections--;
+    g_debug("%s: cur_idle_connections sub:%d for sock:%p", G_STRLOC, pool->cur_idle_connections, sock);
 
     return sock;
 }
@@ -245,6 +246,10 @@ network_connection_pool_add(network_connection_pool *pool, network_socket *sock)
 {
     if (!g_queue_is_empty(sock->recv_queue->chunks)) {
         g_warning("%s: server recv queue not empty", G_STRLOC);
+    }
+    if (!g_queue_is_empty(sock->recv_queue_raw->chunks)) {
+        g_warning("%s: server recv queue raw not empty", G_STRLOC);
+        network_queue_clear(sock->recv_queue_raw);
     }
 
     network_connection_pool_entry *entry;
@@ -262,9 +267,13 @@ network_connection_pool_add(network_connection_pool *pool, network_socket *sock)
         g_hash_table_insert(pool->users, g_string_dup(sock->response->username), conns);
     }
 
+    entry->conns = conns;
+
     g_queue_push_head(conns, entry);
+    entry->link = conns->head;
 
     pool->cur_idle_connections++;
+    g_debug("%s: add cur_idle_connections:%d for sock:%p", G_STRLOC, pool->cur_idle_connections, sock);
 
     return entry;
 }
@@ -273,20 +282,11 @@ network_connection_pool_add(network_connection_pool *pool, network_socket *sock)
  * remove the connection referenced by entry from the pool 
  */
 void
-network_connection_pool_remove(network_connection_pool *pool, network_connection_pool_entry *entry)
+network_connection_pool_remove(network_connection_pool_entry *entry)
 {
-    network_socket *sock = entry->sock;
-    GQueue *conns;
-
-    if (NULL == (conns = g_hash_table_lookup(pool->users, sock->response->username))) {
-        return;
-    }
-
+    entry->pool->cur_idle_connections--;
+    g_queue_delete_link(entry->conns, entry->link);
     network_connection_pool_entry_free(entry, TRUE);
-
-    g_queue_remove(conns, entry);
-
-    pool->cur_idle_connections--;
 }
 
 gboolean

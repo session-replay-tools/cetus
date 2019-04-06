@@ -56,6 +56,7 @@ option(NETWORK_DEBUG_TRACE_EVENT "if NETWORK_DEBUG_TRACE_EVENT is defined, cetus
 option(NETWORK_DEBUG_TRACE_STATE_CHANGES "if NETWORK_DEBUG_TRACE_STATE_CHANGES is defined the state engine for the mysql protocol will log all state changes")
 
 option(USE_GLIB_DEBUG_LOG "g_debug() is default defined to nothing, change to ON if you want to use g_debug()")
+option(WITH_OPENSSL "Compile with OpenSSL")
 
 EXECUTE_PROCESS(COMMAND git describe --tags
                 TIMEOUT 5
@@ -63,9 +64,9 @@ EXECUTE_PROCESS(COMMAND git describe --tags
                 OUTPUT_STRIP_TRAILING_WHITESPACE
                 )
 MESSAGE(STATUS "building from ${GIT_REVISION}")
-SET(CPACK_PACKAGE_VERSION_MAJOR "1")
-SET(CPACK_PACKAGE_VERSION_MINOR "0")
-SET(CPACK_PACKAGE_VERSION_PATCH "0")
+SET(CPACK_PACKAGE_VERSION_MAJOR "2")
+SET(CPACK_PACKAGE_VERSION_MINOR "2")
+SET(CPACK_PACKAGE_VERSION_PATCH "4")
 SET(CPACK_PACKAGE_VENDOR "MySQL")
 SET(PACKAGE_NAME cetus)
 
@@ -177,21 +178,23 @@ CHECK_FUNCTION_EXISTS(getaddrinfo     HAVE_GETADDRINFO)
 # check for gthread actually being present
 CHECK_LIBRARY_EXISTS(gthread-2.0 g_thread_init "${GTHREAD_LIBRARY_DIRS}" HAVE_GTHREAD)
 
-CHECK_LIBRARY_EXISTS(tcmalloc malloc "" HAVE_TCMALLOC)
+#CHECK_LIBRARY_EXISTS(tcmalloc malloc "" HAVE_TCMALLOC)
 
 #SET(OLD_CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES})
 #SET(CMAKE_REQUIRED_LIBRARIES ${CMAKE_REQUIRED_LIBRARIES} ${GTHREAD_LIBRARIES})
 # fails for some reason use check_library_exists instead and hope it's better
 #CHECK_FUNCTION_EXISTS(g_thread_init HAVE_GTHREAD)
 #SET(CMAKE_REQUIRED_LIBRARIES ${OLD_CMAKE_REQUIRED_LIBRARIES})
-find_package(OpenSSL QUIET)
-if (OPENSSL_FOUND)
-  message("-- OpenSSL version: ${OPENSSL_VERSION}")
-  set(HAVE_OPENSSL 1)
-else(OPENSSL_FOUND)
-  message("-- OpenSSL not found")
-  set(OPENSSL_LIBRARIES "")
-endif(OPENSSL_FOUND)
+if (WITH_OPENSSL)
+  find_package(OpenSSL QUIET)
+  if (OPENSSL_FOUND)
+    message("-- OpenSSL version: ${OPENSSL_VERSION}")
+    set(HAVE_OPENSSL 1)
+  else(OPENSSL_FOUND)
+    message("-- OpenSSL not found")
+    set(OPENSSL_LIBRARIES "")
+  endif(OPENSSL_FOUND)
+endif(WITH_OPENSSL)
 
 find_package(ZLIB REQUIRED)
 if (ZLIB_FOUND)

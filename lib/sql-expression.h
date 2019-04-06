@@ -59,6 +59,7 @@ typedef struct sql_insert_t sql_insert_t;
 typedef enum sql_stmt_type_t sql_stmt_type_t;
 typedef struct sql_column_t sql_column_t;
 typedef GPtrArray sql_column_list_t;
+typedef struct sql_drop_database_t sql_drop_database_t;
 
 enum sql_stmt_type_t {
     STMT_UNKOWN,
@@ -83,9 +84,11 @@ enum sql_stmt_type_t {
     STMT_SHOW_COLUMNS,
     STMT_SHOW_CREATE,
     STMT_SHOW_WARNINGS,
+
+    STMT_DROP_DATABASE,
 };
 struct sql_token_t {
-    const char *z;              /* pointer to token text, not NUL-terminated */
+    char *z;              /* pointer to token text, not NUL-terminated */
     uint32_t n;                 /* length of token text in bytes */
 };
 
@@ -144,7 +147,7 @@ enum sql_expr_flags_t {
     EP_AGGREGATE = 0x1000,
 };
 
-enum sql_func_type_t {
+enum sql_aggregate_type_t {
     FT_UNKNOWN = 0,
     FT_COUNT,
     FT_SUM,
@@ -153,17 +156,41 @@ enum sql_func_type_t {
     FT_MIN,
 };
 
+enum sql_index_hint_type_t {
+    IH_USE_INDEX,
+    IH_USE_KEY,
+    IH_IGNORE_INDEX,
+    IH_IGNORE_KEY,
+    IH_FORCE_INDEX,
+    IH_FORCE_KEY
+};
+
+struct sql_index_hint_t {
+    uint8_t type;
+    sql_id_list_t *names;
+};
+
+typedef struct sql_index_hint_t sql_index_hint_t;
+
+struct sql_table_reference_t {
+    sql_src_list_t* table_list;
+    sql_index_hint_t *index_hint;
+};
+
+typedef struct sql_table_reference_t sql_table_reference_t;
+
 struct sql_expr_t {
+    uint16_t height;                 /* Height of the tree headed by this node */
     uint16_t op;                /* Operation performed by this node */
+    unsigned int modify_flag:1;
     char *token_text;           /* Token value. Zero terminated and dequoted */
-    uint64_t num_value;         /* Non-negative integer value */
+    int64_t num_value;
     sql_expr_t *left;
     sql_expr_t *right;
 
     sql_expr_list_t *list;      /* op = IN, EXISTS, SELECT, CASE, FUNCTION, BETWEEN */
     sql_select_t *select;       /* EP_xIsSelect and op = IN, EXISTS, SELECT */
 
-    int height;                 /* Height of the tree headed by this node */
     char *alias;
     enum sql_expr_flags_t flags;
     enum sql_var_scope_t var_scope; /* variable scope: SESSION(default) or GLOBAL */
@@ -204,7 +231,7 @@ struct sql_delete_t {
 };
 
 struct sql_update_t {
-    sql_src_list_t *table;
+    sql_table_reference_t *table_reference;
     sql_expr_list_t *set_list;
     sql_expr_t *where_clause;
     sql_column_list_t *orderby_clause;
@@ -233,15 +260,23 @@ struct sql_column_t {
 struct sql_src_item_t {
     char *dbname;               /* Name of database holding this table */
     char *table_name;           /* Name of the table */
+    GPtrArray *groups;
+    sql_index_hint_t *index_hint;
     char *table_alias;          /* The "B" part of a "A AS B" phrase.  zName is the "A" */
     sql_select_t *select;       /* A SELECT statement used in place of a table name */
-    uint8_t jointype;           /* Type of join between this table and the previous */
 
     sql_expr_t *on_clause;      /* The ON clause of a join */
     sql_id_list_t *pUsing;      /* The USING clause of a join */
 
     sql_expr_list_t *func_arg;  /* Arguments to table-valued-function */
+    int group_index;
+    uint8_t jointype;           /* Type of join between this table and the previous */
 };                              /* One entry for each identifier on the list */
+
+struct sql_drop_database_t {
+    char *schema_name;
+    uint8_t ifexists;
+};
 
 typedef struct sql_set_transaction_t {
     enum sql_var_scope_t scope;
@@ -289,12 +324,15 @@ sql_expr_t *sql_expr_list_find(sql_expr_list_t *list, const char *name);
 sql_expr_t *sql_expr_list_find_fullname(sql_expr_list_t *list, const sql_expr_t *expr);
 
 int sql_expr_list_find_aggregates(sql_expr_list_t *list, group_aggr_t * aggr_array);
-int sql_expr_list_find_aggregate(sql_expr_list_t *list);
+int sql_expr_list_find_aggregate(sql_expr_list_t *list, const char *target);
+
+int sql_expr_list_find_exact_aggregate(sql_expr_list_t *list, const char *target, int len);
 
 void sql_expr_list_free(sql_expr_list_t *list);
 
 sql_src_list_t *sql_src_list_append(sql_src_list_t *, sql_token_t *tname,
-                                    sql_token_t *dbname, sql_token_t *alias, sql_select_t *subquery,
+                                    sql_token_t *dbname, sql_index_hint_t *index_hint,
+                                    sql_token_t *alias, sql_select_t *subquery,
                                     sql_expr_t *on_clause, sql_id_list_t *using_clause);
 
 void sql_src_list_free(sql_src_list_t *p);
@@ -329,14 +367,23 @@ sql_column_t *sql_column_new();
 
 void sql_column_free(void *);
 
+sql_drop_database_t *sql_drop_database_new();
+void sql_drop_database_free(sql_drop_database_t *);
+
 int sql_join_type(sql_token_t kw);
 
 void sql_statement_free(void *clause, sql_stmt_type_t stmt_type);
 
 gboolean sql_is_quoted_string(const char *s);
 
-enum sql_func_type_t sql_func_type(const char *s);
+enum sql_aggregate_type_t sql_aggregate_type(const char *s);
 
 gboolean sql_expr_equals(const sql_expr_t *, const sql_expr_t *);
+
+void sql_index_hint_free(sql_index_hint_t* p);
+sql_index_hint_t *sql_index_hint_new();
+
+void sql_table_reference_free(sql_table_reference_t* p);
+sql_table_reference_t *sql_table_reference_new();
 
 #endif /* SQL_EXPRESSION_H */

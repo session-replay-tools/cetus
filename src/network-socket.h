@@ -102,11 +102,13 @@ typedef struct {
 
 typedef struct network_ssl_connection_s network_ssl_connection_t;
 
+#define XID_LEN 128
+
 typedef struct {
     int socket_type; /**< SOCK_STREAM or SOCK_DGRAM for now */
     int fd;             /**< socket-fd */
-    guint32 create_time;
-    guint32 update_time;
+    time_t create_time;
+    time_t update_time;
 
     struct event event; /**< events for this fd */
 
@@ -135,7 +137,7 @@ typedef struct {
     int total_output;
 
     off_t to_read;
-    off_t resp_len;
+    long long resp_len;
 
     /**
      * data extracted from the handshake  
@@ -186,19 +188,25 @@ typedef struct {
     server_state_data parse;
     server_query_status qstat;
 
-    network_ssl_connection_t* ssl;
+    network_ssl_connection_t *ssl;
+
+#ifndef SIMPLE_PARSER
+    unsigned long long xa_id;
+    char xid_str[XID_LEN];
+#endif
 
 } network_socket;
 
 NETWORK_API network_socket *network_socket_new(void);
 NETWORK_API void network_socket_free(network_socket *s);
 NETWORK_API network_socket_retval_t network_socket_write(network_socket *con, int send_chunks);
+NETWORK_API void network_socket_send_quit_and_free(network_socket *s);
 NETWORK_API network_socket_retval_t network_socket_read(network_socket *con);
 NETWORK_API network_socket_retval_t network_socket_to_read(network_socket *sock);
 NETWORK_API network_socket_retval_t network_socket_set_non_blocking(network_socket *sock);
 NETWORK_API network_socket_retval_t network_socket_connect(network_socket *con);
 NETWORK_API network_socket_retval_t network_socket_connect_finish(network_socket *sock);
-NETWORK_API network_socket_retval_t network_socket_bind(network_socket *con);
+NETWORK_API network_socket_retval_t network_socket_bind(network_socket *con, int advanced_mode);
 NETWORK_API network_socket *network_socket_accept(network_socket *srv, int *reason);
 NETWORK_API network_socket_retval_t network_socket_set_send_buffer_size(network_socket *sock, int size);
 

@@ -454,6 +454,7 @@ network_mysqld_proto_get_com_init_db(network_packet *packet,
     switch (status) {
     case MYSQLD_PACKET_ERR:
         is_finished = 1;
+        con->resp_err_met = 1;
         if (udata->db_name && udata->db_name->len) {
             g_message("%s: COM_INIT_DB failed, want db:%s, client default db still:%s",
                       G_STRLOC, udata->db_name->str, con->client->default_db->str);
@@ -487,6 +488,7 @@ network_mysqld_proto_get_com_init_db(network_packet *packet,
         break;
     default:
         g_critical("%s: COM_INIT_DB should be (ERR|OK), got %02x", G_STRLOC, status);
+        con->resp_err_met = 1;
 
         return -1;
     }
@@ -544,7 +546,7 @@ network_mysqld_con_command_states_init(network_mysqld_con *con, network_packet *
          * b) closed the connection because the client asked it to
          * If b) we should not print a message at the next EV_READ event from the server fd
          */
-        con->com_quit_seen = TRUE;
+        con->com_quit_seen = 1;
     default:
         break;
     }
@@ -778,8 +780,6 @@ network_mysqld_proto_get_query_result(network_packet *packet, network_mysqld_con
         is_finished = 1;
         break;
     default:
-        g_debug_hexdump(G_STRLOC, S(packet->data));
-        g_message("%s: COM_(0x%02x) is not handled", G_STRLOC, con->parse.command);
         err = 1;
         break;
     }
@@ -1162,7 +1162,7 @@ network_mysqld_auth_challenge_set_challenge(network_mysqld_auth_challenge *shake
 int network_mysqld_proto_append_auth_switch(GString *packet, char *method_name, GString *salt)
 {
     network_mysqld_proto_append_int8(packet, 0xfe);
-    /*TODO: different algorithm for methods */
+    /*TODO: different algorithms for methods */
     g_string_append_len(packet, method_name, strlen(method_name));
     g_string_append_c(packet, 0);
     g_string_append_len(packet, salt->str, salt->len);

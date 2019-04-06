@@ -5,6 +5,9 @@ daemon = true
 # Loaded Plugins
 plugins=proxy,admin
 
+# Defines the number of worker processes. 
+worker-processes=1
+
 # Proxy Configuration, For example: MySQL master and salve host ip are both 192.0.0.1
 proxy-address=0.0.0.0:6001
 proxy-backend-addresses=192.0.0.1:3306
@@ -39,3 +42,10 @@ slave-delay-recover=1
 keepalive=true
 verbose-shutdown=true
 log-backtrace-on-crash=true
+
+# For performance
+enable-tcp-stream=true
+enable-fast-stream=true
+
+# For MGR
+group-replication-mode=0

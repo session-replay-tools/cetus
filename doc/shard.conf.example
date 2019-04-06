@@ -5,6 +5,9 @@ daemon=true
 # Loaded Plugins
 plugins=shard,admin
 
+# Defines the number of worker processes. 
+worker-processes=1
+
 # Proxy Configuration, For eaxmlpe: MySQL master host ip is 192.0.0.1 and salve host ip is 192.0.0.2
 proxy-address=0.0.0.0:6001
 proxy-backend-addresses=192.0.0.1:3306@data1,192.0.0.1:3307@data2,192.0.0.1:3308@data3,192.0.0.1:3309@data4
@@ -41,3 +44,10 @@ slave-delay-recover=1
 keepalive=true
 verbose-shutdown=true
 log-backtrace-on-crash=true
+
+# For performance
+enable-tcp-stream=false
+enable-fast-stream=false
+
+#For MGR
+group-replication-mode=0

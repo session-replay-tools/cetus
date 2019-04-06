@@ -75,6 +75,8 @@ typedef int socklen_t;
 
 #define MAX_CACHED_ITEMS 65536
 
+extern int      cetus_last_process;
+
 /* judge if client_ip_with_username is in allow or deny ip_table*/
 static gboolean
 client_ip_table_lookup(GHashTable *ip_table, char *client_ip_with_username)
@@ -150,13 +152,18 @@ do_read_auth(network_mysqld_con *con)
 
 #ifdef HAVE_OPENSSL
         if (con->srv->ssl && auth->ssl_request) {
-            network_ssl_create_connection(recv_sock, NETWORK_SSL_SERVER);
-            g_string_free(g_queue_pop_tail(recv_sock->recv_queue->chunks), TRUE);
-            if (recv_sock->recv_queue->chunks->length > 0) {
-                g_warning("%s: client-recv-queue-len = %d", G_STRLOC, recv_sock->recv_queue->chunks->length);
+            if (network_ssl_create_connection(recv_sock, NETWORK_SSL_SERVER) == FALSE) {
+                network_mysqld_con_send_error_full(con->client, C("SSL server failed"), 1045, "28000");
+                network_mysqld_auth_response_free(auth);
+                return NETWORK_SOCKET_ERROR;
+            } else {
+                g_string_free(g_queue_pop_tail(recv_sock->recv_queue->chunks), TRUE);
+                if (recv_sock->recv_queue->chunks->length > 0) {
+                    g_warning("%s: client-recv-queue-len = %d", G_STRLOC, recv_sock->recv_queue->chunks->length);
+                }
+                con->state = ST_FRONT_SSL_HANDSHAKE;
+                return NETWORK_SOCKET_SUCCESS;
             }
-            con->state = ST_FRONT_SSL_HANDSHAKE;
-            return NETWORK_SOCKET_SUCCESS;
         }
 #endif
         if (!(auth->client_capabilities & CLIENT_PROTOCOL_41)) {
@@ -177,6 +184,7 @@ do_read_auth(network_mysqld_con *con)
         }
 
         con->client->response = auth;
+        g_string_assign_len(con->client->default_db, S(auth->database));
 
         if ((auth->client_capabilities & CLIENT_PLUGIN_AUTH)
             && (g_strcmp0(auth->auth_plugin_name->str, "mysql_native_password") != 0))
@@ -192,13 +200,12 @@ do_read_auth(network_mysqld_con *con)
             return NETWORK_SOCKET_SUCCESS;
         }
 
-        g_string_assign_len(con->client->default_db, S(auth->database));
         g_debug("%s:1nd round auth and set default db:%s for con:%p", G_STRLOC, con->client->default_db->str, con);
 
     } else {
         /* auth switch response */
-        gsize auth_data_len = packet.data->len - 4;
-        GString *auth_data = g_string_sized_new(auth_data_len);
+        gsize auth_data_len = packet.data->len - NET_HEADER_SIZE;
+        GString *auth_data = g_string_sized_new(calculate_alloc_len(auth_data_len));
         network_mysqld_proto_get_gstr_len(&packet, auth_data_len, auth_data);
 
         g_string_assign_len(con->client->response->auth_plugin_data, S(auth_data));
@@ -220,9 +227,12 @@ do_read_auth(network_mysqld_con *con)
         network_mysqld_con_send_error_full(recv_sock, L(ip_err_msg), 1045, "28000");
         log_sql_connect(con, ip_err_msg);
         g_free(ip_err_msg);
+        g_strfreev(client_addr_arr);
         con->state = ST_SEND_ERROR;
         return NETWORK_SOCKET_SUCCESS;
     }
+
+    g_strfreev(client_addr_arr);
 
     const char *client_charset = charset_get_name(auth->charset);
     if (client_charset == NULL) {
@@ -368,7 +378,8 @@ do_connect_cetus(network_mysqld_con *con, network_backend_t **backend, int *back
          */
 
         int min_connected_clients = 0x7FFFFFFF;
-        for (i = 0; i < network_backends_count(g->backends); i++) {
+        int backends_count = network_backends_count(g->backends);
+        for (i = 0; i < backends_count; i++) {
             cur = network_backends_get(g->backends, i);
 
             /**
@@ -408,15 +419,25 @@ do_connect_cetus(network_mysqld_con *con, network_backend_t **backend, int *back
     else
         challenge->capabilities &= ~CLIENT_SSL;
 #endif
+
+    if (con->srv->compress_support) {
+        challenge->capabilities |= CLIENT_COMPRESS;
+    }
+
     network_mysqld_auth_challenge_set_challenge(challenge);
     challenge->server_status |= SERVER_STATUS_AUTOCOMMIT;
     challenge->charset = 0xC0;
     GString *version = g_string_new("");
     network_backends_server_version(g->backends, version);
-    g_string_append(version, " (cetus)");
     challenge->server_version_str = version->str;
     g_string_free(version, FALSE);
     challenge->thread_id = g->thread_id++;
+    g_debug("%s: generate thread id:%d", G_STRLOC, challenge->thread_id);
+
+    if (g->thread_id > g->max_thread_id) {
+        g->thread_id = 1 + (cetus_last_process << 24);
+        g_message("%s: rewind first thread id:%d", G_STRLOC, g->thread_id);
+    }
 
     GString *auth_packet = g_string_new(NULL);
     network_mysqld_proto_append_auth_challenge(auth_packet, challenge);
@@ -446,16 +467,18 @@ plugin_add_backends(chassis *chas, gchar **backend_addresses, gchar **read_only_
 
     GPtrArray *backends_arr = g->backends->backends;
     for (i = 0; backend_addresses[i]; i++) {
-        if (-1 == network_backends_add(g->backends, backend_addresses[i], BACKEND_TYPE_RW, BACKEND_STATE_UNKNOWN, chas)) {
-            return -1;
+        if (BACKEND_OPERATE_SUCCESS != network_backends_add(g->backends, backend_addresses[i], BACKEND_TYPE_RW, BACKEND_STATE_UNKNOWN, chas)) {
+            g_critical("add rw node: %s failed.", backend_addresses[i]);
+            continue;
         }
         network_backend_init_extra(backends_arr->pdata[backends_arr->len - 1], chas);
     }
 
     for (i = 0; read_only_backend_addresses && read_only_backend_addresses[i]; i++) {
-        if (-1 == network_backends_add(g->backends,
+        if (BACKEND_OPERATE_SUCCESS != network_backends_add(g->backends,
                                        read_only_backend_addresses[i], BACKEND_TYPE_RO, BACKEND_STATE_UNKNOWN, chas)) {
-            return -1;
+            g_critical("add ro node: %s failed.", read_only_backend_addresses[i]);
+            continue;
         }
         /* set conn-pool config */
         network_backend_init_extra(backends_arr->pdata[backends_arr->len - 1], chas);
@@ -536,6 +559,7 @@ try_to_get_resp_from_query_cache(network_mysqld_con *con)
         int i;
         int len = item->queue->chunks->length;
         for (i = 0; i < len; i++) {
+            /* TODO g_queue_peek_nth is not efficient*/
             GString *packet = g_queue_peek_nth(item->queue->chunks, i);
             GString *dup_packet = g_string_new(NULL);
             g_string_append_len(dup_packet, S(packet));
@@ -611,6 +635,11 @@ proxy_put_shard_conn_to_pool(network_mysqld_con *con)
                 }
             }
 
+            if (is_put_to_pool_allowed && con->srv->server_conn_refresh_time > server->create_time) {
+                is_put_to_pool_allowed = 0;
+                g_message("%s: old connection for con:%p", G_STRLOC, con);
+            }
+
             CHECK_PENDING_EVENT(&(server->event));
 
             if (is_put_to_pool_allowed) {
@@ -620,7 +649,7 @@ proxy_put_shard_conn_to_pool(network_mysqld_con *con)
             } else {
                 g_debug("%s: is_put_to_pool_allowed false here, server:%p, con:%p, num:%d",
                         G_STRLOC, server, con, (int)con->servers->len);
-                network_socket_free(server);
+                network_socket_send_quit_and_free(server);
                 if (!is_reduced) {
                     con->srv->complement_conn_flag = 1;
                 }
@@ -637,6 +666,10 @@ proxy_put_shard_conn_to_pool(network_mysqld_con *con)
 
     g_ptr_array_free(con->servers, TRUE);
     con->servers = NULL;
+    if (con->server) {
+        g_message("%s: con server is not NULL when having freed servers", G_STRLOC);
+        con->server = NULL;
+    }
     con->client->is_server_conn_reserved = 0;
     con->attr_adj_state = ATTR_START;
 
@@ -665,3 +698,12 @@ remove_mul_server_recv_packets(network_mysqld_con *con)
         network_mysqld_queue_reset(ss->server);
     }
 }
+
+void
+truncate_default_db_when_drop_database(network_mysqld_con *con, char *schema_name)
+{
+    if (schema_name && strcasecmp(con->client->default_db->str, schema_name) == 0) {
+        g_string_truncate(con->client->default_db, 0);
+    }
+}
+

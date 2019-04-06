@@ -44,10 +44,16 @@
 #define LOG_DEBUG	0
 #endif
 
+
 #include "sys-pedantic.h"
 #include "chassis-log.h"
 
+#define MAX_BUF_LEN 2048
+#define LOG_MAX_LEN 2000
+#define cetus_cpymem(d, s, l) (((char *) memcpy(d, (void *) s, l)) + (l))
 #define S(x) x->str, x->len
+
+extern pid_t       cetus_pid;
 
 /**
  * the mapping of our internal log levels various log systems
@@ -196,24 +202,29 @@ chassis_log_update_timestamp(chassis_log *log)
 static int
 chassis_log_write(chassis_log *log, int log_level, GString *str)
 {
-    if (-1 != log->log_file_fd) {
-        /* prepend a timestamp */
-        if (-1 == write(log->log_file_fd, S(str))) {
-            /* writing to the file failed (Disk Full, what ever ... */
+    char buffer[MAX_BUF_LEN], *p;
+    
+    int log_fd = log->log_file_fd;
 
-            if (write(STDERR_FILENO, S(str)) >= 0) {
-                if (write(STDERR_FILENO, "\n", 1) >= 0) {
-                }
-            }
-        } else {
-            if (write(log->log_file_fd, "\n", 1) >= 0) {
-            }
-        }
+    p = buffer;
+
+    sprintf(p, "(pid=%d) ", cetus_pid);
+    
+    p += strlen(p);
+
+    if (str->len < LOG_MAX_LEN) {
+        p = cetus_cpymem(p, str->str, str->len);
     } else {
-        if (write(STDERR_FILENO, S(str)) >= 0) {
-            if (write(STDERR_FILENO, "\n", 1) >= 0) {
-            }
-        }
+        p = cetus_cpymem(p, str->str, LOG_MAX_LEN - 1);
+    }
+
+    *p++ = '\n';
+
+    if (log_fd == -1) {
+        write(STDERR_FILENO, buffer, p - buffer);
+        return -1;
+    } else {
+        write(log_fd, buffer, p - buffer);
     }
 
     return 0;

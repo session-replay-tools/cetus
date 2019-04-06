@@ -106,6 +106,13 @@ sql_savepoint(sql_context_t *st, int tk, char *name)
     sql_context_add_stmt(st, STMT_SAVEPOINT, name);
 }
 
+void
+sql_drop_database(sql_context_t *st, sql_drop_database_t *drop_database)
+{
+    st->rw_flag |= CF_WRITE;
+    sql_context_add_stmt(st, STMT_DROP_DATABASE, drop_database);
+}
+
 static gboolean
 string_array_contains(const char **sa, int size, const char *str)
 {
@@ -146,8 +153,8 @@ sql_set_variable(sql_context_t *ps, sql_expr_list_t *exps)
                 goto out;
             }
         } else if (!sql_filter_vars_is_allowed(var_name, value)) {
-            char msg[100];
-            snprintf(msg, 100, "SET of %s is not supported", var_name);
+            char msg[128];
+            snprintf(msg, 128, "SET of %s is not supported", var_name);
             sql_context_set_error(ps, PARSE_NOT_SUPPORT, msg);
             goto out;
         }
@@ -167,8 +174,8 @@ sql_set_names(sql_context_t *ps, char *val)
     const char *charsets[] = { "latin1", "ascii", "gb2312", "gbk", "utf8", "utf8mb4", "big5" };
     int cs_size = sizeof(charsets) / sizeof(char *);
     if (!string_array_contains(charsets, cs_size, val)) {
-        char msg[64] = { 0 };
-        snprintf(msg, 64, "Unknown character set: %s", val);
+        char msg[128] = { 0 };
+        snprintf(msg, 128, "Unknown character set: %s", val);
         sql_context_set_error(ps, PARSE_NOT_SUPPORT, msg);
         g_free(val);
         return;

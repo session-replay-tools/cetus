@@ -19,6 +19,7 @@
  $%ENDLICENSE%$ */
 
 #include <glib.h>
+#include <string.h>
 #include <errno.h>
 
 #ifdef HAVE_CONFIG_H
@@ -52,13 +53,15 @@
 #define E_NET_WOULDBLOCK EWOULDBLOCK
 #endif
 
+extern sig_atomic_t    cetus_reap;
+extern sig_atomic_t    cetus_change_binary;
+extern sig_atomic_t    cetus_quit;
+extern sig_atomic_t    cetus_noaccept;
+
 void
 chassis_event_add_with_timeout(chassis *chas, struct event *ev, struct timeval *tv)
 {
     event_base_set(chas->event_base, ev);
-#if NETWORK_DEBUG_TRACE_EVENT
-    CHECK_PENDING_EVENT(ev);
-#endif
     event_add(ev, tv);
     g_debug("%s:event add ev:%p", G_STRLOC, ev);
 }
@@ -87,18 +90,29 @@ chassis_event_loop_free(chassis_event_loop_t *event)
 }
 
 void *
-chassis_event_loop(chassis_event_loop_t *loop)
+chassis_event_loop(chassis_event_loop_t *loop, int *mutex)
 {
 
     /**
      * check once a second if we shall shutdown the proxy
      */
-    while (!chassis_is_shutdown()) {
+    while ((mutex != NULL && (*mutex) != 0) || !chassis_is_shutdown()) {
+        if (cetus_reap || cetus_change_binary || cetus_quit || cetus_noaccept) {
+            if (cetus_quit) {
+                g_message("%s: cetus_quit is true", G_STRLOC);
+            }
+
+            if (cetus_noaccept) {
+                g_message("%s: cetus_noaccept is true", G_STRLOC);
+            }
+            break;
+        }
+
         struct timeval timeout;
         int r;
 
-        timeout.tv_sec = 1;
-        timeout.tv_usec = 0;
+        timeout.tv_sec = 0;
+        timeout.tv_usec = 256000;
 
         r = event_base_loopexit(loop, &timeout);
         if (r == -1) {
@@ -109,13 +123,18 @@ chassis_event_loop(chassis_event_loop_t *loop)
         r = event_base_dispatch(loop);
 
         if (r == -1) {
-            if (errno == EINTR)
+            g_debug("%s: after event_base_dispatch:%d, errno:%d, str:%s",
+                    G_STRLOC, r, errno, strerror(errno));
+            if (errno == EINTR) {
+                g_message("%s: EINTR is met", G_STRLOC);
                 continue;
+            }
             g_critical("%s: leaving chassis_event_loop early, errno != EINTR was: %s (%d)",
-                       G_STRLOC, g_strerror(errno), errno);
+                    G_STRLOC, g_strerror(errno), errno);
             break;
         }
     }
+        
 
     return NULL;
 }

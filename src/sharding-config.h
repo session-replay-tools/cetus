@@ -99,14 +99,14 @@ GPtrArray *shard_conf_get_any_group(GPtrArray *groups, const char *db, const cha
 GPtrArray *shard_conf_get_all_groups(GPtrArray *groups);
 
 /* same fixture will get same group */
-GPtrArray *shard_conf_get_fixed_group(GPtrArray *groups, guint64 fixture);
+GPtrArray *shard_conf_get_fixed_group(int partition_mode, GPtrArray *groups, guint64 fixture);
 
 GPtrArray *shard_conf_get_table_groups(GPtrArray *visited_groups,
                                        const char *db, const char *table);
 
 gboolean shard_conf_is_shard_table(const char *db, const char *table);
 
-gboolean shard_conf_is_single_table(const char *db, const char *table);
+gboolean shard_conf_is_single_table(int partition_mode, const char *db, const char *table);
 
 GPtrArray *shard_conf_get_single_table_distinct_group(GPtrArray *groups, const char *db, const char *table);
 
@@ -124,14 +124,14 @@ GPtrArray *shard_conf_table_partitions(GPtrArray *partitions, const char *db, co
  */
 void shard_conf_find_groups(GPtrArray *groups, const char *match);
 
-gboolean shard_conf_load(char *, int);
+gboolean shard_conf_load(int, char *, int);
 
 void shard_conf_destroy(void);
 
 gboolean shard_conf_add_vdb(sharding_vdb_t* vdb);
 
 sharding_vdb_t *sharding_vdb_new();
-gboolean sharding_vdb_is_valid(sharding_vdb_t *vdb, int num_groups);
+gboolean sharding_vdb_is_valid(int is_partition_mode, sharding_vdb_t *vdb, int num_groups);
 void sharding_vdb_free(sharding_vdb_t *vdb);
 
 gboolean shard_conf_add_sharded_table(sharding_table_t* t);
@@ -139,6 +139,7 @@ gboolean shard_conf_add_sharded_table(sharding_table_t* t);
 GList* shard_conf_get_vdb_list();
 GList* shard_conf_get_tables(); /* ! g_list_free() after use */
 GList* shard_conf_get_single_tables();
+GString* partition_get_super_group();
 gboolean shard_conf_write_json(chassis_config_t* conf_manager);
 
 gboolean shard_conf_add_single_table(const char* schema,

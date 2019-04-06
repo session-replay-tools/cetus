@@ -43,3 +43,6 @@ nohup ./xa-suspension.py &
 
 - 由于该工具主要是结合Cetus软件处理xa悬挂事务的，因此请确保使用该工具前已运行Cetus。
 - 由于该工具主要是针对当天的悬挂事务进行处理，若需要在开启Cetus软件的同时处理悬挂事务，请确保及时开启该工具。
+- 要确保cetus服务器和MySQL服务器的时间是同步的，且在同一个时区。
+- 如果cetus端和MySQL端连接需要采用保活机制，请在cetus端的tcp层面设置keepalive，MySQL请不要设置，否则会出现网络隔离情况下数据不一致的情况。
+- 一旦cetus所在的网络和MySQL的网络相隔离（互相不通），悬挂事务处理工具已经无法去rollback悬挂事务，请关闭悬挂事务处理工具，并杀死MySQL端的僵死线程或者重启MySQL，然后根据cetus的xa log来xa rollback MySQL的悬挂事务。

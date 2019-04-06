@@ -115,6 +115,7 @@ sql_expr_new(int op, const sql_token_t *token)
         if (token) {
             if (extra == 0) {
                 expr->num_value = sql_token_to_int(*token);
+                expr->token_text = token->z;
             } else {
                 expr->token_text = (char *)&expr[1];
                 assert(token != NULL);
@@ -148,16 +149,22 @@ sql_expr_dup(const sql_expr_t *p)
     sql_expr_t *expr = g_malloc0(size);
     if (expr) {
         memcpy(expr, p, size);
-        if (p->op == TK_DOT) {
-            expr->left = sql_expr_dup(p->left);
-            expr->right = sql_expr_dup(p->right);
-        } else {
+        if(p->alias) {
+            expr->alias = g_strdup(expr->alias);
             expr->left = 0;
             expr->right = 0;
+        } else {
+            expr->alias = 0;
+            if (p->op == TK_DOT) {
+                expr->left = sql_expr_dup(p->left);
+                expr->right = sql_expr_dup(p->right);
+            } else {
+                expr->left = 0;
+                expr->right = 0;
+            }
         }
         expr->list = 0;
         expr->select = 0;
-        expr->alias = 0;
     }
     return expr;
 }
@@ -295,8 +302,11 @@ sql_expr_is_function(const sql_expr_t *p, const char *name)
     if (name == NULL) {
         return func != NULL;
     } else {
-        if (func) {
-            return strcasecmp(func, name) == 0;
+        if (func && strcasecmp(func, name) == 0) {
+            return TRUE;
+        }
+        if (p && p->alias && strcmp(p->alias, name) == 0) {
+            return TRUE;
         }
         return FALSE;
     }
@@ -404,33 +414,56 @@ sql_expr_list_find_fullname(sql_expr_list_t *list, const sql_expr_t *expr)
     return NULL;
 }
 
-int
-sql_expr_list_find_aggregate(sql_expr_list_t *list)
+/**
+ * Find first aggregate named `target`, only match function name
+ * Example: target=max will match max(a) or max(b)
+ * if `target` is NULL, find first occurance of any aggregate
+ */
+int sql_expr_list_find_aggregate(sql_expr_list_t *list, const char *target)
 {
     int i;
-    enum sql_func_type_t type;
     for (i = 0; i < list->len; ++i) {
         sql_expr_t *p = g_ptr_array_index(list, i);
-        if (p->op == TK_FUNCTION) {
-            type = sql_func_type(p->token_text);
-            if (type != FT_UNKNOWN) {
-                return 1;
+        if (sql_expr_is_function(p, target)
+            && sql_aggregate_type(p->token_text) != FT_UNKNOWN) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+/**
+ * Similar with `sql_exp_list_find_aggregate`, but will also
+ *  match function arguments, and target cannot be NULL
+ * Example: target=max(a) will match max(a)
+ */
+int sql_expr_list_find_exact_aggregate(sql_expr_list_t *list, const char *target, int len)
+{
+    int i;
+    for (i = 0; i < list->len; ++i) {
+        sql_expr_t *p = g_ptr_array_index(list, i);
+        if (p->op == TK_FUNCTION
+            && sql_aggregate_type(p->token_text) != FT_UNKNOWN) {
+            if (strncasecmp(p->start, target, len) == 0) {
+                return i;
+            }
+            if (p->alias && strncmp(p->alias, target, len) == 0) {
+                return i;
             }
         }
     }
-
-    return 0;
+    return -1;
 }
 
 int
 sql_expr_list_find_aggregates(sql_expr_list_t *list, group_aggr_t * aggr_array)
 {
     int i, index = 0;
-    enum sql_func_type_t type;
+    enum sql_aggregate_type_t type;
     for (i = 0; i < list->len; ++i) {
         sql_expr_t *p = g_ptr_array_index(list, i);
         if (p->op == TK_FUNCTION) {
-            type = sql_func_type(p->token_text);
+            type = sql_aggregate_type(p->token_text);
             if (type != FT_UNKNOWN) {
                 if (index < MAX_AGGR_FUNS) {
                     aggr_array[index].pos = i;
@@ -450,8 +483,8 @@ sql_expr_list_free(sql_expr_list_t *list)
         g_ptr_array_free(list, TRUE);
 }
 
-enum sql_func_type_t
-sql_func_type(const char *s)
+enum sql_aggregate_type_t
+sql_aggregate_type(const char *s)
 {
     if (strncasecmp(s, "count", 5) == 0)
         return FT_COUNT;
@@ -578,8 +611,8 @@ sql_update_free(sql_update_t *p)
 {
     if (!p)
         return;
-    if (p->table)
-        sql_src_list_free(p->table);
+    if (p->table_reference)
+        sql_table_reference_free(p->table_reference);
     if (p->set_list)
         sql_expr_list_free(p->set_list);
     if (p->where_clause)        /* The WHERE clause */
@@ -624,6 +657,8 @@ sql_src_item_free(void *p)
     struct sql_src_item_t *item = (struct sql_src_item_t *)p;
     if (item->table_name)
         g_free(item->table_name);
+    if (item->index_hint)
+        sql_index_hint_free(item->index_hint);
     if (item->table_alias)
         g_free(item->table_alias);
     if (item->dbname)
@@ -636,17 +671,38 @@ sql_src_item_free(void *p)
         sql_id_list_free(item->pUsing);
     if (item->func_arg)
         sql_expr_list_free(item->func_arg);
+    if (item->groups) {
+        g_ptr_array_free(item->groups, TRUE);
+    }
     g_free(item);
+}
+
+sql_drop_database_t *
+sql_drop_database_new()
+{
+    sql_drop_database_t *p = g_new0(sql_drop_database_t, 1);
+    return p;
+}
+
+void
+sql_drop_database_free(sql_drop_database_t *p)
+{
+    if(!p) return;
+    if(p && p->schema_name) {
+        g_free(p->schema_name);
+    }
+    g_free(p);
 }
 
 sql_src_list_t *
 sql_src_list_append(sql_src_list_t *p, sql_token_t *tname,
-                    sql_token_t *dbname, sql_token_t *alias, sql_select_t *subquery,
+                    sql_token_t *dbname, sql_index_hint_t *index_hint, sql_token_t *alias, sql_select_t *subquery,
                     sql_expr_t *on_clause, sql_id_list_t *using_clause)
 {
     struct sql_src_item_t *item = g_new0(sql_src_item_t, 1);
     if (item) {
         item->table_name = tname ? sql_token_dup(*tname) : NULL;
+        item->index_hint = index_hint;
         item->table_alias = alias ? sql_token_dup(*alias) : NULL;
         item->dbname = dbname ? sql_token_dup(*dbname) : NULL;
         item->select = subquery;
@@ -898,6 +954,9 @@ sql_statement_free(void *clause, sql_stmt_type_t stmt_type)
     case STMT_ROLLBACK:
     case STMT_COMMON_DDL:
         break;
+    case STMT_DROP_DATABASE:
+        sql_drop_database_free(clause); 
+        break;
     case STMT_CALL:
         sql_expr_free(clause);
         break;
@@ -961,4 +1020,41 @@ sql_expr_equals(const sql_expr_t *p1, const sql_expr_t *p2)
         }
     }
     return FALSE;
+}
+
+void
+sql_index_hint_free(sql_index_hint_t* p)
+{
+    if (p && p->names) {
+        sql_id_list_free(p->names);
+    }
+    if (p)
+        g_free(p);
+}
+
+sql_index_hint_t*
+sql_index_hint_new()
+{
+    return g_new0(sql_index_hint_t, 1);    
+}
+
+void
+sql_table_reference_free(sql_table_reference_t* p)
+{
+    if (!p) {
+        return;
+    }
+    if (p->table_list) {
+        sql_src_list_free(p->table_list);
+    }
+    if (p->index_hint) {
+        sql_index_hint_free(p->index_hint);
+    }
+    g_free(p);
+}
+
+sql_table_reference_t *
+sql_table_reference_new()
+{
+    return g_new0(sql_table_reference_t, 1);
 }

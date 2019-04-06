@@ -421,6 +421,17 @@ cmd ::= DROP TABLE ifexists nm. {
 ifexists(A) ::= IF EXISTS.   {A = 1;}
 ifexists(A) ::= .            {A = 0;}
 
+////////////////////////// The DROP DATABASE /////////////////////////////////////
+//
+%token_class db_schema DATABASE|SCHEMA.
+
+cmd ::= DROP db_schema ifexists(A) nm(B). {
+    sql_drop_database_t *p = sql_drop_database_new();
+    sql_drop_database(context, p);
+    p->schema_name = sql_token_dup(B);
+    p->ifexists = A;
+}
+
 //////////////////////// ALTER TABLE //////////////////////////////////
 cmd ::= ALTER TABLE. {
     context->rw_flag |= CF_WRITE;
@@ -569,9 +580,9 @@ dotnm(A) ::= DOT nm(X). {A = X;}
 %destructor fullname { sql_src_list_free($$);}
 fullname(A) ::= nm(B) dotnm(C). {
   if (C.n)
-    A = sql_src_list_append(0,&C,&B,0,0,0,0);
+    A = sql_src_list_append(0,&C,&B,0,0,0,0,0);
   else
-    A = sql_src_list_append(0,&B,0,0,0,0,0);
+    A = sql_src_list_append(0,&B,0,0,0,0,0,0);
 }
 
 %type joinop {int}
@@ -1022,7 +1033,8 @@ collate(C) ::= COLLATE ids.   {C = 1;}
 
 ///////////////////////LOCK TABLES///////////////////////////
 cmd ::= LOCK TABLES lock_tables. {
-  context->rw_flag |= CF_WRITE;
+    sql_context_set_error(context, PARSE_NOT_SUPPORT,
+                              "(cetus) LOCK TABLES not supported");
 }
 lock_tables ::= fullname as lock_type.
 lock_tables ::= lock_tables COMMA fullname as lock_type.
@@ -1033,5 +1045,21 @@ opt_local ::= .
 opt_priority ::= LOW_PRIORITY.
 opt_priority ::= .
 cmd ::= UNLOCK TABLES. {
-  context->rw_flag |= CF_WRITE;
+    sql_context_set_error(context, PARSE_NOT_SUPPORT,
+                              "(cetus) UNLOCK TABLES not supported");
 }
+
+///////////////////////FLUSH TABLES///////////////////////////
+cmd ::=FLUSH flush_tables. {
+    sql_context_set_error(context, PARSE_NOT_SUPPORT,
+                        "(cetus) FLUSH TABLES not supported");
+}
+flush_tables ::= tables_option.
+flush_tables ::= LOCAL tables_option.
+flush_tables ::= NO_WRITE_TO_BINLOG tables_option.
+tables_option ::= TABLES WITH READ LOCK.
+tables_option ::= TABLES tbl_list WITH READ LOCK.
+tables_option ::= TABLE WITH READ LOCK.
+tables_option ::= TABLE tbl_list WITH READ LOCK.
+tbl_list ::= fullname.
+tbl_list ::= tbl_list COMMA fullname.

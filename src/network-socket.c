@@ -50,6 +50,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <linux/version.h>
+#include <linux/filter.h>
+
 
 #ifdef HAVE_WRITEV
 #define USE_BUFFERED_NETIO
@@ -116,12 +118,26 @@ network_socket_new()
 }
 
 void
+network_socket_send_quit_and_free(network_socket *s)
+{
+    int len = NET_HEADER_SIZE + 1;
+    GString *new_packet = g_string_sized_new(len);
+    new_packet->len = NET_HEADER_SIZE;
+    g_string_append_c(new_packet, (char)COM_QUIT);
+    network_mysqld_proto_set_packet_id(new_packet, 0);
+    network_mysqld_proto_set_packet_len(new_packet, 1);
+    g_queue_push_tail(s->send_queue->chunks, new_packet);
+
+    network_socket_write(s, -1);
+
+    network_socket_free(s);
+}
+
+void
 network_socket_free(network_socket *s)
 {
     if (!s)
         return;
-
-    g_debug("%s: network_socket_free:%p", G_STRLOC, s);
 
     if (s->last_compressed_packet) {
         g_string_free(s->last_compressed_packet, TRUE);
@@ -374,6 +390,29 @@ network_socket_connect(network_socket *sock)
     return NETWORK_SOCKET_SUCCESS;
 }
 
+#if defined(SO_REUSEPORT)
+#ifdef BPF_ENABLED
+static void attach_bpf(int fd) 
+{
+    struct sock_filter code[] = {
+        /* A = raw_smp_processor_id() */
+        { BPF_LD  | BPF_W | BPF_ABS, 0, 0, SKF_AD_OFF + SKF_AD_CPU },
+        /* return A */
+        { BPF_RET | BPF_A, 0, 0, 0 },
+    };
+    struct sock_fprog p = {
+        .len = 2,
+        .filter = code,
+    };
+
+    if (setsockopt(fd, SOL_SOCKET, SO_ATTACH_REUSEPORT_CBPF, &p, sizeof(p))) {
+        g_critical("%s:failed to set SO_ATTACH_REUSEPORT_CBPF, err:%s",
+                G_STRLOC, strerror(errno));
+    }
+}
+#endif
+#endif
+
 /**
  * connect a socket
  *
@@ -385,7 +424,7 @@ network_socket_connect(network_socket *sock)
  * @see network_address_set_address()
  */
 network_socket_retval_t
-network_socket_bind(network_socket *con)
+network_socket_bind(network_socket *con,  int advanced_mode)
 {
     /* 
      * HPUX:       int setsockopt(int s, int level, int optname, 
@@ -423,6 +462,21 @@ network_socket_bind(network_socket *con)
                            G_STRLOC, con->dst->name->str, g_strerror(errno), errno);
                 return NETWORK_SOCKET_ERROR;
             }
+
+#if defined(SO_REUSEPORT)
+            if (advanced_mode) {
+                g_message("%s:set SO_REUSEPORT for fd:%d", G_STRLOC, con->fd);
+                if (0 != setsockopt(con->fd, SOL_SOCKET, SO_REUSEPORT, SETSOCKOPT_OPTVAL_CAST & val, sizeof(val))) {
+                    g_critical("%s: setsockopt(%s, SOL_SOCKET, SO_REUSEPORT) failed: %s (%d)",
+                            G_STRLOC, con->dst->name->str, g_strerror(errno), errno);
+                    return NETWORK_SOCKET_ERROR;
+                }
+
+#ifdef BPF_ENABLED
+                attach_bpf(con->fd);
+#endif
+            }
+#endif
         }
 
         if (con->dst->addr.common.sa_family == AF_INET6) {
@@ -551,7 +605,7 @@ network_socket_read(network_socket *sock)
     gssize len;
 
     if (sock->to_read > 0) {
-        GString *packet = g_string_sized_new(sock->to_read);
+        GString *packet = g_string_sized_new(calculate_alloc_len(sock->to_read));
 
         g_queue_push_tail(sock->recv_queue_raw->chunks, packet);
 
@@ -628,6 +682,7 @@ network_socket_write_writev(network_socket *con, int send_chunks)
 
     iov = g_new0(struct iovec, chunk_count);
 
+    int aggr_len = 0;
     for (chunk = send_queue->chunks->head, chunk_id = 0;
          chunk && chunk_id < chunk_count; chunk_id++, chunk = chunk->next) {
         GString *s = chunk->data;
@@ -642,6 +697,12 @@ network_socket_write_writev(network_socket *con, int send_chunks)
             iov[chunk_id].iov_len = s->len;
         }
 
+        aggr_len += iov[chunk_id].iov_len;
+        if (aggr_len >= 65536) {
+            chunk_id++;
+            break;
+        }
+
         if (s->len == 0) {
             g_warning("%s: s->len is zero", G_STRLOC);
         }
@@ -650,8 +711,8 @@ network_socket_write_writev(network_socket *con, int send_chunks)
     g_debug("%s: network socket:%p, send (src:%s, dst:%s) fd:%d",
             G_STRLOC, con, con->src->name->str, con->dst->name->str, con->fd);
 
-    len = writev(con->fd, iov, chunk_count);
-    g_debug("%s: tcp write:%d, chunk count:%d", G_STRLOC, (int)len, (int)chunk_count);
+    len = writev(con->fd, iov, chunk_id);
+    g_debug("%s: tcp write:%d, chunk count:%d", G_STRLOC, (int)len, (int)chunk_id);
     os_errno = errno;
 
     g_free(iov);
@@ -667,7 +728,7 @@ network_socket_write_writev(network_socket *con, int send_chunks)
                 /** remote side closed the connection */
             return NETWORK_SOCKET_ERROR;
         default:
-            g_message("%s: writev(%s, ...) failed: %s", G_STRLOC, con->dst->name->str, g_strerror(errno));
+            g_message("%s: writev(%s, ...) failed: %s", G_STRLOC, con->dst->name->str, g_strerror(os_errno));
             return NETWORK_SOCKET_ERROR;
         }
     } else if (len == 0) {

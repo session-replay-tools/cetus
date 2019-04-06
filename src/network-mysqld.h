@@ -52,17 +52,19 @@
 #include "network-backend.h"
 #include "cetus-error.h"
 
-#define XID_LEN 64
+#define ANALYSIS_PACKET_LEN 5
 #define COMPRESS_BUF_SIZE 1048576
 
 typedef enum {
     PROXY_NO_DECISION,
     PROXY_NO_CONNECTION,        /* TODO: this one shouldn't be here, it's not a dicsion */
     PROXY_SEND_QUERY,
+    PROXY_WAIT_QUERY_RESULT,
     PROXY_SEND_RESULT,
     PROXY_SEND_INJECTION,
     PROXY_SEND_NONE,
-    PROXY_IGNORE_RESULT       /** for read_query_result */
+    PROXY_IGNORE_RESULT,       /** for read_query_result */
+    PROXY_CLIENT_QUIT
 } network_mysqld_stmt_ret;
 
 typedef struct network_mysqld_con network_mysqld_con;   /* forward declaration */
@@ -175,6 +177,8 @@ typedef struct {
      * which probably is a deficiency.
      */
     NETWORK_MYSQLD_PLUGIN_FUNC(con_cleanup);
+
+    NETWORK_MYSQLD_PLUGIN_FUNC(con_exectute_sql);
 
     NETWORK_MYSQLD_PLUGIN_FUNC(con_timeout);
 } network_mysqld_hooks;
@@ -289,6 +293,9 @@ typedef enum {
     ST_ASYNC_READ_HANDSHAKE,
     ST_ASYNC_SEND_AUTH,
     ST_ASYNC_READ_AUTH_RESULT,
+    ST_ASYNC_SEND_QUERY,
+    ST_ASYNC_READ_QUERY_RESULT,
+    ST_ASYNC_OVER,
     ST_ASYNC_ERROR,
 } self_con_state_t;
 
@@ -339,6 +346,7 @@ struct server_connection_state_t {
     network_socket *server;
     chassis *srv;
     network_connection_pool *pool;
+    unsigned int query_id_to_be_killed;
     unsigned int is_multi_stmt_set:1;
     unsigned int retry_cnt:4;
     guint8 charset_code;
@@ -352,7 +360,6 @@ typedef enum {
 typedef enum {
     RM_SUCCESS,
     RM_FAIL,
-    RM_CALL_FAIL
 } result_merge_status_t;
 
 typedef struct result_merge_t {
@@ -364,6 +371,7 @@ typedef struct having_condition_t {
     int rel_type;
     int data_type;
     char *condition_value;
+    int column_index;
 } having_condition_t;
 
 typedef struct mysqld_query_attr_t {
@@ -510,7 +518,7 @@ struct network_mysqld_con {
     int num_servers_visited;
     int num_write_pending;
     int num_read_pending;
-    guint64 id; /* session id */
+    unsigned int key;
 
     mysqld_query_attr_t query_attr;
 
@@ -532,12 +540,16 @@ struct network_mysqld_con {
     unsigned int xa_start_phase:1;
     unsigned int use_slave_forced:1;
     unsigned int multiple_server_mode:1;
+    unsigned int could_be_fast_streamed:1;
     unsigned int could_be_tcp_streamed:1;
+    unsigned int process_through_special_tunnel:1;
     unsigned int candidate_tcp_streamed:1;
+    unsigned int candidate_fast_streamed:1;
     unsigned int is_new_server_added:1;
     unsigned int is_attr_adjust:1;
     unsigned int sql_modified:1;
     unsigned int dist_tran:1;
+    unsigned int partition_dist_tran:1;
     unsigned int is_tran_not_distributed_by_comment:1;
     unsigned int dist_tran_xa_start_generated:1;
     unsigned int dist_tran_failed:1;
@@ -564,21 +576,62 @@ struct network_mysqld_con {
     unsigned int last_record_updated:1;
     unsigned int query_cache_judged:1;
     unsigned int is_client_compressed:1;
+    unsigned int write_flag:1;
+    unsigned int is_processed_by_subordinate:1;
     unsigned int is_admin_client:1;
+    unsigned int is_admin_waiting_resp:1;
+    unsigned int resp_err_met:1;
+    unsigned int direct_answer:1;
+    unsigned int admin_read_merge:1;
+    unsigned int ask_one_worker:1;
+    unsigned int ask_the_given_worker:1;
     unsigned int is_client_to_be_closed:1;
+    /**
+     * Flag indicating that we have received a COM_QUIT command.
+     * 
+     * This is mainly used to differentiate between the case 
+     * where the server closed the connection because of some error
+     * or if the client asked it to close its side of the connection.
+     * cetus would report spurious errors for the latter case,
+     * if we failed to track this command.
+     */
+    unsigned int com_quit_seen:1;
+
+    /** Flag indicating if we the plugin doesn't need the resultset itself.
+     * 
+     * If set to TRUE, the plugin needs to see 
+     * the entire resultset and we will buffer it.
+     * If set to FALSE, the plugin is not interested 
+     * in the content of the resultset and we'll
+     * try to forward the packets to the client directly, 
+     * even before the full resultset is parsed.
+     */
+    unsigned int resultset_is_needed:1;
     unsigned int last_backend_type:2;
-    unsigned int all_participate_num:8;
+    unsigned int eof_met_cnt:4;
+    unsigned int last_payload_len:4;
+    unsigned int process_index:6;
+    unsigned int last_packet_id:8;
+    unsigned int write_server_num:8;
 
     unsigned long long xa_id;
+#ifndef SIMPLE_PARSER
+    unsigned long long internal_xa_id;
+#endif
+    guint32 auth_switch_to_round;
+    guint32 partically_record_left_cnt;
 
     time_t last_check_conn_supplement_time;
 
+    unsigned char last_payload[ANALYSIS_PACKET_LEN];
     struct timeval req_recv_time;
     struct timeval resp_recv_time;
     struct timeval resp_send_time;
 
     guint64 resp_cnt;
     guint64 last_insert_id;
+    guint64 analysis_next_pos;
+    guint64 cur_resp_len;
 
     /**
      * An integer indicating the result received from a server 
@@ -591,35 +644,6 @@ struct network_mysqld_con {
 
     /* track the auth-method-switch state */
     GString *auth_switch_to_method;
-    GString *auth_switch_to_data;
-    guint32 auth_switch_to_round;
-
-    /** Flag indicating if we the plugin doesn't need the resultset itself.
-     * 
-     * If set to TRUE, the plugin needs to see 
-     * the entire resultset and we will buffer it.
-     * If set to FALSE, the plugin is not interested 
-     * in the content of the resultset and we'll
-     * try to forward the packets to the client directly, 
-     * even before the full resultset is parsed.
-     */
-    gboolean resultset_is_needed;
-    /**
-     * Flag indicating whether we have seen all parts belonging to one resultset.
-     */
-    gboolean resultset_is_finished;
-
-    /**
-     * Flag indicating that we have received a COM_QUIT command.
-     * 
-     * This is mainly used to differentiate between the case 
-     * where the server closed the connection because of some error
-     * or if the client asked it to close its side of the connection.
-     * cetus would report spurious errors for the latter case,
-     * if we failed to track this command.
-     */
-    gboolean com_quit_seen;
-
     /**
      * Contains the parsed packet.
      */
@@ -639,6 +663,7 @@ struct network_mysqld_con {
      * in admin-plugin, not used
      */
     void *plugin_con_state;
+    const GString *first_group;
     /* connection specific timeouts */
     struct timeval connect_timeout; /* default = 2 s */
     struct timeval read_timeout;    /* default = 10 min */
@@ -674,6 +699,7 @@ typedef enum {
 typedef struct server_session_t {
     unsigned int fresh:1;
     unsigned int participated:1;
+    unsigned int has_xa_write:1;
     unsigned int xa_start_already_sent:1;
     unsigned int dist_tran_participated:1;
     unsigned int xa_query_status_error_and_abort:1;
@@ -737,7 +763,7 @@ NETWORK_API void network_mysqld_con_reset_query_state(network_mysqld_con *con);
  * should be socket 
  */
 NETWORK_API network_socket_retval_t network_mysqld_read(chassis *srv, network_socket *con);
-NETWORK_API network_socket_retval_t network_mysqld_write(chassis *srv, network_socket *con);
+NETWORK_API network_socket_retval_t network_mysqld_write(network_socket *con);
 NETWORK_API network_socket_retval_t network_mysqld_con_get_packet(chassis G_GNUC_UNUSED *chas, network_socket *con);
 
 struct chassis_private {
@@ -748,6 +774,7 @@ struct chassis_private {
     struct cetus_variable_t *stats_variables;
     struct cetus_monitor_t *monitor;
     guint32 thread_id;
+    guint32 max_thread_id;
     struct cetus_acl_t *acl;
 };
 
@@ -759,16 +786,19 @@ NETWORK_API void send_part_content_to_client(network_mysqld_con *con);
 NETWORK_API void set_conn_attr(network_mysqld_con *con, network_socket *server);
 NETWORK_API int network_mysqld_init(chassis *srv);
 NETWORK_API void network_mysqld_add_connection(chassis *srv, network_mysqld_con *con, gboolean listen);
-gboolean network_mysqld_kill_connection(chassis *srv, guint64 id);
+gboolean network_mysqld_kill_connection(chassis *srv, guint32 id);
 NETWORK_API void network_mysqld_con_handle(int event_fd, short events, void *user_data);
 NETWORK_API int network_mysqld_queue_append(network_socket *sock, network_queue *queue, const char *data, size_t len);
 NETWORK_API int network_mysqld_queue_append_raw(network_socket *sock, network_queue *queue, GString *data);
 NETWORK_API int network_mysqld_queue_reset(network_socket *sock);
+NETWORK_API void network_mysqld_con_clear_xa_env_when_not_expected(network_mysqld_con *con);
 
+NETWORK_API void network_connection_pool_create_conn_and_kill_query(network_mysqld_con *con);
 NETWORK_API void network_connection_pool_create_conn(network_mysqld_con *con);
 NETWORK_API void network_connection_pool_create_conns(chassis *srv);
 NETWORK_API void check_and_create_conns_func(int fd, short what, void *arg);
 NETWORK_API void update_time_func(int fd, short what, void *arg);
+NETWORK_API char *generate_or_retrieve_xid_str(network_mysqld_con *con, network_socket *server, int need_generate_new);
 
 NETWORK_API void record_xa_log_for_mending(network_mysqld_con *con, network_socket *sock);
 NETWORK_API gboolean shard_set_autocommit(network_mysqld_con *con);

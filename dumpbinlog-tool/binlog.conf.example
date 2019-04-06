@@ -1,0 +1,27 @@
+# 注释只能写在新行，写在行后会被解析成值
+# 值不要用引号
+
+[BINLOG_MYSQL]
+host=10.120.12.55
+port=3406
+user=cetus_app
+password=cetus_app123
+
+[OUTPUT_MYSQL]
+host=10.120.12.55
+port=7002
+user=cetus_app
+password=cetus_app123
+
+[DEFAULT]
+#log_file='bj-10-238-7-7-bin.000010',
+#log_pos=4,
+auto_position=6a765e25-318d-11e8-a762-246e9616dff4:1-3945180
+
+skip_schemas=proxy_heart_beat
+
+log_level=DEBUG
+
+#ignore_ddl=true
+
+#only_sharding_table=~/sharding.json

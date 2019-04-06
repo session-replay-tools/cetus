@@ -74,6 +74,8 @@ CREATE TABLE if not exists `tb_heartbeat` (
 
 GRANT ALL ON `proxy_heart_beat`.* TO 'cetus_app'@'192.0.0.1';
 
+**注意：创建心跳表时p_ts精度必须到小数点后，否则会影响主从延迟检测的准确度**
+
 ## sharding版MySQL环境准备
 
 若使用sharding功能，则需要根据业务创建业务表，并进行分库设计,若开启主从延迟检测，请参考读写分离版本配置心跳库和心跳表。

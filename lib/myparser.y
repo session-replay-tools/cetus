@@ -114,6 +114,7 @@ cmdx ::= select_stmt.
 cmdx ::= update_stmt.
 cmdx ::= delete_stmt.
 cmdx ::= insert_stmt.
+cmdx ::= drop_database_stmt.
 
 ///////////////////// EXPLAIN syntax ////////////////////////////
 cmd ::= explain fullname(X) opt_col_name. {
@@ -424,7 +425,6 @@ ddl_cmd_head ::= DROP VIEW.
 
 %token_class db_schema DATABASE|SCHEMA.
 ddl_cmd_head ::= CREATE db_schema.
-ddl_cmd_head ::= DROP db_schema.
 ddl_cmd_head ::= ALTER db_schema.
 
 ddl_cmd_head ::= CREATE TABLE.
@@ -434,6 +434,19 @@ ddl_cmd_head ::= ALTER TABLE.
 
 opt_unique ::= UNIQUE.
 opt_unique ::= .
+
+////////////////////////// The DROP DATABASE /////////////////////////////////////
+//
+drop_database_stmt ::= DROP db_schema ifexists(A) nm(B). {
+    sql_drop_database_t *p = sql_drop_database_new();
+    sql_drop_database(context, p);
+    p->schema_name = sql_token_dup(B);
+    p->ifexists = A;
+}
+
+%type ifexists {int}
+ifexists(A) ::= IF EXISTS.   {A = 1;}
+ifexists(A) ::= .            {A = 0;}
 
 //////////////////////// The SELECT statement /////////////////////////////////
 //
@@ -600,18 +613,18 @@ stl_prefix(A) ::= seltablist(A) joinop(Y).    {
    }
 }
 stl_prefix(A) ::= .                           {A = 0;}
-seltablist(A) ::= stl_prefix(A) nm(Y) dotnm(D) as(Z) index_hint on_opt(N) using_opt(U). {
+seltablist(A) ::= stl_prefix(A) nm(Y) dotnm(D) as(Z) index_hint(I) on_opt(N) using_opt(U). {
   if (D.n)
-    A = sql_src_list_append(A,&D,&Y,&Z,0,N,U);
+    A = sql_src_list_append(A,&D,&Y,I,&Z,0,N,U);
   else
-    A = sql_src_list_append(A,&Y,0,&Z,0,N,U);
+    A = sql_src_list_append(A,&Y,0,I,&Z,0,N,U);
 }
 seltablist(A) ::= stl_prefix(A) nm(Y) dotnm(D) LP exprlist(E) RP as(Z)
                   on_opt(N) using_opt(U). {
   if (D.n)
-    A = sql_src_list_append(A,&D,&Y,&Z,0,N,U);
+    A = sql_src_list_append(A,&D,&Y,0,&Z,0,N,U);
   else
-    A = sql_src_list_append(A,&Y,0,&Z,0,N,U);
+    A = sql_src_list_append(A,&Y,0,0,&Z,0,N,U);
   sql_src_item_t* item = g_ptr_array_index(A, A->len-1);
   item->func_arg = E;
 }
@@ -619,14 +632,14 @@ seltablist(A) ::= stl_prefix(A) nm(Y) dotnm(D) LP exprlist(E) RP as(Z)
 seltablist(A) ::= stl_prefix(A) LP select(S) RP
                   as(Z) on_opt(N) using_opt(U). {
     context->clause_flags |= CF_SUBQUERY;
-    A = sql_src_list_append(A,0,0,&Z,S,N,U);
+    A = sql_src_list_append(A,0,0,0,&Z,S,N,U);
 }
 seltablist(A) ::= stl_prefix(A) LP seltablist(F) RP
                   as(Z) on_opt(N) using_opt(U). {
     if (A==0 && Z.n==0 && N==0 && U==0) {
         A = F;
     } else if (F->len == 1) {
-        A = sql_src_list_append(A,0,0,&Z,0,N,U);
+        A = sql_src_list_append(A,0,0,0,&Z,0,N,U);
         if (A) {
             printf("not implemented");//TODO;
         }
@@ -644,9 +657,9 @@ dotnm(A) ::= DOT nm(X). {A = X;}
 %destructor fullname { sql_src_list_free($$);}
 fullname(A) ::= nm(B) dotnm(C). {
   if (C.n)
-    A = sql_src_list_append(0,&C,&B,0,0,0,0);
+    A = sql_src_list_append(0,&C,&B,0,0,0,0,0);
   else
-    A = sql_src_list_append(0,&B,0,0,0,0,0);
+    A = sql_src_list_append(0,&B,0,0,0,0,0,0);
 }
 
 %type joinop {int}
@@ -767,7 +780,7 @@ where_sym ::= WHERE. {
 //
 update_stmt ::= UPDATE table_reference(X) SET update_list(Y) where_opt(W) orderby_opt(O) limit_opt(L).  {
   sql_update_t* p = sql_update_new();
-  p->table = X;
+  p->table_reference = X;
   p->set_list = Y;
   p->where_clause = W;
   p->orderby_clause = O;
@@ -827,19 +840,73 @@ simple_ident_q(A) ::= ID(X) DOT ID(Y) DOT ID(Z). {
 }
 
 
-%type table_reference {sql_src_list_t*}
-%destructor table_reference {sql_src_list_free($$);}
-table_reference(A) ::= fullname(A) as index_hint.
-index_hint ::= .
-index_hint ::= USE INDEX|KEY index_for LP index_list RP.
-index_hint ::= IGNORE INDEX|KEY index_for LP index_list RP.
-index_hint ::= FORCE INDEX|KEY index_for LP index_list RP.
+%type table_reference {sql_table_reference_t*}
+%destructor table_reference {sql_table_reference_free($$);}
+table_reference(A) ::= fullname(F) as index_hint(I). {
+    sql_table_reference_t * tr = sql_table_reference_new();
+    tr->table_list = F;
+    tr->index_hint = I;
+    A = tr;
+}
+
+%type index_hint { sql_index_hint_t* }
+%destructor index_hint { sql_index_hint_free($$); }
+index_hint(I) ::= . {
+    I = 0;
+}
+index_hint(I) ::= USE INDEX index_for LP index_list(L) RP. {
+    sql_index_hint_t *ih = sql_index_hint_new();
+    ih->type = IH_USE_INDEX;
+    ih->names = L;
+    I = ih;
+}
+index_hint(I) ::= USE KEY index_for LP index_list(L) RP. {
+    sql_index_hint_t *ih = sql_index_hint_new();
+    ih->type = IH_USE_KEY;
+    ih->names = L;
+    I = ih;
+}
+index_hint(I) ::= IGNORE INDEX index_for LP index_list(L) RP. {
+    sql_index_hint_t *ih = sql_index_hint_new();
+    ih->type = IH_IGNORE_INDEX;
+    ih->names = L;
+    I = ih;
+}
+index_hint(I) ::= IGNORE KEY index_for LP index_list(L) RP. {
+    sql_index_hint_t *ih = sql_index_hint_new();
+    ih->type = IH_IGNORE_KEY;
+    ih->names = L;
+    I = ih;
+}
+index_hint(I) ::= FORCE INDEX index_for LP index_list(L) RP. {
+    sql_index_hint_t *ih = sql_index_hint_new();
+    ih->type = IH_FORCE_INDEX;
+    ih->names = L;
+    I = ih;
+}
+index_hint(I) ::= FORCE KEY index_for LP index_list(L) RP. {
+    sql_index_hint_t *ih = sql_index_hint_new();
+    ih->type = IH_FORCE_KEY;
+    ih->names = L;
+    I = ih;
+}
 index_for ::= .
 index_for ::= FOR JOIN.
 index_for ::= FOR ORDER BY.
 index_for ::= FOR GROUP BY.
-index_list ::= index_list COMMA ID.
-index_list ::= ID|PRIMARY.
+
+%type index_list { sql_id_list_t* }
+%destructor index_list { sql_id_list_free($$); }
+index_list(L) ::= index_list(L) COMMA index_name(N). {
+    L = sql_id_list_append(L, &N);
+}
+index_list(L) ::= index_name(N). {
+    L = sql_id_list_append(0, &N);
+}
+
+%type index_name {sql_token_t}
+index_name(N) ::= ID(N).
+index_name(N) ::= PRIMARY(N).
 
 ////////////////////////// The INSERT command /////////////////////////////////
 //
@@ -992,7 +1059,7 @@ func_expr(A) ::= ID(X) LP distinct(D) exprlist(Y) RP(R). {
             "(proxy)LAST_INSERT_ID() not supported");
         //TODO: parse interupted, func_expr free?
     }
-    if (sql_func_type(X.z) != FT_UNKNOWN) {
+    if (sql_aggregate_type(X.z) != FT_UNKNOWN) {
         A->flags |= EP_AGGREGATE;
         if (context->parsing_place == SELECT_COLUMN) {
             context->clause_flags |= CF_AGGREGATE;
@@ -1005,7 +1072,7 @@ func_expr(A) ::= ID(X) LP distinct(D) exprlist(Y) RP(R). {
 }
 func_expr(A) ::= ID(X) LP STAR RP(R). {
     A = function_expr_new(&X, 0, &R);
-    if (sql_func_type(X.z) != FT_UNKNOWN) {
+    if (sql_aggregate_type(X.z) != FT_UNKNOWN) {
         A->flags |= EP_AGGREGATE;
         if (context->parsing_place == SELECT_COLUMN) {
             context->clause_flags |= CF_AGGREGATE;
@@ -1351,3 +1418,18 @@ precision ::= LP INTEGER COMMA INTEGER RP.
 field_length ::= LP INTEGER RP.
 opt_field_length ::= .
 opt_field_length ::= field_length.
+
+///////////////////////FLUSH TABLES///////////////////////////
+cmd ::=FLUSH flush_tables. {
+    sql_context_set_error(context, PARSE_NOT_SUPPORT,
+                        "(cetus) FLUSH TABLES not supported");
+}
+flush_tables ::= tables_option.
+flush_tables ::= LOCAL tables_option.
+flush_tables ::= NO_WRITE_TO_BINLOG tables_option.
+tables_option ::= TABLES WITH READ LOCK.
+tables_option ::= TABLES tbl_list WITH READ LOCK.
+tables_option ::= TABLE WITH READ LOCK.
+tables_option ::= TABLE tbl_list WITH READ LOCK.
+tbl_list ::= fullname.
+tbl_list ::= tbl_list COMMA fullname.

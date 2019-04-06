@@ -62,16 +62,16 @@ Cetus分为读写分离和分库两个版本，具有如下使用约束：
 
 12）针对分片表，CASE WHEN/IF不能用于DML语句中，也不能用在GROUP BY后
 
-13）在结果集大于特定值时分页，可能无法返回准确值
+13）不支持跨库的JOIN
 
-14）不支持跨库的JOIN
+14）当Where条件中有分区列时值必须是原子值
 
-15）当Where条件中有分区列时值必须是原子值
+15）在做SQL查询时只支持同一个 VDB 内的关联查询，针对 sharding 表，可以使用 sharding key 的要求加上该过滤条件
 
-16）在做SQL查询时只支持同一个 VDB 内的关联查询，针对 sharding 表，可以使用 sharding key 的要求加上该过滤条件
+16）不支持服务器端 PREPARE
 
-17）不支持服务器端 PREPARE
+17）使用中文列名或中文别名时必须加引号
 
-18）使用中文列名或中文别名时必须加引号
+18） order by和group by的字段，必须出现在前面字段列表中
 
-19） order by和group by的字段，必须出现在前面字段列表中
+19）不支持session级别的profiling

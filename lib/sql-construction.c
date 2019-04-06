@@ -42,9 +42,15 @@ string_append_quoted(GString *s, const char *p, char quote)
 static void
 sql_append_expr(GString *s, sql_expr_t *p)
 {
+    size_t len;
     switch (p->op) {
     case TK_ID:
-        g_string_append(s, " ");
+        len = s->len;
+        if (len > 0) {
+            if (s->str[len - 1] != ' ') {
+                g_string_append(s, " ");
+            }
+        }
         g_string_append(s, p->token_text);
         break;
     case TK_EQ:
@@ -144,7 +150,7 @@ sql_append_expr(GString *s, sql_expr_t *p)
                 }
             }
         } else if (p->select) {
-            GString *sel = sql_construct_select(p->select);
+            GString *sel = sql_construct_select(p->select, 0);
             if (sel) {
                 g_string_append(s, sel->str);
                 g_string_free(sel, TRUE);
@@ -155,7 +161,7 @@ sql_append_expr(GString *s, sql_expr_t *p)
     }
     case TK_EXISTS:{
         g_string_append(s, " EXISTS (");
-        GString *sel = sql_construct_select(p->select);
+        GString *sel = sql_construct_select(p->select, 0);
         if (sel) {
             g_string_append(s, sel->str);
             g_string_free(sel, TRUE);
@@ -189,7 +195,7 @@ sql_append_expr(GString *s, sql_expr_t *p)
         break;
     case TK_SELECT:{           /* subselect as an expression */
         g_string_append(s, "(");
-        GString *sel = sql_construct_select(p->select);
+        GString *sel = sql_construct_select(p->select, 0);
         if (sel) {
             g_string_append(s, sel->str);
             g_string_free(sel, TRUE);
@@ -295,10 +301,13 @@ append_sql_expr(GString *s, sql_expr_t *expr)
 }
 
 GString *
-sql_construct_select(sql_select_t *select)
+sql_construct_select(sql_select_t *select, int explain)
 {
     int i = 0;
-    GString *s = g_string_new(NULL);
+    GString *s = g_string_sized_new(512);
+    if (explain) {
+        g_string_append(s, "EXPLAIN ");
+    }
     g_string_append(s, "SELECT ");
     if (select->columns) {
         if (select->flags & SF_DISTINCT) {
@@ -324,10 +333,19 @@ sql_construct_select(sql_select_t *select)
                     g_string_append(s, src->dbname);
                     g_string_append(s, ".");
                 }
-                g_string_append(s, src->table_name);
+                if (src->groups && src->groups->len > 0) {
+                    g_string_append(s, src->table_name);
+                    int index = src->group_index++;
+                    index = index % src->groups->len;
+                    GString *group_name = src->groups->pdata[index];
+                    g_string_append(s, "_");
+                    g_string_append(s, group_name->str);
+                } else {
+                    g_string_append(s, src->table_name);
+                }
                 g_string_append(s, " ");
             } else if (src->select) {
-                GString *sub = sql_construct_select(src->select);
+                GString *sub = sql_construct_select(src->select, 0);
                 g_string_append_c(s, '(');
                 g_string_append_len(s, sub->str, sub->len);
                 g_string_append_c(s, ')');
@@ -339,6 +357,45 @@ sql_construct_select(sql_select_t *select)
                 g_string_append(s, src->table_alias);
                 g_string_append(s, " ");
             }
+
+            if (src->index_hint) {
+                switch (src->index_hint->type) {
+                    case IH_USE_INDEX: {
+                        g_string_append(s, " USE INDEX ( ");
+                        break;
+                    }
+                    case IH_USE_KEY: {
+                        g_string_append(s, " USE KEY ( ");
+                        break;
+                    }
+                    case IH_IGNORE_INDEX: {
+                        g_string_append(s, " IGNORE INDEX ( ");
+                        break;
+                    }
+                    case IH_IGNORE_KEY: {
+                        g_string_append(s, " IGNORE KEY ( ");
+                        break;
+                    }
+                    case IH_FORCE_INDEX: {
+                        g_string_append(s, " FORCE INDEX ( ");
+                        break;
+                    }
+                    case IH_FORCE_KEY: {
+                        g_string_append(s, " FORCE KEY ( ");
+                        break;
+                    }
+                }
+                gint len = src->index_hint->names->len;
+                gint i = 0;
+                for(i=0; i<len; i++) {
+                    g_string_append(s, g_ptr_array_index(src->index_hint->names, i));
+                    if(i != (len -1)) {
+                        g_string_append(s, " , ");
+                    }
+                }
+                g_string_append(s, " ) ");
+            }
+
             if (src->on_clause) {
                 g_string_append(s, " ON ");
                 append_sql_expr(s, src->on_clause);
@@ -351,7 +408,12 @@ sql_construct_select(sql_select_t *select)
     }
     if (select->where_clause) {
         g_string_append(s, " WHERE ");
-        append_sql_expr(s, select->where_clause);
+        sql_expr_t *expr = select->where_clause;
+        if (expr->modify_flag) {
+            sql_expr_traverse(s, expr);
+        } else {
+            append_sql_expr(s, expr);
+        }
     }
     if (select->groupby_clause) {
         sql_expr_list_t *groupby = select->groupby_clause;
@@ -399,6 +461,23 @@ sql_construct_select(sql_select_t *select)
     if (select->lock_read) {
         g_string_append(s, " FOR UPDATE");
     }
+
+    if (select->prior) {
+        sql_select_t *sub_select = select->prior;
+        GString *union_sql = g_string_new(NULL);
+        while (sub_select) {
+            GString *sql = sql_construct_select(sub_select, 0);
+            g_string_append(union_sql, sql->str);
+            g_string_append(union_sql, " UNION ");
+            g_string_free(sql, TRUE);
+            sub_select = sub_select->prior;
+        }
+
+        g_string_append(union_sql, s->str);
+        g_string_free(s, TRUE);
+        s = union_sql;
+    }
+
     return s;
 }
 
@@ -417,7 +496,7 @@ sql_append_expr_list(GString *s, sql_expr_list_t *exprlist)
 }
 
 void
-sql_construct_insert(GString *s, sql_insert_t *p)
+sql_construct_insert(int is_partition_mode, GString *s, sql_insert_t *p, GString *group)
 {
     g_string_append(s, "INSERT INTO ");
     if (p->table && p->table->len > 0) {
@@ -426,7 +505,20 @@ sql_construct_insert(GString *s, sql_insert_t *p)
             g_string_append(s, src->dbname);
             g_string_append_c(s, '.');
         }
+
         g_string_append(s, src->table_name);
+        if (is_partition_mode) {
+            if (group) {
+                g_string_append(s, "_");
+                g_string_append(s, group->str);
+            } else if (src->groups && src->groups->len > 0) {
+                int index = src->group_index++;
+                index = index % src->groups->len;
+                GString *group_name = src->groups->pdata[index];
+                g_string_append(s, "_");
+                g_string_append(s, group_name->str);
+            }
+        }
         g_string_append_c(s, ' ');
     }
     if (p->columns && p->columns->len > 0) {
@@ -437,7 +529,7 @@ sql_construct_insert(GString *s, sql_insert_t *p)
     if (p->sel_val) {
         if (p->sel_val->from_src) {
             /* select as values */
-            GString *select = sql_construct_select(p->sel_val);
+            GString *select = sql_construct_select(p->sel_val, 0);
             g_string_append(s, select->str);
             g_string_free(select, TRUE);
         } else {
@@ -458,3 +550,77 @@ sql_construct_insert(GString *s, sql_insert_t *p)
         sql_append_expr_list(s, p->update_list);
     }
 }
+    
+GString *
+sql_construct_update(sql_update_t *p)
+{
+    GString *s = g_string_sized_new(512);
+
+    g_string_append(s, "UPDATE ");
+
+    sql_src_list_t *tables = p->table_reference->table_list;
+    sql_src_item_t *src = g_ptr_array_index(tables, 0);
+
+    if (src->dbname) {
+        g_string_append(s, src->dbname);
+        g_string_append_c(s, '.');
+    }
+    if (src->groups && src->groups->len > 0) {
+        g_string_append(s, src->table_name);
+        int index = src->group_index++;
+        index = index % src->groups->len;
+        GString *group_name = src->groups->pdata[index];
+        g_string_append(s, "_");
+        g_string_append(s, group_name->str);
+    } else {
+        g_string_append(s, src->table_name);
+    }
+
+    g_string_append(s, " SET ");
+
+    int i;
+    for (i = 0; p->set_list && i < p->set_list->len; ++i) {
+        sql_expr_t *expr = g_ptr_array_index(p->set_list, i);
+        append_sql_expr(s, expr);
+    }
+
+    if (p->where_clause) {
+        g_string_append(s, " WHERE ");
+        append_sql_expr(s, p->where_clause);
+    }
+
+    return s;
+}
+
+GString *
+sql_construct_delete(sql_delete_t *p)
+{
+    GString *s = g_string_new(NULL);
+
+    g_string_append(s, "DELETE FROM ");
+
+    sql_src_item_t *src = g_ptr_array_index(p->from_src, 0);
+
+    if (src->dbname) {
+        g_string_append(s, src->dbname);
+        g_string_append_c(s, '.');
+    }
+    if (src->groups && src->groups->len > 0) {
+        g_string_append(s, src->table_name);
+        int index = src->group_index++;
+        index = index % src->groups->len;
+        GString *group_name = src->groups->pdata[index];
+        g_string_append(s, "_");
+        g_string_append(s, group_name->str);
+    } else {
+        g_string_append(s, src->table_name);
+    }
+
+    if (p->where_clause) {
+        g_string_append(s, " WHERE ");
+        append_sql_expr(s, p->where_clause);
+    }
+
+    return s;
+}
+

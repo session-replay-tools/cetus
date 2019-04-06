@@ -78,6 +78,10 @@ SET(proxy_sources
     network-injection.c
     resultset_merge.c
     cetus-log.c
+    cetus-setaffinity.c
+    cetus-process.c
+    cetus-process-cycle.c
+    cetus-channel.c
     plugin-common.c
     network-backend.c
     sharding-config.c

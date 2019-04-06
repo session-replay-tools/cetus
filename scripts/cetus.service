@@ -1,0 +1,132 @@
+#!/bin/bash
+# chkconfig: - 30 21
+# description: Cetus service.
+# Source Function Library
+. /etc/init.d/functions
+
+STARTTIMEOUT=12
+STOPTIMEOUT=60
+
+# Cetus Settings
+CETUS_HOME=/usr/local
+CETUS_CONF=${CETUS_HOME}/conf/proxy.conf
+CETUS_SBIN=${CETUS_HOME}/bin/cetus
+CETUS_PID=${CETUS_HOME}/cetus.pid
+CETUS_LOG=${CETUS_HOME}/cetus.log
+CETUS_EXEC=${CETUS_HOME}/libexec/cetus
+CETUS_DAEMON="0"
+
+cetus_pid=`sed '/^pid-file=/!d;s/.*=//' ${CETUS_CONF}`     
+if [ "$cetus_pid" != "" ];then
+        CETUS_PID=$cetus_pid
+fi
+
+cetus_daemon=`sed '/^daemon=/!d;s/.*=//' ${CETUS_CONF}`
+if [ "$cetus_daemon" != "" ];then
+        CETUS_DAEMON=$cetus_daemon
+fi
+
+cetus_log=`sed '/^log-file=/!d;s/.*=//' ${CETUS_CONF}`
+if [ "$cetus_log" != "" ];then
+        CETUS_LOG=$cetus_log
+fi
+
+start() {
+    [ -x $CETUS_EXEC ] || exit 5
+    if [ -f "$CETUS_PID" ];then
+        CETUSPID=$(cat $CETUS_PID)
+        if [ -n "$CETUSPID" ];then
+            /bin/kill -0 "$CETUSPID" >/dev/null 2>&1
+            RETVAL=$?
+            if [ $RETVAL -eq 0 ];then
+                # already running
+                action $"Starting $prog: " /bin/true
+                return $RETVAL
+            fi
+        fi
+    fi
+    if [ "${CETUS_DAEMON}" == "0" ];then
+        ${CETUS_SBIN} --defaults-file=${CETUS_CONF} >/dev/null 2>&1 &
+    else
+        ${CETUS_SBIN} --defaults-file=${CETUS_CONF} >/dev/null 2>&1
+    fi
+    TIMEOUT="$STARTTIMEOUT"
+    while [ $TIMEOUT -gt 0 ]; do
+        CETUSPID=$(cat $CETUS_PID)
+        /bin/kill -0 "$CETUSPID" >/dev/null 2>&1
+        RETVAL=$?
+        if [ $RETVAL -eq 0 ];then
+            break
+        fi
+        sleep 0.5
+        let TIMEOUT=${TIMEOUT}-1
+    done
+    if [ $TIMEOUT -eq 0 ];then
+        echo "Timeout error occurred trying to start Cetus"
+    fi
+    if [ $RETVAL -eq 0 ];then
+        action $"Starting $prog: " /bin/true
+    else
+        echo "please see ${CETUS_LOG}"
+        action $"Starting $prog: " /bin/false
+    fi
+    return $RETVAL
+}
+
+stop() {
+    if [ ! -f "$CETUS_PID" ];then
+        # not running
+        action $"Stopping $prog: " /bin/true
+        return 0
+    fi
+    CETUSPID=$(cat $CETUS_PID)
+    if [ -n "$CETUSPID" ];then
+        /bin/kill "$CETUSPID" >/dev/null 2>&1
+        RETVAL=$?
+        if [ $RETVAL -eq 0 ] ;then
+            TIMEOUT="$STOPTIMEOUT"
+            while [ $TIMEOUT -gt 0 ]; do
+                /bin/kill -0 "$CETUSPID" >/dev/null 2>&1 ||break
+                sleep 0.5
+                let TIMEOUT=${TIMEOUT} -1
+            done
+            if [ $TIMEOUT -eq 0 ];then
+                echo "Timeout error occurred trying to stop Cetus."
+                RETVAL=1
+                action $"Stopping $prog: " /bin/false
+            else
+                action $"Stopping $prog: " /bin/true
+            fi
+        else
+            echo "kill cetus(pid=$CETUSPID) failed, cetus may not be running"    
+            action $"Stopping $prog: " /bin/false
+        fi
+    else 
+        echo "cetus's pidfile is null, $CETUS_PID"
+        action $"Stopping $prog: " /bin/false
+        RETVAL=4
+    fi
+    return $RETVAL
+}
+
+restart(){
+        stop
+        start
+}
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  restart)
+        restart
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart}"
+        RETVAL=1
+esac
+
+exit $RETVAL

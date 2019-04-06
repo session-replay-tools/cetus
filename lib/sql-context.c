@@ -175,7 +175,7 @@ sql_context_parse_len(sql_context_t *context, GString *sql)
     sql_property_parser_reset(&comment_parser);
 
     int code;
-    int last_parsed_token;
+    int last_parsed_token = 0;
     sql_token_t token;
     while ((code = yylex(scanner)) > 0) {   /* 0 on EOF */
         token.z = yyget_text(scanner);
@@ -216,6 +216,13 @@ sql_context_is_autocommit_on(sql_context_t *context)
                 gboolean on;
                 if (sql_expr_is_boolean(expr->right, &on)) {
                     return on;
+                } else {
+                    sql_expr_t *p = expr->right;
+                    if (p && p->op == TK_ON) {
+                        if (strcasecmp(p->token_text, "on") == 0) {
+                            return TRUE;
+                        }
+                    }
                 }
             }
         }

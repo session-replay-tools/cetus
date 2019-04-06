@@ -52,25 +52,26 @@ typedef struct {
 } query_status;
 
 typedef struct {
-    GString *query;
-
     /**< a unique id set by the scripts to map the query to a handler */
     int id;
+    /**< flag to announce if we have to buffer the result for later processing */
+    unsigned int resultset_is_needed:1;
+    unsigned int is_fast_streamed:1;
+
+    GString *query;
 
     /* the userdata's need them */
     GQueue *result_queue;                   /**< the data to parse */
 
-    /**< summary information about the query status */
-    query_status qstat;
-
     guint64 rows;
     guint64 bytes;
 
-    /**< flag to announce if we have to buffer the result for later processing */
-    gboolean resultset_is_needed;
-
     guint64 ts_read_query;
     guint64 ts_read_query_result_last;
+
+    /**< summary information about the query status */
+    query_status qstat;
+
 } injection;
 
 /**

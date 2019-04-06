@@ -51,18 +51,37 @@
 typedef struct chassis_private chassis_private;
 typedef struct chassis chassis;
 
+#ifdef SIMPLE_PARSER
 #define MAX_SERVER_NUM 64
-#define MAX_SERVER_NUM_FOR_PREPARE 16
-#define MAX_QUERY_TIME 1000
+#define MAX_SERVER_NUM_FOR_PREPARE 64
+#else
+#define MAX_SERVER_NUM 1024
+#define MAX_SERVER_NUM_FOR_PREPARE 1024
+#endif
+
+#define MAX_WORK_PROCESSES 64
+#define MAX_WORK_PROCESSES_SHIFT 6
+#define MAX_QUERY_TIME 65536
 #define MAX_WAIT_TIME 1024
 #define MAX_TRY_NUM 6
-#define MAX_CREATE_CONN_NUM 512
-#define MAX_DIST_TRAN_PREFIX 32
+#define MAX_CREATE_CONN_NUM 256
+#define MAX_DIST_TRAN_PREFIX 64
 #define DEFAULT_LIVE_TIME 7200
 
+#define DEFAULT_POOL_SIZE 10
 #define MAX_ALLOWED_PACKET_CEIL    (1 * GB)
 #define MAX_ALLOWED_PACKET_DEFAULT (32 * MB)
 #define MAX_ALLOWED_PACKET_FLOOR   (1 * KB)
+
+enum asynchronous_admin_type {
+    ASYNCHRONOUS_RELOAD = 1,
+    ASYNCHRONOUS_RELOAD_VARIABLES,
+    ASYNCHRONOUS_RELOAD_USER,
+    ASYNCHRONOUS_UPDATE_OR_DELETE_USER_PASSWORD,
+    ASYNCHRONOUS_CONFIG_REMOTE_SHARD,
+    ASYNCHRONOUS_SET_CONFIG,
+    ASYNCHRONOUS_UPDATE_BACKENDS,
+};
 
 typedef struct rw_op_t {
     uint64_t ro;
@@ -72,33 +91,24 @@ typedef struct rw_op_t {
 typedef struct query_stats_t {
     rw_op_t client_query;
     rw_op_t proxyed_query;
-    uint64_t com_select;
-    uint64_t com_insert;
-    uint64_t com_update;
-    uint64_t com_delete;
-    uint64_t com_select_shard;
-    uint64_t com_insert_shard;
-    uint64_t com_update_shard;
-    uint64_t com_delete_shard;
-    uint64_t com_select_global;
-    uint64_t com_select_bad_key;
     uint64_t xa_count;
     uint64_t query_time_table[MAX_QUERY_TIME];
     uint64_t query_wait_table[MAX_WAIT_TIME];
     rw_op_t server_query_details[MAX_SERVER_NUM];
 } query_stats_t;
 
+#ifndef SIMPLE_PARSER
 /* For generating unique global ids for MySQL */
 struct incremental_guid_state_t {
     unsigned int last_sec;
+    unsigned int last_msec;
     int worker_id;
-    int rand_id;
-    int init_rand_id;
     int seq_id;
 };
 
 void incremental_guid_init(struct incremental_guid_state_t *s);
 uint64_t incremental_guid_get_next(struct incremental_guid_state_t *s);
+#endif
 
 struct chassis {
     struct event_base *event_base;
@@ -106,6 +116,7 @@ struct chassis {
 
     /**< array(chassis_plugin) */
     GPtrArray *modules;
+    void *admin_plugin;
 
     /**< base directory for all relative paths referenced */
     gchar *base_dir;
@@ -117,47 +128,67 @@ struct chassis {
 
     char *proxy_address;
     char *default_db;
+    char *ifname;
     char *default_username;
     char *default_charset;
     char *default_hashed_pwd;
+    char *unix_socket_name;
 
     guint64 sess_key;
-    unsigned int maintain_close_mode;
-    unsigned int disable_threads;
-    int ssl;
-    unsigned int is_tcp_stream_enabled;
-    unsigned int query_cache_enabled;
-    unsigned int is_back_compressed;
-    unsigned int compress_support;
-    unsigned int client_found_rows;
-    unsigned int master_preferred;
-    unsigned int is_manual_down;
-    unsigned int is_reduce_conns;
-    unsigned int xa_log_detailed;
-    unsigned int check_slave_delay;
-    int complement_conn_flag;
-    int default_query_cache_timeout;
-    int client_idle_timeout;
-    int maintained_client_idle_timeout;
-    double slave_delay_down_threshold_sec;
-    double slave_delay_recover_threshold_sec;
-    unsigned int long_query_time;
-    unsigned int min_req_time_for_cache;
-    int cetus_max_allowed_packet;
-    int disable_dns_cache;
 
+    unsigned int maintain_close_mode:1;
+    unsigned int disable_threads:1;
+    unsigned int ssl:1;
+    unsigned int is_tcp_stream_enabled:1;
+    unsigned int is_fast_stream_enabled:1;
+    unsigned int is_partition_mode:1;
+    unsigned int is_sql_special_processed:1;
+    unsigned int query_cache_enabled:1;
+    unsigned int is_back_compressed:1;
+    unsigned int is_groupby_need_reconstruct:1;
+    unsigned int compress_support:1;
+    unsigned int client_found_rows:1;
+    unsigned int master_preferred:1;
+    unsigned int is_manual_down:1;
+    unsigned int is_reduce_conns:1;
+    unsigned int xa_log_detailed:1;
+    unsigned int charset_check:1;
+    unsigned int check_slave_delay:1;
+    unsigned int complement_conn_flag:1;
+    unsigned int disable_dns_cache:1;
+    unsigned int enable_admin_listen:1;
+    unsigned int is_need_to_create_conns:1;
+
+    unsigned int min_req_time_for_cache;
+    unsigned int long_query_time;
+    unsigned int internal_trx_isolation_level;
+    int need_to_refresh_server_connections;
+
+    int cpus;
+    int worker_processes;
+    int child_instant_exit_times;
+
+    int cetus_max_allowed_packet;
+    int maintained_client_idle_timeout;
+    int client_idle_timeout;
+    int incomplete_tran_idle_timeout;
+    int default_query_cache_timeout;
+    int socketpair_mutex;
     int max_alive_time;
-    int max_resp_len;
     int merged_output_size;
     int max_header_size;
     int compressed_merged_output_size;
-    int is_need_to_create_conns;
+    int asynchronous_type;
+    int connections_created_per_time;
 
     /* Conn-pool initialize settings */
     int max_idle_connections;
     int mid_idle_connections;
 
+    long long max_resp_len;
     unsigned long long dist_tran_id;
+    double slave_delay_recover_threshold_sec;
+    double slave_delay_down_threshold_sec;
 
     char dist_tran_prefix[MAX_DIST_TRAN_PREFIX];
 
@@ -172,9 +203,14 @@ struct chassis {
 
     query_stats_t query_stats;
 
+
+#ifndef SIMPLE_PARSER
     struct incremental_guid_state_t guid_state;
+#endif
     time_t startup_time;
+    time_t child_exit_time;
     time_t current_time;
+    time_t server_conn_refresh_time;
     struct chassis_options_t *options;
     chassis_config_t *config_manager;
     GHashTable *query_cache_table;
@@ -184,19 +220,23 @@ struct chassis {
 
     gint verbose_shutdown;
     gint daemon_mode;
+    char **argv;
+    int    argc;
     gchar *pid_file;
+    gchar *old_pid_file;
     gchar *log_level;
     gchar **plugin_names;
     gchar *log_xa_filename;
     guint invoke_dbg_on_crash;
-    guint auto_restart;
     gint max_files_number;
     char *remote_config_url;
+    char *trx_isolation_level;
     gchar *default_file;
     gint print_version;
 
     gint group_replication_mode;
 
+    struct event remote_config_event;
     struct event auto_create_conns_event;
     struct event update_timer_event;
 

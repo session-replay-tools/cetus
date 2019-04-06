@@ -14,9 +14,28 @@ Cetus只支持linux系统，安装步骤参考[Cetus 安装说明](https://githu
 
 ## 启动
 
+Cetus有两种启动方式：1. 本地配置文件启动； 2. 远程配置库启动。用户可以根据实际情况任意选择启动方式。下述例子以**本地配置文件**启动方式为例叙述。
+
+启动cetus之前，要保证配置文件（proxy.conf/shard.conf）的权限最小为660，可以通过以下命令修改权限：
 ```
-bin/cetus --defaults-file=conf/proxy.conf|shard.conf [--conf-dir＝/home/user/cetus_install/conf/]
+chmod 660 proxy.conf
 ```
+
+### 1. 命令行启动
+```
+bin/cetus --defaults-file=conf/proxy.conf|shard.conf [--conf-dir=/home/user/cetus_install/conf/]
+```
+
+### 2. service命令启动
+
+源码路径下的scripts文件夹中的cetus.service文件提供了启动、关闭cetus的脚本，CentOS系统下的用户可以将其拷贝至系统/etc/init.d/目录下，将其改名为cetus，并将其CETUS_HOME修改成cetus的实际安装路径，同时根据安装的cetus的读写分离版本或是分库版本，修改CETUS_CONF。使用该脚本对cetus操作的命令如下：
+
+```
+service cetus start
+service cetus stop
+service cetus restart
+```
+
 
 ## 连接
 
@@ -82,9 +101,28 @@ print "maintain status: %s" % data
 
 **注：Cetus读写分离和分库两个版本的使用约束详见[Cetus 使用约束说明](https://github.com/Lede-Inc/cetus/blob/master/doc/cetus-constraint.md)**
 
+## MGR 支持
+
+目前Cetus支持**单主模式**的MGR集群。对MGR支持通过在*.conf文件中设置参数：`group-replication-mode = 1`来实现，默认该参数为0，即只支持普通MySQL主从复制的集群。该参数支持通过admin端口动态的设置。
+
+特别注意，*.conf文件中配置的参数default-username在开启MGR模式后，需要对performance_schema.global_status和performance_schema.replication_group_members表进行查询从而获得MGR集群相关信息，因此在对default-username授权时候，需要特别注意。例如授权可以参考：
+
+```
+## 创建default-username账号（例如*.conf配置：default-username=cetus_app, default-db=test）
+CREATE USER 'cetus_app'@'172.17.0.*' IDENTIFIED BY 'Cetus_2019,2,18';
+
+## default-username对default-db/业务库的相关表授权
+GRANT SELECT, INSERT, UPDATE, DELETE ON test.* TO 'cetus_app'@'172.17.0.*';
+
+## MGR涉及表授权
+GRANT SELECT ON `performance_schema`.`replication_group_members` TO 'cetus_app'@'172.17.0.*';
+GRANT SELECT ON `performance_schema`.`global_status` TO 'cetus_app'@'172.17.0.*';
+
+```
+
 ## MySQL8 支持
 
-由于MySQL8.0用户权限认证插件新增了caching\_sha2\_password，并且默认创建的用户权限认证插件为该插件，MySQL55/56/57不支持该认证方式。因此在使用MySQL55/56/57库编译的Cetus时，配置default\-username账号，应该在MySQL上创建时指定插件为mysql|_native|_password，否则Cetus的监控线程无法工作，影响Cetus的正常使用。
+由于MySQL8.0用户权限认证插件新增了caching\_sha2\_password，并且默认创建的用户权限认证插件为该插件，MySQL55/56/57不支持该认证方式。因此在使用MySQL55/56/57库编译的Cetus时，配置default\-username账号，应该在MySQL上创建时指定插件为mysql_native_password，否则Cetus的监控线程无法工作，影响Cetus的正常使用。
 
 配置方法示例如下：
 
@@ -93,3 +131,6 @@ create user 'default-user'@'%' identified with mysql_native_password by 'my_pass
 grant all privileges on *.* to 'default-user'@'%';
 ```
 
+## 特别注意
+
+在使用cetus的时候，**不要**将后端MySQL的全局autocommit模式设置为OFF/0。如果需要使用隐式提交，可以在业务端配置该参数，例如在Java客户端的jdbcUrl中配置autoCommit=false。

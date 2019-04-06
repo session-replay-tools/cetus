@@ -13,49 +13,54 @@
 
 | Command                                  | Description                              |
 | :--------------------------------------- | :--------------------------------------- |
-| select conn_details from backend         | display the idle conns                   |
-| select * from backends                   | list the backends and their state        |
-| select * from groups                     | list the backends and their groups       |
-| show connectionlist [\<num>]             | show \<num> connections                  |
-| show allow_ip \<module>                  | show allow_ip rules of module, currently admin\|shard |
-| show deny_ip \<module>                   | show deny_ip rules of module, currently admin\|shard |
-| add allow_ip \<module> \<address>        | add address to white list of module      |
-| add deny_ip \<module> \<address>         | add address to black list of module      |
-| delete allow_ip \<module> \<address>     | delete address from white list of module |
-| delete deny_ip \<module> \<address>      | delete address from black list of module |
-| set reduce_conns (true\|false)           | reduce idle connections if set to true   |
-| reduce memory                            | reduce memory occupied by system         |
-| set maintain (true\|false)               | close all client connections if set to true |
-| show maintain status                     | query whether cetus status is maintain  |
-| reload shard                             | reload sharding config from remote db    |
-| show status [like '%\<pattern>%']        | show select/update/insert/delete statistics |
-| show variables [like '%\<pattern>%']     | show configuration variables             |
-| select version                           | cetus version                            |
-| select conn_num from backends where backend_ndx=\<index> and user='\<name>') | display selected backend and its connection number |
-| select * from user_pwd [where user='\<name>'] | display server username and password     |
-| select * from app_user_pwd [where user='\<name>'] | display client username and password     |
-| update user_pwd set password='xx' where user='\<name>' | update server username and password      |
-| update app_user_pwd set password='xx' where user='\<name>' | update client username and password      |
-| delete from user_pwd where user='\<name>' | delete server username and password      |
-| delete from app_user_pwd where user='\<name>' | delete client username and password      |
-| insert into backends values ('\<ip:port@group>', '(ro\|rw)', '\<state>') | add mysql instance to backends list      |
-| update backends set (type\|state)='\<value>' where (backend_ndx=\<index>\|address='\<ip:port>') | update mysql instance type or state      |
-| delete from backends where (backend_ndx=\<index>\|address='\<ip:port>') | set state of mysql instance to deleted   |
-| remove backend where (backend_ndx=\<index>\|address='\<ip:port>') | set state of mysql instance to deleted   |
-| add master '\<ip:port@group>'            | add master                               |
-| add slave '\<ip:port@group>'             | add slave                                |
-| stats get [\<item>]                      | show query statistics                    |
-| config get [\<item>]                     | show config                              |
-| config set \<key>=\<value>               | set config                               |
-| stats reset                              | reset query statistics                   |
-| save settings                            | not implemented                          |
-| select * from help                       | show this help                           |
-| select help                              | show this help                           |
-| cetus                                    | Show overall status of Cetus             |
+| select conn\_details from backends                                                  | display the idle conns                                     |
+| select * from backends                                                             | list the backends and their state                          |
+| show connectionlist [\<num\>]                                                        | show \<num\> connections                                     |
+| select * from groups                                                               | list the backends and their groups                         |
+| show allow\_ip/deny\_ip                                                              | show allow\_ip rules of module, currently admin|proxy|shard |
+| add allow\_ip/deny\_ip '\<user\>@\<address\>'                                            | add address to white list of module                        |
+| delete allow\_ip/deny\_ip '\<user\>@\<address\>'                                         | delete address from white list of module                   |
+| set reduce\_conns (true\|false)                                                      | reduce idle connections if set to true                     |
+| set maintain (true\|false)                                                          | Accelerate to close the connection                |
+| set charset_check (true\|false)                                                     | check the client charset is equal to the default charset   |
+| refresh conns                                                                      | refresh all server connections                             |
+| show maintain status                                                               | show maintain status                                       |
+| show variables [like '%pattern%']                                                  |                                                            |
+| select version                                                                     | cetus version                                              |
+| select * from user\_pwd [where user='<name>']                                       |                                                            |
+| select * from app\_user\_pwd [where user='<name>']                                   |                                                            |
+| update user\_pwd set password='xx' where user='<name>'                              |                                                            |
+| update app\_user\_pwd set password='xx' where user='<name>'                          |                                                            |
+| delete from user\_pwd where user='<name>'                                           |                                                            |
+| delete from app\_user\_pwd where user='<name>'                                       |                                                            |
+| insert into backends values ('\<ip:port@group\>', '(ro\|rw)', '\<state\>')              | add mysql instance to backends list                        |
+| update backends set (type\|state)=x where (backend\_ndx=\<index\>\|address=\<'ip:port'\>) | update mysql instance type or state                        |
+| delete from backends where (backend\_ndx=\<index\>|address=\<'ip:port'\>)               |                                                            |
+| remove backend where (backend\_ndx=<index>|address='<ip:port>')                     |                                                            |
+| remove backend backend\_ndx                                                         |                                                            |
+| add master \<'ip:port@group'\>                                                       |                                                            |
+| add slave \<'ip:port@group'\>                                                        |                                                            |
+| stats get [\<item\>]                                                                 | show query statistics                                      |
+| config get [\<item\>]                                                                | show config                                                |
+| config set \<key\>=\<value\>                                                           |                                                            |
+| stats reset                                                                        | reset query statistics                                     |
+| select \* from help                                                                 | show this help                                             |
+| select help                                                                        | show this help                                             |
+| cetus                                                                              | Show overall status of Cetus                               |
+| create vdb \<id\> (groupA:xx, groupB:xx) using \<method\>                              | Method example: hash(int,4) range(str)                     |
+| create sharded table \<schema\>.\<table\> vdb \<id\> shardkey \<key\>                      | Create sharded table                                       |
+| select \* from vdb                                                                  | Show all vdb                                               |
+| select sharded table                                                               | Show all sharded table                                     |
+| create single table \<schema\>.\<table\> on \<group\>                                    | Create single-node table                                   |
+| select single table                                                                | Show single tables                                         |
+| sql log status                                                                     | show sql log status                                        |
+| sql log start                                                                      | start sql log thread                                       |
+| sql log stop                                                                       | stop sql log thread                                        |
+| kill query \<tid\>                                                                   | kill session when the thread id is equal to tid            |
 
 结果说明：
 
-sharding版本管理端口提供了39条语句对cetus进行管理，具体用法见以下说明。
+sharding版本管理端口提供了多种语句对cetus进行管理，具体用法见以下说明。
 
 ## 后端配置
 
@@ -221,7 +226,7 @@ update后端的state只包括up|down|maintaining三种状态，delete/remove后�
 
 例如
 
->config set slave_delay_down = 3
+>config set slave-delay-down = 3
 
 ### 查看参数配置
 
@@ -288,7 +293,7 @@ XO:     处于XA OVER状态。
 
 减少空闲连接。
 
-### 设置是否关闭所有客户端连接
+### 设置是否加速关闭所有客户端连接
 
 `set maintain (true|false)`
 
@@ -296,13 +301,13 @@ XO:     处于XA OVER状态。
 
 >set maintain true;
 
-关闭所有客户端连接。
+加速关闭客户端与Cetus的连接，该参数通常与LVS配合使用。
 
-### 查询是否关闭所有客户端连接
+### 查询是否加速关闭所有客户端连接
 
 `show maintain status`
 
-查询是否关闭所有客户端连接。
+查询是否加速关闭所有客户端连接。
 
 ## 用户/密码管理
 
@@ -360,107 +365,91 @@ XO:     处于XA OVER状态。
 
 >delete from app_user_pwd where user='root'
 
-## IP白名单
+## Shard端口IP白名单
 
-### 查看IP白名单
+### 查看Shard端口IP白名单
 
-`show allow_ip <module>`
+`show allow_ip`
 
-\<module\>：admin|shard
+查看shard模块的IP白名单。
 
-查看admin／shard模块的IP白名单。
+若列表为空或为\*，则代表没有任何限制。
 
-若列表为空，则代表没有任何限制。
+### 增加Shard端口IP白名单
 
-### 增加IP白名单
+`add allow_ip <address>`
 
-`add allow_ip <module> <address>`
-
-向白名单增加一个IP许可。(IP不要加引号)
-
-\<module\>：admin|shard
+向Shard端口白名单增加一个IP许可。(IP需要加引号)
 
 \<address\>：[[user@]IP]
 
 ```
 说明
-Admin: 仅配置IP，不能限制用户(Admin有效用户只有一个)；
-Shard: 仅配置IP或者IP段，代表允许该IP来源所有用户的访问；配置User@IP，代表允许该IP来源的特定用户访问。
-其中配置的IP可为特定IP（如192.0.0.1），或者IP段（如192.0.0.*），或者所有IP（用*表示）。
+其中配置的IP为特定IP（如192.0.0.1），也支持IP段（如192.0.0.*）。
 ```
 
 例如
 
->add allow_ip admin 127.0.0.1
+>add allow_ip "127.0.0.1"
 
->add allow_ip shard test@127.0.0.1
+>add allow_ip "test@127.0.0.1"
 
-### 删除IP白名单
+### 删除Shard端口的IP白名单
 
-`delete allow_ip <module> <address>`
+`delete allow_ip <address>`
 
-删除白名单中的一个IP许可。(IP不要加引号)
-
-\<module\>：admin|shard
+删除白名单中的一个IP许可。(IP需要加引号)
 
 \<address\>：[[user@]IP]
 
 例如
 
->delete allow_ip admin 127.0.0.1
+>delete allow_ip "127.0.0.1"
 
->delete allow_ip shard test@127.0.0.1
+>delete allow_ip "test@127.0.0.1"
 
-## IP黑名单
+## Shard端口IP黑名单
 
-### 查看IP黑名单
+### 查看Shard端口IP黑名单
 
-`show deny_ip <module>`
+`show deny_ip`
 
-\<module\>：admin|shard
-
-查看admin／shard模块的IP黑名单。
+查看shard模块的IP黑名单。
 
 若列表为空，则代表没有任何限制。
 
-### 增加IP黑名单
+### 增加Shard端口IP黑名单
 
-`add deny_ip <module> <address>`
+`add deny_ip <address>`
 
-向黑名单增加一个IP限制。(IP不要加引号)
-
-\<module\>：admin|shard
+向Shard端口的黑名单增加一个IP限制。(IP需要加引号)
 
 \<address\>：[[user@]IP]
 
 ```
 说明
-Admin: 仅能配置IP，不能限制用户(Admin有效用户只有一个)；
-Shard: 仅配置IP，代表限制该IP来源所有用户的访问；配置User@IP，代表限制该IP来源的特定用户访问。
-其中配置的IP可为特定IP（如192.0.0.1），或者IP段（如192.0.0.*），或者所有IP（用*表示）。
+其中配置的IP为特定IP（如192.0.0.1），也支持IP段（如192.0.0.*）。
 ```
 
 例如
 
->add deny_ip admin 127.0.0.1
+>add deny_ip "127.0.0.1"
 
->add deny_ip shard test@127.0.0.1
+>add deny_ip "test@127.0.0.1"
 
-### 删除IP黑名单
+### 删除Shard端口IP黑名单
 
-`delete deny_ip <module> <address>`
+`delete deny_ip <address>`
 
-删除黑名单中的一个IP限制。(IP不要加引号)
-
-\<module\>：admin|shard
+删除Shard端口黑名单中的一个IP限制。(IP需要加引号)
 
 \<address\>：[[user@]IP]
 
 例如
 
->delete deny_ip admin 127.0.0.1
+>delete deny_ip "127.0.0.1"
 
->delete deny_ip shard test@127.0.0.1
+>delete deny_ip "test@127.0.0.1"
 
 **注意：IP白名单的优先级高于IP黑名单**
 
@@ -470,7 +459,7 @@ Shard: 仅配置IP，代表限制该IP来源所有用户的访问；配置User@I
 
 `reload shard`
 
-需要"remote-conf-url ＝ \<url>"和"disable-threads = false"启动选项。
+需要"remote-conf-url = \<url>"和"disable-threads = false"启动选项。
 从远端配置库中重载Shard配置。
 
 ### 保存最新配置
@@ -522,23 +511,6 @@ stats reset：重置统计信息
 
 包括程序版本、连接数量、QPS、TPS等信息
 
-### 查看各类SQL统计
-
-`show status [like '%<pattern>%']`
-
-```
-pattern参数说明
-Com_select         总的SELECT数量
-Com_insert         总的INSERT数量
-Com_update         总的UPDATE数量
-Com_delete         总的DELETE数量
-Com_select_shard   走多个节点的SELECT数量
-Com_insert_shard   走多个节点的INSERT数量
-Com_update_shard   走多个节点的UPDATE数量
-Com_delete_shard   走多个节点的DELETE数量
-Com_select_gobal   仅涉及公共表的SELECT数量
-Com_select_bad_key 分库键未识别导致走全库的SELECT数量
-```
 ### 查看当前cetus版本
 
 `select version`

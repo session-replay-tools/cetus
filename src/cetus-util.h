@@ -38,16 +38,17 @@ typedef int32_t BitArray;
 #define ClearBit(A,k)   (A[(k/32)] &= ~(1 << (k%32)))
 #define TestBit(A,k)    (A[(k/32)] & (1 << (k%32)))
 
-void cetus_string_dequote(char *z);
-
 #define KB 1024
 #define MB 1024 * KB
 #define GB 1024 * MB
 
 gboolean try_get_int_value(const gchar *option_value, gint *return_value);
+gboolean try_get_long_value(const gchar *option_value, long long *return_value);
 gboolean try_get_double_value(const gchar *option_value, gdouble *return_value);
 
 int make_iso8601_timestamp(char *buf, uint64_t utime);
 guint64 get_timer_microseconds();
+
+void bytes_to_hex_str(char* pin, int len, char* pout);
 
 #endif

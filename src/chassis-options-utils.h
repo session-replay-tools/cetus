@@ -43,8 +43,8 @@ enum {
     ASSIGN_NOT_SUPPORT,
     ASSIGN_VALUE_INVALID,
     SAVE_ERROR,
-    RENAME_ERROR,
-    CHMOD_ERROR
+    CHMOD_ERROR,
+    CHANGE_SAVE_ERROR
 };
 
 /* show utils */
@@ -65,8 +65,10 @@ CHASSIS_API gchar* show_max_open_files(gpointer param);
 CHASSIS_API gchar* show_default_charset(gpointer param);
 CHASSIS_API gchar* show_default_username(gpointer param);
 CHASSIS_API gchar* show_default_db(gpointer param);
+CHASSIS_API gchar* show_ifname(gpointer param);
 CHASSIS_API gchar* show_default_pool_size(gpointer param);
 CHASSIS_API gchar* show_max_pool_size(gpointer param);
+CHASSIS_API gchar* show_worker_processes(gpointer param);
 CHASSIS_API gchar* show_max_resp_len(gpointer param);
 CHASSIS_API gchar* show_max_alive_time(gpointer param);
 CHASSIS_API gchar* show_merged_output_size(gpointer param);
@@ -80,17 +82,22 @@ CHASSIS_API gchar* show_slave_delay_down(gpointer param);
 CHASSIS_API gchar* show_slave_delay_recover(gpointer param);
 CHASSIS_API gchar* show_default_query_cache_timeout(gpointer param);
 CHASSIS_API gchar* show_default_client_idle_timeout(gpointer param);
+CHASSIS_API gchar* show_default_incomplete_tran_idle_timeout(gpointer param);
 CHASSIS_API gchar* show_default_maintained_client_idle_timeout(gpointer param);
 CHASSIS_API gchar* show_long_query_time(gpointer param);
 CHASSIS_API gchar* show_enable_client_found_rows(gpointer param);
 CHASSIS_API gchar* show_reduce_connections(gpointer param);
 CHASSIS_API gchar* show_enable_query_cache(gpointer param);
 CHASSIS_API gchar* show_enable_tcp_stream(gpointer param);
+CHASSIS_API gchar* show_enable_fast_stream(gpointer param);
+CHASSIS_API gchar* show_enable_partition(gpointer param);
+CHASSIS_API gchar* show_enable_sql_special_processed(gpointer param);
 CHASSIS_API gchar* show_log_xa_in_detail(gpointer param);
 CHASSIS_API gchar* show_disable_dns_cache(gpointer param);
 CHASSIS_API gchar* show_master_preferred(gpointer param);
 CHASSIS_API gchar* show_max_allowed_packet(gpointer param);
 CHASSIS_API gchar* show_remote_conf_url(gpointer param);
+CHASSIS_API gchar* show_trx_isolation_level(gpointer param);
 CHASSIS_API gchar* show_group_replication_mode(gpointer param);
 CHASSIS_API gchar* show_sql_log_bufsize(gpointer param);
 CHASSIS_API gchar* show_sql_log_switch(gpointer param);
@@ -101,14 +108,17 @@ CHASSIS_API gchar* show_sql_log_mode(gpointer param);
 CHASSIS_API gchar* show_sql_log_idletime(gpointer param);
 CHASSIS_API gchar* show_sql_log_maxnum(gpointer param);
 CHASSIS_API gchar* show_check_dns(gpointer param);
+CHASSIS_API gchar* show_ssl(gpointer param);
 
 /* assign utils */
 CHASSIS_API gint assign_log_level(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_default_charset(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_default_username(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_default_db(const gchar *newval, gpointer param);
+CHASSIS_API gint assign_ifname(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_default_pool_size(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_max_pool_size(const gchar *newval, gpointer param);
+CHASSIS_API gint assign_worker_processes(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_max_resp_len(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_max_alive_time(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_merged_output_size(const gchar *newval, gpointer param);
@@ -117,6 +127,7 @@ CHASSIS_API gint assign_slave_delay_recover(const gchar *newval, gpointer param)
 CHASSIS_API gint assign_slave_delay_down(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_default_query_cache_timeout(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_default_client_idle_timeout(const gchar *newval, gpointer param);
+CHASSIS_API gint assign_default_incomplete_tran_idle_timeout(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_default_maintained_client_idle_timeout(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_long_query_time(const gchar *newval, gpointer param);
 CHASSIS_API gint assign_max_allowed_packet(const gchar *newval, gpointer param);

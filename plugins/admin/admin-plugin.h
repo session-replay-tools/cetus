@@ -4,6 +4,7 @@
 #include "glib-ext.h"
 #include "network-mysqld.h"
 #include "admin-stats.h"
+#include "cetus-process.h"
 
 #ifndef PLUGIN_VERSION
 #ifdef CHASSIS_BUILD_TAG
@@ -30,6 +31,5 @@ struct chassis_plugin_config {
 
     admin_stats_t *admin_stats;
 };
-
 
 #endif

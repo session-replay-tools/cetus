@@ -1,8 +1,9 @@
 #include "chassis-sql-log.h"
 #include "network-mysqld-packet.h"
+#include "cetus-process.h"
 #include <sys/stat.h>
 #include <sys/types.h>
-#include<unistd.h>
+#include <unistd.h>
 
 const COM_STRING com_command_name[]={
     { C("Sleep") },
@@ -79,7 +80,7 @@ static void get_current_time_str(GString *str) {
 }
 
 static struct rfifo *rfifo_alloc(guint size) {
-    struct rfifo *ret = (struct rfifo *)g_malloc0(sizeof(struct rfifo));;
+    struct rfifo *ret = (struct rfifo *)g_malloc0(sizeof(struct rfifo));
 
     if (!ret) {
         return NULL;
@@ -244,7 +245,7 @@ static void sql_log_check_rotate(struct sql_log_mgr *mgr) {
     localtime_r(&t, &cur_tm);
 
     gchar *rotate_filename = g_strdup_printf("%s/%s-%d-%04d%02d%02d%02d%02d%02d.%s",
-            mgr->sql_log_path, mgr->sql_log_prefix, getpid(),
+            mgr->sql_log_path, mgr->sql_log_prefix, cetus_pid,
             cur_tm.tm_year + 1900, cur_tm.tm_mon + 1, cur_tm.tm_mday, cur_tm.tm_hour,
             cur_tm.tm_min, cur_tm.tm_sec, SQL_LOG_DEF_SUFFIX);
     if (!rotate_filename) {
@@ -352,7 +353,8 @@ sql_log_thread_start(struct sql_log_mgr *mgr) {
          g_message("sql log path is not exist, try to mkdir success");
      }
      if (mgr->sql_log_fullname == NULL) {
-         mgr->sql_log_fullname = g_strdup_printf("%s/%s-%d.%s", mgr->sql_log_path, mgr->sql_log_prefix, getpid(), SQL_LOG_DEF_SUFFIX);
+         mgr->sql_log_fullname = g_strdup_printf("%s/%s-%d.%s",
+                 mgr->sql_log_path, mgr->sql_log_prefix, cetus_pid, SQL_LOG_DEF_SUFFIX);
      }
      mgr->fifo = rfifo_alloc(mgr->sql_log_bufsize);
      mgr->sql_log_filelist = g_queue_new();
@@ -431,7 +433,7 @@ log_sql_backend(network_mysqld_con *con, injection *inj)
                                               inj->id, inj->bytes, inj->rows,
                                               latency_ms, inj->qstat.query_status == MYSQLD_PACKET_OK ? "OK" : "ERR",
                                               GET_COM_NAME(con->parse.command),//type
-                                              con->parse.command == 23 ? "" : (inj->query != NULL ? GET_COM_STRING(inj->query) : ""));//sql
+                                              con->parse.command == COM_STMT_EXECUTE ? "" : (inj->query != NULL ? GET_COM_STRING(inj->query) : ""));//sql
 
      rfifo_write(mgr->fifo, message->str, message->len);
      g_string_free(message, TRUE);

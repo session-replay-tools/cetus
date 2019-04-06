@@ -48,9 +48,11 @@
 #include "chassis-event.h"
 #include "chassis-log.h"
 #include "chassis-timings.h"
+#include "cetus-process-cycle.h"
 #include "chassis-sql-log.h"
 
 static volatile sig_atomic_t signal_shutdown;
+extern int cetus_process_id;
 
 /**
  * check if the libevent headers we built against match the
@@ -59,8 +61,8 @@ static volatile sig_atomic_t signal_shutdown;
 int
 chassis_check_version(const char *lib_version, const char *hdr_version)
 {
-    int lib_maj, lib_min, lib_pat;
-    int hdr_maj, hdr_min, hdr_pat;
+    int lib_maj, lib_min;
+    int hdr_maj, hdr_min;
     int scanned_fields;
 
     if (2 != (scanned_fields = sscanf(lib_version, "%d.%d", &lib_maj, &lib_min))) {
@@ -100,8 +102,6 @@ chassis_new()
     chas->event_hdr_version = g_strdup(_EVENT_VERSION);
 
     chas->shutdown_hooks = chassis_shutdown_hooks_new();
-
-    incremental_guid_init(&(chas->guid_state));
 
     chas->startup_time = time(0);
 
@@ -184,6 +184,8 @@ chassis_free(chassis *chas)
         g_free(chas->user);
     if (chas->default_db)
         g_free(chas->default_db);
+    if (chas->ifname)
+        g_free(chas->ifname);
     if (chas->default_username)
         g_free(chas->default_username);
     if (chas->default_hashed_pwd)
@@ -192,6 +194,9 @@ chassis_free(chassis *chas)
         g_hash_table_destroy(chas->query_cache_table);
     if (chas->cache_index)
         g_queue_free_cache_index(chas->cache_index);
+    if  (chas->unix_socket_name) {
+        g_free(chas->unix_socket_name);
+    }
 
     g_free(chas->event_hdr_version);
 
@@ -224,6 +229,10 @@ chassis_free(chassis *chas)
         g_free(chas->pid_file);
     }
 
+    if (chas->old_pid_file) {
+        g_free(chas->old_pid_file);
+    }
+
     if(chas->log_level) {
         g_free(chas->log_level);
     }
@@ -248,6 +257,13 @@ chassis_free(chassis *chas)
         sql_log_free(chas->sql_mgr);
     }
 
+    if (chas->argv) {
+        for (i = 0; i < chas->argc; i++) {
+            free(chas->argv[i]);
+        }
+        free(chas->argv);
+    }
+
     g_free(chas);
 }
 
@@ -258,32 +274,13 @@ chassis_set_shutdown_location(const gchar *location)
         g_message("Initiating shutdown, requested from %s", (location != NULL ? location : "signal handler"));
     }
     signal_shutdown = 1;
+    cetus_terminate = 1;
 }
 
 gboolean
 chassis_is_shutdown()
 {
-    return signal_shutdown == 1;
-}
-
-static void
-sigterm_handler(int G_GNUC_UNUSED fd, short G_GNUC_UNUSED event_type, void G_GNUC_UNUSED *_data)
-{
-    chassis_set_shutdown_location(NULL);
-}
-
-static void
-sighup_handler(int G_GNUC_UNUSED fd, short G_GNUC_UNUSED event_type, void *_data)
-{
-    chassis *chas = _data;
-
-    /* this should go into the old logfile */
-    g_message("received a SIGHUP, closing log file");
-
-    chassis_log_set_logrotate(chas->log);
-
-    /* ... and this into the new one */
-    g_message("re-opened log file after SIGHUP");
+    return signal_shutdown == 1 || cetus_terminate == 1;
 }
 
 /**
@@ -312,11 +309,7 @@ int
 chassis_mainloop(void *_chas)
 {
     chassis *chas = _chas;
-    guint i;
-    struct event ev_sigterm, ev_sigint;
-#ifdef SIGHUP
-    struct event ev_sighup;
-#endif
+
     /* redirect logging from libevent to glib */
     event_set_log_callback(event_log_use_glib);
 
@@ -324,29 +317,6 @@ chassis_mainloop(void *_chas)
     chassis_event_loop_t *mainloop = chassis_event_loop_new();
     chas->event_base = mainloop;
     g_assert(chas->event_base);
-
-    /* setup all plugins */
-    for (i = 0; i < chas->modules->len; i++) {
-        chassis_plugin *p = chas->modules->pdata[i];
-
-        g_assert(p->apply_config);
-        if (0 != p->apply_config(chas, p->config)) {
-            g_critical("%s: applying config of plugin %s failed", G_STRLOC, p->name);
-            return -1;
-        }
-    }
-
-#ifndef SIMPLE_PARSER
-    chas->dist_tran_id = g_random_int_range(0, 100000000);
-    int srv_id = g_random_int_range(0, 10000);
-    if (chas->proxy_address) {
-        snprintf(chas->dist_tran_prefix, MAX_DIST_TRAN_PREFIX, "clt-%s-%d", chas->proxy_address, srv_id);
-    } else {
-        snprintf(chas->dist_tran_prefix, MAX_DIST_TRAN_PREFIX, "clt-%d", srv_id);
-    }
-    g_message("Initial dist_tran_id:%llu", chas->dist_tran_id);
-    g_message("dist_tran_prefix:%s", chas->dist_tran_prefix);
-#endif
 
     /*
      * drop root privileges if requested
@@ -382,67 +352,47 @@ chassis_mainloop(void *_chas)
         g_debug("now running as user: %s (%d/%d)", chas->user, user_info->pw_uid, user_info->pw_gid);
     }
 
-    signal_set(&ev_sigterm, SIGTERM, sigterm_handler, NULL);
-    event_base_set(chas->event_base, &ev_sigterm);
-    signal_add(&ev_sigterm, NULL);
-
-    signal_set(&ev_sigint, SIGINT, sigterm_handler, NULL);
-    event_base_set(chas->event_base, &ev_sigint);
-    signal_add(&ev_sigint, NULL);
-
-#ifdef SIGHUP
-    signal_set(&ev_sighup, SIGHUP, sighup_handler, chas);
-    event_base_set(chas->event_base, &ev_sighup);
-    if (signal_add(&ev_sighup, NULL)) {
-        g_critical("%s: signal_add(SIGHUP) failed", G_STRLOC);
-    }
-#endif
-
 #if !GLIB_CHECK_VERSION(2, 32, 0)
     /* GLIB below 2.32 must call thread_init if multi threads */
-    if (!chas->disable_threads) {
-        g_thread_init(NULL);
-    } else {
-        g_debug("Disable threads creation.");
+    g_thread_init(NULL);
+#endif
+
+    if (cetus_init_signals() == -1 ) {
+        return 1;
     }
-#endif
 
-    /**
-     * block until we are asked to shutdown
-     */
-    chassis_event_loop(mainloop);
+    cetus_master_process_cycle(chas);
 
-    signal_del(&ev_sigterm);
-    signal_del(&ev_sigint);
-#ifdef SIGHUP
-    signal_del(&ev_sighup);
-#endif
     return 0;
 }
 
+#ifndef SIMPLE_PARSER
 uint64_t
 incremental_guid_get_next(struct incremental_guid_state_t *s)
 {
     uint64_t uniq_id = 0;
-    uint64_t cur_time = time(0);
-    static uint64_t SEQ_MASK = (-1L ^ (-1L << 16L));
+    static uint64_t SEQ_MASK = (-1L ^ (-1L << 10L));
+
+    struct timeval tp;
+    gettimeofday(&tp, NULL);
+    unsigned int msec = tp.tv_usec / 1000;
+    uint64_t cur_time = tp.tv_sec;
 
     uniq_id = cur_time << 32;
-    uniq_id |= (s->worker_id & 0xff) << 24;
+    uniq_id |= (msec << 22);
+    uniq_id |= (s->worker_id & 0xfff) << 10;
 
-    if (cur_time == s->last_sec) {
+    if (cur_time == s->last_sec && msec == s->last_msec) {
         s->seq_id = (s->seq_id + 1) & SEQ_MASK;
         if (s->seq_id == 0) {
-            s->rand_id = (s->rand_id + 1) & 0x3ff;
-            g_message("%s:rand id changed:%llu", G_STRLOC, (unsigned long long)s->rand_id);
+            g_critical("%s:too many calls in one millisecond", G_STRLOC);
         }
     } else {
         s->seq_id = 0;
-        s->rand_id = s->init_rand_id;
     }
 
     s->last_sec = cur_time;
-    uniq_id |= s->rand_id << 16;
+    s->last_msec = msec;
     uniq_id |= s->seq_id;
 
     return uniq_id;
@@ -453,14 +403,12 @@ incremental_guid_init(struct incremental_guid_state_t *s)
 {
     struct timeval tp;
     gettimeofday(&tp, NULL);
-    unsigned int seed = tp.tv_usec;
 
-    if (s->worker_id == 0) {
-        s->worker_id = (int)((rand_r(&seed) / (RAND_MAX + 1.0)) * 64);
-    }
-
-    s->rand_id = (int)((rand_r(&seed) / (RAND_MAX + 1.0)) * 1024);
-    s->init_rand_id = s->rand_id;
-    s->last_sec = time(0);
+    s->worker_id = (s->worker_id << MAX_WORK_PROCESSES_SHIFT) + cetus_process_id;
+    g_message("internal worker id:%d", s->worker_id);
+    s->last_sec = tp.tv_sec;
+    s->last_msec = tp.tv_usec;
     s->seq_id = 0;
 }
+#endif
+

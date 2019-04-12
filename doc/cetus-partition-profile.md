@@ -84,6 +84,18 @@ partition-mode=true
 }
 ```
 
+- 创建子表
+
+直连主库，创建对应的子表:
+
+```
+use ght;
+create table tb_hs0 (id int);
+create table tb_hs1 (id int);
+create table tb_hs2 (id int);
+create table tb_hs3 (id int);
+```
+
 - 启动Cetus
 
 ```

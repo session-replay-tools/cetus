@@ -79,7 +79,7 @@ partition-mode=true
     }
   ],
  "table": [
-    {"vdb": 1, "db": "ght", "table": "t1", "pkey": "id"}
+    {"vdb": 1, "db": "ght", "table": "tb", "pkey": "id"}
   ]
 }
 ```

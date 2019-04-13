@@ -1170,9 +1170,13 @@ process_query_or_stmt_prepare(network_mysqld_con *con, proxy_plugin_con_t *st,
     }
 
     /* forbid force write on slave */
-    if ((context->rw_flag & CF_FORCE_SLAVE) && (context->rw_flag & CF_WRITE)) {
+    if ((context->rw_flag & CF_FORCE_SLAVE) && ((context->rw_flag & CF_WRITE) || con->is_in_transaction)) {
         g_message("%s Comment usage error. SQL: %s", G_STRLOC, con->orig_sql->str);
-        network_mysqld_con_send_error(con->client, C("Force write on read-only slave"));
+        if (con->is_in_transaction) {
+            network_mysqld_con_send_error(con->client, C("Force transaction on read-only slave"));
+        } else {
+            network_mysqld_con_send_error(con->client, C("Force write on read-only slave"));
+        }
         *disp_flag = PROXY_SEND_RESULT;
         return 0;
     }

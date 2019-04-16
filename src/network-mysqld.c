@@ -3958,6 +3958,7 @@ network_mysqld_process_select_resp(network_mysqld_con *con, network_socket *serv
         }
 
         queue->len += len;
+        server->recv_queue_raw->len = 0;
         g_message("%s: append raw packets to send queue for con:%p, len:%d, queue len:%d", G_STRLOC, con, len, (int) queue->len);
         network_queue *reserved_queue = server->recv_queue_raw;
         server->recv_queue_raw = server->recv_queue;

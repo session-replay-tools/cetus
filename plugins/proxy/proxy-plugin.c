@@ -1442,7 +1442,7 @@ network_read_query(network_mysqld_con *con, proxy_plugin_con_t *st)
     sql_context_t *context = st->sql_context;
     switch (command) {
     case COM_QUERY:
-        if (context->stmt_type == STMT_SELECT && con->server->is_read_only) {
+        if (context->stmt_type == STMT_SELECT && con->is_read_ro_server_allowed) {
             if (con->srv->is_fast_stream_enabled) {
                 if ((!con->srv->sql_mgr) ||
                         (con->srv->sql_mgr->sql_log_switch != ON && con->srv->sql_mgr->sql_log_switch != REALTIME))

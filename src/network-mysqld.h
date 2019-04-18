@@ -53,6 +53,7 @@
 #include "cetus-error.h"
 
 #define ANALYSIS_PACKET_LEN 5
+#define RECORD_PACKET_LEN 11
 #define COMPRESS_BUF_SIZE 1048576
 
 typedef enum {
@@ -607,9 +608,13 @@ struct network_mysqld_con {
      * even before the full resultset is parsed.
      */
     unsigned int resultset_is_needed:1;
+    unsigned int eof_last_met:1;
+    unsigned int fast_stream_need_more:1;
     unsigned int last_backend_type:2;
     unsigned int eof_met_cnt:4;
     unsigned int last_payload_len:4;
+    unsigned int last_record_payload_len:4;
+    unsigned int fast_stream_last_exec_index:4;
     unsigned int process_index:6;
     unsigned int last_packet_id:8;
     unsigned int write_server_num:8;
@@ -624,6 +629,7 @@ struct network_mysqld_con {
     time_t last_check_conn_supplement_time;
 
     unsigned char last_payload[ANALYSIS_PACKET_LEN];
+    unsigned char record_last_payload[RECORD_PACKET_LEN];
     struct timeval req_recv_time;
     struct timeval resp_recv_time;
     struct timeval resp_send_time;

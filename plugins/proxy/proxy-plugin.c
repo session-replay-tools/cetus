@@ -125,6 +125,52 @@ struct chassis_plugin_config {
 
 static gboolean proxy_get_backend_ndx(network_mysqld_con *con, int type, gboolean force_slave);
 
+void
+g_fast_stream_hexdump(const char *msg, const void *_s, size_t len)
+{
+    GString *hex;
+    size_t i;
+    const unsigned char *s = _s;
+
+    hex = g_string_new(NULL);
+
+    for (i = 0; i < len; i++) {
+        if (i % 16 == 0) {
+            g_string_append_printf(hex, "[%04" G_GSIZE_MODIFIER "x]  ", i);
+        }
+        g_string_append_printf(hex, "%02x", s[i]);
+
+        if ((i + 1) % 16 == 0) {
+            size_t j;
+            g_string_append_len(hex, C("  "));
+            for (j = i - 15; j <= i; j++) {
+                g_string_append_c(hex, g_ascii_isprint(s[j]) ? s[j] : '.');
+            }
+            g_string_append_len(hex, C("\n  "));
+        } else {
+            g_string_append_c(hex, ' ');
+        }
+    }
+
+    if (i % 16 != 0) {
+        /* fill up the line */
+        size_t j;
+
+        for (j = 0; j < 16 - (i % 16); j++) {
+            g_string_append_len(hex, C("   "));
+        }
+
+        g_string_append_len(hex, C(" "));
+        for (j = i - (len % 16); j < i; j++) {
+            g_string_append_c(hex, g_ascii_isprint(s[j]) ? s[j] : '.');
+        }
+    }
+
+    g_message("(%s) %" G_GSIZE_FORMAT " bytes:\n  %s", msg, len, hex->str);
+
+    g_string_free(hex, TRUE);
+}
+
 /**
  * handle event-timeouts on the different states
  *
@@ -170,6 +216,17 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_timeout)
     case ST_READ_QUERY_RESULT:
         if (con->server && !con->client->is_server_conn_reserved) {
             con->server_to_be_closed = 1;
+            if (!con->resultset_is_needed && con->candidate_fast_streamed) {
+                g_critical("%s, fast_stream_last_exec_index:%d, need more:%d", G_STRLOC, 
+                        con->fast_stream_last_exec_index, con->fast_stream_need_more);
+                g_critical("%s, eof_last_met:%d, eof_met_cnt:%d", G_STRLOC, 
+                        con->eof_last_met, con->eof_met_cnt);
+                g_critical("%s, partically_record_left_cnt:%d, analysis_next_pos:%d, cur_resp_len:%d", 
+                        G_STRLOC, con->partically_record_left_cnt, (int) con->analysis_next_pos, (int) con->cur_resp_len);
+                g_critical("%s, last_payload_len:%d, last_record_payload_len:%d", G_STRLOC, 
+                        con->last_payload_len, con->last_record_payload_len);
+                g_fast_stream_hexdump(G_STRLOC, con->record_last_payload, con->last_record_payload_len);
+            }
             g_critical("%s, con:%p read query result timeout, sql:%s", G_STRLOC, con, con->orig_sql->str);
 
             network_mysqld_con_send_error_full(con->client,

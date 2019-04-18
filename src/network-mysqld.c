@@ -3720,11 +3720,21 @@ fast_analyze_stream(network_mysqld_con *con, network_socket *server, int *send_f
     g_debug("%s: fast_analyze_stream here:%d for con:%p, con->partically_record_left_cnt:%d",
             G_STRLOC, (int) con->last_payload_len, con, (int) con->partically_record_left_cnt);
 
+    con->eof_last_met = 0;
+    con->fast_stream_need_more = 0;
+    int last_eof_cnt = con->eof_met_cnt;
+    GString *last_payload = NULL;
+
+    con->fast_stream_last_exec_index = 0;
+
     for (chunk = queue->chunks->head; chunk; chunk = chunk->next) {
         GString *s = chunk->data;
+        last_payload = s;
+
         if (con->partically_record_left_cnt) {
             con->partically_record_left_cnt--;
             g_debug("%s: continue  here:%d for con:%p, s->len:%d", G_STRLOC, con->last_payload_len, con, (int) s->len);
+            con->fast_stream_last_exec_index = 1;
             continue;
         }
 
@@ -3740,6 +3750,7 @@ fast_analyze_stream(network_mysqld_con *con, network_socket *server, int *send_f
                 con->last_payload_len = con->last_payload_len + s->len;
                 con->cur_resp_len += s->len;
                 g_debug("%s: padding here:%d for con:%p", G_STRLOC, con->last_payload_len, con);
+                con->fast_stream_last_exec_index = 2;
                 continue;
             }
         }
@@ -3805,6 +3816,7 @@ fast_analyze_stream(network_mysqld_con *con, network_socket *server, int *send_f
                 g_debug("%s:continue here:%d for con:%p, packet_len:%d, s->len:%d, cur_resp_len:%d,analysis_next_pos:%d",
                         G_STRLOC, (int) con->last_payload_len, con, packet_len, (int) s->len,
                         (int) con->cur_resp_len, (int) con->analysis_next_pos);
+                con->fast_stream_last_exec_index = 3;
                 continue;
             }
             g_debug("%s:  packet len:%d, last_payload_len:%d, diff:%d for con:%p",
@@ -3818,6 +3830,7 @@ fast_analyze_stream(network_mysqld_con *con, network_socket *server, int *send_f
                 con->last_payload_len = 0;
                 g_debug("%s:continue here:%d for con:%p, cur_resp_len:%d, analysis_next_pos:%d, s->len:%d",
                         G_STRLOC, con->last_payload_len, con, (int) con->cur_resp_len, (int) con->analysis_next_pos, (int) s->len);
+                con->fast_stream_last_exec_index = 4;
                 continue;
             }
             packet_len = NET_HEADER_SIZE + ((header[0]) | (header[1] << 8) | (header[2] << 16));
@@ -3836,6 +3849,7 @@ fast_analyze_stream(network_mysqld_con *con, network_socket *server, int *send_f
                 con->cur_resp_len += s->len;
                 con->analysis_next_pos += packet_len;
                 g_debug("%s:continue here:%d for con:%p, s->len:%d, packet_len:%d", G_STRLOC, con->last_payload_len, con, (int) s->len, packet_len);
+                con->fast_stream_last_exec_index = 5;
                 continue;
             }
         }
@@ -3887,6 +3901,14 @@ fast_analyze_stream(network_mysqld_con *con, network_socket *server, int *send_f
                 G_STRLOC, (int) con->cur_resp_len, (int) con->analysis_next_pos,  packet_len, (int) s->len, con);
         if (con->analysis_next_pos != con->cur_resp_len) {
             need_more = TRUE;
+            con->fast_stream_need_more = 1;
+            if (s->len > RECORD_PACKET_LEN) {
+                memcpy(con->record_last_payload, s->str + s->len - RECORD_PACKET_LEN, RECORD_PACKET_LEN);
+                con->last_record_payload_len = RECORD_PACKET_LEN;
+            } else {
+                memcpy(con->record_last_payload, s->str, s->len);
+                con->last_record_payload_len = s->len;
+            }
             int  partially_diff = 0;
             if (complete_record_len > 0) {
                 partially_diff = s->len - complete_record_len;
@@ -3904,7 +3926,23 @@ fast_analyze_stream(network_mysqld_con *con, network_socket *server, int *send_f
             con->partically_record_left_cnt++;
             g_debug("%s: wait more response, analysis_next_pos:%d, cur_resp_len:%d, diff:%d, complete_record_len:%d for con:%p",
                     G_STRLOC, (int) con->analysis_next_pos, (int) con->cur_resp_len, partially_diff, complete_record_len, con);
+            con->fast_stream_last_exec_index = 6;
             break;
+        }
+        con->fast_stream_last_exec_index = 7;
+    }
+
+    if (con->eof_met_cnt != last_eof_cnt) {
+        con->eof_last_met = 1;
+    }
+
+    if (!need_more) {
+        if (last_payload->len > RECORD_PACKET_LEN) {
+            memcpy(con->record_last_payload, last_payload->str + last_payload->len - RECORD_PACKET_LEN, RECORD_PACKET_LEN);
+            con->last_record_payload_len = RECORD_PACKET_LEN;
+        } else {
+            memcpy(con->record_last_payload, last_payload->str, last_payload->len);
+            con->last_record_payload_len = last_payload->len;
         }
     }
 

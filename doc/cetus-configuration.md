@@ -257,12 +257,12 @@ Default: false
 
 > enable-client-found-rows = true
 
-### worker_id
+### worker-id
 
 只针对分库版本有效
 不同cetus实例的id号必须是不一样，否则容易有冲突
 
-> worker_id = 1
+> worker-id = 1
 
 ## Admin配置
 

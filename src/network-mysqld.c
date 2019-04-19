@@ -3626,7 +3626,7 @@ normal_read_query_result(network_mysqld_con *con, network_mysqld_con_state_t ost
             while ((packet = g_queue_pop_head(con->server->recv_queue->chunks)) != NULL) {
                 network_mysqld_queue_append_raw(con->client, con->client->send_queue, packet);
             }
-            if (con->client->send_queue->len > 0) {
+            if (!g_queue_is_empty(con->client->send_queue->chunks)) {
                 g_debug("%s: send_part_content_to_client", G_STRLOC);
                 send_part_content_to_client(con);
             }

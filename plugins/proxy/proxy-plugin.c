@@ -1472,6 +1472,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
 
     int server_attr_changed = 0;
     con->is_client_to_be_closed = 0;
+    con->server_to_be_closed = 0;
     con->server_in_tran_and_auto_commit_received = 0;
 
     if (con->server != NULL) {

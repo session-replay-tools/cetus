@@ -1606,6 +1606,13 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
     int server_attr_changed = 0;
     con->is_client_to_be_closed = 0;
     con->server_in_tran_and_auto_commit_received = 0;
+    if (con->server_to_be_closed) {
+        g_warning("%s server_to_be_closed is true", G_STRLOC);
+    }
+    con->server_to_be_closed = 0;
+    if (con->client->send_queue->len > 0) {
+        g_warning("%s client send queue is not zero", G_STRLOC);
+    }
 
     if (con->server != NULL) {
         if (con->last_backend_type != st->backend->type) {
@@ -2077,6 +2084,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query_result)
      * if the send-queue is empty, we have nothing to send
      * and can read the next query */
     if (send_sock->send_queue->chunks) {
+        g_debug("%s: send queue is not empty:%d", G_STRLOC, send_sock->send_queue->chunks->length);
         con->state = ST_SEND_QUERY_RESULT;
     } else {
         /*

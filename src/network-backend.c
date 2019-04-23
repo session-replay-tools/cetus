@@ -399,8 +399,6 @@ network_backends_count(network_backends_t *bs)
     return len;
 }
 
-#define DEFAULT_CHARSET   '\x21'
-
 
 gboolean
 network_backends_load_config(network_backends_t *bs, chassis *srv)

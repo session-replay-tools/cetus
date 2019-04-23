@@ -23,6 +23,8 @@
 
 #include "network-exports.h"
 
+#define DEFAULT_CHARSET   '\x21'
+
 NETWORK_API int charset_get_number(const char *name);
 NETWORK_API const char *charset_get_name(int number);
 

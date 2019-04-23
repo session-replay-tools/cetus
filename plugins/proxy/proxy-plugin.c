@@ -583,6 +583,9 @@ process_set_names(network_mysqld_con *con, char *s, mysqld_query_attr_t *query_a
     query_attr->charset_results_set = 1;
     query_attr->charset_set = 1;
     sock->charset_code = charset_get_number(s);
+    if (s && strcmp(s, "utf8") != 0 && sock->charset_code == DEFAULT_CHARSET) {
+        g_warning("%s: charset code:%d, charset:%s", G_STRLOC, sock->charset_code, s == NULL ? "NULL":s);
+    }
     return 0;
 }
 

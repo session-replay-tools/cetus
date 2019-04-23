@@ -23,8 +23,6 @@
 #include <string.h>
 #include <assert.h>
 
-#define DEFAULT_CHARSET   '\x21'
-
 int
 charset_get_number(const char *name)
 {

@@ -223,11 +223,7 @@ Default: 10485760 (10MB)
 
 ### master-preferred
 
-`可在Admin模块中动态更改`
-
-Proxy在读写分离时可以指定访问的库
-
-参数未设置时，没有限制；设置为true时仅访问读写后端(主库)，除非利用注释强制走从库
+设置为true时仅访问读写后端(主库)，除非利用注释强制走从库
 
 > master-preferred = true
 

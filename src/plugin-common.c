@@ -236,8 +236,13 @@ do_read_auth(network_mysqld_con *con)
 
     const char *client_charset = charset_get_name(auth->charset);
     if (client_charset == NULL) {
-        client_charset = con->srv->default_charset;
-        auth->charset = charset_get_number(client_charset);
+        g_message("%s: client charset is nil, orig charset num:%d", G_STRLOC, auth->charset);
+        char *err_msg = g_strdup_printf("client charset is not supported");
+        network_mysqld_con_send_error_full(recv_sock, L(err_msg), 1045, "28000");
+        log_sql_connect(con, err_msg);
+        g_free(err_msg);
+        con->state = ST_SEND_ERROR;
+        return NETWORK_SOCKET_SUCCESS;
     }
 
     recv_sock->charset_code = auth->charset;

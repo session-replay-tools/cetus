@@ -4242,16 +4242,6 @@ normal_read_query_result(network_mysqld_con *con, network_mysqld_con_state_t ost
 
         switch (plugin_call(srv, con, con->state)) {
         case NETWORK_SOCKET_SUCCESS:
-            /* 
-             * if we don't need the resultset, 
-             * forward it to the client
-             */
-            if (!con->resultset_is_needed) {
-                if (con->client->send_queue->len > 65536) {
-                    con->state = ST_SEND_QUERY_RESULT;
-                    g_warning("%s: send queue len is too big for sock:%p", G_STRLOC, con->client);
-                }
-            }
             break;
         case NETWORK_SOCKET_ERROR:
             /* 

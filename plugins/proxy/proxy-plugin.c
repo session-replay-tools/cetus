@@ -1049,6 +1049,7 @@ adjust_user(network_mysqld_con *con)
         }
         chuser.database = con->client->default_db;
         chuser.charset = con->client->charset_code;
+        g_debug("%s: charset:%d when change user", G_STRLOC, con->client->charset_code);
 
         GString *payload = g_string_new(NULL);
         mysqld_proto_append_change_user_packet(payload, &chuser);
@@ -1613,9 +1614,6 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query)
         g_warning("%s server_to_be_closed is true", G_STRLOC);
     }
     con->server_to_be_closed = 0;
-    if (con->client->send_queue->len > 0) {
-        g_warning("%s client send queue is not zero", G_STRLOC);
-    }
 
     if (con->server != NULL) {
         if (con->last_backend_type != st->backend->type) {

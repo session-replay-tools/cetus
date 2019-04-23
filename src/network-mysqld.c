@@ -2731,6 +2731,8 @@ process_shard_write(network_mysqld_con *con, int *disp_flag)
 static int
 process_rw_write(network_mysqld_con *con, network_mysqld_con_state_t ostate, int *disp_flag)
 {
+    g_debug("%s: conn:%p, server charset code:%d, charset:%s, client charset code:%d, charset:%s", G_STRLOC, con,
+            con->server->charset_code, con->server->charset->str, con->client->charset_code, con->client->charset->str);
     /* Add check for abnormal response processing */
     if (con->srv->is_fast_stream_enabled && (!con->server->do_compress)) {
         if (con->server->recv_queue_raw->chunks->length > 0) {
@@ -5858,8 +5860,8 @@ network_connection_pool_create_conns(chassis *srv)
 
                 }
 
-                g_message("%s: connected_clients add, backend ndx:%d, for server:%p, faked con:%p",
-                          G_STRLOC, i, scs->server, scs);
+                g_message("%s: connected_clients add, backend ndx:%d, for server:%p, faked con:%p, charset:%d",
+                          G_STRLOC, i, scs->server, scs, scs->charset_code);
 
                 scs->backend->connected_clients++;
                 int create_err = 0;

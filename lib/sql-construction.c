@@ -582,6 +582,9 @@ sql_construct_update(sql_update_t *p)
     for (i = 0; p->set_list && i < p->set_list->len; ++i) {
         sql_expr_t *expr = g_ptr_array_index(p->set_list, i);
         append_sql_expr(s, expr);
+        if ((i + 1) < p->set_list->len) {
+            g_string_append(s, ",");
+        }
     }
 
     if (p->where_clause) {

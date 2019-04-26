@@ -49,6 +49,24 @@ sharding_plan_free(sharding_plan_t *plan)
     g_free(plan);
 }
 
+void
+sharding_plan_free_map(sharding_plan_t *plan)
+{
+    plan->is_sql_rewrite_completely = 0;
+    if (plan->sql_list) {
+        g_list_free_full(plan->sql_list, g_string_true_free);
+        plan->sql_list = NULL;
+    }
+    if (plan->mapping) {
+        GList *l = plan->mapping;
+        for (; l != NULL; l = l->next) {
+            g_free(l->data);
+        }
+        g_list_free(plan->mapping);
+        plan->mapping = NULL;
+    }
+}
+
 static struct _group_sql_pair *
 sharding_plan_get_mapping(sharding_plan_t *plan, const GString *gp)
 {
@@ -141,8 +159,9 @@ sharding_plan_get_sql(sharding_plan_t *plan, const GString *group)
         } else {
             return plan->is_modified ? plan->modified_sql : plan->orig_sql;
         }
+    } else {
+        return plan->is_modified ? plan->modified_sql : plan->orig_sql;
     }
-    return NULL;
 }
 
 void

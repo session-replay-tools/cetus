@@ -988,6 +988,18 @@ before_get_server_list(network_mysqld_con *con)
         }
         con->dist_tran_xa_start_generated = 0;
     }
+
+    if (con->sharding_plan) {
+        if (con->servers == NULL || con->servers->len == 0) {
+            if (con->sharding_plan) {
+                sharding_plan_free(con->sharding_plan);
+                g_debug("%s: call sharding_plan_free here:%p", G_STRLOC, con);
+                con->sharding_plan = NULL;
+            }
+        } else {
+            sharding_plan_free_map(con->sharding_plan);
+        }
+    }
 }
 
 static void
@@ -1162,6 +1174,13 @@ make_first_decision(network_mysqld_con *con, sharding_plan_t *plan, int *rv, int
         return 0;
 
     case USE_PREVIOUS_WARNING_CONN:
+        if (con->sharding_plan == NULL) {
+            con->client->is_server_conn_reserved = 0;
+            *disp_flag = PROXY_SEND_RESULT;
+            network_mysqld_con_send_ok_full(con->client, 0, 0, 0, 0);
+            g_warning("%s: origin has no sharding plan yet", G_STRLOC);
+            return 0;
+        }
         sharding_plan_free(plan);
         if (con->last_warning_met) {
             con->use_all_prev_servers = 1;
@@ -1184,6 +1203,13 @@ make_first_decision(network_mysqld_con *con, sharding_plan_t *plan, int *rv, int
         }
         break;
     case USE_PREVIOUS_TRAN_CONNS:
+        if (con->sharding_plan == NULL) {
+            con->client->is_server_conn_reserved = 0;
+            *disp_flag = PROXY_SEND_RESULT;
+            network_mysqld_con_send_ok_full(con->client, 0, 0, 0, 0);
+            g_warning("%s: origin has no sharding plan yet", G_STRLOC);
+            return 0;
+        }
         if (!process_rv_use_previous_tran_conns(con, plan, rv, disp_flag)) {
             return 0;
         }

@@ -52,6 +52,7 @@ typedef struct sharding_plan_t {
 sharding_plan_t *sharding_plan_new(const GString *orig_sql);
 
 void sharding_plan_free(sharding_plan_t *);
+void sharding_plan_free_map(sharding_plan_t *);
 
 void sharding_plan_set_modified_sql(sharding_plan_t *, GString *sql);
 

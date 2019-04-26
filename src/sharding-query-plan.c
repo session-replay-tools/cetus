@@ -52,6 +52,7 @@ sharding_plan_free(sharding_plan_t *plan)
 void
 sharding_plan_free_map(sharding_plan_t *plan)
 {
+    plan->is_sql_rewrite_completely = 0;
     if (plan->sql_list) {
         g_list_free_full(plan->sql_list, g_string_true_free);
         plan->sql_list = NULL;
@@ -158,8 +159,9 @@ sharding_plan_get_sql(sharding_plan_t *plan, const GString *group)
         } else {
             return plan->is_modified ? plan->modified_sql : plan->orig_sql;
         }
+    } else {
+        return plan->is_modified ? plan->modified_sql : plan->orig_sql;
     }
-    return NULL;
 }
 
 void

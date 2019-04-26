@@ -12,7 +12,42 @@
 - mysql-devel／mariadb-devel
 - gperftools-libs (由于malloc存在着潜在的内存碎片问题，建议采用gperftools-libs中的tcmalloc)
 
-centos系统可使用：yum install cmake gcc glib2-devel flex mysql-devel gperftools-libs zlib-devel -y 安装依赖包，请确保在编译安装Cetus前已安装好相应的依赖。
+CentOS 系统可以通过以下命令安装依赖包：
+
+```
+yum install cmake gcc glib2-devel flex mysql-devel gperftools-libs zlib-devel -y 
+```
+
+SUSE 系统可以通过以下命令安装依赖包:
+
+```
+## 安装命令
+zypper in cmake
+zypper in gcc
+zypper in glib2-devel
+zypper in zlib-devel
+zypper in flex
+zypper in mysql-devel
+zypper in gperftools-libs
+## 注意1: cmake工具的版本
+## Cetus目前要求cmake工具版本要大于等于2.8.11
+## SUSE11某版本上cmake版本低于2.8.11，因此需要升级cmake
+## 下述流程为源码编译cmake的步骤
+zypper in gcc-c++
+wget https://cmake.org/files/v3.9/cmake-3.9.2.tar.gz
+tar -xvf cmake-3.9.2.tar.gz
+cd cmake-3.9.2
+./configure
+make && make install
+mv /usr/bin/cmake /usr/bin/cmake2.8.4
+ln -s /usr/local/bin/cmake /usr/bin/cmake
+cmake --version
+## 注意2： 没有正确安装mysql-devel
+## 可能会报错 error Only <glib.h> can be included directly
+## 原因可能是mysql-devel没有正确安装，没有正确安装的原因可能是其依赖的库无法找到等等，可以手动安装依赖库等等
+```
+
+请确保在编译安装Cetus前已安装好相应的依赖。
 
 **注意**：如果已经安装了gperftools-libs，但是编译cetus时仍然提示找不到tcmalloc，则可以通过建立软链接的形式，解决。
 ```

@@ -15,6 +15,7 @@ CETUS_PID=${CETUS_HOME}/cetus.pid
 CETUS_LOG=${CETUS_HOME}/cetus.log
 CETUS_EXEC=${CETUS_HOME}/libexec/cetus
 CETUS_DAEMON="0"
+CETUS_PROG="cetus"
 
 cetus_pid=`sed '/^pid-file=/!d;s/.*=//' ${CETUS_CONF}`     
 if [ "$cetus_pid" != "" ];then
@@ -120,6 +121,9 @@ case "$1" in
         ;;
   stop)
         stop
+        ;;
+  status)
+        status -p "$CETUS_PID" $CETUS_PROG
         ;;
   restart)
         restart

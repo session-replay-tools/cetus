@@ -105,6 +105,10 @@ chassis_event_loop(chassis_event_loop_t *loop, int *mutex)
             if (cetus_noaccept) {
                 g_message("%s: cetus_noaccept is true", G_STRLOC);
             }
+
+            if (cetus_reap) {
+                g_message("%s: cetus_reap is true", G_STRLOC);
+            }
             break;
         }
 

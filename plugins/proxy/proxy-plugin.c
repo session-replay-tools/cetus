@@ -1472,7 +1472,7 @@ network_read_query(network_mysqld_con *con, proxy_plugin_con_t *st)
                 change_stmt_id(con, stmt_id);
             }
         } else if (command == COM_QUERY) {
-            change_server_by_rw(con, backend_ndx);
+            change_server_by_rw(con, st->backend_ndx);
         }
     }
 

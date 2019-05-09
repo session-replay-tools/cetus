@@ -754,19 +754,22 @@ cetus_worker_process_cycle(cetus_cycle_t *cycle, void *data)
             cetus_worker_process_exit(cycle);
         }
 
+        if (cetus_reap) {
+            cetus_reap = 0;
+            g_message("%s: cetus reap is true for child", G_STRLOC);
+        }
+
         g_debug("%s: worker cycle", G_STRLOC);
 
         /* call main procedures for worker */
         chassis_event_loop_t *loop = cycle->event_base;
         chassis_event_loop(loop, NULL);
-        g_message("%s: after chassis_event_loop", G_STRLOC);
 
         if (cetus_terminate) {
             g_message("%s: exiting", G_STRLOC);
             cetus_worker_process_exit(cycle);
         }
 
-        g_message("%s: check cetus_noaccept", G_STRLOC);
         if (cetus_noaccept) {
             g_message("%s: cetus_noaccept is set true", G_STRLOC);
             cetus_noaccept = 0;

@@ -137,7 +137,6 @@ Cetus分为读写分离和分库（分表是分库的一种特殊形式）两个
 
 如果您在使用Cetus的过程中发现BUG或者有新的功能需求，欢迎在issue里面提出来。
 
-## 优质服务
+## 加入Cetus知识星球，享受优质服务
 
-[cetus知识星球，享受优质服务](./doc/cetus知识星球二维码.png)
-
+![cetus](https://raw.github.com/cetus-tools/cetus/master/doc/cetus知识星球二维码.png)

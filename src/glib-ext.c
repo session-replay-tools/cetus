@@ -164,6 +164,18 @@ g_debug_hexdump(const char *msg, const void *_s, size_t len)
 int calculate_alloc_len(int orig_len)
 {
     if (orig_len <= 16384) {
+        if (orig_len <= 32) {
+            return 32;
+        }
+     
+        if (orig_len <= 48) {
+            return 48;
+        }
+     
+        if (orig_len <= 64) {
+            return 64;
+        }
+     
         if (orig_len <= 128) {
             return 128;
         }

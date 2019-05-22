@@ -8,11 +8,15 @@ MySQL建议使用5.7.16以上版本
 
 例如：
 
-Cetus所在的主机ip为192.0.0.1
+假设Cetus所在的主机ip为192.0.0.1，直连主库在主库上创建数据库并授权：
+
+```
 
 CREATE database if not exists testdb;
 GRANT USAGE ON *.* TO 'cetus_app'@'192.0.0.1' identified by 'cetus_app';
 GRANT all ON `testdb`.* TO 'cetus_app'@'192.0.0.1';
+```
+
 
 ## 读写分离版MySQL环境准备
 
@@ -26,27 +30,37 @@ GRANT all ON `testdb`.* TO 'cetus_app'@'192.0.0.1';
 
 **创建repl用户**
 
-192.0.0.1为MySQL从库ip
+假设192.0.0.1为MySQL从库ip，在主库上创建复制用的账号，并授权：
+
+```
 
 CREATE USER 'repl'@'192.0.0.1' IDENTIFIED BY 'xxxxxx';     
 REVOKE ALL PRIVILEGES ,GRANT OPTION FROM 'repl'@'192.0.0.1';
 GRANT RELOAD,LOCK TABLES, REPLICATION CLIENT ,REPLICATION SLAVE ON *.* TO 'repl'@'192.0.0.1';
 FLUSH PRIVILEGES;
+```
+
 
 - 在从库上操作：
 
 **开启主从复制**
 
-MySQL主库ip为192.0.0.1
+假设MySQL主库ip为192.0.0.1，在每个从库上，配置主从复制并启动复制：
 
 1) 非gtid
+
+```
 change master TO master_host='192.0.0.1',
 master_user='repl',master_password='xxxxxx',
 master_port=3306,master_log_file='mysql-bin.000001',
 master_log_pos=1124;
 start slave;
+```
+
 
 2) gtid
+
+```
 CHANGE MASTER TO
   MASTER_HOST='192.0.0.1',
   MASTER_USER='repl',
@@ -55,6 +69,7 @@ CHANGE MASTER TO
   master_auto_position=1,
   MASTER_CONNECT_RETRY=10;
 start slave;
+```
 
 ### 主从延迟检测准备
 
@@ -62,8 +77,9 @@ start slave;
 
 例如：
 
-Cetus所在的主机ip为192.0.0.1
+假设Cetus所在的主机ip为192.0.0.1，直连主库创建心跳表并授权：
 
+```
 create database if not exists proxy_heart_beat;
 use proxy_heart_beat;       
 CREATE TABLE if not exists `tb_heartbeat` (
@@ -73,6 +89,8 @@ CREATE TABLE if not exists `tb_heartbeat` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 GRANT ALL ON `proxy_heart_beat`.* TO 'cetus_app'@'192.0.0.1';
+```
+
 
 **注意：创建心跳表时p_ts精度必须到小数点后，否则会影响主从延迟检测的准确度**
 

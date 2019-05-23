@@ -15,9 +15,9 @@ update backends set state='maintaining' , type='ro' where address='172.0.0.1:330
 
 3、提升MySQL从库为新的主库
 
-4、在cetus管理端修改新主库的状态，将当前主库状态修改为“维护(unknown)”，类型修改为“只读(rw)”，发送修改的通知短信
+4、在cetus管理端修改新主库的状态，将当前主库状态修改为“维护(unknown)”，类型修改为“只读(ro)”，发送修改的通知短信
 
-update backends set state='unknown' , type='rw' where address='172.0.0.2:3306';
+update backends set state='unknown' , type='ro' where address='172.0.0.2:3306';
 
 ## 安装
 在master和node主机节点yum安装rpm包

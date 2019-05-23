@@ -125,6 +125,7 @@ cetus_read_channel(int s, cetus_channel_t *ch, size_t size)
 
     switch (ch->basics.command) {
         case CETUS_CMD_ADMIN:
+        case CETUS_CMD_ADMIN_RESP:
         case CETUS_CMD_OPEN_CHANNEL: 
             if (cmsg.cm.cmsg_len < (socklen_t) CMSG_LEN(sizeof(int))) {
                 g_critical("%s:recvmsg() returned too small ancillary data:%d", 
@@ -145,7 +146,7 @@ cetus_read_channel(int s, cetus_channel_t *ch, size_t size)
             break;
     }
 
-    if (ch->basics.command == CETUS_CMD_ADMIN) {
+    if (ch->basics.command == CETUS_CMD_ADMIN || ch->basics.command == CETUS_CMD_ADMIN_RESP) {
         close(ch->basics.fd);
         ch->basics.fd = 0;
     } else {

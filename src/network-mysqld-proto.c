@@ -638,6 +638,13 @@ network_mysqld_proto_fielddefs_new(void)
 void
 network_mysqld_proto_fielddefs_free(GPtrArray *fields)
 {
+    guint i;
+    for (i = 0; i < fields->len; i++) {
+        MYSQL_FIELD *field = fields->pdata[i];
+        if (field)
+            g_free(field);
+    }
+
     g_ptr_array_free(fields, TRUE);
 }
 

@@ -2012,18 +2012,7 @@ void admin_select_all_groups(network_mysqld_con* con)
 
     GPtrArray *fields = network_mysqld_proto_fielddefs_new();
 
-    MYSQL_FIELD *field = network_mysqld_proto_fielddef_new();
-    field->name = g_strdup("group");
-    field->type = FIELD_TYPE_VAR_STRING;
-    g_ptr_array_add(fields, field);
-    field = network_mysqld_proto_fielddef_new();
-    field->name = g_strdup(("master"));
-    field->type = FIELD_TYPE_VAR_STRING;
-    g_ptr_array_add(fields, field);
-    field = network_mysqld_proto_fielddef_new();
-    field->name = g_strdup(("slaves"));
-    field->type = FIELD_TYPE_VAR_STRING;
-    g_ptr_array_add(fields, field);
+    MAKE_FIELD_DEF_3_COL(fields, "group", "master", "slaves");
 
     GPtrArray *rows = g_ptr_array_new_with_free_func(
         (void*)network_mysqld_mysql_field_row_free);

@@ -91,7 +91,7 @@ static void
 cetus_result_destroy(cetus_result_t *res)
 {
     if (res->fielddefs) {
-        network_mysqld_proto_fielddefs_free(res->fielddefs);
+        g_ptr_array_free(res->fielddefs, TRUE);
         res->fielddefs = NULL;
     }
 }
@@ -1563,18 +1563,19 @@ cetus_result_parse_fielddefs(cetus_result_t *res_merge, GQueue *input)
 
     network_packet packet = { 0 };
 
-    res_merge->fielddefs = network_mysqld_proto_fielddefs_new();
+    res_merge->fielddefs = g_ptr_array_new_with_free_func((GDestroyNotify)network_mysqld_proto_fielddef_free);
     int i;
     for (i = 0; i < res_merge->field_count; ++i) {
         /* TODO g_queue_peek_nth is not efficient*/
         packet.data = g_queue_peek_nth(input, i + 1);
         packet.offset = 0;
         network_mysqld_proto_skip_network_header(&packet);
-        network_mysqld_proto_fielddef_t *fdef = network_mysqld_proto_fielddef_new();
+        network_mysqld_proto_fielddef_t *fdef;
+        fdef = network_mysqld_proto_fielddef_new();
         int err = network_mysqld_proto_get_fielddef(&packet, fdef, CLIENT_PROTOCOL_41);
         if (err) {
             network_mysqld_proto_fielddef_free(fdef);
-            network_mysqld_proto_fielddefs_free(res_merge->fielddefs);
+            g_ptr_array_free(res_merge->fielddefs, TRUE);
             res_merge->fielddefs = NULL;
             return FALSE;
         }

@@ -758,7 +758,7 @@ NETWORK_API int network_mysqld_con_send_error(network_socket *con, const gchar *
 NETWORK_API int network_mysqld_con_send_error_full(network_socket *con, const char *errmsg,
                                                    gsize errmsg_len, guint errorcode, const gchar *sqlstate);
 NETWORK_API int network_mysqld_con_send_resultset(network_socket *con, GPtrArray *fields, GPtrArray *rows);
-int network_mysqld_con_send_current_date(network_socket *, const char *);
+int network_mysqld_con_send_current_date(network_socket *, char *);
 int network_mysqld_con_send_cetus_version(network_socket *);
 void network_mysqld_send_xa_start(network_socket *, const char *xid);
 

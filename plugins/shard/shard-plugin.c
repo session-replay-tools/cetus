@@ -360,7 +360,7 @@ mysqld_con_send_sequence(network_mysqld_con *con)
     GPtrArray *fields = network_mysqld_proto_fielddefs_new();
 
     MYSQL_FIELD *field = network_mysqld_proto_fielddef_new();
-    field->name = g_strdup("SEQUENCE");
+    field->name = "SEQUENCE";
     field->type = MYSQL_TYPE_LONGLONG;
     g_ptr_array_add(fields, field);
 
@@ -453,11 +453,11 @@ proxy_generate_shard_explain_packet(network_mysqld_con *con)
     GPtrArray *fields = network_mysqld_proto_fielddefs_new();
 
     MYSQL_FIELD *field1 = network_mysqld_proto_fielddef_new();
-    field1->name = g_strdup("groups");
+    field1->name = "groups";
     field1->type = MYSQL_TYPE_VAR_STRING;
     g_ptr_array_add(fields, field1);
     MYSQL_FIELD *field2 = network_mysqld_proto_fielddef_new();
-    field2->name = g_strdup("sql");
+    field2->name = "sql";
     field2->type = MYSQL_TYPE_VAR_STRING;
     g_ptr_array_add(fields, field2);
 
@@ -1174,6 +1174,7 @@ make_first_decision(network_mysqld_con *con, sharding_plan_t *plan, int *rv, int
         return 0;
 
     case USE_PREVIOUS_WARNING_CONN:
+        sharding_plan_free(plan);
         if (con->sharding_plan == NULL) {
             con->client->is_server_conn_reserved = 0;
             *disp_flag = PROXY_SEND_RESULT;
@@ -1181,7 +1182,6 @@ make_first_decision(network_mysqld_con *con, sharding_plan_t *plan, int *rv, int
             g_warning("%s: origin has no sharding plan yet", G_STRLOC);
             return 0;
         }
-        sharding_plan_free(plan);
         if (con->last_warning_met) {
             con->use_all_prev_servers = 1;
             if (con->servers == NULL) {
@@ -1204,6 +1204,7 @@ make_first_decision(network_mysqld_con *con, sharding_plan_t *plan, int *rv, int
         break;
     case USE_PREVIOUS_TRAN_CONNS:
         if (con->sharding_plan == NULL) {
+            sharding_plan_free(plan);
             con->client->is_server_conn_reserved = 0;
             *disp_flag = PROXY_SEND_RESULT;
             network_mysqld_con_send_ok_full(con->client, 0, 0, 0, 0);
@@ -1385,7 +1386,6 @@ proxy_get_server_list(network_mysqld_con *con)
     }
 
     con->last_record_updated = 0;
-
     return RET_SUCCESS;
 }
 

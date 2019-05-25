@@ -4970,11 +4970,12 @@ network_mysqld_con_send_resultset(network_socket *con, GPtrArray *fields, GPtrAr
 }
 
 int
-network_mysqld_con_send_current_date(network_socket *con, const char *name)
+network_mysqld_con_send_current_date(network_socket *con, char *name)
 {
-    GPtrArray *fields = g_ptr_array_new_with_free_func((void *)network_mysqld_proto_fielddef_free);
+    GPtrArray *fields = network_mysqld_proto_fielddefs_new();
+
     MYSQL_FIELD *field = network_mysqld_proto_fielddef_new();
-    field->name = g_strdup(name);
+    field->name = name;
     field->type = MYSQL_TYPE_VAR_STRING;
     g_ptr_array_add(fields, field);
 
@@ -4990,8 +4991,10 @@ network_mysqld_con_send_current_date(network_socket *con, const char *name)
     g_ptr_array_add(rows, row);
 
     network_mysqld_con_send_resultset(con, fields, rows);
-    g_ptr_array_free(fields, TRUE);
+
+    network_mysqld_proto_fielddefs_free(fields);
     g_ptr_array_free(rows, TRUE);
+
     return 0;
 }
 

@@ -467,11 +467,11 @@ network_mysqld_con_handle_insert_id_response(network_mysqld_con *con, const char
     GPtrArray *fields;
     GPtrArray *rows;
 
-    fields = g_ptr_array_new_with_free_func((void *)network_mysqld_proto_fielddef_free);
+    fields = network_mysqld_proto_fielddefs_new();
 
     MYSQL_FIELD *field;
     field = network_mysqld_proto_fielddef_new();
-    field->name = g_strdup(name);
+    field->name = name;
     field->type = MYSQL_TYPE_LONGLONG;
     g_ptr_array_add(fields, field);
 
@@ -484,8 +484,8 @@ network_mysqld_con_handle_insert_id_response(network_mysqld_con *con, const char
 
     network_mysqld_con_send_resultset(con->client, fields, rows);
 
+    network_mysqld_proto_fielddefs_free(fields);
     g_ptr_array_free(rows, TRUE);
-    g_ptr_array_free(fields, TRUE);
     return 0;
 }
 

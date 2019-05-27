@@ -461,7 +461,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_auth)
 }
 
 static int
-network_mysqld_con_handle_insert_id_response(network_mysqld_con *con, const char *name, int last_packet_id)
+network_mysqld_con_handle_insert_id_response(network_mysqld_con *con, char *name, int last_packet_id)
 {
     char buffer[16];
     GPtrArray *fields;
@@ -636,7 +636,7 @@ process_non_trans_query(network_mysqld_con *con, sql_context_t *context, mysqld_
         con->is_calc_found_rows = (select->flags & SF_CALC_FOUND_ROWS) ? 1 : 0;
         g_debug(G_STRLOC ": is_calc_found_rows: %d", con->is_calc_found_rows);
 
-        const char *last_insert_id_name = NULL;
+        char *last_insert_id_name = NULL;
         gboolean is_insert_id = FALSE;
         sql_expr_list_t *cols = select->columns;
         int i;

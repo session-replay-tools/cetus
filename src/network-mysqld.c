@@ -4111,6 +4111,8 @@ network_mysqld_read_rw_resp(network_mysqld_con *con, network_socket *server, int
             if (server->recv_queue_uncompress_raw->len == 0) {
                 return ret;
             }
+        } else {
+            ret = network_mysqld_con_get_packet(chas, server);
         }
     }
 

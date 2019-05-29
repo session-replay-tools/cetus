@@ -2,22 +2,6 @@
 
 MySQL建议使用5.7.16以上版本
 
-## 创建数据库实例
-
-创建数据库实例，以及Cetus连接MySQL的用户和密码。
-
-例如：
-
-假设Cetus所在的主机ip为192.0.0.1，直连主库在主库上创建数据库并授权：
-
-```
-
-CREATE database if not exists testdb;
-GRANT USAGE ON *.* TO 'cetus_app'@'192.0.0.1' identified by 'cetus_app';
-GRANT all ON `testdb`.* TO 'cetus_app'@'192.0.0.1';
-```
-
-
 ## 读写分离版MySQL环境准备
 
 若使用读写分离功能则需要搭建MySQL主从关系，若开启读写延迟检测需要创建心跳库和表
@@ -69,6 +53,21 @@ CHANGE MASTER TO
   master_auto_position=1,
   MASTER_CONNECT_RETRY=10;
 start slave;
+```
+
+## 创建数据库实例
+
+创建数据库实例，以及Cetus连接MySQL的用户和密码。
+
+例如：
+
+假设Cetus所在的主机ip为192.0.0.1，直连主库在主库上创建数据库并授权：
+
+```
+
+CREATE database if not exists testdb;
+GRANT USAGE ON *.* TO 'cetus_app'@'192.0.0.1' identified by 'cetus_app';
+GRANT all ON `testdb`.* TO 'cetus_app'@'192.0.0.1';
 ```
 
 ### 主从延迟检测准备

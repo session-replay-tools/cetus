@@ -158,7 +158,7 @@ log-level=debug
 
 worker-processes为4，代表工作进程数量为4，建议设置数量小于等于cpu数目；
 
-proxy-address的值是Proxy监听的IP和端口，我们设置为127.0.0.1:1234；proxy-backend-addresses的值是读写后端(主库)的IP和端口，我们设置为127.0.0.1:3306，可多项；proxy-read-only-backend-addresses的值是只读后端(从库)的IP和端口，我们设置为127.0.0.1:3307，可多项；
+proxy-address的值是Proxy监听的IP和端口，我们设置为127.0.0.1:1234；proxy-backend-addresses的值是读写后端(主库)的IP和端口，我们设置为127.0.0.1:3306，只允许一个主库；proxy-read-only-backend-addresses的值是只读后端(从库)的IP和端口，我们设置为127.0.0.1:3307，可多项；
 
 admin-address的值是管理模块的IP和端口，我们设置为127.0.0.1:5678；admin-username的值是管理模块的用户名，我们设置为admin；admin-password的值是管理模块的密码明文，我们设置为admin；
 

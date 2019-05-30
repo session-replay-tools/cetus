@@ -133,4 +133,6 @@ grant all privileges on *.* to 'default-user'@'%';
 
 ## 特别注意
 
-在使用cetus的时候，**不要**将后端MySQL的全局autocommit模式设置为OFF/0。如果需要使用隐式提交，可以在业务端配置该参数，例如在Java客户端的jdbcUrl中配置autoCommit=false。
+1. 在使用cetus的时候，**不要**将后端MySQL的全局autocommit模式设置为OFF/0。如果需要使用隐式提交，可以在业务端配置该参数，例如在Java客户端的jdbcUrl中配置autoCommit=false。
+
+2. 不要在分布式事务中使用隐式提交的SQL（如DDL），否则XA协议会报错：ERROR 1399 (XAE07): XAER_RMFAIL

@@ -784,8 +784,8 @@ static GString* network_mysqld_get_compressed_packet(network_socket* sock)
         return NULL;
     GString *compressed_packet = g_string_sized_new(16384);
     network_mysqld_proto_append_packet_len(compressed_packet, 0);
-    network_mysqld_proto_append_packet_id(compressed_packet, sock->compressed_packet_id);
     sock->compressed_packet_id++;
+    network_mysqld_proto_append_packet_id(compressed_packet, sock->compressed_packet_id);
     network_mysqld_proto_append_packet_len(compressed_packet, 0);
 
     z_stream strm;
@@ -906,6 +906,7 @@ network_mysqld_con_get_uncompressed_packet(chassis *chas, network_socket *con)
 #endif
         unsigned char *info = (unsigned char *)packet->str + NET_HEADER_SIZE;
         int uncompressed_len = (info[0]) | (info[1] << 8) | (info[2] << 16);
+        con->compressed_packet_id = info[-1];
         g_debug("%s: do uncompress here, com len:%d, uncompress len:%d", G_STRLOC, packet_len, uncompressed_len);
 
         GString *uncompressed_packet;
@@ -2485,7 +2486,7 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
 
     recv_sock->total_output = 0;
 
-    recv_sock->compressed_packet_id = 1;
+    recv_sock->compressed_packet_id = 0;
     recv_sock->do_strict_compress = 0;
 
     con->client->do_query_cache = 0;
@@ -2686,7 +2687,7 @@ process_shard_write(network_mysqld_con *con, int *disp_flag)
         server_session_t *ss = g_ptr_array_index(con->servers, i);
         ss->index = i;
         ss->fresh = 0;
-        ss->server->compressed_packet_id = 0;
+        ss->server->compressed_packet_id = 0xFF;
         ss->server->resp_len = 0;
         ss->server->is_read_finished = 0;
         ss->server->is_waiting = 0;
@@ -2758,7 +2759,7 @@ process_rw_write(network_mysqld_con *con, network_mysqld_con_state_t ostate, int
     }
 
     con->server->resp_len = 0;
-    con->server->compressed_packet_id = 0;
+    con->server->compressed_packet_id = 0xFF;
 
     if (con->client->last_packet_id > 0) {
         g_warning("%s: last packet id:%d for con:%p", G_STRLOC, con->client->last_packet_id, con);

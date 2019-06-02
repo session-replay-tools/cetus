@@ -248,34 +248,34 @@ process_write_event(network_mysqld_con *con, server_session_t *ss)
     network_socket *sock = ss->server;
 
     switch (network_mysqld_write(sock)) {
-    case NETWORK_SOCKET_SUCCESS:
-        con->num_pending_servers++;
-        con->num_servers_visited++;
-        con->num_read_pending++;
-        ss->read_cal_flag = 0;
-        con->num_write_pending--;
-        ss->state = NET_RW_STATE_READ;
-        if (con->num_write_pending == 0) {
-            network_mysqld_con_handle(-1, 0, con);
-        }
-        break;
-    case NETWORK_SOCKET_WAIT_FOR_EVENT:
-        ss->state = NET_RW_STATE_WRITE;
-        g_debug("%s:write wait for con:%p", G_STRLOC, con);
-        server_sess_wait_for_event(ss, EV_WRITE, &con->write_timeout);
-        break;
-    default:
-    {
-        char *msg = "write error";
-        con->state = ST_SEND_QUERY_RESULT;
-        con->server_to_be_closed = 1;
-        con->dist_tran = 0;
-        con->is_client_to_be_closed = 1;
-        g_warning("%s:write error for con:%p", G_STRLOC, con);
-        network_mysqld_con_send_error_full(con->client, L(msg), ER_NET_ERROR_ON_WRITE, "08S01");
-        network_mysqld_con_handle(-1, 0, con);
-        break;
-    }
+        case NETWORK_SOCKET_SUCCESS:
+            con->num_pending_servers++;
+            con->num_servers_visited++;
+            con->num_read_pending++;
+            ss->read_cal_flag = 0;
+            con->num_write_pending--;
+            ss->state = NET_RW_STATE_READ;
+            if (con->num_write_pending == 0) {
+                network_mysqld_con_handle(-1, 0, con);
+            }
+            break;
+        case NETWORK_SOCKET_WAIT_FOR_EVENT:
+            ss->state = NET_RW_STATE_WRITE;
+            g_debug("%s:write wait for con:%p", G_STRLOC, con);
+            server_sess_wait_for_event(ss, EV_WRITE, &con->write_timeout);
+            break;
+        default:
+            {
+                char *msg = "write error";
+                con->state = ST_SEND_QUERY_RESULT;
+                con->server_to_be_closed = 1;
+                con->dist_tran = 0;
+                con->is_client_to_be_closed = 1;
+                g_warning("%s:write error for con:%p", G_STRLOC, con);
+                network_mysqld_con_send_error_full(con->client, L(msg), ER_NET_ERROR_ON_WRITE, "08S01");
+                network_mysqld_con_handle(-1, 0, con);
+                break;
+            }
     }
 
 }

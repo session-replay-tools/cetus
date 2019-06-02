@@ -166,6 +166,7 @@ typedef struct {
     unsigned int do_compress:1;
     unsigned int do_strict_compress:1;
     unsigned int do_query_cache:1;
+    unsigned int write_uncomplete:1; /* only valid for compresssion */
 
     guint8 charset_code;
 

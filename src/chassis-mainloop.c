@@ -197,6 +197,12 @@ chassis_free(chassis *chas)
     if  (chas->unix_socket_name) {
         g_free(chas->unix_socket_name);
     }
+    if (chas->trx_isolation_level) {
+        g_free(chas->trx_isolation_level);
+    }
+    if (chas->default_charset) {
+       g_free(chas->default_charset);
+    }
 
     g_free(chas->event_hdr_version);
 

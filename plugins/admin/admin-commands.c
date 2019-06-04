@@ -1055,9 +1055,6 @@ void admin_select_user_password(network_mysqld_con* con, char* from_table, char 
                 strings_to_free = g_list_append(strings_to_free, pwdhex);
             }
             APPEND_ROW_2_COL(rows, username, pwdhex);
-            if (pwdhex) {
-                g_free(pwdhex);
-            }
         }
         network_mysqld_con_send_resultset(con->client, fields, rows);
         network_mysqld_proto_fielddefs_free(fields);

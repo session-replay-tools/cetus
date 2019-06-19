@@ -2378,7 +2378,6 @@ void admin_select_vdb(network_mysqld_con* con)
     MAKE_FIELD_DEF_3_COL(fields, "VDB id", "Method", "Partitions");
     GPtrArray *rows = g_ptr_array_new_with_free_func((void *)network_mysqld_mysql_field_row_free);
     GString* str = g_string_new(0);
-    GList* freelist = NULL;
     GList* l = NULL;
     for (l = vdb_list; l; l = l->next) {
         sharding_vdb_t* vdb = l->data;
@@ -2388,10 +2387,6 @@ void admin_select_vdb(network_mysqld_con* con)
                  sharding_key_type_str(vdb->key_type));
         sharding_vdb_partitions_to_string(vdb, str);
         char* partitions = g_strdup(str->str);
-        freelist = g_list_append(freelist, vdb_id);
-        freelist = g_list_append(freelist, method);
-        freelist = g_list_append(freelist, partitions);
-        APPEND_ROW_3_COL(rows, vdb_id, method, partitions);
         GPtrArray* row = g_ptr_array_new_with_free_func(g_free);
         g_ptr_array_add(row, vdb_id);
         g_ptr_array_add(row, method);
@@ -2402,7 +2397,6 @@ void admin_select_vdb(network_mysqld_con* con)
     network_mysqld_proto_fielddefs_free(fields);
     g_ptr_array_free(rows, TRUE);
     g_string_free(str, TRUE);
-    g_list_free_full(freelist, g_free);
 }
 
 void admin_select_sharded_table(network_mysqld_con* con)
@@ -2421,6 +2415,10 @@ void admin_select_sharded_table(network_mysqld_con* con)
     GList* l = NULL;
     for (l = tables; l; l = l->next) {
         sharding_table_t* t = l->data;
+        if (t->pkey == NULL || t->schema == NULL || t->name == NULL) {
+            g_warning("%s: table info is not complete", G_STRLOC);
+            continue;
+        }
         char* vdb_id = g_strdup_printf("%d", t->vdb_id);
         char* name = g_strdup_printf("%s.%s", t->schema->str, t->name->str);
         freelist = g_list_append(freelist, vdb_id);
@@ -2430,7 +2428,9 @@ void admin_select_sharded_table(network_mysqld_con* con)
     network_mysqld_con_send_resultset(con->client, fields, rows);
     network_mysqld_proto_fielddefs_free(fields);
     g_ptr_array_free(rows, TRUE);
-    g_list_free_full(freelist, g_free);
+    if (freelist) {
+        g_list_free_full(freelist, g_free);
+    }
     g_list_free(tables);
 }
 
@@ -2599,12 +2599,10 @@ void admin_select_single_table(network_mysqld_con* con)
     GPtrArray* fields = network_mysqld_proto_fielddefs_new();
     MAKE_FIELD_DEF_2_COL(fields, "Table", "Group");
     GPtrArray *rows = g_ptr_array_new_with_free_func((void *)network_mysqld_mysql_field_row_free);
-    GList* freelist = NULL;
     GList* l = NULL;
     for (l = tables; l; l = l->next) {
         struct single_table_t* t = l->data;
         char* name = g_strdup_printf("%s.%s", t->schema->str, t->name->str);
-        freelist = g_list_append(freelist, name);
         GPtrArray *row = g_ptr_array_new_with_free_func(g_free);
         g_ptr_array_add(row, name);
         g_ptr_array_add(row, g_strdup(t->group->str));
@@ -2613,7 +2611,6 @@ void admin_select_single_table(network_mysqld_con* con)
     network_mysqld_con_send_resultset(con->client, fields, rows);
     network_mysqld_proto_fielddefs_free(fields);
     g_ptr_array_free(rows, TRUE);
-    g_list_free_full(freelist, g_free);
 }
 
 void admin_sql_log_start(network_mysqld_con* con) {

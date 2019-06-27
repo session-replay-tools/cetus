@@ -67,9 +67,10 @@ network_mysqld_con_idle_handle(int event_fd, short events, void *user_data)
          */
         if (ioctlsocket(event_fd, FIONREAD, &b)) {
             g_critical("ioctl(%d, FIONREAD) failed: %s", event_fd, g_strerror(errno));
-        } else if (b != 0) {
-            g_critical("ioctl(%d, FIONREAD) said something to read, oops: %d", event_fd, b);
         } else {
+            if (b != 0) {
+                g_critical("ioctl(%d, FIONREAD) said something to read, oops: %d", event_fd, b);
+            }
             /* the server decided the close the connection (wait_timeout, crash, ... )
              *
              * remove us from the connection pool and close the connection */

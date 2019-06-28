@@ -364,7 +364,7 @@ void admin_select_conn_details(network_mysqld_con *con)
                 sprintf(buffer, "%d", process_id);
                 g_ptr_array_add(row, g_strdup(buffer));
 
-                sprintf(buffer, "%d", i); 
+                sprintf(buffer, "%d", i + 1); 
                 g_ptr_array_add(row, g_strdup(buffer));
                 g_ptr_array_add(row, g_strdup(key->str));
                 sprintf(buffer, "%d", queue->length);

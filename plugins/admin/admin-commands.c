@@ -742,6 +742,7 @@ void admin_acl_show_rules(network_mysqld_con *con, gboolean is_white)
 void admin_acl_add_rule(network_mysqld_con *con, gboolean is_white, char *addr)
 {
     if (con->is_processed_by_subordinate) {
+        con->srv->candidate_config_changed = 1;
         return;
     }
 
@@ -763,6 +764,7 @@ void admin_acl_add_rule(network_mysqld_con *con, gboolean is_white, char *addr)
 void admin_acl_delete_rule(network_mysqld_con *con, gboolean is_white, char *addr)
 {
     if (con->is_processed_by_subordinate) {
+        con->srv->candidate_config_changed = 1;
         return;
     }
     chassis *chas = con->srv;
@@ -851,6 +853,7 @@ void admin_show_variables(network_mysqld_con* con, const char* like)
 void admin_set_reduce_conns(network_mysqld_con* con, int mode)
 {
     if (con->is_processed_by_subordinate) {
+        con->srv->candidate_config_changed = 1;
         return;
     }
 
@@ -1200,6 +1203,7 @@ static backend_state_t backend_state(const char* str)
 void admin_insert_backend(network_mysqld_con* con, char *addr, char *type, char *state)
 {
     if (con->is_processed_by_subordinate) {
+        con->srv->candidate_config_changed = 1;
         return;
     }
 
@@ -1259,6 +1263,7 @@ void admin_update_backend(network_mysqld_con* con, GList* equations,
                           char *cond_key, char *cond_val)
 {
     if (con->is_processed_by_subordinate) {
+        con->srv->candidate_config_changed = 1;
         return;
     }
 
@@ -1336,6 +1341,7 @@ void admin_update_backend(network_mysqld_con* con, GList* equations,
 void admin_delete_backend(network_mysqld_con* con, char *key, char *val)
 {
     if (con->is_processed_by_subordinate) {
+        con->srv->candidate_config_changed = 1;
         return;
     }
 
@@ -1665,6 +1671,7 @@ static void admin_update_remote_backend(network_mysqld_con* con, chassis_config_
 void admin_set_config(network_mysqld_con* con, char* key, char* value)
 {
     if (con->is_processed_by_subordinate) {
+        con->srv->candidate_config_changed = 1;
         return;
     }
 

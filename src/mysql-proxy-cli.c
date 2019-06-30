@@ -972,6 +972,12 @@ main_cmdline(int argc, char **argv)
         GOTO_EXIT(EXIT_FAILURE);
     }
 
+    srv->argc = argc;
+    srv->argv = g_new0(char *, argc);
+    int i;
+    for (i = 0; i < argc; i++) {
+        srv->argv[i] = g_strdup(argv[i]);
+    }
     /* we need the log structure for the log-rotation */
     srv->log = log;
 
@@ -1016,12 +1022,6 @@ main_cmdline(int argc, char **argv)
     opts = chassis_options_new();
     opts->ignore_unknown = TRUE;
     srv->options = opts;
-    srv->argc = argc;
-    srv->argv = g_new0(char *, argc);
-    int i;
-    for (i = 0; i < argc; i++) {
-        srv->argv[i] = g_strdup(argv[i]);
-    }
 
     chassis_frontend_set_chassis_options(frontend, opts, srv);
 

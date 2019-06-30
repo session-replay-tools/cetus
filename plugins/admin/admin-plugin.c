@@ -582,6 +582,7 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
     con->ask_one_worker = 0;
     con->ask_the_given_worker = 0;
     con->admin_read_merge = 0;
+    con->srv->candidate_config_changed = 0;
 
     visit_parser(con, con->orig_sql->str);
     if (con->srv->worker_processes == 0) {

@@ -2511,6 +2511,13 @@ merge_for_modify(sql_context_t *context, network_queue *send_queue, GPtrArray *r
         total_affected_rows /= recv_queues->len;
     }
 
+    if (con->srv->candidate_config_changed) {
+        if (total_affected_rows > 0) {
+            con->srv->config_changed = 1;
+        } else {
+            con->srv->config_changed = 0;
+        }
+    }
     network_mysqld_con_send_ok_full(con->client, total_affected_rows, 0, 0x02, total_warnings);
 
     return 1;

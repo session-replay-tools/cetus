@@ -58,7 +58,7 @@ static cetus_cycle_t      cetus_exit_cycle;
 
 
 static int
-open_plugins(cetus_cycle_t *cycle, int admin_only)
+open_plugins(cetus_cycle_t *cycle)
 {
     int      i;
 
@@ -66,20 +66,11 @@ open_plugins(cetus_cycle_t *cycle, int admin_only)
 
     for (i = 0; i < cycle->modules->len; i++) {
         chassis_plugin *p = cycle->modules->pdata[i];
-        if (admin_only) {
-            g_message("%s: applying config of plugin %s", G_STRLOC, p->name);
-            if (strcmp(p->name, "admin") == 0) {
-                cycle->enable_admin_listen = 1;
-                g_assert(p->apply_config);
-                g_message("%s: call apply_config", G_STRLOC);
-                if (0 != p->apply_config(cycle, p->config)) {
-                    g_critical("%s: applying config of plugin %s failed", G_STRLOC, p->name);
-                    return -1;
-                }
-            }
-        } else {
+        g_message("%s: applying config of plugin %s", G_STRLOC, p->name);
+        if (strcmp(p->name, "admin") == 0) {
             cycle->enable_admin_listen = 1;
-            g_message("%s: applying config of plugin %s", G_STRLOC, p->name);
+            g_assert(p->apply_config);
+            g_message("%s: call apply_config", G_STRLOC);
             if (0 != p->apply_config(cycle, p->config)) {
                 g_critical("%s: applying config of plugin %s failed", G_STRLOC, p->name);
                 return -1;
@@ -225,20 +216,12 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
     cetus_pid = getpid();
 
     cycle->cpus = sysconf(_SC_NPROCESSORS_ONLN);
+    cycle->active_worker_processes = cycle->worker_processes;
 
-    if (cycle->worker_processes) {
-        cetus_start_worker_processes(cycle, cycle->worker_processes,
-                CETUS_PROCESS_RESPAWN);
+    cetus_start_worker_processes(cycle, cycle->worker_processes, CETUS_PROCESS_RESPAWN);
 
-        if (open_plugins(cycle, 1) == -1) {
-            return;
-        }
-    } else {
-        if (open_plugins(cycle, 0) == -1) {
-            return;
-        }
-        cetus_remote_config_start_thread(cycle);
-        cetus_sql_log_start_thread_once(cycle->sql_mgr);
+    if (open_plugins(cycle) == -1) {
+        return;
     }
 
     if (cycle->pid_file) {
@@ -250,13 +233,11 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
         }
     }
 
-
     live = 1;
     try_cnt = 0;
     mutex_set = 0;
 
     for ( ;; ) {
-
 
         if (!cetus_terminate) {
             if (mutex_set) {
@@ -274,6 +255,17 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
             usleep(10 * 1000);
             try_cnt++;
         } else {
+            if (cetus_reap) {
+                if (cycle->config_changed) {
+                    cetus_reap = 0;
+                    g_message("%s: set cetus_reap false", G_STRLOC);
+                    cycle->active_worker_processes--;
+                    if (cycle->active_worker_processes < 1) {
+                        cetus_change_binary = 1;
+                        cetus_noaccept = 1;
+                    }
+                }
+            }
             if (cetus_reap) {
                 g_message("%s: cetus_reap is true", G_STRLOC);
                 cetus_reap = 0;
@@ -327,27 +319,10 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
 
         if (cetus_restart) {
             cetus_restart = 0;
-            if (cycle->worker_processes) {
-                cetus_start_worker_processes(cycle, cycle->worker_processes,
-                        CETUS_PROCESS_RESPAWN);
-                open_plugins(cycle, 1);
-            } else {
-                open_plugins(cycle, 0);
-            }
+            cetus_start_worker_processes(cycle, cycle->worker_processes, CETUS_PROCESS_RESPAWN);
+            open_plugins(cycle);
     
             live = 1;
-        }
-
-
-        if (cetus_change_binary) {
-            g_message("%s: changing binary", G_STRLOC);
-#if defined(SO_REUSEPORT)
-            unlink(cycle->unix_socket_name);
-            g_free(cycle->unix_socket_name);
-            cycle->unix_socket_name = NULL;
-#endif
-            cetus_new_binary = cetus_exec_new_binary(cycle, cycle->argv);
-            cetus_change_binary = 0;
         }
 
         if (cetus_noaccept) {
@@ -363,6 +338,22 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
             if (cycle->worker_processes) {
                 cetus_signal_worker_processes(cycle, cetus_signal_value(CETUS_NOACCEPT_SIGNAL));
             }
+        }
+
+        if (cetus_change_binary) {
+            g_message("%s: changing binary", G_STRLOC);
+#if defined(SO_REUSEPORT)
+            unlink(cycle->unix_socket_name);
+            g_free(cycle->unix_socket_name);
+            cycle->unix_socket_name = NULL;
+#endif
+            cetus_new_binary = cetus_exec_new_binary(cycle, cycle->argv);
+            cetus_change_binary = 0;
+	    if (cycle->active_worker_processes > 0) {
+                g_message("%s: changing binary when active processes:%d", G_STRLOC, cycle->active_worker_processes);
+	    } else {
+                cetus_quit = 1;
+	    }
         }
     }
 }
@@ -498,7 +489,10 @@ cetus_signal_worker_processes(cetus_cycle_t *cycle, int signo)
             if (err == ESRCH) {
                 cetus_processes[i].exited = 1;
                 cetus_processes[i].exiting = 0;
-                cetus_reap = 1;
+                if (!cycle->config_changed) {
+                    g_message("%s: set reap true", G_STRLOC);
+                    cetus_reap = 1;
+                }
             }
 
             continue;

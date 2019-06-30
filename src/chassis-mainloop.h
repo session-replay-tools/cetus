@@ -158,6 +158,8 @@ struct chassis {
     unsigned int disable_dns_cache:1;
     unsigned int enable_admin_listen:1;
     unsigned int is_need_to_create_conns:1;
+    unsigned int candidate_config_changed:1;
+    unsigned int config_changed:1;
 
     unsigned int min_req_time_for_cache;
     unsigned int long_query_time;
@@ -166,6 +168,7 @@ struct chassis {
 
     int cpus;
     int worker_processes;
+    int active_worker_processes;
     int child_instant_exit_times;
 
     int cetus_max_allowed_packet;

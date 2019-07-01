@@ -170,11 +170,8 @@ cetus_spawn_process(cetus_cycle_t *cycle, cetus_spawn_proc_pt proc, void *data,
 
     cetus_process_slot = s;
 
-
-    g_message("%s: before call fork, channel:%d, pid:%d", G_STRLOC, s, cetus_processes[s].pid);
     pid = fork();
 
-    g_message("%s: after call fork, pid:%d", G_STRLOC, pid);
     switch (pid) {
 
     case -1:
@@ -200,8 +197,6 @@ cetus_spawn_process(cetus_cycle_t *cycle, cetus_spawn_proc_pt proc, void *data,
 
     cetus_processes[s].pid = pid;
     cetus_processes[s].exited = 0;
-
-    g_message("%s: after call fork, channel:%d, pid:%d", G_STRLOC, s, cetus_processes[s].pid);
 
     if (respawn >= 0) {
         return pid;

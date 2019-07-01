@@ -62,15 +62,13 @@ open_plugins(cetus_cycle_t *cycle)
 {
     int      i;
 
-    g_message("%s: call open_plugins:%d", G_STRLOC, cycle->modules->len);
-
     for (i = 0; i < cycle->modules->len; i++) {
         chassis_plugin *p = cycle->modules->pdata[i];
-        g_message("%s: applying config of plugin %s", G_STRLOC, p->name);
+        g_debug("%s: applying config of plugin %s", G_STRLOC, p->name);
         if (strcmp(p->name, "admin") == 0) {
             cycle->enable_admin_listen = 1;
             g_assert(p->apply_config);
-            g_message("%s: call apply_config", G_STRLOC);
+            g_debug("%s: call apply_config", G_STRLOC);
             if (0 != p->apply_config(cycle, p->config)) {
                 g_critical("%s: applying config of plugin %s failed", G_STRLOC, p->name);
                 return -1;
@@ -257,7 +255,7 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
         } else {
             if (cetus_reap) {
                 if (cycle->config_changed) {
-                    g_message("%s: set cetus_reap false", G_STRLOC);
+                    g_message("%s: config changed and no respawn process here", G_STRLOC);
                     cycle->active_worker_processes--;
                     if (cycle->active_worker_processes < 1) {
                         cetus_change_binary = 1;
@@ -568,8 +566,7 @@ cetus_reap_children(cetus_cycle_t *cycle)
             if (cycle->config_changed) {
                 cetus_processes[i].respawn = 0;
             }
-            if (cetus_processes[i].detached) {
-                g_message("%s: detached false:%d", G_STRLOC, cetus_last_process);
+            if (!cetus_processes[i].detached || cycle->config_changed) {
                 cetus_close_channel(cetus_processes[i].parent_child_channel);
 
                 cetus_processes[i].parent_child_channel[0] = -1;
@@ -859,7 +856,7 @@ static
 cetus_channel_t *retrieve_admin_resp(network_mysqld_con *con)
 {
     GList *chunk;
-    g_message("%s:call retrieve_admin_resp", G_STRLOC);
+    g_debug("%s:call retrieve_admin_resp", G_STRLOC);
     int total = sizeof(cetus_channel_t); 
     int resp_len = 0;
     for (chunk = con->client->send_queue->chunks->head; chunk; chunk = chunk->next) {
@@ -883,7 +880,7 @@ cetus_channel_t *retrieve_admin_resp(network_mysqld_con *con)
 
     g_debug_hexdump(G_STRLOC, ch->admin_sql_resp, resp_len);
 
-    g_message("%s:call retrieve_admin_resp end", G_STRLOC);
+    g_debug("%s:call retrieve_admin_resp end", G_STRLOC);
     
     return ch;
 }
@@ -892,15 +889,15 @@ cetus_channel_t *retrieve_admin_resp(network_mysqld_con *con)
 void send_admin_resp(chassis *cycle, network_mysqld_con *con)
 {
     if (cycle->worker_processes) {
-        g_message("%s:call send_admin_resp, cetus_process_slot:%d", G_STRLOC, cetus_process_slot);
+        g_debug("%s:call send_admin_resp, cetus_process_slot:%d", G_STRLOC, cetus_process_slot);
         cetus_channel_t  *ch = retrieve_admin_resp(con); 
         ch->basics.command = CETUS_CMD_ADMIN_RESP;
         ch->basics.pid = cetus_processes[cetus_process_slot].pid;
         ch->basics.slot = cetus_process_slot;
         ch->basics.fd = cetus_processes[cetus_process_slot].parent_child_channel[1];
 
-        g_message("%s:send resp to admin, cetus_process_slot:%d", G_STRLOC, cetus_process_slot);
-        g_message("%s: pass sql resp channel s:%i pid:%d to:%d, fd:%d", G_STRLOC,
+        g_debug("%s:send resp to admin, cetus_process_slot:%d", G_STRLOC, cetus_process_slot);
+        g_debug("%s: pass sql resp channel s:%i pid:%d to:%d, fd:%d", G_STRLOC,
                 ch->basics.slot, ch->basics.pid, cetus_processes[cetus_process_slot].pid,
                 cetus_processes[cetus_process_slot].parent_child_channel[1]);
 
@@ -961,13 +958,6 @@ cetus_channel_handler(int fd, short events, void *user_data)
     cetus_channel_t    ch;
 
     g_debug("%s: channel handler, cetus_last_process:%d", G_STRLOC, cetus_last_process);
-
-    int i;
-    for (i = 0; i < cetus_last_process; i++) {
-        g_message("%s: i:%d, pid:%d, fd1:%d, fd2:%d", G_STRLOC,
-                i, cetus_processes[i].pid, cetus_processes[i].parent_child_channel[0],
-                cetus_processes[i].parent_child_channel[1]);
-    }
 
     do {
 

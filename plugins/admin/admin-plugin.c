@@ -404,13 +404,12 @@ static
 int construct_channel_info(network_mysqld_con *con, char *sql)
 {
     chassis *cycle = con->srv;
-    g_message("%s:call construct_channel_info, cetus_process_slot:%d", G_STRLOC, cetus_process_slot);
+    g_debug("%s:call construct_channel_info, cetus_process_slot:%d", G_STRLOC, cetus_process_slot);
     cetus_channel_t  ch; 
     memset(&ch, 0, sizeof(cetus_channel_t));
     ch.basics.command = CETUS_CMD_ADMIN;
-    ch.basics.pid = cetus_processes[cetus_process_slot].pid;
+    ch.basics.pid = cetus_pid;
     ch.basics.slot = cetus_process_slot;
-    ch.basics.fd = cetus_processes[cetus_process_slot].parent_child_channel[0];
 
     con->num_read_pending = 0;
 
@@ -421,12 +420,13 @@ int construct_channel_info(network_mysqld_con *con, char *sql)
         return -1;
     } else {
         strncpy(ch.admin_sql, sql, len);
-        g_message("%s:cetus_last_process:%d, ch admin sql:%s", 
+        g_debug("%s:cetus_last_process:%d, ch admin sql:%s",
                 G_STRLOC, cetus_last_process, ch.admin_sql);
         if (con->ask_the_given_worker) {
             int index = con->process_index;
-            g_message("%s: pass sql info to s:%i pid:%d to:%d", G_STRLOC,
+            g_debug("%s: pass sql info to s:%i pid:%d to:%d", G_STRLOC,
                     ch.basics.slot, ch.basics.pid, cetus_processes[index].pid);
+            ch.basics.fd = cetus_processes[index].parent_child_channel[0];
             /* TODO: AGAIN */
             cetus_write_channel(cetus_processes[index].parent_child_channel[0],
                     &ch, sizeof(cetus_channel_t));
@@ -446,17 +446,22 @@ int construct_channel_info(network_mysqld_con *con, char *sql)
 
         int i;
         for (i = 0; i < num; i++) {
-            g_message("%s: pass sql info to s:%i pid:%d to:%d", G_STRLOC,
+            g_debug("%s: pass sql info to s:%i pid:%d to:%d", G_STRLOC,
                     ch.basics.slot, ch.basics.pid, cetus_processes[i].pid);
 
-            /* TODO: AGAIN */
-            cetus_write_channel(cetus_processes[i].parent_child_channel[0],
-                    &ch, sizeof(cetus_channel_t));
             int fd = cetus_processes[i].parent_child_channel[0];
-            g_debug("%s:fd:%d for network_read_sql_resp", G_STRLOC, fd);
-            event_set(&(cetus_processes[i].event), fd, EV_READ, network_read_sql_resp, con);
-            chassis_event_add_with_timeout(cycle, &(cetus_processes[i].event), NULL);
-            con->num_read_pending++;
+            if (fd > 0) {
+                ch.basics.fd = cetus_processes[i].parent_child_channel[0];
+                 /* TODO: AGAIN */
+                cetus_write_channel(cetus_processes[i].parent_child_channel[0],
+                        &ch, sizeof(cetus_channel_t));
+                g_debug("%s:fd:%d for network_read_sql_resp", G_STRLOC, fd);
+                event_set(&(cetus_processes[i].event), fd, EV_READ, network_read_sql_resp, con);
+                chassis_event_add_with_timeout(cycle, &(cetus_processes[i].event), NULL);
+                con->num_read_pending++;
+            } else {
+                g_message("%s:fd is not valid:%d, num:%d, pending:%d", G_STRLOC, fd, num, con->num_read_pending);
+            }
         }
         g_debug("%s:con num_read_pending:%d", G_STRLOC, con->num_read_pending);
         
@@ -544,10 +549,9 @@ NETWORK_MYSQLD_PLUGIN_PROTO(execute_admin_query)
     if (con->config == NULL) {
         con->config = admin_config;
     }
-    g_message("%s:call execute_admin_query", G_STRLOC);
     char *sql = con->orig_sql->str;
 
-    g_message("%s:call execute_admin_query:%s", G_STRLOC, sql);
+    g_debug("%s:call execute_admin_query:%s", G_STRLOC, sql);
 
     visit_parser(con, sql);
 
@@ -576,7 +580,7 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
 
     g_string_assign_len(con->orig_sql, packet->str + (NET_HEADER_SIZE + 1),
                         packet->len - (NET_HEADER_SIZE + 1));
-    g_message("%s:admin sql:%s", G_STRLOC, con->orig_sql->str);
+    g_debug("%s:admin sql:%s", G_STRLOC, con->orig_sql->str);
     
     con->direct_answer = 0;
     con->ask_one_worker = 0;
@@ -613,7 +617,7 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
  * gets called after a query has been read
  */
 NETWORK_MYSQLD_PLUGIN_PROTO(server_read_query) {
-    g_message("%s:call server_read_query", G_STRLOC);
+    g_debug("%s:call server_read_query", G_STRLOC);
     network_socket *recv_sock;
     network_mysqld_stmt_ret ret;
 

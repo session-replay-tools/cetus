@@ -5757,7 +5757,7 @@ network_connection_pool_create_conn(network_mysqld_con *con)
             }
 
             scs->backend->connected_clients++;
-            g_message("%s: connected_clients add, backend ndx:%d, for server:%p, faked con:%p",
+            g_debug("%s: connected_clients add, backend ndx:%d, for server:%p, faked con:%p",
                       G_STRLOC, i, scs->server, scs);
 
             switch (network_socket_connect(scs->server)) {
@@ -5848,7 +5848,7 @@ network_connection_pool_create_conns(chassis *srv)
 
                 }
 
-                g_message("%s: connected_clients add, backend ndx:%d, for server:%p, faked con:%p, charset:%d",
+                g_debug("%s: connected_clients add, backend ndx:%d, for server:%p, faked con:%p, charset:%d",
                           G_STRLOC, i, scs->server, scs, scs->charset_code);
 
                 scs->backend->connected_clients++;

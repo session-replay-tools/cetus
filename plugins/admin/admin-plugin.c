@@ -440,10 +440,6 @@ int construct_channel_info(network_mysqld_con *con, char *sql)
         }
 
         int num = cetus_last_process;
-        if (con->ask_one_worker) {
-            num = 1;
-        }
-
         int i;
         for (i = 0; i < num; i++) {
             g_debug("%s: pass sql info to s:%i pid:%d to:%d", G_STRLOC,
@@ -459,6 +455,9 @@ int construct_channel_info(network_mysqld_con *con, char *sql)
                 event_set(&(cetus_processes[i].event), fd, EV_READ, network_read_sql_resp, con);
                 chassis_event_add_with_timeout(cycle, &(cetus_processes[i].event), NULL);
                 con->num_read_pending++;
+                if (con->ask_one_worker) {
+                    break;
+                }
             } else {
                 g_message("%s:fd is not valid:%d, num:%d, pending:%d", G_STRLOC, fd, num, con->num_read_pending);
             }

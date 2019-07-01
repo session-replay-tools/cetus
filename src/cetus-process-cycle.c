@@ -257,16 +257,12 @@ cetus_master_process_cycle(cetus_cycle_t *cycle)
         } else {
             if (cetus_reap) {
                 if (cycle->config_changed) {
-                    cetus_reap = 0;
                     g_message("%s: set cetus_reap false", G_STRLOC);
                     cycle->active_worker_processes--;
                     if (cycle->active_worker_processes < 1) {
                         cetus_change_binary = 1;
-                        cetus_noaccept = 1;
                     }
                 }
-            }
-            if (cetus_reap) {
                 g_message("%s: cetus_reap is true", G_STRLOC);
                 cetus_reap = 0;
                 cycle->current_time = time(0);
@@ -554,7 +550,7 @@ cetus_reap_children(cetus_cycle_t *cycle)
     live = 0;
     for (i = 0; i < cetus_last_process; i++) {
 
-        g_debug("%s: child: %i %d e:%d t:%d d:%d r:%d j:%d", G_STRLOC,
+        g_message("%s: child: %i %d e:%d t:%d d:%d r:%d j:%d", G_STRLOC,
                        i,
                        cetus_processes[i].pid,
                        cetus_processes[i].exiting,
@@ -569,7 +565,11 @@ cetus_reap_children(cetus_cycle_t *cycle)
 
         if (cetus_processes[i].exited) {
 
-            if (!cetus_processes[i].detached) {
+            if (cycle->config_changed) {
+                cetus_processes[i].respawn = 0;
+            }
+            if (cetus_processes[i].detached) {
+                g_message("%s: detached false:%d", G_STRLOC, cetus_last_process);
                 cetus_close_channel(cetus_processes[i].parent_child_channel);
 
                 cetus_processes[i].parent_child_channel[0] = -1;

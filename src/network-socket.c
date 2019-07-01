@@ -159,7 +159,6 @@ network_socket_free(network_socket *s)
     network_address_free(s->src);
 
     if (s->event.ev_base) {     /* if .ev_base isn't set, the event never got added */
-        g_debug("%s:event del, ev:%p", G_STRLOC, &(s->event));
         event_del(&(s->event));
     }
 #ifdef HAVE_OPENSSL

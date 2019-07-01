@@ -1005,6 +1005,15 @@ network_mysqld_admin_plugin_stop_listening(chassis *chas,
         g_message("%s:close listen socket:%d", G_STRLOC, config->listen_con->server->fd);
         network_socket_free(config->listen_con->server);
         config->listen_con = NULL;
+
+        int i;
+        for (i = 0; i < chas->priv->cons->len; i++) {
+            network_mysqld_con* con = g_ptr_array_index(chas->priv->cons, i);
+            if (con->client) {
+                g_message("%s:close socket:%d", G_STRLOC, con->client->fd);
+                network_socket_free(con->client);
+            }
+        }
     }
 }
 

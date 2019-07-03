@@ -110,6 +110,7 @@ struct chassis_frontend_t {
     int is_tcp_stream_enabled;
     int is_fast_stream_enabled;
     int is_partition_mode;
+    int check_sql_loosely;
     int is_sql_special_processed;
     int is_back_compressed;
     int is_client_compress_support;
@@ -215,6 +216,7 @@ chassis_frontend_new(void)
 #endif
     frontend->is_fast_stream_enabled = 0;
     frontend->is_partition_mode = 0;
+    frontend->check_sql_loosely = 0;
     frontend->is_sql_special_processed = 0;
     frontend->group_replication_mode = 0;
     frontend->sql_log_bufsize = 0;
@@ -518,6 +520,9 @@ chassis_frontend_set_chassis_options(struct chassis_frontend_t *frontend, chassi
     chassis_options_add(opts, "partition-mode", 0, 0, OPTION_ARG_NONE, &(frontend->is_partition_mode), "", NULL,
                         NULL, show_enable_partition, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
 
+    chassis_options_add(opts, "check-sql-loosely", 0, 0, OPTION_ARG_NONE, &(frontend->check_sql_loosely), "", NULL,
+                        NULL, show_check_sql_loosely, SHOW_OPTS_PROPERTY|SAVE_OPTS_PROPERTY);
+
     chassis_options_add(opts,
                         "log-xa-in-detail",
                         0, 0, OPTION_ARG_NONE, &(frontend->xa_log_detailed), "log xa in detail", NULL,
@@ -783,6 +788,8 @@ init_parameters(struct chassis_frontend_t *frontend, chassis *srv)
         g_message("%s:partition mode", G_STRLOC);
     }
 #endif
+    srv->check_sql_loosely = frontend->check_sql_loosely;
+
     srv->is_sql_special_processed = frontend->is_sql_special_processed;
     if (srv->is_sql_special_processed) {
         g_message("%s:enable sql special porcessing", G_STRLOC);

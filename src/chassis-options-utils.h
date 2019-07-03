@@ -92,6 +92,7 @@ CHASSIS_API gchar* show_enable_tcp_stream(gpointer param);
 CHASSIS_API gchar* show_enable_fast_stream(gpointer param);
 CHASSIS_API gchar* show_enable_partition(gpointer param);
 CHASSIS_API gchar* show_enable_sql_special_processed(gpointer param);
+CHASSIS_API gchar* show_check_sql_loosely(gpointer param);
 CHASSIS_API gchar* show_log_xa_in_detail(gpointer param);
 CHASSIS_API gchar* show_disable_dns_cache(gpointer param);
 CHASSIS_API gchar* show_master_preferred(gpointer param);

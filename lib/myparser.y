@@ -171,7 +171,7 @@ opt_wild_or_where ::= WHERE expr. /* destructor expr */
 
 cmd ::= USE ID(X). {sql_use_database(context, sql_token_dup(X));}
 cmd ::= CALL expr(X). {
-    context->rw_flag |= CF_READ;
+    context->rw_flag |= CF_WRITE;
     sql_context_add_stmt(context, STMT_CALL, X);
 }
 

@@ -570,7 +570,6 @@ try_to_get_resp_from_query_cache(network_mysqld_con *con)
             g_string_append_len(dup_packet, S(packet));
             network_queue_append(con->client->send_queue, dup_packet);
             g_debug("%s:read packet len:%d from cache", G_STRLOC, (int)dup_packet->len);
-            g_debug_hexdump(G_STRLOC, S(dup_packet));
         }
         con->state = ST_SEND_QUERY_RESULT;
         con->client->do_query_cache = 0;

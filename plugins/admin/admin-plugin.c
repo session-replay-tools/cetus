@@ -568,7 +568,7 @@ static network_mysqld_stmt_ret admin_process_query(network_mysqld_con *con)
         return PROXY_SEND_QUERY;
     }
 
-    char command = packet->str[NET_HEADER_SIZE + 0];
+    guchar command = packet->str[NET_HEADER_SIZE + 0];
 
     if (COM_QUIT == command) {
         return PROXY_CLIENT_QUIT;

@@ -861,7 +861,6 @@ cetus_channel_t *retrieve_admin_resp(network_mysqld_con *con)
     int resp_len = 0;
     for (chunk = con->client->send_queue->chunks->head; chunk; chunk = chunk->next) {
         GString *s = chunk->data;
-        g_debug_hexdump(G_STRLOC, S(s));
         resp_len += s->len; 
         g_debug("%s:s->len:%d, resp len:%d", G_STRLOC, (int) s->len, resp_len);
     }
@@ -877,8 +876,6 @@ cetus_channel_t *retrieve_admin_resp(network_mysqld_con *con)
         memcpy(p, s->str, s->len);
         p = p + s->len;
     }
-
-    g_debug_hexdump(G_STRLOC, ch->admin_sql_resp, resp_len);
 
     g_debug("%s:call retrieve_admin_resp end", G_STRLOC);
     

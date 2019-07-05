@@ -326,7 +326,7 @@ proxy_c_read_query_result(network_mysqld_con *con)
         break;
     case INJ_ID_CHANGE_DB: {
         network_mysqld_com_query_result_t *query = con->parse.data;
-        if (query->query_status == MYSQLD_PACKET_OK) {
+        if (query && query->query_status == MYSQLD_PACKET_OK) {
             g_string_truncate(con->server->default_db, 0);
             g_string_append_len(con->server->default_db, S(con->client->default_db));
             g_debug("%s: set server db to client db for con:%p", G_STRLOC, con);
@@ -1861,7 +1861,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
 
     if (st->sql_context->stmt_type == STMT_DROP_DATABASE) {
         network_mysqld_com_query_result_t *com_query = con->parse.data;
-        if (com_query->query_status == MYSQLD_PACKET_OK) {
+        if (com_query && com_query->query_status == MYSQLD_PACKET_OK) {
             if (con->servers != NULL) {
                 con->server_to_be_closed = 1;
             } else if (con->server) {

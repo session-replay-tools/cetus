@@ -4138,11 +4138,11 @@ network_mysqld_read_rw_resp(network_mysqld_con *con, network_socket *server, int
                     G_STRLOC, con->client->default_db->str, server->default_db->str);
             if (con->parse.command == COM_QUERY) {
                 network_mysqld_com_query_result_t *query = con->parse.data;
-                if (query->query_status == MYSQLD_PACKET_ERR) {
+                if (query && query->query_status == MYSQLD_PACKET_ERR) {
                     disp_err_packet(con, &packet);
                 }
 
-                if (query->warning_count > 0) {
+                if (query && query->warning_count > 0) {
                     g_debug("%s warning flag from server:%s is met:%s",
                               G_STRLOC, server->dst->name->str, con->orig_sql->str);
                     con->last_warning_met = 1;

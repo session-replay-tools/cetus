@@ -2184,7 +2184,7 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
 
     if (context->stmt_type == STMT_DROP_DATABASE) {
         network_mysqld_com_query_result_t *com_query = con->parse.data;
-        if (com_query->query_status == MYSQLD_PACKET_OK) {
+        if (com_query && com_query->query_status == MYSQLD_PACKET_OK) {
             if (con->servers != NULL) {
                 int i;
                 for (i = 0; i < con->servers->len; i++) {

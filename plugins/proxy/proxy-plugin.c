@@ -1859,17 +1859,6 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
     injection *inj;
     proxy_plugin_con_t *st = con->plugin_con_state;
 
-    if (st->sql_context->stmt_type == STMT_DROP_DATABASE) {
-        network_mysqld_com_query_result_t *com_query = con->parse.data;
-        if (com_query && com_query->query_status == MYSQLD_PACKET_OK) {
-            if (con->servers != NULL) {
-                con->server_to_be_closed = 1;
-            } else if (con->server) {
-                g_string_truncate(con->server->default_db, 0);
-                g_message("%s:truncate server database for con:%p", G_STRLOC, con);
-            }
-        }
-    }
 
     con->server_in_tran_and_auto_commit_received = 0;
 
@@ -1922,7 +1911,17 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_send_query_result)
 
     if (st->injected.queries->length == 0) {
         /* we have nothing more to send, let's see what the next state is */
-
+        if (st->sql_context->stmt_type == STMT_DROP_DATABASE) {
+            network_mysqld_com_query_result_t *com_query = con->parse.data;
+            if (com_query && com_query->query_status == MYSQLD_PACKET_OK) {
+                if (con->servers != NULL) {
+                    con->server_to_be_closed = 1;
+                } else if (con->server) {
+                    g_string_truncate(con->server->default_db, 0);
+                    g_message("%s:truncate server database for con:%p", G_STRLOC, con);
+                }
+            }
+        }
         con->state = ST_READ_QUERY;
 
         return NETWORK_SOCKET_SUCCESS;

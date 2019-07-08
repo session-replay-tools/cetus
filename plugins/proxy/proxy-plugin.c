@@ -829,9 +829,9 @@ change_server_by_rw(network_mysqld_con *con, int backend_ndx)
 {
     if (backend_ndx >= 0) {
         proxy_plugin_con_t *st = con->plugin_con_state;
-        int index = st->backend_ndx_array[backend_ndx] - 1;
-        g_debug("conn:%p, change_server_by_rw,ndx:%d, index:%d, st ndx:%d", con, backend_ndx, index, st->backend_ndx);
         if (con->servers != NULL) {
+            int index = st->backend_ndx_array[backend_ndx] - 1;
+            g_debug("conn:%p, change_server_by_rw,ndx:%d, index:%d, st ndx:%d", con, backend_ndx, index, st->backend_ndx);
             con->server = g_ptr_array_index(con->servers, index);
             st->backend_ndx = backend_ndx;
         }

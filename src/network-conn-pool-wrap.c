@@ -246,6 +246,7 @@ network_pool_add_conn(network_mysqld_con *con, int is_swap)
 
         g_ptr_array_free(con->servers, TRUE);
         con->servers = NULL;
+        con->multiple_server_mode = 0;
 
         if (st->backend_ndx_array) {
             g_free(st->backend_ndx_array);

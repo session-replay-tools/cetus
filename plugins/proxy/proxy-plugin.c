@@ -805,7 +805,14 @@ change_stmt_id(network_mysqld_con *con, uint32_t stmt_id)
             return -1;
         }
         con->server = g_ptr_array_index(con->servers, index);
-        st->backend_ndx = st->backend_ndx_array[index] - 1;
+        int i;
+        int value = index + 1;
+        for (i = 0; i < MAX_SERVER_NUM_FOR_PREPARE; i++) {
+            if (st->backend_ndx_array[i] == value) {
+                st->backend_ndx = i;
+                break;
+            }
+        }
         g_debug("change conn:%p, server:%p stmt_id:%d, fd:%d, new back ndx:%d",
                 con, con->server, (int)stmt_id, con->server->fd, st->backend_ndx);
 

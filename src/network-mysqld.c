@@ -4231,7 +4231,7 @@ normal_read_query_result(network_mysqld_con *con, network_mysqld_con_state_t ost
                 }
 
             }
-            if (!g_queue_is_empty(con->client->send_queue->chunks)) {
+            if (con->candidate_tcp_streamed && !g_queue_is_empty(con->client->send_queue->chunks)) {
                 g_debug("%s: send_part_content_to_client:%p", G_STRLOC, con);
                 send_part_content_to_client(con);
             }

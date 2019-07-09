@@ -1391,6 +1391,7 @@ network_read_query(network_mysqld_con *con, proxy_plugin_con_t *st)
     con->slave_conn_shortaged = 0;
     con->use_slave_forced = 0;
     con->candidate_fast_streamed = 0;
+    con->candidate_tcp_streamed = 1;
 
     network_injection_queue_reset(st->injected.queries);
 
@@ -1425,8 +1426,9 @@ network_read_query(network_mysqld_con *con, proxy_plugin_con_t *st)
     case COM_BINLOG_DUMP:
         network_mysqld_con_send_error(con->client, C("(proxy) unable to process binlog dump"));
         return PROXY_SEND_RESULT;
-    case COM_QUERY:
     case COM_STMT_PREPARE:
+        con->candidate_tcp_streamed = 0;
+    case COM_QUERY:
         if (!process_query_or_stmt_prepare(con, st, &packet, &query_attr, command, &disp_flag)) {
             return disp_flag;
         }

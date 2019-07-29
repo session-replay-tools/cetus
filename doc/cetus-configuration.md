@@ -157,7 +157,7 @@ Default: : 2 (seconds)
 
 连接Proxy的超时时间
 
-> proxy-connect-timeout = 1
+> proxy-connect-timeout = 2
 
 ### proxy-read-timeout
 
@@ -165,7 +165,7 @@ Default: : 600 (seconds)
 
 读Proxy的超时时间
 
-> proxy-read-timeout = 1
+> proxy-read-timeout = 600
 
 ### proxy-write-timeout
 
@@ -173,7 +173,7 @@ Default: : 600 (seconds)
 
 写Proxy的超时时间
 
-> proxy-write-timeout = 1
+> proxy-write-timeout = 600
 
 ### default-username
 

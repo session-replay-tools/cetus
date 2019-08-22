@@ -9,7 +9,7 @@
 - glib2-devel （version >= 2.6.0)
 - zlib-devel
 - flex
-- mysql-devel／mariadb-devel
+- mysql-devel 5.6+／mariadb-devel 
 - gperftools-libs (由于malloc存在着潜在的内存碎片问题，建议采用gperftools-libs中的tcmalloc)
 
 CentOS 系统可以通过以下命令安装依赖包：

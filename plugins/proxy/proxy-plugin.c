@@ -1007,8 +1007,7 @@ adjust_default_db(network_mysqld_con *con, enum enum_server_command cmd)
     if (clt_default_db->len > 0) {
         if (!g_string_equal(clt_default_db, srv_default_db)) {
             GString *packet = g_string_new(NULL);
-            g_string_append_c(packet, (char)COM_QUERY);
-            g_string_append(packet, "use ");
+            g_string_append_c(packet, (char)COM_INIT_DB);
             g_string_append_len(packet, clt_default_db->str, clt_default_db->len);
             proxy_inject_packet(con, PROXY_QUEUE_ADD_PREPEND, INJ_ID_CHANGE_DB, packet, TRUE, FALSE);
             g_debug("%s: adjust default db", G_STRLOC);

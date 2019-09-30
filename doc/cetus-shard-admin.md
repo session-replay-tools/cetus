@@ -22,8 +22,8 @@
 | delete allow\_ip/deny\_ip '\<user\>@\<address\>'                                         | delete address from white list of module                   |
 | set reduce\_conns (true\|false)                                                      | reduce idle connections if set to true                     |
 | set maintain (true\|false)                                                          | Accelerate to close the connection                |
-| set charset_check (true\|false)                                                     | check the client charset is equal to the default charset   |
-| refresh conns                                                                      | refresh all server connections                             |
+| set charset\_check (true\|false)                                                     | check the client charset is equal to the default charset   |
+| refresh\_conns                                                                      | refresh all server connections                             |
 | show maintain status                                                               | show maintain status                                       |
 | show variables [like '%pattern%']                                                  |                                                            |
 | select version                                                                     | cetus version                                              |

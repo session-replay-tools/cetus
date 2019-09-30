@@ -2074,7 +2074,7 @@ static struct sql_help_entry_t {
     {"insert into backends values ('ip:port', '[ro|rw]', 'state')", "add mysql instance to backends list", RW_HELP},
     {"insert into backends values ('ip:port@group', '[ro|rw]', 'state')", "add mysql instance to backends list", SHARD_HELP},
     {"kill query tid", "kill session when the thread id is equal to tid. e.g. kill query 1; ", ALL_HELP},
-    {"refresh conns", "refresh all server connections. e.g. refresh conns; ", ALL_HELP},
+    {"refresh_conns", "refresh all server connections. e.g. refresh_conns; ", ALL_HELP},
     {"remove backend where [backend_ndx=index|address='ip:port']", "e.g. remove backend where address='3.1.2.1:6666'; ", ALL_HELP},
     {"remove backend backend_ndx", "e.g. remove backend 1; ", ALL_HELP},
     {"save settings", "save the current running configuration to files. e.g. save settings; ", ALL_HELP},

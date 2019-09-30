@@ -21,7 +21,7 @@
 | delete allow\_ip/deny\_ip '\<user\>@\<address\>'                                         | delete address from white list of module                   |
 | set reduce\_conns (true\|false)                                                      | reduce idle connections if set to true                     |
 | set maintain (true\|false)                                                          | Accelerate to close the connection                |
-| refresh conns                                                                      | refresh all server connections                             |
+| refresh\_conns                                                                      | refresh all server connections                             |
 | show maintain status                                                               | show maintain status                                       |
 | show variables [like '%pattern%']                                                  |                                                            |
 | select version                                                                     | cetus version                                              |

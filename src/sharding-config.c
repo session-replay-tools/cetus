@@ -714,7 +714,7 @@ parse_partitions(cJSON *root, const sharding_vdb_t *vdb, GPtrArray *partitions /
             break;
         case cJSON_Number:     /* range > 123 */
             item = sharding_partition_new(cur->string, vdb);
-            item->value = (void *)(uint64_t)cur->valueint;
+            item->value = (void *)(uint64_t)cur->valuedouble;
             g_ptr_array_add(partitions, item);
             break;
         case cJSON_String:     /* range > "str" */

@@ -371,6 +371,8 @@ replace into `objects` values ("users", '{"users":[{"user": "ght","client_pwd":"
 >  `start_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
 > 
 >  PRIMARY KEY (`id`)
+> 
+> )
 
 该表中的`id`字段记录了Cetus插件监听的IP/PORT，`data`字段记录了插件名称，`start_time`字段则记录了插件的启动时间。例如启动Cetus后，表中数据可能类似下面所示：
 

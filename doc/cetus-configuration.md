@@ -405,7 +405,7 @@ mysql> select * from services;
 
 - 启动命令类似如下：
 
-> /home/ght/cetus_install/libexec/cetus --remote-conf-url=mysql://ght:123456@172.17.0.1:3306/test
+> /home/ght/cetus_install/bin/cetus --remote-conf-url=mysql://ght:123456@172.17.0.1:3306/test
  
 ### 重新load配置
 当配置中心的某些配置需要修改，而需要Cetus重新加载修改后的配置时候，并不需要重新启动Cetus，Cetus的admin端口提供了重新读取配置中心配置信息的功能。

@@ -431,7 +431,7 @@ do_connect_cetus(network_mysqld_con *con, network_backend_t **backend, int *back
 
     network_mysqld_auth_challenge_set_challenge(challenge);
     challenge->server_status |= SERVER_STATUS_AUTOCOMMIT;
-    challenge->charset = 0xC0;
+    challenge->charset = charset_get_number(con->srv->default_charset);
     GString *version = g_string_new("");
     network_backends_server_version(g->backends, version);
     challenge->server_version_str = version->str;

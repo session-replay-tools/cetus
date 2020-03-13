@@ -2022,6 +2022,8 @@ NETWORK_MYSQLD_PLUGIN_PROTO(proxy_read_query_result)
             network_mysqld_com_stmt_prep_result_t *r = con->parse.data;
             if (r->status == MYSQLD_PACKET_OK) {
                 con->prepare_stmt_count++;
+            } else {
+                g_warning("%s: prepare stmt not ok for con:%p", G_STRLOC, con);
             }
             break;
         }

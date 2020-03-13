@@ -2811,7 +2811,11 @@ process_rw_write(network_mysqld_con *con, network_mysqld_con_state_t ostate, int
         network_mysqld_queue_reset(con->client);
         network_mysqld_queue_reset(con->server);
 
-        con->prepare_stmt_count--;
+        if (con->prepare_stmt_count > 0) {
+            con->prepare_stmt_count--;
+        } else {
+            g_warning("%s: prepare_stmt_count is zero for con:%p", G_STRLOC, con);
+        }
         g_debug("%s: conn:%p, sub, now prepare_stmt_count:%d", G_STRLOC, con, con->prepare_stmt_count);
 
         if (con->prepare_stmt_count == 0) {

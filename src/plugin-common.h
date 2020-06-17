@@ -42,7 +42,7 @@
 
 #include "network-exports.h"
 
-#define XA_CMD_BUF_LEN 128
+#define XA_CMD_BUF_LEN 256
 
 NETWORK_API network_socket_retval_t do_read_auth(network_mysqld_con *);
 NETWORK_API network_socket_retval_t do_connect_cetus(network_mysqld_con *, network_backend_t **, int *);

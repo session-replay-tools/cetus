@@ -617,6 +617,46 @@ process_trans_query(network_mysqld_con *con)
 }
 
 static int
+process_filter_for_trans_query(network_mysqld_con *con, sql_context_t *context, mysqld_query_attr_t *query_attr)
+{
+    gboolean is_orig_ro_server = FALSE;
+    gboolean need_to_visit_master = FALSE;
+    proxy_plugin_con_t *st = con->plugin_con_state;
+
+    switch (context->stmt_type) {
+    case STMT_SET_NAMES:{
+        char *charset_name = (char *)context->sql_statement;
+        process_set_names(con, charset_name, query_attr);
+        break;
+    }
+    case STMT_SET:{
+        sql_expr_list_t *set_list = context->sql_statement;
+        if (set_list && set_list->len > 0) {
+            sql_expr_t *expr = g_ptr_array_index(set_list, 0);
+            if (expr && expr->op == TK_EQ) {
+                sql_expr_t *left = expr->left;
+                sql_expr_t *right = expr->right;
+                if (!left || !right)
+                    break;
+
+                if (sql_filter_vars_is_silent(left->token_text, right->token_text)) {
+                    network_mysqld_con_send_ok(con->client);
+                    g_message("silent variable: %s", left->token_text);
+                    return PROXY_SEND_RESULT;
+                }
+            }
+        }
+        break;
+    }
+    default:
+        break;
+    }
+
+    return PROXY_NO_DECISION;
+}
+
+
+static int
 process_non_trans_query(network_mysqld_con *con, sql_context_t *context, mysqld_query_attr_t *query_attr)
 {
     gboolean is_orig_ro_server = FALSE;
@@ -1218,6 +1258,13 @@ process_rw_split(network_mysqld_con *con, proxy_plugin_con_t *st,
             break;
         }
     } else {
+        if (command == COM_QUERY) {
+            int ret = process_filter_for_trans_query(con, context, query_attr);
+            if (ret == PROXY_SEND_RESULT) {
+                *disp_flag = PROXY_SEND_RESULT;
+                return 0;
+            }
+        }
         con->srv->query_stats.client_query.rw++;
         if (con->is_in_transaction) {
             query_attr->conn_reserved = 1;
@@ -1553,7 +1600,11 @@ network_read_query(network_mysqld_con *con, proxy_plugin_con_t *st)
             packet.offset = NET_HEADER_SIZE;
 
             if (network_mysqld_proto_get_stmt_id(&packet, &stmt_id) == 0) {
-                change_stmt_id(con, stmt_id);
+                if (change_stmt_id(con, stmt_id) == -1) {
+                    network_mysqld_con_send_error_full(con->client,
+                         C("change stmt id failed"), ER_ABORTING_CONNECTION, "29001");
+                    return PROXY_SEND_RESULT;
+                }
             }
         } else if (command == COM_QUERY) {
             change_server_by_rw(con, st->backend_ndx);

@@ -320,7 +320,7 @@ sql_expr_is_function(const sql_expr_t *p, const char *name)
  *  |--TK_ID
  *  |--TK_ID
  *
- * if prefix or suffix not NULL, return ture only if expr is "preifx.suffix"
+ * if prefix or suffix not NULL, return ture only if expr is "prefix.suffix"
  */
 gboolean
 sql_expr_is_dotted_name(const sql_expr_t *p, const char *prefix, const char *suffix)

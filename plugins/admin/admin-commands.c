@@ -1695,8 +1695,8 @@ void admin_set_config(network_mysqld_con* con, char* key, char* value)
     chassis_config_t* conf = con->srv->config_manager;
 
     if(ret == 0 && conf->type == CHASSIS_CONF_MYSQL) {
-        conf->key = key;
-        conf->value = value;
+        conf->key = g_strdup(key);
+        conf->value = g_strdup(value);
         admin_set_remote_config(con, conf);
         return;
     }

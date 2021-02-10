@@ -603,6 +603,12 @@ process_trans_query(network_mysqld_con *con)
         } else if (sql_context_is_autocommit_on(context)) {
             if (con->is_in_transaction) {
                 con->server_in_tran_and_auto_commit_received = 1;
+                if (con->multiple_server_mode) {
+                  if (!proxy_get_backend_ndx(con, BACKEND_TYPE_RW, FALSE)) {
+                    g_critical("%s:serious error when change from slave to master", G_STRLOC);
+                    return PROXY_NO_CONNECTION;
+                  }
+               }
             }
             con->is_auto_commit = 1;
             con->is_auto_commit_trans_buffered = 0;

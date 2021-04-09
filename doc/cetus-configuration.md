@@ -213,14 +213,6 @@ Default: 7200 (seconds)
 
 > max-alive-time = 7200
 
-### max-resp-size
-
-Default: 10485760 (10MB)
-
-每个后端返回结果集的最大数量
-
-> max-resp-size = 1048576
-
 ### master-preferred
 
 设置为true时仅访问读写后端(主库)，除非利用注释强制走从库

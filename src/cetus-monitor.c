@@ -97,40 +97,65 @@ get_current_sys_timestr(void)
 static MYSQL *
 get_mysql_connection(cetus_monitor_t *monitor, char *addr)
 {
-    MYSQL *conn = g_hash_table_lookup(monitor->backend_conns, addr);
-    if (conn) {
-        if (mysql_ping(conn) == 0) {
-            return conn;
-        } else {
-            g_hash_table_remove(monitor->backend_conns, addr);
-            g_message("monitor: remove dead mysql conn of backend: %s", addr);
-        }
+  MYSQL *conn = g_hash_table_lookup(monitor->backend_conns, addr);
+  if (conn) {
+    if (mysql_ping(conn) == 0) {
+      return conn;
+    } else {
+      g_hash_table_remove(monitor->backend_conns, addr);
+      g_message("monitor: remove dead mysql conn of backend: %s", addr);
     }
+  }
 
-    conn = mysql_init(NULL);
-    monitor->mysql_init_called = 1;
-    if (!conn)
-        return NULL;
+  conn = mysql_init(NULL);
+  monitor->mysql_init_called = 1;
+  if (!conn) return NULL;
 
-    unsigned int timeout = 2 * SECONDS;
-    mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
-    mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
-    mysql_options(conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
+  unsigned int timeout = 2 * SECONDS;
+  mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
+  mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
+  mysql_options(conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);
 
-    char **ip_port = g_strsplit(addr, ":", -1);
-    int port = atoi(ip_port[1]);
-    char *user = monitor->chas->default_username;
-    if (mysql_real_connect(conn, ip_port[0], user, monitor->db_passwd->str, NULL, port, NULL, 0) == NULL) {
-        g_critical("monitor thread cannot connect to backend: %s@%s", monitor->chas->default_username, addr);
-        mysql_conn_free(conn);
-        g_strfreev(ip_port);
-        return NULL;
-    }
-    g_hash_table_insert(monitor->backend_conns, g_strdup(addr), conn);
-    g_message("monitor thread connected to backend: %s, cached %d conns",
-              addr, g_hash_table_size(monitor->backend_conns));
+  char **ip_port = g_strsplit(addr, ":", -1);
+  int port = atoi(ip_port[1]);
+  char *user = monitor->chas->default_username;
+  if (mysql_real_connect(conn, ip_port[0], user, monitor->db_passwd->str, NULL,
+                         port, NULL, 0) == NULL) {
+    g_critical("monitor thread cannot connect to backend: %s@%s",
+               monitor->chas->default_username, addr);
+    mysql_conn_free(conn);
     g_strfreev(ip_port);
-    return conn;
+    return NULL;
+  }
+
+  const char *sql = "set session time_zone='+08:00'";
+
+  if (mysql_real_query(conn, L(sql))) {
+    g_message(
+        "set session timezone failed. error: %d, "
+        "text: %s, backend: %s",
+        mysql_errno(conn), mysql_error(conn), addr);
+    mysql_conn_free(conn);
+    return NULL;
+  } else {
+    MYSQL_RES *rs_set = mysql_store_result(conn);
+    if (rs_set == NULL) {
+      if (mysql_field_count(conn) != 0) {
+        g_message(
+            "set session timezone failed. "
+            "error: %d, text: %s, backend: %s",
+            mysql_errno(conn), mysql_error(conn), addr);
+      }
+    } else {
+      mysql_free_result(rs_set);
+    }
+  }
+
+  g_hash_table_insert(monitor->backend_conns, g_strdup(addr), conn);
+  g_message("monitor thread connected to backend: %s, cached %d conns", addr,
+            g_hash_table_size(monitor->backend_conns));
+  g_strfreev(ip_port);
+  return conn;
 }
 
 static gint

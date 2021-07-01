@@ -5580,11 +5580,9 @@ network_connection_pool_create_conn_and_kill_query(network_mysqld_con *con)
         return;
     }
 
-    if (con->servers == NULL) {
-        return;
-    }
-
-    for (i = 0; i < con->servers->len; i++) {
+    if (con->servers != NULL) {
+#ifndef SIMPLE_PARSER
+      for (i = 0; i < con->servers->len; i++) {
         server_session_t *ss = g_ptr_array_index(con->servers, i);
 
         network_backend_t *backend = ss->backend;
@@ -5640,6 +5638,71 @@ network_connection_pool_create_conn_and_kill_query(network_mysqld_con *con)
                 break;
             }
         }
+      }
+#else
+      return;
+#endif
+    } else {
+#ifndef SIMPLE_PARSER
+      return;
+#else
+      if (con->server) {
+        proxy_plugin_con_t *st = con->plugin_con_state;
+        network_backend_t *backend = st->backend;
+        server_connection_state_t *scs = network_mysqld_self_con_init(srv);
+
+        scs->query_id_to_be_killed = con->server->challenge->thread_id;
+
+        g_debug("%s: thread id:%d", G_STRLOC, scs->query_id_to_be_killed);
+
+        scs->charset_code = con->client->charset_code;
+        if (srv->disable_dns_cache) {
+          network_address_set_address(scs->server->dst, backend->address->str);
+        } else {
+          network_address_copy(scs->server->dst, backend->addr);
+        }
+
+        scs->pool = backend->pool;
+        scs->backend = backend;
+        cetus_users_get_hashed_server_pwd(con->srv->priv->users, username,
+                                          scs->hashed_pwd);
+
+        /*  Avoid the event base's time cache problems */
+        scs->connect_timeout.tv_sec = 60;
+        scs->connect_timeout.tv_usec = 0;
+
+        g_string_append(scs->server->username, username);
+
+        if (con->client->default_db && con->client->default_db->len > 0) {
+          g_string_append(scs->server->default_db,
+                          con->client->default_db->str);
+          g_debug("%s:set server default db:%s for con:%p", G_STRLOC,
+                  scs->server->default_db->str, con);
+        }
+
+        scs->backend->connected_clients++;
+        {
+          switch (network_socket_connect(scs->server)) {
+            case NETWORK_SOCKET_ERROR_RETRY: {
+              scs->state = ST_ASYNC_CONN;
+              struct timeval timeout = scs->connect_timeout;
+              g_debug("%s: set timeout:%d for new conn", G_STRLOC,
+                      (int)scs->connect_timeout.tv_sec);
+              ASYNC_WAIT_FOR_EVENT(scs->server, EV_WRITE, &timeout, scs);
+              break;
+            }
+            case NETWORK_SOCKET_SUCCESS:
+              ASYNC_WAIT_FOR_EVENT(scs->server, EV_READ, 0, scs);
+              scs->state = ST_ASYNC_READ_HANDSHAKE;
+              break;
+            default:
+              scs->backend->connected_clients--;
+              network_mysqld_self_con_free(scs);
+              break;
+          }
+        }
+      }
+#endif
     }
 }
 

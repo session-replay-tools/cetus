@@ -1319,12 +1319,19 @@ process_query_or_stmt_prepare(network_mysqld_con *con, proxy_plugin_con_t *st,
         *disp_flag = PROXY_SEND_RESULT;
         return 0;
     } else if (context->rc == PARSE_NOT_SUPPORT) {
+      if (con->srv->is_sql_special_processed) {
+        network_mysqld_con_send_ok_full(con->client, 0, 0, 0, 0);
+      } else {
         char *msg = context->message;
-        g_message("%s SQL unsupported: %s. while parsing: %s for con:%p, clt:%s",
-                  G_STRLOC, msg, con->orig_sql->str, con, con->client->src->name->str);
-        network_mysqld_con_send_error_full(con->client, msg, strlen(msg), ER_NOT_SUPPORTED_YET, "42000");
-        *disp_flag = PROXY_SEND_RESULT;
-        return 0;
+        g_message(
+            "%s SQL unsupported: %s. while parsing: %s for con:%p, clt:%s",
+            G_STRLOC, msg, con->orig_sql->str, con,
+            con->client->src->name->str);
+        network_mysqld_con_send_error_full(con->client, msg, strlen(msg),
+                                           ER_NOT_SUPPORTED_YET, "42000");
+      }
+      *disp_flag = PROXY_SEND_RESULT;
+      return 0;
     } else if (context->rc == PARSE_UNRECOGNIZED) {
         g_debug("%s SQL unrecognized: %s", G_STRLOC, con->orig_sql->str);
     }

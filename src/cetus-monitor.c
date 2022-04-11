@@ -111,7 +111,7 @@ get_mysql_connection(cetus_monitor_t *monitor, char *addr)
   monitor->mysql_init_called = 1;
   if (!conn) return NULL;
 
-  unsigned int timeout = 2 * SECONDS;
+  unsigned int timeout = 6 * SECONDS;
   mysql_options(conn, MYSQL_OPT_CONNECT_TIMEOUT, &timeout);
   mysql_options(conn, MYSQL_OPT_READ_TIMEOUT, &timeout);
   mysql_options(conn, MYSQL_OPT_WRITE_TIMEOUT, &timeout);

@@ -347,5 +347,7 @@ sql_filter_vars_reload_str_rules(const char *json_str)
         g_hash_table_remove_all(cetus_variables);
     }
 
+    sql_filter_vars_load_default_rules();
+
     return sql_filter_vars_load_str_rules(json_str);
 }

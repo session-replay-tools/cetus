@@ -42,6 +42,7 @@ typedef enum {
 } backend_state_t;
 
 #define NO_PREVIOUS_STATE -1
+#define MAX_WEIGHT_VALUE 9
 
 typedef enum {
     BACKEND_TYPE_UNKNOWN,
@@ -86,6 +87,7 @@ typedef struct {
 
     time_t last_check_time;
     int slave_delay_msec;       /* valid if this is a ReadOnly slave */
+    int server_weight;
     GString *server_version;
 } network_backend_t;
 
@@ -96,6 +98,7 @@ NETWORK_API int network_backend_init_extra(network_backend_t *b, chassis *chas);
 
 typedef struct {
     int is_partition_mode;
+    int priority_mode;
     unsigned int ro_server_num;
     unsigned int read_count;
     GPtrArray *backends;

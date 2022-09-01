@@ -56,6 +56,7 @@ network_backend_new()
     b->server_group = g_string_new(NULL);
     b->address = g_string_new(NULL);
     b->server_version = g_string_new(NULL);
+    b->server_weight = 0;
 
     return b;
 }
@@ -211,7 +212,19 @@ network_backends_add(network_backends_t *bs, const gchar *address,
         if (bs->is_partition_mode) {
             network_backends_add_group(bs, NULL);
         }
-        g_string_assign(new_backend->address, address);
+        /* Only valid for rw mode */
+        char *weight_p = NULL;
+        if ((weight_p = strrchr(address, '#')) != NULL) {
+          bs->priority_mode = 1;
+          new_backend->server_weight = atoi(weight_p + 1);
+          if (new_backend->server_weight > MAX_WEIGHT_VALUE) {
+            new_backend->server_weight = MAX_WEIGHT_VALUE;
+          }
+          g_string_assign_len(new_backend->address, address,
+                              weight_p - address);
+        } else {
+          g_string_assign(new_backend->address, address);
+        }
     }
 
     if (0 != network_address_set_address(new_backend->addr, new_backend->address->str)) {
@@ -538,9 +551,54 @@ network_group_update(network_group_t *gp)
     g_list_free(backends);
 }
 
-/* round robin choose read only backend */
+static int network_backends_get_ro_ndx_by_priority(network_backends_t *bs) {
+  GArray *active_ro_indices = g_array_sized_new(FALSE, TRUE, sizeof(int), 4);
+  int count = network_backends_count(bs);
+  int weight[MAX_WEIGHT_VALUE + 1];
+  int i;
+
+  memset(weight, 0, sizeof(int) * (MAX_WEIGHT_VALUE + 1));
+  for (i = 0; i < count; i++) {
+    network_backend_t *backend = network_backends_get(bs, i);
+    if ((backend->type == BACKEND_TYPE_RO) &&
+        (backend->state == BACKEND_STATE_UP ||
+         backend->state == BACKEND_STATE_UNKNOWN)) {
+      weight[backend->server_weight] = 1;
+    }
+  }
+
+  int max_weight = 0;
+  for (i = 0; i <= MAX_WEIGHT_VALUE; i++) {
+    if (weight[i]) {
+      max_weight = i;
+    }
+  }
+
+  for (i = 0; i < count; i++) {
+    network_backend_t *backend = network_backends_get(bs, i);
+    if ((backend->type == BACKEND_TYPE_RO) &&
+        (backend->state == BACKEND_STATE_UP ||
+         backend->state == BACKEND_STATE_UNKNOWN)) {
+      if (backend->server_weight == max_weight) {
+        g_array_append_val(active_ro_indices, i);
+      }
+    }
+  }
+  int num = active_ro_indices->len;
+  int result = -1;
+  if (num > 0) {
+    result = g_array_index(active_ro_indices, int, (bs->read_count++) % num);
+  }
+  g_array_free(active_ro_indices, TRUE);
+  return result;
+}
+
 int network_backends_get_ro_ndx(network_backends_t *bs)
 {
+  if (bs->priority_mode) {
+    return network_backends_get_ro_ndx_by_priority(bs);
+  } else {
+    /* round robin choose read only backend */
     GArray* active_ro_indices = g_array_sized_new(FALSE, TRUE, sizeof(int), 4);
     int count = network_backends_count(bs);
     int i = 0;
@@ -558,6 +616,7 @@ int network_backends_get_ro_ndx(network_backends_t *bs)
     }
     g_array_free(active_ro_indices, TRUE);
     return result;
+  }
 }
 
 int

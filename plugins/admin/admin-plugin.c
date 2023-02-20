@@ -302,7 +302,8 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
         int  unread_len = ch.admin_sql_resp_len;
         GString *raw_packet = g_string_sized_new(calculate_alloc_len(unread_len));
         unsigned char *p = raw_packet->str;
-
+        time_t start = time(0);
+        int timeout = 0;
         do {
             int len = recv(fd, p, unread_len, 0);
             if (len > 0) {
@@ -315,20 +316,38 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
                         G_STRLOC, unread_len, len, fd);
                 break;
             } else {
-                g_message("%s: resp_len:%d, len:%d, fd:%d",
-                        G_STRLOC, unread_len, len, fd);
+              time_t end = time(0);
+              if ((end - start) >= 6) {
+                g_warning("%s:timeout, resp_len:%d, len:%d, fd:%d, "
+                          "con->num_read_pending:%d",
+                          G_STRLOC, unread_len, len, fd, con->num_read_pending);
+                timeout = 1;
+                break;
+              }
+              usleep(100000);
             }
         } while (unread_len > 0);
 
-        network_socket *sock = network_socket_new();
-        g_queue_push_tail(sock->recv_queue_raw->chunks, raw_packet);
+        if (timeout) {
+          g_critical("%s: admin sql response timeout", G_STRLOC);
+          con->srv->socketpair_mutex = 0;
+          network_mysqld_con_send_error(con->client, C("internal error"));
+          con->state = ST_SEND_QUERY_RESULT;
+          network_mysqld_queue_reset(con->client);
+          network_queue_clear(con->client->recv_queue);
+          network_mysqld_con_handle(-1, 0, con);
+          return;
+        } else {
+          network_socket *sock = network_socket_new();
+          g_queue_push_tail(sock->recv_queue_raw->chunks, raw_packet);
 
-        sock->recv_queue_raw->len += ch.admin_sql_resp_len;
-        raw_packet->len = ch.admin_sql_resp_len;
+          sock->recv_queue_raw->len += ch.admin_sql_resp_len;
+          raw_packet->len = ch.admin_sql_resp_len;
 
-        network_socket_retval_t ret = network_mysqld_con_get_packet(con->srv, sock);
+          network_socket_retval_t ret =
+              network_mysqld_con_get_packet(con->srv, sock);
 
-        while (ret == NETWORK_SOCKET_SUCCESS) {
+          while (ret == NETWORK_SOCKET_SUCCESS) {
             network_packet packet;
             GList *chunk;
 
@@ -350,6 +369,7 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
         }
 
         g_ptr_array_add(con->servers, sock);
+        }
 
     } else {
         g_critical("%s: not admin sql response command", G_STRLOC);

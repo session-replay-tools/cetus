@@ -492,57 +492,49 @@ network_mysqld_con_handle_insert_id_response(network_mysqld_con *con, char *name
 static int
 process_non_trans_prepare_stmt(network_mysqld_con *con)
 {
-    con->is_prepared = 1;
-    gboolean visit_slave = FALSE;
-    proxy_plugin_con_t *st = con->plugin_con_state;
-    sql_context_t *context = st->sql_context;
+  con->is_prepared = 1;
+  proxy_plugin_con_t *st = con->plugin_con_state;
+  sql_context_t *context = st->sql_context;
 
-    gboolean is_orig_ro_server = FALSE;
-    if (con->server != NULL) {
-        if (st->backend && st->backend->type == BACKEND_TYPE_RO) {
-            is_orig_ro_server = TRUE;
-        }
+  gboolean is_orig_ro_server = FALSE;
+  if (con->server != NULL) {
+    if (st->backend && st->backend->type == BACKEND_TYPE_RO) {
+      is_orig_ro_server = TRUE;
     }
+  }
 
-    g_debug("%s: call process_non_trans_prepare_stmt", G_STRLOC);
-    /* TODO:prepare does not support select for update until now */
-    if (!con->srv->master_preferred && context->stmt_type == STMT_SELECT) {
-        visit_slave = TRUE;
-        g_debug("%s: set read only true for ps", G_STRLOC);
-        if (con->prepare_stmt_count == 0 && !is_orig_ro_server) {
-            g_debug("%s: try to get from slave", G_STRLOC);
-            /* use ro server */
-            int type = BACKEND_TYPE_RO;
-            if (!proxy_get_backend_ndx(con, type, FALSE)) {
-                visit_slave = FALSE;
-                con->slave_conn_shortaged = 1;
-            }
-        } else {
-            if (con->server) {
-                proxy_plugin_con_t *st = con->plugin_con_state;
-                if (st->backend->state != BACKEND_STATE_UP && st->backend->state != BACKEND_STATE_UNKNOWN) {
-                    visit_slave = FALSE;
-                    g_debug("%s: slave down,move to master", G_STRLOC);
-                }
-            } else {
-                g_warning("%s: original server null", G_STRLOC);
-            }
+  g_debug("%s: call process_non_trans_prepare_stmt", G_STRLOC);
+  if (!con->srv->master_preferred && context->stmt_type == STMT_SELECT) {
+    if (con->prepare_stmt_count == 0 && !is_orig_ro_server) {
+      /* use rw server */
+      int type = BACKEND_TYPE_RW;
+      if (!proxy_get_backend_ndx(con, type, FALSE)) {
+        con->master_conn_shortaged = 1;
+      }
+    } else {
+      if (con->server) {
+        proxy_plugin_con_t *st = con->plugin_con_state;
+        if (st->backend->state != BACKEND_STATE_UP &&
+            st->backend->state != BACKEND_STATE_UNKNOWN) {
+          g_debug("%s: slave down,move to master", G_STRLOC);
         }
+      } else {
+        g_warning("%s: original server null", G_STRLOC);
+      }
     }
+  }
 
-    if (visit_slave == FALSE) {
-        if (is_orig_ro_server) {
-            int type = BACKEND_TYPE_RW;
-            if (!proxy_get_backend_ndx(con, type, FALSE)) {
-                con->master_conn_shortaged = 1;
-                g_debug("%s:PROXY_NO_CONNECTION", G_STRLOC);
-                /* no master connection */
-                return PROXY_NO_CONNECTION;
-            }
-        }
+  if (is_orig_ro_server) {
+    int type = BACKEND_TYPE_RW;
+    if (!proxy_get_backend_ndx(con, type, FALSE)) {
+      con->master_conn_shortaged = 1;
+      g_debug("%s:PROXY_NO_CONNECTION", G_STRLOC);
+      /* no master connection */
+      return PROXY_NO_CONNECTION;
     }
+  }
 
-    return PROXY_NO_DECISION;
+  return PROXY_NO_DECISION;
 }
 
 static int

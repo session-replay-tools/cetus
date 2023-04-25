@@ -2585,12 +2585,14 @@ handle_read_query(network_mysqld_con *con, network_mysqld_con_state_t ostate)
         }
         /* fall through */
     default:
-        g_critical("%s: wait failed and no server backend for user:%s, ret:%d",
-                G_STRLOC, con->client->response->username->str, ret);
+      g_critical("%s: wait failed and no server backend for user:%s, ret:%d, "
+                 "max conn:%d",
+                 G_STRLOC, con->client->response->username->str, ret,
+                 con->srv->max_idle_connections);
 
-        handle_query_wait_stats(con);
-        process_service_unavailable(con);
-        break;
+      handle_query_wait_stats(con);
+      process_service_unavailable(con);
+      break;
     }
 
     /**

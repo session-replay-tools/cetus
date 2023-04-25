@@ -355,20 +355,21 @@ network_read_sql_resp(int G_GNUC_UNUSED fd, short events, void *user_data)
             packet.data = chunk->data;
             packet.offset = 0;
 
-            int is_finished = network_mysqld_proto_get_query_result(&packet, con);
+            int is_finished =
+                network_mysqld_proto_get_query_result(&packet, con);
             if (is_finished == 1) {
-                g_debug("%s: read finished", G_STRLOC);
-                break;
+              g_debug("%s: read finished", G_STRLOC);
+              break;
             }
 
             ret = network_mysqld_con_get_packet(con->srv, sock);
-        }
+          }
 
-        if (con->servers == NULL) {
+          if (con->servers == NULL) {
             con->servers = g_ptr_array_new();
-        }
+          }
 
-        g_ptr_array_add(con->servers, sock);
+          g_ptr_array_add(con->servers, sock);
         }
 
     } else {

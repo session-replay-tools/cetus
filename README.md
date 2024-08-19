@@ -104,6 +104,11 @@ Cetus is available in two versions: read-write splitting and sharding (where sha
 
 [Cetus Testing Report](./doc/cetus-test.md)
 
+## Note
+1. Cetus runs exclusively on Linux.
+2. Cetus cannot be compiled with MySQL 8.0 development.
+3. Cetus supports only `mysql_native_password`.
+4. For non-Chinese users, please visit visit [mysql-proxy](https://github.com/session-replay-tools/mysql-proxy).
 
 ## Bugs and Feature Requests
 Have a bug or a feature request? [Please open a new issue](https://github.com/session-replay-tools/cetus/issues). Before opening any issue, please search for existing issues.

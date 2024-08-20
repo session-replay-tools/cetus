@@ -31,12 +31,12 @@ Cetus is available in two versions: read-write splitting and sharding (where sha
 **For the database sharding version:**
 - Multi-process, lock-free design for improved efficiency
 - Supports transparent backend connection pooling
-- Supports SQL read-write separation
+- Supports SQL read-write splitting
 - Supports data sharding
 - Supports distributed transaction processing
 - Supports bulk insert operations
 - Supports conditional DISTINCT operations
-- Enhanced SQL routing and injection
+- Enhanced SQL routing
 - Supports result set compression
 - Features a high-performance result set merging algorithm
 - Supports security management

@@ -5424,6 +5424,10 @@ network_mysqld_self_con_handle(int event_fd, short events, void *user_data)
     chassis *srv = con->srv;
 
     if (!process_self_event(con, events, event_fd)) {
+        con->backend->connected_clients--;
+        g_debug("%s: connected_clients sub, now:%d for con:%p", G_STRLOC,
+                con->backend->connected_clients, con);
+        network_mysqld_self_con_free(con);
         return;
     }
 
